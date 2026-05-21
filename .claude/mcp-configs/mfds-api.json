@@ -1,0 +1,50 @@
+{
+  "name": "MFDS (식품의약품안전처) 의약품안전나라",
+  "api_key_env": "MFDS_API_KEY",
+  "base_url": "https://apis.data.go.kr/1471000",
+
+  "_strategy": "bulk_load_then_delta_sync",
+  "_note": "운영 중 약 조회는 내부 DB만 사용. API는 초기 적재 + 주기 동기화에만 호출.",
+
+  "endpoints": {
+    "drug_master": {
+      "path": "/MdcinPrdtPrmsnInfoService06/getMdcinPrdtPrmsnInfo",
+      "use_case": "의약품 마스터 (초기 적재 + 주 1회 delta)"
+    },
+    "drug_interaction": {
+      "path": "/DURIrdntInfoService03/getUsjntTabooInfoList",
+      "use_case": "병용금기 (초기 적재 + 주 1회 delta)"
+    },
+    "elderly_caution": {
+      "path": "/DURIrdntInfoService03/getOdsnAtentInfoList",
+      "use_case": "노인 주의 (초기 적재 + 주 1회 delta)"
+    },
+    "pregnancy_taboo": {
+      "path": "/DURIrdntInfoService03/getPwnmTabooInfoList",
+      "use_case": "임부 금기 (초기 적재 + 주 1회 delta)"
+    }
+  },
+
+  "bulk_load": {
+    "page_size": 100,
+    "delay_ms_between_pages": 100,
+    "checkpoint_file": ".mfds_bulk_checkpoint.json",
+    "estimated_total": {
+      "drug_master": 30000,
+      "drug_interaction": 5000,
+      "elderly_caution": 500,
+      "pregnancy_taboo": 1000
+    }
+  },
+
+  "delta_sync": {
+    "schedule": "0 3 * * 0",
+    "strategy": "last_synced_at 이후 변경분만 조회",
+    "upsert_key": "kd_code"
+  },
+
+  "rate_limit": {
+    "_note": "동기화 전용. 운영 중 약 조회는 DB만 사용하므로 API 호출 없음.",
+    "delay_ms_between_pages": 100
+  }
+}

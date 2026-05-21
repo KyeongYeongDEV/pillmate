@@ -1,0 +1,53 @@
+{
+  "provider": "google",
+  "api_key_env": "GEMINI_API_KEY",
+  "models": {
+    "ocr": {
+      "name": "gemini-2.5-flash",
+      "max_tokens": 4096,
+      "temperature": 0.1,
+      "use_case": "처방전 OCR — 한글+이미지 정확도 우선"
+    },
+    "chat_rag": {
+      "name": "gemini-2.5-flash",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "use_case": "복약 상담 챗봇 — RAG 컨텍스트 기반"
+    },
+    "health_recommend": {
+      "name": "gemini-2.5-flash",
+      "max_tokens": 3072,
+      "temperature": 0.3,
+      "use_case": "건강 추천 — 처방 기반"
+    },
+    "report": {
+      "name": "gemini-2.5-flash-lite",
+      "max_tokens": 1500,
+      "temperature": 0.2,
+      "use_case": "복약 리포트 — 단순 요약, 비용 절감"
+    },
+    "test": {
+      "name": "gemini-2.5-flash-lite",
+      "max_tokens": 1000,
+      "temperature": 0.0,
+      "use_case": "테스트 환경 항상 사용"
+    }
+  },
+  "embedding": {
+    "name": "text-embedding-004",
+    "dimensions": 768
+  },
+  "rate_limit": {
+    "rpm": 60,
+    "tpm": 1000000,
+    "daily_per_user": 10
+  },
+  "cache": {
+    "image_hash_ttl_days": 30,
+    "rag_faq_similarity_threshold": 0.92
+  },
+  "cost_budget": {
+    "daily_warning_usd": 5,
+    "daily_critical_usd": 15
+  }
+}

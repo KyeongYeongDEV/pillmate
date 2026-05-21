@@ -1,0 +1,115 @@
+# ==============================
+# 환경 변수 / 시크릿 (절대 커밋 금지)
+# ==============================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+application-secret.yml
+application-local.yml
+application-prod.yml
+
+# ==============================
+# Java / Spring Boot (Gradle)
+# ==============================
+build/
+.gradle/
+out/
+*.class
+*.jar
+*.war
+*.ear
+!gradle/wrapper/gradle-wrapper.jar
+.gradletasknamecache
+
+# ==============================
+# Python / FastAPI
+# ==============================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.uv/
+dist/
+*.egg-info/
+.eggs/
+pip-selfcheck.json
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ==============================
+# IDE
+# ==============================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# ==============================
+# macOS
+# ==============================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ==============================
+# 로그
+# ==============================
+*.log
+logs/
+spring.log*
+
+# ==============================
+# 테스트 리포트 / 커버리지
+# ==============================
+test-results/
+reports/
+jacoco/
+*.exec
+
+# ==============================
+# Docker
+# ==============================
+docker-compose.override.yml
+
+# ==============================
+# 식약처 API 적재 체크포인트
+# ==============================
+.mfds_bulk_checkpoint.json
+
+# ==============================
+# 임시 파일
+# ==============================
+*.tmp
+*.swp
+*.bak
+
+# ==============================
+# CMUX / 멀티에이전트 worktree
+# ==============================
+worktrees/
+.cmux/local/
+
+# ==============================
+# bkit / PDCA 로컬 상태
+# ==============================
+.bkit-memory.json
+.pdca-status.json

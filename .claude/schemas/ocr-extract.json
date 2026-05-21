@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pillmate.local/schemas/ocr-extract.json",
+  "title": "Prescription OCR Extract",
+  "description": "Gemini Vision이 처방전 이미지에서 추출하는 구조화된 응답",
+  "type": "object",
+  "required": ["drugs", "metadata"],
+  "properties": {
+    "drugs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name_raw", "confidence"],
+        "properties": {
+          "name_raw": {
+            "type": "string",
+            "description": "처방전에 적힌 원본 약품명 (한글)"
+          },
+          "name_matched": {
+            "type": "string",
+            "description": "식약처 DB와 매칭된 정식 약품명"
+          },
+          "drug_code": {
+            "type": "string",
+            "description": "식약처 의약품 코드 (KD-...)"
+          },
+          "dose": {
+            "type": "object",
+            "properties": {
+              "amount": {"type": "number"},
+              "unit": {"type": "string", "enum": ["mg", "g", "mL", "정", "캡슐"]},
+              "frequency_per_day": {"type": "integer", "minimum": 1, "maximum": 6},
+              "duration_days": {"type": "integer", "minimum": 1}
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "매칭 신뢰도. < 0.7 시 사용자 확인 필요"
+          },
+          "match_method": {
+            "type": "string",
+            "enum": ["vector", "bm25", "hybrid", "exact"]
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["model", "extracted_at"],
+      "properties": {
+        "model": {"type": "string", "examples": ["gemini-2.5-flash"]},
+        "extracted_at": {"type": "string", "format": "date-time"},
+        "image_hash": {"type": "string", "description": "SHA-256 이미지 해시"},
+        "cache_hit": {"type": "boolean"},
+        "patient_name_present": {
+          "type": "boolean",
+          "description": "환자 식별 정보 포함 여부 (감사용, 본문 비저장)"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

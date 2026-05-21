@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pillmate.local/schemas/drug-interaction.json",
+  "title": "Drug Interaction",
+  "description": "병용금기 / 연령금기 / 임부금기 정보",
+  "type": "object",
+  "required": ["type", "severity", "source"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["drug_drug", "age_elderly", "age_pediatric", "pregnancy", "lactation"]
+    },
+    "drugs": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "관련 약품 코드 (drug_drug는 2개 이상)",
+      "minItems": 1,
+      "maxItems": 10
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "critical/high는 자동 차단, medium/low는 경고"
+    },
+    "description": {
+      "type": "string",
+      "description": "금기 사유 (한국어)"
+    },
+    "alternative": {
+      "type": "string",
+      "description": "대안 약물 또는 조치 권고"
+    },
+    "source": {
+      "type": "object",
+      "required": ["name", "url"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "examples": ["식품의약품안전처 의약품 병용금기 목록"]
+        },
+        "url": {"type": "string", "format": "uri"},
+        "version": {"type": "string"}
+      }
+    }
+  }
+}

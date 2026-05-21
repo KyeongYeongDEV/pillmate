@@ -1,0 +1,43 @@
+{
+  "version": "16",
+  "extensions": ["pgvector >= 0.7", "pg_trgm"],
+  "connection_env": {
+    "host": "POSTGRES_HOST",
+    "port": "POSTGRES_PORT",
+    "database": "POSTGRES_DB",
+    "username": "POSTGRES_USER",
+    "password": "POSTGRES_PASSWORD"
+  },
+  "schemas": [
+    {
+      "name": "pillmate",
+      "purpose": "도메인 스키마 (Bounded Context별 테이블)"
+    },
+    {
+      "name": "embeddings",
+      "purpose": "RAG 벡터 인덱스",
+      "tables": ["drug_embeddings", "guideline_embeddings", "interaction_embeddings"]
+    }
+  ],
+  "vector_index": {
+    "method_phase_1": "ivfflat",
+    "method_phase_2": "hnsw",
+    "ivfflat_lists": 100,
+    "embedding_dimensions": 768
+  },
+  "partitioning": {
+    "dose_logs": {
+      "strategy": "RANGE",
+      "key": "scheduled_at",
+      "interval": "monthly",
+      "retention_months": 24
+    }
+  },
+  "migrations": {
+    "tool": "Flyway",
+    "location": "src/main/resources/db/migration",
+    "naming": "V{version}__{description}.sql"
+  },
+  "phase_1_instance": "db.t3.medium",
+  "phase_2_instance": "db.t3.large + read replica"
+}

@@ -1,0 +1,41 @@
+{
+  "region": "ap-northeast-2",
+  "bucket": {
+    "name_env": "S3_PRESCRIPTION_BUCKET",
+    "block_public_access": true,
+    "encryption": {
+      "type": "SSE-S3",
+      "phase_3_upgrade": "SSE-KMS"
+    },
+    "cors": {
+      "allowed_origins": ["https://pillmate.app", "https://app.pillmate.app"],
+      "allowed_methods": ["PUT", "GET"],
+      "max_age_seconds": 300
+    }
+  },
+  "lifecycle": [
+    {"days": 30, "transition_to": "STANDARD_IA"},
+    {"days": 90, "transition_to": "GLACIER_IR"},
+    {"days": 1095, "action": "EXPIRE", "note": "3년 후 자동 삭제 (의료 데이터 보관 한도)"}
+  ],
+  "presigned_url": {
+    "upload_ttl_seconds": 300,
+    "download_ttl_seconds": 3600,
+    "allowed_methods": ["PUT", "GET"],
+    "max_size_bytes": 10485760
+  },
+  "iam_roles": {
+    "spring_boot": {
+      "name": "pillmate-spring-role",
+      "permissions": ["s3:PutObject", "s3:GetObject (metadata)", "s3:GenerateUrlPresigned"]
+    },
+    "fastapi": {
+      "name": "pillmate-fastapi-role",
+      "permissions": ["s3:GetObject (raw image only)"]
+    }
+  },
+  "audit": {
+    "cloudtrail_data_events": true,
+    "retention_days": 1095
+  }
+}

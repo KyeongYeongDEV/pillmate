@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pillmate.local/schemas/rag-chunk.json",
+  "title": "RAG Chunk Metadata",
+  "description": "pgvector에 저장되는 청크와 메타데이터",
+  "type": "object",
+  "required": ["chunk_id", "content", "source", "embedding_model"],
+  "properties": {
+    "chunk_id": {
+      "type": "string",
+      "description": "UUID v4"
+    },
+    "content": {
+      "type": "string",
+      "description": "청크 본문 (한글, 800자 이내)"
+    },
+    "source": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["mfds_drug", "mfds_interaction", "guideline", "internal_faq"]
+        },
+        "name": {
+          "type": "string",
+          "examples": ["식품의약품안전처", "대한당뇨병학회"]
+        },
+        "url": {"type": "string", "format": "uri"},
+        "published_at": {"type": "string", "format": "date"},
+        "version": {"type": "string"}
+      }
+    },
+    "category": {
+      "type": "string",
+      "enum": ["efficacy", "side_effect", "interaction", "dosage", "storage", "guideline"]
+    },
+    "drug_codes": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "관련된 식약처 약품 코드"
+    },
+    "embedding_model": {
+      "type": "string",
+      "examples": ["text-embedding-004"]
+    },
+    "embedded_at": {"type": "string", "format": "date-time"}
+  }
+}

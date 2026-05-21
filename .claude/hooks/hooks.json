@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/hooks.json",
+  "description": "PillMate 자동화 훅 — TDD/DDD 규칙 강제, 비용 가드, 의료 도메인 검증",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "filePattern": "src/main/java/com/pillmate/**/domain/**/*.java",
+        "command": ".claude/scripts/check_tdd_pair.sh \"$FILE\"",
+        "description": "domain 클래스에 대응 테스트가 있는지 확인. 없으면 경고."
+      },
+      {
+        "matcher": "Write|Edit",
+        "filePattern": "src/main/java/**/*.java",
+        "command": ".claude/scripts/check_layer_dependency.sh \"$FILE\"",
+        "description": "DDD 레이어 의존 방향 위반 즉시 검출."
+      },
+      {
+        "matcher": "Write|Edit",
+        "filePattern": "ai_server/app/**/*.py",
+        "command": ".claude/scripts/check_medical_source.sh \"$FILE\"",
+        "description": "LLM 응답 코드에 식약처 출처 강제 패턴 확인."
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "commandPattern": "gradle.*test.*",
+        "command": "echo '🧪 TDD 사이클 실행 중...'",
+        "description": "테스트 실행 표시"
+      }
+    ],
+    "Stop": [
+      {
+        "command": ".claude/scripts/post_session_summary.sh",
+        "description": "세션 종료 시 TDD 사이클 위반 요약 + 비용 감사"
+      }
+    ]
+  }
+}
