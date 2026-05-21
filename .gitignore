@@ -103,10 +103,14 @@ docker-compose.override.yml
 *.bak
 
 # ==============================
-# CMUX / 멀티에이전트 worktree
+# CMUX 멀티에이전트 런타임
 # ==============================
-worktrees/
+.cmux/messages/
+.cmux/logs/
+.cmux/.runtime/
+.cmux/specs/
 .cmux/local/
+worktrees/
 
 # ==============================
 # bkit / PDCA 로컬 상태

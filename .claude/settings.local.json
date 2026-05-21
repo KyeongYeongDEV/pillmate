@@ -2,8 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(chmod +x *)",
-      "Bash(cmux --version)",
-      "Read(//Users/user/**)"
+      "Bash(docker exec pillmate-postgres *)",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/groups -H 'Content-Type: application/json' -H 'X-User-Id: 1' -d '{\"name\":\"우리 가족\"}')",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }
