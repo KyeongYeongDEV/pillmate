@@ -84,6 +84,8 @@ DRUGS_COLUMNS = [
     "bizrno",
 ]
 
+NOT_NULL_COLUMNS = {"kd_code", "source", "synced_at", "is_rare"}
+
 
 def _load_checkpoint() -> dict[str, Any]:
     if not CHECKPOINT_PATH.exists():
@@ -112,14 +114,16 @@ def _connect_db():
     )
 
 
+def _update_assignment(column: str) -> str:
+    if column in NOT_NULL_COLUMNS:
+        return f"{column} = EXCLUDED.{column}"
+    return f"{column} = COALESCE(EXCLUDED.{column}, drugs.{column})"
+
+
 def _build_upsert_sql() -> str:
     cols = ["source", "synced_at", *DRUGS_COLUMNS]
     placeholders = ", ".join(f"%({c})s" for c in cols)
-    update_set = ", ".join(
-        f"{c} = EXCLUDED.{c}"
-        for c in cols
-        if c != "kd_code"
-    )
+    update_set = ", ".join(_update_assignment(c) for c in cols if c != "kd_code")
     return (
         f"INSERT INTO drugs ({', '.join(cols)}) VALUES ({placeholders}) "
         f"ON CONFLICT (kd_code) DO UPDATE SET {update_set}, version = drugs.version + 1"
