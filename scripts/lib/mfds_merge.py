@@ -35,6 +35,24 @@ def _parse_date(value: Any) -> date | None:
             return None
 
 
+def _normalize_etc_otc(value: Any) -> tuple[str | None, bool]:
+    """ETC_OTC_NAME/SPCLTY_PBLC 정규화.
+
+    실데이터: '전문의약품' / '일반의약품' / '전문,희귀' / '일반,희귀' 등.
+    반환: (정규화 값, is_rare)
+    """
+    v = _norm(value)
+    if v is None:
+        return None, False
+    s = str(v)
+    is_rare = "희귀" in s
+    if "전문" in s:
+        return "전문의약품", is_rare
+    if "일반" in s:
+        return "일반의약품", is_rare
+    return None, is_rare
+
+
 def _join_color(c1: Any, c2: Any) -> Any:
     """COLOR_CLASS1 + COLOR_CLASS2 → '흰색,분홍' (NULL 무시)."""
     v1 = _norm(c1)
@@ -75,23 +93,28 @@ def _from_easy(easy: Mapping[str, Any]) -> dict[str, Any]:
 
 def _from_permit(permit: Mapping[str, Any]) -> dict[str, Any]:
     """제품허가 레코드 → drugs row 컬럼 dict."""
-    return {
+    etc_otc, is_rare = _normalize_etc_otc(permit.get("SPCLTY_PBLC"))
+    row: dict[str, Any] = {
         "kd_code": _norm(permit.get("ITEM_SEQ")),
         "name": _norm(permit.get("ITEM_NAME")),
         "company": _norm(permit.get("ENTP_NAME")),
         "permit_no": _norm(permit.get("PRDUCT_PRMISN_NO")),
         "permit_date": _parse_date(permit.get("ITEM_PERMIT_DATE")),
         "cancel_date": _parse_date(permit.get("CANCEL_DATE")),
-        "etc_otc": _norm(permit.get("SPCLTY_PBLC")),
+        "etc_otc": etc_otc,
         "class_name": _norm(permit.get("PRDUCT_TYPE")),
         "main_ingr": _norm(permit.get("ITEM_INGR_NAME")),
         "bizrno": _norm(permit.get("BIZRNO")),
     }
+    if is_rare:
+        row["is_rare"] = True
+    return row
 
 
 def _from_ident(ident: Mapping[str, Any]) -> dict[str, Any]:
     """낱알식별 레코드 → drugs row 컬럼 dict."""
-    return {
+    etc_otc, is_rare = _normalize_etc_otc(ident.get("ETC_OTC_NAME"))
+    row: dict[str, Any] = {
         "kd_code": _norm(ident.get("ITEM_SEQ")),
         "name": _norm(ident.get("ITEM_NAME")),
         "company": _norm(ident.get("ENTP_NAME")),
@@ -104,11 +127,14 @@ def _from_ident(ident: Mapping[str, Any]) -> dict[str, Any]:
         "chart": _norm(ident.get("CHART")),
         "item_image": _norm(ident.get("ITEM_IMAGE")),
         "form": _norm(ident.get("FORM_CODE_NAME")),
-        "etc_otc": _norm(ident.get("ETC_OTC_NAME")),
+        "etc_otc": etc_otc,
         "permit_date": _parse_date(ident.get("ITEM_PERMIT_DATE")),
         "class_name": _norm(ident.get("CLASS_NAME")),
         "bizrno": _norm(ident.get("BIZRNO")),
     }
+    if is_rare:
+        row["is_rare"] = True
+    return row
 
 
 def merge_drug_record(

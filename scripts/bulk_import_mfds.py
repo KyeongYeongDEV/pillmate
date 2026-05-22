@@ -72,6 +72,7 @@ DRUGS_COLUMNS = [
     "permit_date",
     "cancel_date",
     "etc_otc",
+    "is_rare",
     "storage_method",
     "main_ingr",
     "warning",
@@ -128,6 +129,9 @@ def _build_upsert_sql() -> str:
 def _row_to_params(row: dict[str, Any]) -> dict[str, Any]:
     params: dict[str, Any] = {c: None for c in DRUGS_COLUMNS}
     params.update({k: v for k, v in row.items() if k in params})
+    # NOT NULL 컬럼 기본값
+    if params.get("is_rare") is None:
+        params["is_rare"] = False
     params["source"] = SOURCE
     params["synced_at"] = datetime.now(timezone.utc)
     return params
