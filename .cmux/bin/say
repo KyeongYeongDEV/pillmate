@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Usage: say <dev|qa-claude|qa-gemini> "message text"
+# Sends a message to the named agent's pane.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME="$SCRIPT_DIR/../.runtime/cmux.env"
+[[ -f "$RUNTIME" ]] || { echo "✗ run ./.cmux/setup-fitpet.sh first" >&2; exit 1; }
+source "$RUNTIME"
+
+role="${1:-}"; message="${2:-}"
+[[ -z "$role" || -z "$message" ]] && { echo "Usage: say <dev|qa-claude|qa-gemini> \"message\"" >&2; exit 1; }
+
+case "$role" in
+  dev)        target="$DEV_SURFACE" ;;
+  qa-claude)  target="$QA_CLAUDE_SURFACE" ;;
+  qa-gemini)  target="$QA_GEMINI_SURFACE" ;;
+  *)          echo "✗ unknown role: $role" >&2; exit 1 ;;
+esac
+
+cmux send-panel --panel "$target" --workspace "$CMUX_WORKSPACE" -- "$message"
+sleep 0.5
+cmux send-key-panel --panel "$target" --workspace "$CMUX_WORKSPACE" Enter >/dev/null
+echo "→ sent to $role ($target)"
