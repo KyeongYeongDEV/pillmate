@@ -42,13 +42,25 @@ The orchestra workspace is: $WORKSPACE
 EOF
 )
 
-  color dev "[$(ts)] ⚙  invoking claude -p (this may take a while)…"
+  color dev "[$(ts)] ⚙  invoking claude -p (stream-json, --bare)…"
   log_file="$LOG_DIR/dev-${task_id}.log"
-  if claude -p --permission-mode acceptEdits --add-dir "$WORKSPACE" "$full_prompt" \
-        2>&1 | tee "$log_file"; then
+  raw_log="$LOG_DIR/dev-${task_id}.stream.jsonl"
+  # --bare: hooks/auto-memory/CLAUDE.md auto-discovery 비활성화 (CMUX 환경 hang 방지)
+  # stream-json: 도구 호출 단위로 진행 가시화. jq로 핵심 이벤트만 사람용 로그로.
+  if claude -p --bare --dangerously-skip-permissions \
+        --output-format stream-json --verbose --include-partial-messages \
+        --add-dir "$WORKSPACE" "$full_prompt" \
+        2> "$log_file.err" \
+      | tee "$raw_log" \
+      | jq -r --unbuffered '
+          select(.type=="system" and .subtype=="init") | "[init] model=\(.model) cwd=\(.cwd)",
+          select(.type=="assistant") | "[asst] " + (.message.content[0].text // (.message.content[0].name // "tool") | tostring | .[0:200]),
+          select(.type=="user" and .message.content[0].tool_use_id != null) | "[tool-result] " + ((.message.content[0].content // "") | tostring | .[0:200]),
+          select(.type=="result") | "[result] subtype=\(.subtype) duration_ms=\(.duration_ms) cost=\(.total_cost_usd // 0)"
+        ' 2>&1 | tee "$log_file"; then
     color dev "[$(ts)] ✓ implementation finished"
   else
-    color err "[$(ts)] ✗ claude exited non-zero — see $log_file"
+    color err "[$(ts)] ✗ claude exited non-zero — see $log_file (stderr in $log_file.err)"
   fi
 
   if [[ ! -f "$out_payload" ]]; then

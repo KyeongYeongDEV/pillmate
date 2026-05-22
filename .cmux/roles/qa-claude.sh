@@ -40,9 +40,19 @@ EOF
 )
 
   log_file="$LOG_DIR/qa-claude-${task_id}.log"
-  color qa "[$(ts)] ⚙  invoking claude -p (QA)…"
-  if claude -p --permission-mode acceptEdits --add-dir "$WORKSPACE" "$full_prompt" \
-        2>&1 | tee "$log_file"; then
+  raw_log="$LOG_DIR/qa-claude-${task_id}.stream.jsonl"
+  color qa "[$(ts)] ⚙  invoking claude -p (QA, stream-json, --bare)…"
+  if claude -p --bare --dangerously-skip-permissions \
+        --output-format stream-json --verbose --include-partial-messages \
+        --add-dir "$WORKSPACE" "$full_prompt" \
+        2> "$log_file.err" \
+      | tee "$raw_log" \
+      | jq -r --unbuffered '
+          select(.type=="system" and .subtype=="init") | "[init] model=\(.model) cwd=\(.cwd)",
+          select(.type=="assistant") | "[asst] " + (.message.content[0].text // (.message.content[0].name // "tool") | tostring | .[0:200]),
+          select(.type=="user" and .message.content[0].tool_use_id != null) | "[tool-result] " + ((.message.content[0].content // "") | tostring | .[0:200]),
+          select(.type=="result") | "[result] subtype=\(.subtype) duration_ms=\(.duration_ms)"
+        ' 2>&1 | tee "$log_file"; then
     color qa "[$(ts)] ✓ QA-Claude finished"
   else
     color err "[$(ts)] ✗ claude exited non-zero — see $log_file"
