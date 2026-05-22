@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Usage: dispatch <task_id> <spec_file>
+# Sends the spec to the Developer panel.
+
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+ROLE="cto"
+
+if [[ $# -ne 2 ]]; then
+  echo "Usage: dispatch <task_id> <spec_file>" >&2
+  exit 1
+fi
+
+task_id="$1"
+spec_file="$2"
+
+if [[ ! -f "$spec_file" ]]; then
+  echo "spec file not found: $spec_file" >&2
+  exit 1
+fi
+
+# Use absolute path so the dev watcher can read it from anywhere.
+abs_spec="$(cd "$(dirname "$spec_file")" && pwd)/$(basename "$spec_file")"
+
+out="$(send_message "dev" "task" "$task_id" "$abs_spec")"
+echo "→ dispatched $task_id to dev: $out"
