@@ -23,35 +23,35 @@ class DrugCacheAdapter implements DrugCachePort {
     private final ObjectMapper objectMapper;
 
     @Override
-    public Optional<DrugDetailResponse> get(Long drugId) {
-        String value = redisTemplate.opsForValue().get(key(drugId));
+    public Optional<DrugDetailResponse> get(String kdCode) {
+        String value = redisTemplate.opsForValue().get(key(kdCode));
         if (value == null) {
             return Optional.empty();
         }
         try {
             return Optional.of(objectMapper.readValue(value, DrugDetailResponse.class));
         } catch (Exception e) {
-            log.warn("Redis 역직렬화 실패 (drugId={}): {}", drugId, e.getMessage());
+            log.warn("Redis 역직렬화 실패 (kdCode={}): {}", kdCode, e.getMessage());
             return Optional.empty();
         }
     }
 
     @Override
-    public void put(Long drugId, DrugDetailResponse response) {
+    public void put(String kdCode, DrugDetailResponse response) {
         try {
             String value = objectMapper.writeValueAsString(response);
-            redisTemplate.opsForValue().set(key(drugId), value, TTL);
+            redisTemplate.opsForValue().set(key(kdCode), value, TTL);
         } catch (Exception e) {
-            log.warn("Redis 직렬화 실패 (drugId={}): {}", drugId, e.getMessage());
+            log.warn("Redis 직렬화 실패 (kdCode={}): {}", kdCode, e.getMessage());
         }
     }
 
     @Override
-    public void evict(Long drugId) {
-        redisTemplate.delete(key(drugId));
+    public void evict(String kdCode) {
+        redisTemplate.delete(key(kdCode));
     }
 
-    private String key(Long drugId) {
-        return KEY_PREFIX + drugId;
+    private String key(String kdCode) {
+        return KEY_PREFIX + kdCode;
     }
 }

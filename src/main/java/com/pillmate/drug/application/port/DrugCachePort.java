@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public interface DrugCachePort {
 
-    Optional<DrugDetailResponse> get(Long drugId);
+    Optional<DrugDetailResponse> get(String kdCode);
 
-    void put(Long drugId, DrugDetailResponse response);
+    void put(String kdCode, DrugDetailResponse response);
 
-    void evict(Long drugId);
+    void evict(String kdCode);
 }

@@ -17,13 +17,16 @@ public class GetDrugDetailUseCase {
     private final DrugRepository drugRepository;
     private final DrugCachePort drugCachePort;
 
-    public DrugDetailResponse getDetail(Long drugId) {
-        return drugCachePort.get(drugId).orElseGet(() -> {
-            DrugDetailResponse response = drugRepository.findById(drugId)
-                    .map(DrugDetailResponse::from)
-                    .orElseThrow(() -> new PillmateException(ErrorCode.DRUG_NOT_FOUND));
-            drugCachePort.put(drugId, response);
-            return response;
-        });
+    public DrugDetailResponse getDetail(String kdCode) {
+        return drugCachePort.get(kdCode)
+                .orElseGet(() -> loadFromRepositoryAndCache(kdCode));
+    }
+
+    private DrugDetailResponse loadFromRepositoryAndCache(String kdCode) {
+        DrugDetailResponse response = drugRepository.findByKdCode(kdCode)
+                .map(DrugDetailResponse::from)
+                .orElseThrow(() -> new PillmateException(ErrorCode.DRUG_NOT_FOUND));
+        drugCachePort.put(kdCode, response);
+        return response;
     }
 }
