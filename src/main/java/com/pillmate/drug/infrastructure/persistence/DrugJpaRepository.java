@@ -15,9 +15,17 @@ interface DrugJpaRepository extends JpaRepository<Drug, Long> {
     @Query(value = """
             SELECT * FROM drugs
             WHERE status = 'ACTIVE'
-              AND tsv @@ plainto_tsquery('simple', :query)
-            ORDER BY ts_rank(tsv, plainto_tsquery('simple', :query)) DESC
+              AND (
+                    name      ILIKE '%' || :query || '%'
+                 OR main_ingr ILIKE '%' || :query || '%'
+                 OR ingredient ILIKE '%' || :query || '%'
+              )
+            ORDER BY
+              CASE WHEN name ILIKE :query THEN 0
+                   WHEN name ILIKE :query || '%' THEN 1
+                   ELSE 2 END,
+              name
             LIMIT :limit
             """, nativeQuery = true)
-    List<Drug> searchByTsv(@Param("query") String query, @Param("limit") int limit);
+    List<Drug> searchByKeyword(@Param("query") String query, @Param("limit") int limit);
 }

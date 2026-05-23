@@ -16,7 +16,7 @@ class DrugRepositoryImpl implements DrugRepository {
 
     @Override
     public List<Drug> searchByKeyword(String keyword, int limit) {
-        return jpaRepository.searchByTsv(keyword, limit);
+        return jpaRepository.searchByKeyword(keyword, limit);
     }
 
     @Override

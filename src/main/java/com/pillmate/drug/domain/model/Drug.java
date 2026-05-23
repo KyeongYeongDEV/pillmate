@@ -20,7 +20,7 @@ public class Drug {
     @Column(name = "kd_code", unique = true, nullable = false, length = 20)
     private String kdCode;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, length = 500)
     private String name;
 
     @Column(columnDefinition = "TEXT")
