@@ -54,6 +54,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-pillmate-prescriptions}
+      AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8001}
     ports:
       - "8080:8080"
     healthcheck:

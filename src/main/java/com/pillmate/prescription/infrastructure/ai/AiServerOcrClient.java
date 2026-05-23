@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
@@ -25,22 +26,27 @@ public class AiServerOcrClient implements OcrPort {
 
     @Override
     public OcrResult extractFromImage(String imageUrl) {
-        return restClient.post()
-                .uri("/api/v1/ocr/prescription")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new AiServerOcrRequest(imageUrl))
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                    throw new PillmateException(ErrorCode.OCR_REQUEST_INVALID);
-                })
-                .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                    if (response.getStatusCode().value() == 504) {
-                        throw new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT);
-                    }
-                    throw new PillmateException(ErrorCode.OCR_UPSTREAM_FAILED);
-                })
-                .body(AiServerOcrResponse.class)
-                .toOcrResult();
+        try {
+            return restClient.post()
+                    .uri("/api/v1/ocr/prescription")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new AiServerOcrRequest(imageUrl))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new PillmateException(ErrorCode.OCR_REQUEST_INVALID);
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        if (response.getStatusCode().value() == 504) {
+                            throw new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT);
+                        }
+                        throw new PillmateException(ErrorCode.OCR_UPSTREAM_FAILED);
+                    })
+                    .body(AiServerOcrResponse.class)
+                    .toOcrResult();
+        } catch (ResourceAccessException e) {
+            log.error("OCR server connection failed: {}", e.getMessage());
+            throw new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT);
+        }
     }
 
     private record AiServerOcrRequest(String image_url) {}
