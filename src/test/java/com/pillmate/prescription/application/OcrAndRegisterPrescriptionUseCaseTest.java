@@ -4,7 +4,7 @@ import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
-import com.pillmate.prescription.application.domain.model.OcrStatus;
+import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.application.port.FileStoragePort;
 import com.pillmate.prescription.application.port.OcrPort;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;

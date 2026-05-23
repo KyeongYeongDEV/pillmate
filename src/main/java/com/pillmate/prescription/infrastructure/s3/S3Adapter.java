@@ -43,12 +43,17 @@ class S3Adapter implements FileStoragePort {
 
     @Override
     public String generateGetUrl(String objectKey) {
+        return issueDownloadUrl(objectKey, Duration.ofHours(getTtlHours));
+    }
+
+    @Override
+    public String issueDownloadUrl(String objectKey, Duration ttl) {
         GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(objectKey)
                 .build();
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofHours(getTtlHours))
+                .signatureDuration(ttl)
                 .getObjectRequest(getRequest)
                 .build();
         return s3Presigner.presignGetObject(presignRequest).url().toString();

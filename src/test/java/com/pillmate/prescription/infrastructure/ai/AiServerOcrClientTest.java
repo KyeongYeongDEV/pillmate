@@ -20,7 +20,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import org.springframework.test.context.TestPropertySource;
+
 @RestClientTest(AiServerOcrClient.class)
+@TestPropertySource(properties = {
+    "ai-server.base-url=http://ai-server:8001"
+})
 class AiServerOcrClientTest {
 
     @Autowired
