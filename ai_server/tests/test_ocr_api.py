@@ -12,6 +12,7 @@ from app.api import ocr as ocr_api
 from app.domain.ocr import OcrItem, PrescriptionOcrRequest, RawOcrItem
 from app.exceptions import ImageFetchError, OcrParseError, VisionInvocationError
 from app.main import create_app
+from app.rag.ocr.cache import InMemoryOcrResultCache, OcrResultCache
 from app.rag.ocr.service import OcrPrescriptionService
 
 
@@ -52,11 +53,12 @@ def _build_client(service: OcrPrescriptionService) -> TestClient:
     return TestClient(app)
 
 
-def _service(fetcher=None, vision=None, matcher=None) -> OcrPrescriptionService:
+def _service(fetcher=None, vision=None, matcher=None, cache: OcrResultCache | None = None) -> OcrPrescriptionService:
     return OcrPrescriptionService(
         fetcher=fetcher or StubFetcher(),
         vision=vision or StubVision([]),
         matcher=matcher or StubMatcher({}),
+        cache=cache,
     )
 
 
@@ -161,6 +163,31 @@ def test_ocr_returns_504_when_vision_invocation_fails():
 
     assert response.status_code == 504
     assert response.json()["detail"]["code"] == "OCR_002"
+
+
+def test_ocr_skips_vision_when_image_hash_cached():
+    raw_items = [RawOcrItem(name_raw="타이레놀", confidence=Decimal("0.92"))]
+    matched = {
+        "타이레놀": OcrItem(
+            kd_code="KD001",
+            name_raw="타이레놀",
+            matched_name="타이레놀500mg",
+            confidence=Decimal("0.92"),
+        )
+    }
+    vision = StubVision(raw_items)
+    cache = InMemoryOcrResultCache()
+    service = _service(vision=vision, matcher=StubMatcher(matched), cache=cache)
+    client = _build_client(service)
+
+    first = client.post("/api/v1/ocr/prescription", json={"image_url": SAMPLE_URL})
+    assert first.status_code == 200
+
+    vision._items = VisionInvocationError("should not be called on cache hit")
+    second = client.post("/api/v1/ocr/prescription", json={"image_url": SAMPLE_URL})
+
+    assert second.status_code == 200
+    assert second.json()["items"][0]["kd_code"] == "KD001"
 
 
 def test_ocr_returns_500_when_parse_fails():
