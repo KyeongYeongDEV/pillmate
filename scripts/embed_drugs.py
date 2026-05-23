@@ -1,133 +1,199 @@
-"""
-약 마스터 데이터 pgvector 임베딩 생성 스크립트
+"""Gemini text-embedding-004 으로 drugs 테이블 벡터 적재.
 
-사용:
-    python scripts/embed_drugs.py           # 임베딩 없는 것만
-    python scripts/embed_drugs.py --all     # 전체 재생성
-
-환경변수 (.env):
-    GEMINI_API_KEY, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+원본: efficacy 또는 dosage 가 있는 ACTIVE 약품 중 아직 임베딩 안 된 행.
+대상: drug_embeddings (drug_id PK, vector(768)).
+배치 50, 일일 가드 MAX_EMBED_COUNT (기본 5000), 체크포인트 .drug_embed_checkpoint.json.
 """
 from __future__ import annotations
 
 import argparse
+import json
+import logging
 import os
 import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterable
 
-import google.generativeai as genai
-import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
+)
+logger = logging.getLogger("embed_drugs")
+
+CHECKPOINT_PATH = ROOT / ".drug_embed_checkpoint.json"
+EMBEDDING_DIM = 768
+EMBEDDING_MODEL = "models/text-embedding-004"
 BATCH_SIZE = 50
-EMBED_MODEL = "models/text-embedding-004"
-VECTOR_DIM = 768
+DEFAULT_MAX_EMBED_COUNT = 5000
+RATE_LIMIT_RETRY_DELAYS = (1.0, 2.0, 4.0)
+SLEEP_BETWEEN_BATCHES_SEC = 0.5
 
 
-def _dsn() -> str:
-    return (
-        f"host={os.getenv('POSTGRES_HOST', 'localhost')} "
-        f"port={os.getenv('POSTGRES_PORT', '5433')} "
-        f"dbname={os.getenv('POSTGRES_DB', 'pillmate')} "
-        f"user={os.getenv('POSTGRES_USER', 'pillmate')} "
-        f"password={os.getenv('POSTGRES_PASSWORD', 'pillmate_local')}"
+SELECT_SQL = """
+SELECT d.id, d.name, d.ingredient, d.efficacy, d.dosage, d.main_ingr
+FROM drugs d
+LEFT JOIN drug_embeddings e ON e.drug_id = d.id
+WHERE d.status = 'ACTIVE'
+  AND (d.efficacy IS NOT NULL OR d.dosage IS NOT NULL)
+  AND e.drug_id IS NULL
+  AND d.id > %s
+ORDER BY d.id
+LIMIT %s
+"""
+
+UPSERT_SQL = """
+INSERT INTO drug_embeddings (drug_id, embedding, embedded_at)
+VALUES (%s, %s::vector, %s)
+ON CONFLICT (drug_id) DO UPDATE
+SET embedding = EXCLUDED.embedding,
+    embedded_at = EXCLUDED.embedded_at
+"""
+
+
+def _connect_db():
+    import psycopg
+
+    return psycopg.connect(
+        host=os.environ.get("POSTGRES_HOST", "localhost"),
+        port=int(os.environ.get("POSTGRES_PORT", "5433")),
+        dbname=os.environ.get("POSTGRES_DB", "pillmate"),
+        user=os.environ.get("POSTGRES_USER", "pillmate"),
+        password=os.environ.get("POSTGRES_PASSWORD", ""),
+        autocommit=False,
     )
 
 
-def get_unembedded_drug_ids() -> list[int]:
-    with psycopg.connect(_dsn()) as conn:
-        rows = conn.execute(
-            """
-            SELECT d.id FROM drugs d
-            LEFT JOIN drug_embeddings e ON d.id = e.drug_id
-            WHERE e.drug_id IS NULL AND d.status = 'ACTIVE'
-            ORDER BY d.id
-            """
-        ).fetchall()
-    return [r[0] for r in rows]
+def _load_checkpoint() -> dict:
+    if not CHECKPOINT_PATH.exists():
+        return {"last_drug_id": 0, "done_count": 0}
+    return json.loads(CHECKPOINT_PATH.read_text(encoding="utf-8"))
 
 
-def get_all_drug_ids() -> list[int]:
-    with psycopg.connect(_dsn()) as conn:
-        rows = conn.execute(
-            "SELECT id FROM drugs WHERE status = 'ACTIVE' ORDER BY id"
-        ).fetchall()
-    return [r[0] for r in rows]
+def _save_checkpoint(state: dict) -> None:
+    CHECKPOINT_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def get_drug_texts(drug_ids: list[int]) -> list[tuple[int, str]]:
-    with psycopg.connect(_dsn()) as conn:
-        rows = conn.execute(
-            """
-            SELECT id,
-                   name || ' ' || COALESCE(ingredient, '') || ' ' || COALESCE(efficacy, '')
-            FROM drugs
-            WHERE id = ANY(%s)
-            """,
-            (drug_ids,),
-        ).fetchall()
-    return [(r[0], r[1].strip()) for r in rows]
+def _build_text(row: dict) -> str:
+    parts = [row["name"]]
+    if row.get("main_ingr"):
+        parts.append(row["main_ingr"])
+    if row.get("ingredient"):
+        parts.append(row["ingredient"])
+    if row.get("efficacy"):
+        parts.append(row["efficacy"])
+    if row.get("dosage"):
+        parts.append(row["dosage"])
+    return " ".join(p for p in parts if p).strip()
 
 
-def embed_batch(texts: list[str]) -> list[list[float]]:
-    result = genai.embed_content(
-        model=EMBED_MODEL,
-        content=texts,
-        task_type="RETRIEVAL_DOCUMENT",
-    )
-    return result["embedding"]
+def _format_vector(values: list[float]) -> str:
+    return "[" + ",".join(f"{v:.8f}" for v in values) + "]"
 
 
-def upsert_embeddings(drug_ids: list[int], vectors: list[list[float]]) -> None:
-    rows = [(drug_id, f"[{','.join(map(str, vec))}]") for drug_id, vec in zip(drug_ids, vectors)]
-    with psycopg.connect(_dsn()) as conn:
-        conn.executemany(
-            """
-            INSERT INTO drug_embeddings (drug_id, embedding, embedded_at)
-            VALUES (%s, %s::vector, NOW())
-            ON CONFLICT (drug_id) DO UPDATE SET
-                embedding   = EXCLUDED.embedding,
-                embedded_at = NOW()
-            """,
-            rows,
+def _embed_with_retry(embed_fn, texts: list[str]) -> list[list[float]]:
+    delays = (*RATE_LIMIT_RETRY_DELAYS, None)
+    last_exc: Exception | None = None
+    for delay in delays:
+        try:
+            return embed_fn(texts)
+        except Exception as exc:
+            last_exc = exc
+            if delay is None or not _is_rate_limit(exc):
+                raise
+            logger.warning("rate limited (%s); retry in %.1fs", exc, delay)
+            time.sleep(delay)
+    raise RuntimeError(f"rate limit retries exhausted: {last_exc}")
+
+
+def _is_rate_limit(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "429" in msg or "rate" in msg or "quota" in msg
+
+
+def _fetch_batch(conn, last_id: int, limit: int) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(SELECT_SQL, (last_id, limit))
+        columns = [d.name for d in cur.description]
+        return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+
+def _upsert_batch(conn, drug_ids: Iterable[int], vectors: Iterable[list[float]]) -> None:
+    now = datetime.now(timezone.utc)
+    with conn.cursor() as cur:
+        for drug_id, vector in zip(drug_ids, vectors):
+            cur.execute(UPSERT_SQL, (drug_id, _format_vector(vector), now))
+
+
+def _build_embed_fn():
+    import google.generativeai as genai
+
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+    def embed(texts: list[str]) -> list[list[float]]:
+        result = genai.embed_content(
+            model=EMBEDDING_MODEL,
+            content=texts,
+            task_type="RETRIEVAL_DOCUMENT",
         )
-        conn.commit()
+        return result["embedding"]
+
+    return embed
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="약 마스터 임베딩 생성")
-    parser.add_argument("--all", action="store_true", help="전체 재생성")
-    args = parser.parse_args()
+def run(args: argparse.Namespace) -> int:
+    load_dotenv(ROOT / ".env")
+    if not os.environ.get("GEMINI_API_KEY"):
+        logger.error("GEMINI_API_KEY missing")
+        return 2
 
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        print("GEMINI_API_KEY 환경변수가 없습니다.", file=sys.stderr)
-        return 1
+    max_count = int(os.environ.get("MAX_EMBED_COUNT", DEFAULT_MAX_EMBED_COUNT))
+    state = _load_checkpoint() if args.resume else {"last_drug_id": 0, "done_count": 0}
+    last_id = int(state["last_drug_id"])
+    done = int(state["done_count"])
+    logger.info("resume=%s last_id=%d done=%d max=%d", args.resume, last_id, done, max_count)
 
-    genai.configure(api_key=api_key)
+    embed_fn = _build_embed_fn()
+    conn = _connect_db()
+    try:
+        while done < max_count:
+            batch = _fetch_batch(conn, last_id, BATCH_SIZE)
+            if not batch:
+                logger.info("no more rows to embed")
+                break
 
-    drug_ids = get_all_drug_ids() if args.all else get_unembedded_drug_ids()
-    total = len(drug_ids)
-    if total == 0:
-        print("임베딩할 약이 없습니다.")
+            texts = [_build_text(row) for row in batch]
+            vectors = _embed_with_retry(embed_fn, texts)
+            assert all(len(v) == EMBEDDING_DIM for v in vectors), "embedding dim mismatch"
+
+            _upsert_batch(conn, [row["id"] for row in batch], vectors)
+            conn.commit()
+
+            last_id = batch[-1]["id"]
+            done += len(batch)
+            _save_checkpoint({"last_drug_id": last_id, "done_count": done})
+            logger.info("batch done=%d last_id=%d (+%d)", done, last_id, len(batch))
+            time.sleep(SLEEP_BETWEEN_BATCHES_SEC)
+
+        if done >= max_count:
+            logger.warning("MAX_EMBED_COUNT=%d reached (done=%d), stopping", max_count, done)
         return 0
+    finally:
+        conn.close()
 
-    print(f"임베딩 대상: {total}건")
 
-    for i in range(0, total, BATCH_SIZE):
-        batch_ids = drug_ids[i : i + BATCH_SIZE]
-        texts_data = get_drug_texts(batch_ids)
-        ids = [t[0] for t in texts_data]
-        texts = [t[1] for t in texts_data]
-
-        vectors = embed_batch(texts)
-        upsert_embeddings(ids, vectors)
-        print(f"  {min(i + BATCH_SIZE, total)}/{total}건 완료", end="\r")
-
-    print(f"\n임베딩 완료: {total}건")
-    return 0
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="drugs → drug_embeddings (Gemini text-embedding-004)")
+    p.add_argument("--resume", action="store_true", help="체크포인트에서 이어서")
+    return p.parse_args(argv)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run(parse_args()))
