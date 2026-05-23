@@ -8,9 +8,9 @@ from fastapi import FastAPI
 from app.api import chat as chat_api
 from app.core.config import get_settings
 from app.core.db import build_pool
-from app.core.db import AsyncpgDrugRetriever
 from app.core.llm import GeminiInvoker
 from app.rag.chain import ChatService
+from app.rag.pgvector_retriever import GeminiEmbeddingAdapter, PgVectorRetriever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s :: %(message)s")
 logger = logging.getLogger("ai_server")
@@ -24,7 +24,8 @@ async def lifespan(app: FastAPI):
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
     )
     pool = await build_pool(dsn)
-    retriever = AsyncpgDrugRetriever(pool)
+    embedder = GeminiEmbeddingAdapter(api_key=settings.gemini_api_key)
+    retriever = PgVectorRetriever(pool=pool, embedder=embedder)
     llm = GeminiInvoker(api_key=settings.gemini_api_key, model=settings.gemini_model)
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
 
