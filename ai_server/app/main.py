@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.api import chat as chat_api
+from app.core.config import get_settings
+from app.core.db import build_pool
+from app.core.db import AsyncpgDrugRetriever
+from app.core.llm import GeminiInvoker
+from app.rag.chain import ChatService
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s :: %(message)s")
+logger = logging.getLogger("ai_server")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    dsn = (
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+    pool = await build_pool(dsn)
+    retriever = AsyncpgDrugRetriever(pool)
+    llm = GeminiInvoker(api_key=settings.gemini_api_key, model=settings.gemini_model)
+    service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
+
+    app.dependency_overrides[chat_api.get_chat_service] = lambda: service
+    try:
+        yield
+    finally:
+        await pool.close()
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="PillMate AI", version="0.1.0", lifespan=lifespan)
+    app.include_router(chat_api.router)
+    return app
+
+
+app = create_app()
+
+
+@app.get("/api/v1/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
