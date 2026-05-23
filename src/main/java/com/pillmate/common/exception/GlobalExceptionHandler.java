@@ -26,7 +26,8 @@ public class GlobalExceptionHandler {
         return switch (code) {
             case DRUG_NOT_FOUND, GROUP_NOT_FOUND, PRESCRIPTION_NOT_FOUND, SCHEDULE_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case GROUP_ACCESS_DENIED -> HttpStatus.FORBIDDEN;
-            case DRUG_SEARCH_EMPTY_QUERY, SCHEDULE_CONFLICT, INVALID_REQUEST -> HttpStatus.BAD_REQUEST;
+            case DRUG_SEARCH_EMPTY_QUERY, SCHEDULE_CONFLICT, INVALID_REQUEST,
+                 PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY -> HttpStatus.BAD_REQUEST;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
