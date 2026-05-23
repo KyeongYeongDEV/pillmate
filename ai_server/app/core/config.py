@@ -11,6 +11,14 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-2.5-flash")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_api_key_alt: str = Field(default="", alias="OpenAI_API_KEY")
+    embedding_model: str = Field(default="text-embedding-3-small")
+    embedding_dim: int = Field(default=768)
+
+    @property
+    def effective_openai_key(self) -> str:
+        return self.openai_api_key or self.openai_api_key_alt
 
     postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5433, alias="POSTGRES_PORT")

@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.db import build_pool
 from app.core.llm import GeminiInvoker
 from app.rag.chain import ChatService
-from app.rag.pgvector_retriever import GeminiEmbeddingAdapter, PgVectorRetriever
+from app.rag.pgvector_retriever import OpenAIEmbeddingAdapter, PgVectorRetriever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s :: %(message)s")
 logger = logging.getLogger("ai_server")
@@ -24,7 +24,11 @@ async def lifespan(app: FastAPI):
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
     )
     pool = await build_pool(dsn)
-    embedder = GeminiEmbeddingAdapter(api_key=settings.gemini_api_key)
+    embedder = OpenAIEmbeddingAdapter(
+        api_key=settings.effective_openai_key,
+        model=settings.embedding_model,
+        dimensions=settings.embedding_dim,
+    )
     retriever = PgVectorRetriever(pool=pool, embedder=embedder)
     llm = GeminiInvoker(api_key=settings.gemini_api_key, model=settings.gemini_model)
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)

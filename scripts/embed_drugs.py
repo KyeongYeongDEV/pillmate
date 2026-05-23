@@ -30,11 +30,11 @@ logger = logging.getLogger("embed_drugs")
 
 CHECKPOINT_PATH = ROOT / ".drug_embed_checkpoint.json"
 EMBEDDING_DIM = 768
-EMBEDDING_MODEL = "models/gemini-embedding-001"
+EMBEDDING_MODEL = "text-embedding-3-small"
 BATCH_SIZE = 50
 DEFAULT_MAX_EMBED_COUNT = 5000
 RATE_LIMIT_RETRY_DELAYS = (1.0, 2.0, 4.0)
-SLEEP_BETWEEN_BATCHES_SEC = 0.5
+SLEEP_BETWEEN_BATCHES_SEC = 0.2
 
 
 SELECT_SQL = """
@@ -132,27 +132,38 @@ def _upsert_batch(conn, drug_ids: Iterable[int], vectors: Iterable[list[float]])
             cur.execute(UPSERT_SQL, (drug_id, _format_vector(vector), now))
 
 
-def _build_embed_fn():
-    import google.generativeai as genai
+def _resolve_openai_key() -> str:
+    return (
+        os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("OpenAI_API_KEY")
+        or ""
+    )
 
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+def _build_embed_fn():
+    from openai import OpenAI
+
+    api_key = _resolve_openai_key()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY (또는 OpenAI_API_KEY) 환경변수가 필요합니다")
+
+    client = OpenAI(api_key=api_key)
 
     def embed(texts: list[str]) -> list[list[float]]:
-        result = genai.embed_content(
+        response = client.embeddings.create(
             model=EMBEDDING_MODEL,
-            content=texts,
-            task_type="RETRIEVAL_DOCUMENT",
-            output_dimensionality=EMBEDDING_DIM,
+            input=texts,
+            dimensions=EMBEDDING_DIM,
         )
-        return result["embedding"]
+        return [item.embedding for item in response.data]
 
     return embed
 
 
 def run(args: argparse.Namespace) -> int:
     load_dotenv(ROOT / ".env")
-    if not os.environ.get("GEMINI_API_KEY"):
-        logger.error("GEMINI_API_KEY missing")
+    if not _resolve_openai_key():
+        logger.error("OPENAI_API_KEY (or OpenAI_API_KEY) missing")
         return 2
 
     max_count = int(os.environ.get("MAX_EMBED_COUNT", DEFAULT_MAX_EMBED_COUNT))

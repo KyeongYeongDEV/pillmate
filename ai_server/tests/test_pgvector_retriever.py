@@ -119,7 +119,7 @@ async def test_pgvector_retriever_returns_top_k_for_korean_query():
     """
     import asyncpg
     from app.core.config import get_settings
-    from app.rag.pgvector_retriever import PgVectorRetriever, GeminiEmbeddingAdapter
+    from app.rag.pgvector_retriever import PgVectorRetriever, OpenAIEmbeddingAdapter
 
     settings = get_settings()
     dsn = (
@@ -130,7 +130,7 @@ async def test_pgvector_retriever_returns_top_k_for_korean_query():
     try:
         retriever = PgVectorRetriever(
             pool=pool,
-            embedder=GeminiEmbeddingAdapter(api_key=settings.gemini_api_key),
+            embedder=OpenAIEmbeddingAdapter(api_key=settings.effective_openai_key),
         )
         result = await retriever.search("타이레놀 효능", top_k=5)
 

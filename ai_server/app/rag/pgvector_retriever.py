@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 EMBEDDING_DIM = 768
 MIN_SCORE = 0.55
-EMBEDDING_MODEL = "models/gemini-embedding-001"
+EMBEDDING_MODEL = "text-embedding-3-small"
 
 _TOP_K_SQL = """
 SELECT d.kd_code AS kd_code,
@@ -31,25 +31,21 @@ class QueryEmbedder(Protocol):
         ...
 
 
-class GeminiEmbeddingAdapter(QueryEmbedder):
-    def __init__(self, api_key: str, model: str = EMBEDDING_MODEL):
-        import google.generativeai as genai
+class OpenAIEmbeddingAdapter(QueryEmbedder):
+    def __init__(self, api_key: str, model: str = EMBEDDING_MODEL, dimensions: int = EMBEDDING_DIM):
+        from openai import AsyncOpenAI
 
-        genai.configure(api_key=api_key)
-        self._genai = genai
+        self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
+        self._dimensions = dimensions
 
     async def aembed_query(self, text: str) -> list[float]:
-        result = self._genai.embed_content(
+        response = await self._client.embeddings.create(
             model=self._model,
-            content=text,
-            task_type="RETRIEVAL_QUERY",
-            output_dimensionality=EMBEDDING_DIM,
+            input=text,
+            dimensions=self._dimensions,
         )
-        vector = result["embedding"]
-        if isinstance(vector[0], list):
-            return vector[0]
-        return vector
+        return response.data[0].embedding
 
 
 class PgVectorRetriever(DrugRetriever):
