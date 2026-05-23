@@ -3,6 +3,7 @@ package com.pillmate.common.exception;
 import com.pillmate.common.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -14,6 +15,12 @@ public class GlobalExceptionHandler {
         HttpStatus status = resolveStatus(e.getErrorCode());
         return ResponseEntity.status(status)
                 .body(ApiResponse.error(e.getErrorCode()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.INVALID_REQUEST));
     }
 
     @ExceptionHandler(Exception.class)

@@ -1,15 +1,19 @@
 package com.pillmate.prescription.presentation;
 
 import com.pillmate.common.response.ApiResponse;
-import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
+import com.pillmate.prescription.application.RegisterPrescriptionService;
+import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
+import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
+import com.pillmate.prescription.presentation.dto.UploadUrlRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/prescriptions")
@@ -17,14 +21,19 @@ import java.time.LocalDate;
 public class PrescriptionController {
 
     private final GetUploadUrlUseCase getUploadUrlUseCase;
+    private final RegisterPrescriptionService registerPrescriptionService;
 
     @PostMapping("/upload-url")
-    public ResponseEntity<ApiResponse<UploadUrlResponse>> getUploadUrl(
-            @RequestParam Long careGroupId,
-            @RequestParam Long patientId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate prescribedAt) {
-        UserContext.get(); // 인증 확인
-        return ResponseEntity.ok(ApiResponse.success(
-                getUploadUrlUseCase.getUploadUrl(careGroupId, patientId, prescribedAt)));
+    public ResponseEntity<ApiResponse<UploadUrlResponse>> issueUploadUrl(
+            @Valid @RequestBody UploadUrlRequest request) {
+        UploadUrlResponse response = getUploadUrlUseCase.issue(request.careGroupId());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<RegisterPrescriptionResponse>> register(
+            @Valid @RequestBody RegisterPrescriptionRequest request) {
+        RegisterPrescriptionResponse response = registerPrescriptionService.register(request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
