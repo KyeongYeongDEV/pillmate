@@ -13,9 +13,10 @@ description: 비용 의식 코딩 규칙 — LLM/AWS 비용을 항상 고려
    - 챗봇: 질문 임베딩 유사도 > 0.92 → 캐시 hit
 
 2. **모델 라우팅**
-   - 기본: gemini-2.5-flash-lite (테스트, 단순 요약)
-   - 정확도 필요: gemini-2.5-flash (OCR, 챗봇, 추천)
-   - GPT-4o, Claude 3.5 사용 금지 (비용 X10+)
+   - 챗 LLM 기본: gemini-2.5-flash-lite (테스트, 단순 요약)
+   - 챗 LLM 정확도 필요: gemini-2.5-flash (OCR, 챗봇, 추천)
+   - 챗 LLM 에서 GPT-4o, Claude 3.5 사용 금지 (비용 X10+)
+   - 임베딩: OpenAI `text-embedding-3-small`(768) 허용. Gemini 무료 quota(1,000 RPD) 초과 시 fallback. 단가 $0.02/1M tokens 로 cost-aware 허용 범위.
 
 3. **토큰 한도**
    - 사용자당 일 LLM 호출 10회
