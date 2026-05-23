@@ -17,6 +17,10 @@ public enum ErrorCode {
     SCHEDULE_NOT_FOUND("PILL_030", "복약 스케줄을 찾을 수 없습니다."),
     SCHEDULE_CONFLICT("PILL_031", "동일 시간대에 이미 스케줄이 존재합니다."),
     INVALID_REQUEST("PILL_040", "잘못된 요청입니다."),
+    OCR_UPSTREAM_TIMEOUT("PILL_050", "OCR 서비스 응답 시간이 초과되었습니다."),
+    OCR_UPSTREAM_FAILED("PILL_051", "OCR 서비스 호출에 실패했습니다."),
+    OCR_REQUEST_INVALID("PILL_052", "OCR 요청이 잘못되었습니다."),
+    OCR_EMPTY("PILL_053", "처방전에서 추출된 약품 정보가 없습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;

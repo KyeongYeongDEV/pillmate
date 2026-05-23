@@ -37,7 +37,11 @@ public class GlobalExceptionHandler {
             case DRUG_NOT_FOUND, GROUP_NOT_FOUND, PRESCRIPTION_NOT_FOUND, SCHEDULE_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case GROUP_ACCESS_DENIED -> HttpStatus.FORBIDDEN;
             case DRUG_SEARCH_EMPTY_QUERY, SCHEDULE_CONFLICT, INVALID_REQUEST,
-                 PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY -> HttpStatus.BAD_REQUEST;
+                 PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY,
+                 OCR_REQUEST_INVALID -> HttpStatus.BAD_REQUEST;
+            case OCR_UPSTREAM_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
+            case OCR_UPSTREAM_FAILED -> HttpStatus.BAD_GATEWAY;
+            case OCR_EMPTY -> HttpStatus.UNPROCESSABLE_ENTITY;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
