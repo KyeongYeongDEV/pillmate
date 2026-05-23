@@ -1,18 +1,33 @@
 package com.pillmate.prescription.domain.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "prescriptions")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Prescription {
+
+    private static final BigDecimal OCR_MIN_CONFIDENCE = new BigDecimal("0.7");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,6 +51,9 @@ public class Prescription {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PrescribedDrug> drugs = new ArrayList<>();
+
     public static Prescription create(Long careGroupId, Long patientId,
                                       String imageKey, LocalDate prescribedAt) {
         Prescription p = new Prescription();
@@ -48,11 +66,41 @@ public class Prescription {
         return p;
     }
 
+    public List<PrescribedDrug> getDrugs() {
+        return Collections.unmodifiableList(drugs);
+    }
+
     public void updateImageKey(String imageKey) {
         this.imageKey = imageKey;
     }
 
     public void startOcr() {
         this.ocrStatus = OcrStatus.PROCESSING;
+    }
+
+    public void addDrug(PrescribedDrug drug) {
+        drug.assignTo(this);
+        drugs.add(drug);
+    }
+
+    public void markOcrDone() {
+        this.ocrStatus = hasLowConfidenceDrug() ? OcrStatus.MANUAL : OcrStatus.DONE;
+    }
+
+    public void markOcrFailed() {
+        this.ocrStatus = OcrStatus.FAILED;
+    }
+
+    public void markManualReview() {
+        this.ocrStatus = OcrStatus.MANUAL;
+    }
+
+    private boolean hasLowConfidenceDrug() {
+        return drugs.stream().anyMatch(this::isBelowMinConfidence);
+    }
+
+    private boolean isBelowMinConfidence(PrescribedDrug drug) {
+        BigDecimal confidence = drug.getConfidence();
+        return confidence != null && confidence.compareTo(OCR_MIN_CONFIDENCE) < 0;
     }
 }
