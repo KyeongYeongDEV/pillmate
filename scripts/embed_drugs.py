@@ -30,7 +30,7 @@ logger = logging.getLogger("embed_drugs")
 
 CHECKPOINT_PATH = ROOT / ".drug_embed_checkpoint.json"
 EMBEDDING_DIM = 768
-EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_MODEL = "models/gemini-embedding-001"
 BATCH_SIZE = 50
 DEFAULT_MAX_EMBED_COUNT = 5000
 RATE_LIMIT_RETRY_DELAYS = (1.0, 2.0, 4.0)
@@ -142,6 +142,7 @@ def _build_embed_fn():
             model=EMBEDDING_MODEL,
             content=texts,
             task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=EMBEDDING_DIM,
         )
         return result["embedding"]
 
