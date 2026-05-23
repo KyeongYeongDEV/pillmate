@@ -8,3 +8,15 @@ class LlmInvocationError(AiServerError):
 
 class RetrievalError(AiServerError):
     """retrieval 호출 실패."""
+
+
+class ImageFetchError(AiServerError):
+    """presigned URL 이미지 다운로드 실패."""
+
+
+class VisionInvocationError(AiServerError):
+    """Gemini Vision 호출 실패 (네트워크/타임아웃 외)."""
+
+
+class OcrParseError(AiServerError):
+    """LLM 응답 JSON 파싱 실패."""
