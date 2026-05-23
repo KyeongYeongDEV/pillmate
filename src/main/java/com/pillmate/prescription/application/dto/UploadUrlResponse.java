@@ -1,7 +1,9 @@
 package com.pillmate.prescription.application.dto;
 
+import java.time.Instant;
+
 public record UploadUrlResponse(
-        Long prescriptionId,
         String uploadUrl,
-        String objectKey
+        String objectKey,
+        Instant expiresAt
 ) {}

@@ -2,32 +2,38 @@ package com.pillmate.prescription.application;
 
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.application.port.FileStoragePort;
-import com.pillmate.prescription.domain.model.Prescription;
-import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import com.pillmate.prescription.application.port.FileStoragePort.PresignedUploadUrl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GetUploadUrlUseCase {
 
-    private final PrescriptionRepository prescriptionRepository;
+    private static final String OBJECT_KEY_EXTENSION = ".jpg";
+    private static final ZoneId KEY_ZONE = ZoneId.of("Asia/Seoul");
+
     private final FileStoragePort fileStoragePort;
+    private final Clock clock;
 
-    @Transactional
-    public UploadUrlResponse getUploadUrl(Long careGroupId, Long patientId, LocalDate prescribedAt) {
-        // 환자 식별자 없는 UUID 기반 키 (개인정보 보호)
-        String objectKey = "prescriptions/" + UUID.randomUUID() + ".jpg";
+    public UploadUrlResponse issue(Long careGroupId) {
+        String objectKey = buildObjectKey();
+        PresignedUploadUrl presigned = fileStoragePort.generatePutUrl(objectKey);
+        log.info("PresignedUrlIssued careGroupId={} objectKey={}", careGroupId, objectKey);
+        return new UploadUrlResponse(presigned.url(), objectKey, presigned.expiresAt());
+    }
 
-        Prescription prescription = prescriptionRepository.save(
-                Prescription.create(careGroupId, patientId, objectKey, prescribedAt));
-
-        String uploadUrl = fileStoragePort.generatePutUrl(objectKey);
-
-        return new UploadUrlResponse(prescription.getId(), uploadUrl, objectKey);
+    private String buildObjectKey() {
+        LocalDate today = LocalDate.now(clock.withZone(KEY_ZONE));
+        return String.format("prescriptions/%04d/%02d/%s%s",
+                today.getYear(), today.getMonthValue(),
+                UUID.randomUUID(), OBJECT_KEY_EXTENSION);
     }
 }
