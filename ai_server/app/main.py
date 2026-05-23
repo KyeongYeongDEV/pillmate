@@ -6,10 +6,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import chat as chat_api
+from app.api import ocr as ocr_api
 from app.core.config import get_settings
 from app.core.db import build_pool
 from app.core.llm import GeminiInvoker
 from app.rag.chain import ChatService
+from app.rag.ocr.drug_search import AsyncpgIlikeSearch, PgVectorDrugSearch
+from app.rag.ocr.image_fetcher import HttpxImageFetcher
+from app.rag.ocr.matcher import DrugMatcher
+from app.rag.ocr.service import OcrPrescriptionService
 from app.rag.pgvector_retriever import OpenAIEmbeddingAdapter, PgVectorRetriever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s :: %(message)s")
@@ -33,16 +38,41 @@ async def lifespan(app: FastAPI):
     llm = GeminiInvoker(api_key=settings.gemini_api_key, model=settings.gemini_model)
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
 
+    ocr_service = _build_ocr_service(pool=pool, retriever=retriever, settings=settings)
+
     app.dependency_overrides[chat_api.get_chat_service] = lambda: service
+    app.dependency_overrides[ocr_api.get_ocr_service] = lambda: ocr_service
     try:
         yield
     finally:
         await pool.close()
 
 
+def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    from app.rag.ocr.vision import GeminiVisionAdapter
+
+    vision_llm = ChatGoogleGenerativeAI(
+        model=settings.gemini_model,
+        google_api_key=settings.gemini_api_key,
+        temperature=0.0,
+    )
+    matcher = DrugMatcher(
+        ilike=AsyncpgIlikeSearch(pool=pool),
+        vector=PgVectorDrugSearch(retriever=retriever),
+    )
+    return OcrPrescriptionService(
+        fetcher=HttpxImageFetcher(),
+        vision=GeminiVisionAdapter(llm=vision_llm),
+        matcher=matcher,
+    )
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="PillMate AI", version="0.1.0", lifespan=lifespan)
     app.include_router(chat_api.router)
+    app.include_router(ocr_api.router)
     return app
 
 
