@@ -56,14 +56,14 @@ class GetUploadUrlUseCaseTest {
     }
 
     @Test
-    @DisplayName("객체키에 환자 식별자가 포함되지 않는다")
-    void issue_keyDoesNotContainPatientIdentifier() {
-        Long patientLikeArg = 99L;
+    @DisplayName("객체키는 prescriptions/yyyy/MM/{uuid}.jpg 패턴만으로 구성된다 (환자 식별자 미포함)")
+    void issue_keyMatchesUuidOnlyPattern() {
         given(fileStoragePort.generatePutUrl(anyString()))
                 .willReturn(new PresignedUploadUrl("https://presigned", FIXED_NOW.plusSeconds(300)));
 
-        UploadUrlResponse response = sut().issue(patientLikeArg);
+        UploadUrlResponse response = sut().issue(99L);
 
-        assertThat(response.objectKey()).doesNotContain(String.valueOf(patientLikeArg));
+        assertThat(response.objectKey())
+                .matches("^prescriptions/\\d{4}/\\d{2}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.jpg$");
     }
 }
