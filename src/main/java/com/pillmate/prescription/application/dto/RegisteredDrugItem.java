@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record RegisteredDrugItem(
         Long drugId,
         String kdCode,
-        String name,
+        String nameRaw,
+        String matchedName,
         BigDecimal confidence
 ) {}

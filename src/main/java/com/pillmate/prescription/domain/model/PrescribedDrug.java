@@ -31,10 +31,10 @@ public class PrescribedDrug {
     @JoinColumn(name = "prescription_id", nullable = false)
     private Prescription prescription;
 
-    @Column(name = "drug_id", nullable = false)
+    @Column(name = "drug_id")
     private Long drugId;
 
-    @Column(name = "name_raw", length = 200)
+    @Column(name = "name_raw", length = 200, nullable = false)
     private String nameRaw;
 
     @Column(name = "dose_amount", precision = 8, scale = 2)
@@ -77,5 +77,9 @@ public class PrescribedDrug {
 
     void assignTo(Prescription prescription) {
         this.prescription = prescription;
+    }
+
+    public boolean isMatched() {
+        return drugId != null;
     }
 }

@@ -84,7 +84,15 @@ public class Prescription {
     }
 
     public void markOcrDone() {
-        this.ocrStatus = hasLowConfidenceDrug() ? OcrStatus.MANUAL : OcrStatus.DONE;
+        if (hasUnmatchedDrug() || hasLowConfidenceDrug()) {
+            this.ocrStatus = OcrStatus.MANUAL;
+            return;
+        }
+        this.ocrStatus = OcrStatus.DONE;
+    }
+
+    private boolean hasUnmatchedDrug() {
+        return drugs.stream().anyMatch(drug -> !drug.isMatched());
     }
 
     public void markOcrFailed() {
