@@ -31,6 +31,37 @@ services:
       timeout: 5s
       retries: 5
 
+  ai-server:
+    build:
+      context: .
+      dockerfile: ai_server/Dockerfile
+    container_name: pillmate-ai-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: pillmate
+      POSTGRES_USER: pillmate
+      POSTGRES_PASSWORD: pillmate_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-${OpenAI_API_KEY:-}}
+      OpenAI_API_KEY: ${OpenAI_API_KEY:-}
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:8001/healthz',timeout=2).status_code==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   app:
     build:
       context: .
@@ -40,6 +71,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ai-server:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
