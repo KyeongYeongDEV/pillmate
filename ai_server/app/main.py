@@ -11,7 +11,11 @@ from app.core.config import get_settings
 from app.core.db import build_pool
 from app.core.llm import GeminiInvoker
 from app.rag.chain import ChatService
-from app.rag.ocr.drug_search import AsyncpgIlikeSearch, PgVectorDrugSearch
+from app.rag.ocr.drug_search import (
+    AsyncpgIlikeSearch,
+    AsyncpgIngredientSearch,
+    PgVectorDrugSearch,
+)
 from app.rag.ocr.image_fetcher import HttpxImageFetcher
 from app.rag.ocr.matcher import DrugMatcher
 from app.rag.ocr.service import OcrPrescriptionService
@@ -61,6 +65,7 @@ def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
     matcher = DrugMatcher(
         ilike=AsyncpgIlikeSearch(pool=pool),
         vector=PgVectorDrugSearch(retriever=retriever),
+        ingredient=AsyncpgIngredientSearch(pool=pool),
     )
     return OcrPrescriptionService(
         fetcher=HttpxImageFetcher(),

@@ -6,13 +6,17 @@ from decimal import Decimal
 from typing import Literal, Protocol
 
 from app.domain.ocr import OcrItem, RawOcrItem
-from app.rag.ocr.normalizer import first_token, normalize_drug_name
+from app.rag.ocr.normalizer import (
+    first_english_token,
+    first_token,
+    normalize_drug_name,
+)
 
 logger = logging.getLogger(__name__)
 
 VECTOR_MIN_SCORE = Decimal("0.6")
 
-MatchStage = Literal["ilike", "token", "vector", "none"]
+MatchStage = Literal["ilike", "token", "ingredient", "vector", "none"]
 
 
 @dataclass(frozen=True)
@@ -32,14 +36,29 @@ class IlikeDrugSearch(Protocol):
     async def search(self, name: str) -> MatchCandidate | None: ...
 
 
+class IngredientSearch(Protocol):
+    async def search(self, ingredient: str) -> MatchCandidate | None: ...
+
+
 class VectorDrugSearch(Protocol):
     async def search(self, name: str) -> MatchCandidate | None: ...
 
 
+class _NullIngredientSearch(IngredientSearch):
+    async def search(self, ingredient: str) -> MatchCandidate | None:
+        return None
+
+
 class DrugMatcher:
-    def __init__(self, ilike: IlikeDrugSearch, vector: VectorDrugSearch):
+    def __init__(
+        self,
+        ilike: IlikeDrugSearch,
+        vector: VectorDrugSearch,
+        ingredient: IngredientSearch | None = None,
+    ):
         self._ilike = ilike
         self._vector = vector
+        self._ingredient = ingredient or _NullIngredientSearch()
 
     async def match(self, raw: RawOcrItem) -> MatchResult:
         candidate, stage = await self._resolve_candidate(raw.name_raw)
@@ -60,6 +79,12 @@ class DrugMatcher:
             hit = await self._ilike_or_none(token)
             if hit is not None:
                 return hit, "token"
+
+        english = first_english_token(name_raw)
+        if english:
+            hit = await self._ingredient.search(english)
+            if hit is not None:
+                return hit, "ingredient"
 
         vector_hit = await self._vector.search(name_raw)
         if self._is_vector_acceptable(vector_hit):

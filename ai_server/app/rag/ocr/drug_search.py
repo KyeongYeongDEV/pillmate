@@ -4,7 +4,12 @@ import logging
 from decimal import Decimal
 from typing import Any
 
-from app.rag.ocr.matcher import IlikeDrugSearch, MatchCandidate, VectorDrugSearch
+from app.rag.ocr.matcher import (
+    IlikeDrugSearch,
+    IngredientSearch,
+    MatchCandidate,
+    VectorDrugSearch,
+)
 from app.rag.pgvector_retriever import PgVectorRetriever
 
 logger = logging.getLogger(__name__)
@@ -24,6 +29,18 @@ LIMIT 1
 """
 
 
+_INGREDIENT_SQL = """
+SELECT kd_code, name
+FROM drugs
+WHERE status = 'ACTIVE'
+  AND ingredient ILIKE '%' || $1 || '%'
+ORDER BY length(name)
+LIMIT 1
+"""
+
+_INGREDIENT_MATCH_SCORE = Decimal("0.85")
+
+
 class AsyncpgIlikeSearch(IlikeDrugSearch):
     def __init__(self, pool: Any):
         self._pool = pool
@@ -34,6 +51,20 @@ class AsyncpgIlikeSearch(IlikeDrugSearch):
         if row is None:
             return None
         return MatchCandidate(kd_code=row["kd_code"], name=row["name"], score=Decimal("1.0"))
+
+
+class AsyncpgIngredientSearch(IngredientSearch):
+    def __init__(self, pool: Any):
+        self._pool = pool
+
+    async def search(self, ingredient: str) -> MatchCandidate | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_INGREDIENT_SQL, ingredient)
+        if row is None:
+            return None
+        return MatchCandidate(
+            kd_code=row["kd_code"], name=row["name"], score=_INGREDIENT_MATCH_SCORE
+        )
 
 
 class PgVectorDrugSearch(VectorDrugSearch):
