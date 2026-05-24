@@ -13,6 +13,7 @@ from app.domain.ocr import OcrItem, PrescriptionOcrRequest, RawOcrItem
 from app.exceptions import ImageFetchError, OcrParseError, VisionInvocationError
 from app.main import create_app
 from app.rag.ocr.cache import InMemoryOcrResultCache, OcrResultCache
+from app.rag.ocr.matcher import MatchResult
 from app.rag.ocr.service import OcrPrescriptionService
 
 
@@ -43,8 +44,10 @@ class StubMatcher:
     def __init__(self, table: dict[str, OcrItem]):
         self._table = table
 
-    async def match(self, raw: RawOcrItem) -> OcrItem:
-        return self._table[raw.name_raw]
+    async def match(self, raw: RawOcrItem) -> MatchResult:
+        item = self._table[raw.name_raw]
+        stage = "ilike" if item.kd_code else "none"
+        return MatchResult(item=item, stage=stage)
 
 
 def _build_client(service: OcrPrescriptionService) -> TestClient:
