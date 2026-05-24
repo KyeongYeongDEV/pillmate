@@ -9,7 +9,6 @@ import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
-import com.pillmate.prescription.application.exception.DrugNotMatchedException;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
@@ -70,7 +69,8 @@ class PrescriptionControllerTest {
         given(registerPrescriptionService.register(any()))
                 .willReturn(new RegisterPrescriptionResponse(
                         42L, OcrStatus.DONE,
-                        List.of(new RegisteredDrugItem(101L, "KD-001", "타이레놀", new BigDecimal("0.95")))));
+                        List.of(new RegisteredDrugItem(
+                                101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")))));
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -87,7 +87,8 @@ class PrescriptionControllerTest {
         given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(anyLong(), anyLong(), any(), anyString()))
                 .willReturn(new RegisterPrescriptionResponse(
                         42L, OcrStatus.DONE,
-                        List.of(new RegisteredDrugItem(101L, "KD-001", "타이레놀", new BigDecimal("0.95")))));
+                        List.of(new RegisteredDrugItem(
+                                101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")))));
 
         OcrRegisterRequest req = new OcrRegisterRequest(1L, 2L, LocalDate.of(2026, 5, 23), "imageKey");
 
@@ -126,16 +127,26 @@ class PrescriptionControllerTest {
     }
 
     @Test
-    @DisplayName("kdCode 매칭 실패 시 400 + PILL_021")
-    void postRegister_returns400_whenDrugNotMatched() throws Exception {
+    @DisplayName("kdCode 1건 매칭 실패 시 200 + ocrStatus MANUAL + drugId null")
+    void postRegister_whenOneItemKdCodeNotFound_returns200_withManualStatus_andNullDrugId() throws Exception {
         given(registerPrescriptionService.register(any()))
-                .willThrow(new DrugNotMatchedException("KD-XXX"));
+                .willReturn(new RegisterPrescriptionResponse(
+                        99L, OcrStatus.MANUAL,
+                        List.of(
+                                new RegisteredDrugItem(
+                                        101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")),
+                                new RegisteredDrugItem(
+                                        null, null, "동광나자티딘캡슐", null, new BigDecimal("0.95")))));
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRegisterRequest())))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("PILL_021"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.prescriptionId").value(99))
+                .andExpect(jsonPath("$.data.ocrStatus").value("MANUAL"))
+                .andExpect(jsonPath("$.data.items[0].drugId").value(101))
+                .andExpect(jsonPath("$.data.items[1].drugId").doesNotExist())
+                .andExpect(jsonPath("$.data.items[1].nameRaw").value("동광나자티딘캡슐"));
     }
 
     private RegisterPrescriptionRequest validRegisterRequest() {

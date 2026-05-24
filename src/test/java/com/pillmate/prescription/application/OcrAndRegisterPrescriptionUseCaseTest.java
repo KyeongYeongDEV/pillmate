@@ -81,6 +81,35 @@ class OcrAndRegisterPrescriptionUseCaseTest {
     }
 
     @Test
+    @DisplayName("ai_server 가 일부 약만 매칭(kdCode null 혼합)을 반환해도 register 위임은 그대로 호출되고 MANUAL 응답이 전달된다")
+    void ocrAndRegister_whenAiServerReturnsPartialMatch_savesAsManual() {
+        given(fileStoragePort.issueDownloadUrl(any(), any())).willReturn("http://url");
+        OcrItem matched = new OcrItem(
+                "200500823", "오페나딘서방정50밀리그람", "오페나딘서방정50밀리그램",
+                new BigDecimal("50"), "mg", 2, 7, new BigDecimal("0.95"));
+        OcrItem unmatched = new OcrItem(
+                null, "동광나자티딘캡슐150mg Nizatidine 150mg", null,
+                new BigDecimal("150"), "mg", 2, 7, new BigDecimal("0.95"));
+        given(ocrPort.extractFromImage(any()))
+                .willReturn(new OcrResult(List.of(matched, unmatched), "식약처"));
+
+        RegisterPrescriptionResponse manual = new RegisterPrescriptionResponse(
+                7L, OcrStatus.MANUAL, Collections.emptyList());
+        given(registerPrescriptionService.register(any(RegisterPrescriptionCommand.class)))
+                .willReturn(manual);
+
+        RegisterPrescriptionResponse actual = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
+                1L, 2L, LocalDate.of(2026, 5, 24), "prescriptions/2026/05/uuid.jpg");
+
+        assertThat(actual.ocrStatus()).isEqualTo(OcrStatus.MANUAL);
+        ArgumentCaptor<RegisterPrescriptionCommand> captor =
+                ArgumentCaptor.forClass(RegisterPrescriptionCommand.class);
+        verify(registerPrescriptionService).register(captor.capture());
+        assertThat(captor.getValue().items()).hasSize(2);
+        assertThat(captor.getValue().items().get(1).kdCode()).isNull();
+    }
+
+    @Test
     @DisplayName("OCR 결과가 비어있으면 OCR_EMPTY 예외를 던진다")
     void ocrAndRegister_whenAiServerReturnsEmpty_throwsOcrEmpty() {
         // given

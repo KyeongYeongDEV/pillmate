@@ -3,7 +3,6 @@ package com.pillmate.prescription.application;
 import com.pillmate.prescription.application.dto.DrugItem;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
-import com.pillmate.prescription.application.exception.DrugNotMatchedException;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.domain.model.OcrStatus;
@@ -27,7 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-@DisplayName("RegisterPrescriptionUseCase — 처방전 등록")
+@DisplayName("RegisterPrescriptionUseCase — 처방전 등록 (부분 매칭 허용)")
 @ExtendWith(MockitoExtension.class)
 class RegisterPrescriptionUseCaseTest {
 
@@ -36,8 +35,8 @@ class RegisterPrescriptionUseCaseTest {
     @InjectMocks RegisterPrescriptionService sut;
 
     @Test
-    @DisplayName("모든 kdCode 매칭 성공 + 모든 confidence ≥ 0.7 → DONE 상태로 저장")
-    void register_whenAllKdCodesFound_savesAndReturnsDone() {
+    @DisplayName("모든 kdCode 매칭 + 모든 confidence ≥ 0.7 → DONE 상태로 저장")
+    void register_whenAllMatched_savesAsDone() {
         DrugItem item = drugItem("KD-001", new BigDecimal("0.92"));
         RegisterPrescriptionCommand command = command(List.of(item));
         given(drugLookupPort.findByKdCode("KD-001"))
@@ -52,17 +51,48 @@ class RegisterPrescriptionUseCaseTest {
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().get(0).drugId()).isEqualTo(101L);
         assertThat(response.items().get(0).kdCode()).isEqualTo("KD-001");
+        assertThat(response.items().get(0).matchedName()).isEqualTo("타이레놀");
     }
 
     @Test
-    @DisplayName("kdCode 가 식약처 DB에 없으면 DrugNotMatchedException")
-    void register_whenAnyKdCodeMissing_throwsDrugNotMatched() {
-        DrugItem item = drugItem("KD-XXX", new BigDecimal("0.95"));
-        RegisterPrescriptionCommand command = command(List.of(item));
-        given(drugLookupPort.findByKdCode("KD-XXX")).willReturn(Optional.empty());
+    @DisplayName("1개라도 kdCode 매칭 실패면 drugId null + ocrStatus MANUAL 로 저장")
+    void register_whenOneUnmatched_savesAsManual_withNullDrugId() {
+        DrugItem matched = drugItem("KD-001", new BigDecimal("0.95"));
+        DrugItem unmatched = drugItem("ZZZNOTEXIST", new BigDecimal("0.95"));
+        RegisterPrescriptionCommand command = command(List.of(matched, unmatched));
+        given(drugLookupPort.findByKdCode("KD-001"))
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀")));
+        given(drugLookupPort.findByKdCode("ZZZNOTEXIST")).willReturn(Optional.empty());
+        given(prescriptionRepository.save(any(Prescription.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> sut.register(command))
-                .isInstanceOf(DrugNotMatchedException.class);
+        RegisterPrescriptionResponse response = sut.register(command);
+
+        assertThat(response.ocrStatus()).isEqualTo(OcrStatus.MANUAL);
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items().get(0).drugId()).isEqualTo(101L);
+        assertThat(response.items().get(0).matchedName()).isEqualTo("타이레놀");
+        assertThat(response.items().get(1).drugId()).isNull();
+        assertThat(response.items().get(1).matchedName()).isNull();
+        assertThat(response.items().get(1).nameRaw()).isEqualTo("약명");
+    }
+
+    @Test
+    @DisplayName("kdCode 가 null 이거나 전부 매칭 실패면 모두 drugId null + MANUAL")
+    void register_whenAllUnmatched_savesAsManual_withAllNullDrugIds() {
+        DrugItem nullKd = new DrugItem(
+                null, "동광나자티딘캡슐", new BigDecimal("150.00"), "mg", 2, 7, new BigDecimal("0.95"));
+        DrugItem unknownKd = drugItem("ZZZNOTEXIST", new BigDecimal("0.95"));
+        RegisterPrescriptionCommand command = command(List.of(nullKd, unknownKd));
+        given(drugLookupPort.findByKdCode("ZZZNOTEXIST")).willReturn(Optional.empty());
+        given(prescriptionRepository.save(any(Prescription.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        RegisterPrescriptionResponse response = sut.register(command);
+
+        assertThat(response.ocrStatus()).isEqualTo(OcrStatus.MANUAL);
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items()).allMatch(it -> it.drugId() == null);
     }
 
     @Test
@@ -85,7 +115,7 @@ class RegisterPrescriptionUseCaseTest {
 
     @Test
     @DisplayName("items 가 비어 있으면 EmptyPrescriptionItemsException")
-    void register_whenItemsEmpty_throws() {
+    void register_whenItemsEmpty_throwsItemsEmpty() {
         RegisterPrescriptionCommand command = command(List.of());
 
         assertThatThrownBy(() -> sut.register(command))
