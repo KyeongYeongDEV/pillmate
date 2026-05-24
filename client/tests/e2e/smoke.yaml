@@ -1,0 +1,5 @@
+appId: com.pillmate.app
+---
+- launchApp
+- assertVisible: "PillMate"
+- assertVisible: "오늘 복용"
