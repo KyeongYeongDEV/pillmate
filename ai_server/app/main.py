@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api import analyze as analyze_api
 from app.api import chat as chat_api
 from app.api import ocr as ocr_api
 from app.core.config import get_settings
@@ -16,6 +17,7 @@ from app.rag.ocr.drug_search import (
     AsyncpgIngredientSearch,
     PgVectorDrugSearch,
 )
+from app.rag.health_report.service import HealthReportService
 from app.rag.ocr.image_fetcher import HttpxImageFetcher
 from app.rag.ocr.matcher import DrugMatcher
 from app.rag.ocr.service import OcrPrescriptionService
@@ -43,9 +45,11 @@ async def lifespan(app: FastAPI):
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
 
     ocr_service = _build_ocr_service(pool=pool, retriever=retriever, settings=settings)
+    health_report_service = HealthReportService(llm=_GeminiLlmRunner(llm=llm))
 
     app.dependency_overrides[chat_api.get_chat_service] = lambda: service
     app.dependency_overrides[ocr_api.get_ocr_service] = lambda: ocr_service
+    app.dependency_overrides[analyze_api.get_health_report_service] = lambda: health_report_service
     try:
         yield
     finally:
@@ -74,10 +78,20 @@ def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
     )
 
 
+class _GeminiLlmRunner:
+    def __init__(self, llm: GeminiInvoker):
+        self._llm = llm
+
+    async def invoke(self, system: str, user: str) -> str:
+        combined = f"{system}\n\n---\n{user}"
+        return await self._llm.ainvoke(combined)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="PillMate AI", version="0.1.0", lifespan=lifespan)
     app.include_router(chat_api.router)
     app.include_router(ocr_api.router)
+    app.include_router(analyze_api.router)
     return app
 
 
