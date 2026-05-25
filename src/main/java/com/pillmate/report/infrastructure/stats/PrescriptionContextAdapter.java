@@ -17,7 +17,6 @@ class PrescriptionContextAdapter implements PrescriptionContextPort {
             SELECT care_group_id FROM prescriptions
             WHERE patient_id = :patientId
             ORDER BY created_at DESC
-            LIMIT 1
             """;
 
     private static final String ACTIVE_DRUGS_SQL = """
@@ -29,7 +28,6 @@ class PrescriptionContextAdapter implements PrescriptionContextPort {
               AND pd.drug_id IS NOT NULL
               AND d.status = 'ACTIVE'
             ORDER BY d.kd_code
-            LIMIT 20
             """;
 
     private final EntityManager entityManager;
@@ -56,6 +54,7 @@ class PrescriptionContextAdapter implements PrescriptionContextPort {
     private List<DrugSummary> findActiveDrugs(Long patientId) {
         List<Tuple> rows = entityManager.createNativeQuery(ACTIVE_DRUGS_SQL, Tuple.class)
                 .setParameter("patientId", patientId)
+                .setMaxResults(20)
                 .getResultList();
         return rows.stream()
                 .map(r -> new DrugSummary(
