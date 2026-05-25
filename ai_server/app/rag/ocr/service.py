@@ -15,6 +15,7 @@ from app.rag.ocr.cache import (
     image_hash,
 )
 from app.rag.ocr.matcher import MatchResult, MatchStage
+from app.rag.ocr.parser import ParsedItem, parse_drug_item
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class VisionAdapter(Protocol):
 
 
 class DrugMatcherPort(Protocol):
-    async def match(self, raw: RawOcrItem) -> MatchResult: ...
+    async def match(self, parsed: ParsedItem, raw: RawOcrItem) -> MatchResult: ...
 
 
 class OcrPrescriptionService:
@@ -66,7 +67,11 @@ class OcrPrescriptionService:
         return PrescriptionOcrResponse(items=items), stages
 
     async def _match_all(self, raw_items: list[RawOcrItem]) -> list[MatchResult]:
-        return [await self._matcher.match(raw) for raw in raw_items]
+        parsed_items = [parse_drug_item(raw.name_raw) for raw in raw_items]
+        return [
+            await self._matcher.match(parsed, raw)
+            for parsed, raw in zip(parsed_items, raw_items)
+        ]
 
     def _log_done(
         self,

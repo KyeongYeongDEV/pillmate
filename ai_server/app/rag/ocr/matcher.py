@@ -11,6 +11,7 @@ from app.rag.ocr.normalizer import (
     first_token,
     normalize_drug_name,
 )
+from app.rag.ocr.parser import ParsedItem
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,9 @@ class DrugMatcher:
         self._vector = vector
         self._ingredient = ingredient or _NullIngredientSearch()
 
-    async def match(self, raw: RawOcrItem) -> MatchResult:
+    async def match(self, parsed: ParsedItem, raw: RawOcrItem) -> MatchResult:
+        if not parsed.is_valid:
+            return MatchResult(item=self._unmatched(raw), stage="none")
         candidate, stage = await self._resolve_candidate(raw.name_raw)
         if candidate is None:
             return MatchResult(item=self._unmatched(raw), stage="none")

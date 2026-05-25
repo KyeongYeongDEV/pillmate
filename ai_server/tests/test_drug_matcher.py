@@ -13,6 +13,7 @@ from app.rag.ocr.matcher import (
     MatchResult,
     VectorDrugSearch,
 )
+from app.rag.ocr.parser import parse_drug_item
 
 
 class StubIlikeSearch(IlikeDrugSearch):
@@ -76,7 +77,7 @@ async def test_matcher_returns_kd_code_when_name_ilike_hits():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector)
 
-    result: MatchResult = await matcher.match(_raw("타이레놀", "0.90"))
+    result: MatchResult = await matcher.match(parse_drug_item("타이레놀"), _raw("타이레놀", "0.90"))
 
     assert result.item.kd_code == "KD001"
     assert result.item.matched_name == "타이레놀500mg"
@@ -91,7 +92,7 @@ async def test_matcher_falls_back_to_vector_when_ilike_misses():
     vector = StubVectorSearch(MatchCandidate(kd_code="KD002", name="아스피린100mg", score=Decimal("0.80")))
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("아스피린", "0.95"))
+    result = await matcher.match(parse_drug_item("아스피린"), _raw("아스피린", "0.95"))
 
     assert result.item.kd_code == "KD002"
     assert result.item.matched_name == "아스피린100mg"
@@ -105,7 +106,7 @@ async def test_matcher_returns_none_when_both_fail():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("듣보잡약", "0.40"))
+    result = await matcher.match(parse_drug_item("듣보잡약"), _raw("듣보잡약", "0.40"))
 
     assert result.item.kd_code is None
     assert result.item.matched_name is None
@@ -119,7 +120,7 @@ async def test_matcher_filters_vector_score_below_threshold():
     vector = StubVectorSearch(MatchCandidate(kd_code="KD002", name="아스피린", score=Decimal("0.55")))
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("아스피린", "0.95"))
+    result = await matcher.match(parse_drug_item("아스피린"), _raw("아스피린", "0.95"))
 
     assert result.item.kd_code is None
     assert result.item.matched_name is None
@@ -132,7 +133,9 @@ async def test_matcher_strips_brackets_before_ilike():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("이세틸정 (이세틸정 100mg)", "0.95"))
+    result = await matcher.match(
+        parse_drug_item("이세틸정 (이세틸정 100mg)"), _raw("이세틸정 (이세틸정 100mg)", "0.95")
+    )
 
     assert ilike.calls == ["이세틸정"]
     assert result.item.kd_code == "KD010"
@@ -147,7 +150,9 @@ async def test_matcher_normalizes_unit_away_before_ilike():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("동광나자티딘캡슐150mg", "0.95"))
+    result = await matcher.match(
+        parse_drug_item("동광나자티딘캡슐150mg"), _raw("동광나자티딘캡슐150mg", "0.95")
+    )
 
     assert ilike.calls == ["동광나자티딘캡슐"]
     assert result.item.kd_code == "KD020"
@@ -162,7 +167,10 @@ async def test_matcher_falls_back_to_first_token_when_normalized_misses():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector)
 
-    result = await matcher.match(_raw("오페나딘서방정50밀리그람 Ophenadine SR", "0.95"))
+    result = await matcher.match(
+        parse_drug_item("오페나딘서방정50밀리그람 Ophenadine SR"),
+        _raw("오페나딘서방정50밀리그람 Ophenadine SR", "0.95"),
+    )
 
     assert ilike.calls == ["오페나딘서방정 Ophenadine SR", "오페나딘서방정"]
     assert result.item.kd_code == "KD030"
@@ -179,7 +187,10 @@ async def test_matcher_falls_back_to_ingredient_when_token_misses():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector, ingredient=ingredient)
 
-    result = await matcher.match(_raw("동광나자티딘캡슐150mg Nizatidine 150mg", "0.95"))
+    result = await matcher.match(
+        parse_drug_item("동광나자티딘캡슐150mg Nizatidine 150mg"),
+        _raw("동광나자티딘캡슐150mg Nizatidine 150mg", "0.95"),
+    )
 
     assert ilike.calls == ["동광나자티딘캡슐 Nizatidine", "동광나자티딘캡슐"]
     assert ingredient.calls == ["Nizatidine"]
@@ -195,11 +206,41 @@ async def test_matcher_skips_ingredient_when_no_english_token():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector, ingredient=ingredient)
 
-    result = await matcher.match(_raw("엔테론정150밀리그람 포도씨건조엑스", "0.90"))
+    result = await matcher.match(
+        parse_drug_item("엔테론정150밀리그람 포도씨건조엑스"),
+        _raw("엔테론정150밀리그람 포도씨건조엑스", "0.90"),
+    )
 
     assert ingredient.calls == []
     assert vector.calls == ["엔테론정150밀리그람 포도씨건조엑스"]
     assert result.stage == "none"
+
+
+@pytest.mark.asyncio
+async def test_matcher_skips_all_stages_when_parse_invalid():
+    """validation 실패 시 ilike/vector 호출 없이 즉시 none 반환 (ADR-001 안전망)."""
+    ilike = StubIlikeSearch([MatchCandidate(kd_code="KD999", name="X", score=Decimal("1.0"))])
+    vector = StubVectorSearch(MatchCandidate(kd_code="KD999", name="X", score=Decimal("1.0")))
+    matcher = _matcher(ilike, vector)
+
+    # "가" → name_too_short → is_valid=False
+    from app.rag.ocr.parser import ParsedItem
+    invalid = ParsedItem(
+        raw="가",
+        name="가",
+        dose_amount=None,
+        dose_unit=None,
+        form=None,
+        name_jamo="ㄱㅏ",
+        is_valid=False,
+        validation_errors=["name_too_short"],
+    )
+    result = await matcher.match(invalid, _raw("가", "0.90"))
+
+    assert result.item.kd_code is None
+    assert result.stage == "none"
+    assert ilike.calls == []
+    assert vector.calls == []
 
 
 @pytest.mark.asyncio
@@ -209,7 +250,10 @@ async def test_matcher_returns_none_when_all_four_stages_fail():
     vector = StubVectorSearch(None)
     matcher = _matcher(ilike, vector, ingredient=ingredient)
 
-    result = await matcher.match(_raw("듣보잡캡슐150mg Unknownine", "0.40"))
+    result = await matcher.match(
+        parse_drug_item("듣보잡캡슐150mg Unknownine"),
+        _raw("듣보잡캡슐150mg Unknownine", "0.40"),
+    )
 
     assert result.item.kd_code is None
     assert result.stage == "none"
