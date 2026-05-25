@@ -1,15 +1,26 @@
 package com.pillmate.caregroup.presentation;
 
 import com.pillmate.caregroup.application.CreateCareGroupUseCase;
+import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
+import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
+import com.pillmate.caregroup.application.dto.InviteCodeResponse;
+import com.pillmate.caregroup.application.dto.MyGroupItem;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -19,6 +30,8 @@ public class CareGroupController {
 
     private final CreateCareGroupUseCase createCareGroupUseCase;
     private final JoinGroupUseCase joinGroupUseCase;
+    private final IssueInviteCodeUseCase issueInviteCodeUseCase;
+    private final ListMyGroupsUseCase listMyGroupsUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -28,6 +41,13 @@ public class CareGroupController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/{groupId}/invite-codes")
+    public ResponseEntity<ApiResponse<InviteCodeResponse>> issueInviteCode(
+            @PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(issueInviteCodeUseCase.issue(groupId, userId)));
+    }
+
     @GetMapping("/join/{code}")
     public ResponseEntity<ApiResponse<Map<String, Long>>> join(
             @PathVariable String code,
@@ -35,5 +55,11 @@ public class CareGroupController {
         Long userId = UserContext.get();
         Long groupId = joinGroupUseCase.join(code, userId, MemberRole.valueOf(role));
         return ResponseEntity.ok(ApiResponse.success(Map.of("groupId", groupId)));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<MyGroupItem>>> listMyGroups() {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(listMyGroupsUseCase.listMyGroups(userId)));
     }
 }
