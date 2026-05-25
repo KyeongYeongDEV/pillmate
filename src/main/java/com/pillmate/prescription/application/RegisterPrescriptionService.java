@@ -79,7 +79,8 @@ public class RegisterPrescriptionService {
                 drug.map(DrugSummary::kdCode).orElse(null),
                 item.nameRaw(),
                 drug.map(DrugSummary::name).orElse(null),
-                item.confidence());
+                item.confidence(),
+                drug.map(DrugSummary::imageUrl).orElse(null));
     }
 
     private PrescribedDrug toPrescribedDrug(Long drugId, DrugItem item) {

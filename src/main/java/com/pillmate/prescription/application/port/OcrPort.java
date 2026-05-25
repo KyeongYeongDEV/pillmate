@@ -16,6 +16,7 @@ public interface OcrPort {
             String doseUnit,
             Integer frequency,
             Integer durationDays,
-            BigDecimal confidence
+            BigDecimal confidence,
+            String imageUrl
     ) {}
 }

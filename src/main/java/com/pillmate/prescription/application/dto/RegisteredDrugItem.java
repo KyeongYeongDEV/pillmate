@@ -7,5 +7,6 @@ public record RegisteredDrugItem(
         String kdCode,
         String nameRaw,
         String matchedName,
-        BigDecimal confidence
+        BigDecimal confidence,
+        String imageUrl
 ) {}

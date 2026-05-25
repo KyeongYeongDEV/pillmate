@@ -6,5 +6,5 @@ public interface DrugLookupPort {
 
     Optional<DrugSummary> findByKdCode(String kdCode);
 
-    record DrugSummary(Long drugId, String kdCode, String name) {}
+    record DrugSummary(Long drugId, String kdCode, String name, String imageUrl) {}
 }

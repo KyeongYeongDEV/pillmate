@@ -42,7 +42,7 @@ class RegisterPrescriptionUseCaseTest {
         DrugItem item = drugItem("KD-001", new BigDecimal("0.92"));
         RegisterPrescriptionCommand command = command(List.of(item));
         given(drugLookupPort.findByKdCode("KD-001"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀")));
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", "https://nedrug/img1")));
         given(prescriptionRepository.save(any(Prescription.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -63,7 +63,7 @@ class RegisterPrescriptionUseCaseTest {
         DrugItem unmatched = drugItem("ZZZNOTEXIST", new BigDecimal("0.95"));
         RegisterPrescriptionCommand command = command(List.of(matched, unmatched));
         given(drugLookupPort.findByKdCode("KD-001"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀")));
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", "https://nedrug/img1")));
         given(drugLookupPort.findByKdCode("ZZZNOTEXIST")).willReturn(Optional.empty());
         given(prescriptionRepository.save(any(Prescription.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
@@ -104,9 +104,9 @@ class RegisterPrescriptionUseCaseTest {
         DrugItem low = drugItem("KD-002", new BigDecimal("0.55"));
         RegisterPrescriptionCommand command = command(List.of(high, low));
         given(drugLookupPort.findByKdCode("KD-001"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀")));
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", "https://nedrug/img1")));
         given(drugLookupPort.findByKdCode("KD-002"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(102L, "KD-002", "아스피린")));
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(102L, "KD-002", "아스피린", null)));
         given(prescriptionRepository.save(any(Prescription.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 

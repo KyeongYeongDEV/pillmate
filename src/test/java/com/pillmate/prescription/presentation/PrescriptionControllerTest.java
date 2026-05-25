@@ -70,7 +70,8 @@ class PrescriptionControllerTest {
                 .willReturn(new RegisterPrescriptionResponse(
                         42L, OcrStatus.DONE,
                         List.of(new RegisteredDrugItem(
-                                101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")))));
+                                101L, "KD-001", "타이레놀", "타이레놀500mg",
+                                new BigDecimal("0.95"), "https://nedrug/img1"))));
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -88,7 +89,8 @@ class PrescriptionControllerTest {
                 .willReturn(new RegisterPrescriptionResponse(
                         42L, OcrStatus.DONE,
                         List.of(new RegisteredDrugItem(
-                                101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")))));
+                                101L, "KD-001", "타이레놀", "타이레놀500mg",
+                                new BigDecimal("0.95"), "https://nedrug/img1"))));
 
         OcrRegisterRequest req = new OcrRegisterRequest(1L, 2L, LocalDate.of(2026, 5, 23), "imageKey");
 
@@ -134,9 +136,11 @@ class PrescriptionControllerTest {
                         99L, OcrStatus.MANUAL,
                         List.of(
                                 new RegisteredDrugItem(
-                                        101L, "KD-001", "타이레놀", "타이레놀500mg", new BigDecimal("0.95")),
+                                        101L, "KD-001", "타이레놀", "타이레놀500mg",
+                                        new BigDecimal("0.95"), "https://nedrug/img1"),
                                 new RegisteredDrugItem(
-                                        null, null, "동광나자티딘캡슐", null, new BigDecimal("0.95")))));
+                                        null, null, "동광나자티딘캡슐", null,
+                                        new BigDecimal("0.95"), null))));
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -68,7 +68,7 @@ public class AiServerOcrClient implements OcrPort {
             BigDecimal confidence
     ) {
         public OcrItem toOcrItem() {
-            return new OcrItem(kd_code, name_raw, matched_name, dose_amount, dose_unit, frequency, duration_days, confidence);
+            return new OcrItem(kd_code, name_raw, matched_name, dose_amount, dose_unit, frequency, duration_days, confidence, null);
         }
     }
 }

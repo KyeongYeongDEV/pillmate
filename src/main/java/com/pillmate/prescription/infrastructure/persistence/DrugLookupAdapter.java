@@ -14,7 +14,7 @@ import java.util.Optional;
 class DrugLookupAdapter implements DrugLookupPort {
 
     private static final String LOOKUP_SQL =
-            "SELECT id AS drug_id, kd_code, name FROM drugs " +
+            "SELECT id AS drug_id, kd_code, name, item_image FROM drugs " +
             "WHERE kd_code = :kdCode AND status = 'ACTIVE'";
 
     private final EntityManager entityManager;
@@ -35,6 +35,7 @@ class DrugLookupAdapter implements DrugLookupPort {
         Number drugId = (Number) row.get("drug_id");
         String code = (String) row.get("kd_code");
         String name = (String) row.get("name");
-        return new DrugSummary(drugId.longValue(), code, name);
+        String itemImage = (String) row.get("item_image");
+        return new DrugSummary(drugId.longValue(), code, name, itemImage);
     }
 }

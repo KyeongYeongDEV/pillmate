@@ -61,7 +61,7 @@ class OcrAndRegisterPrescriptionUseCaseTest {
 
         given(fileStoragePort.issueDownloadUrl(eq(imageKey), any(Duration.class))).willReturn(downloadUrl);
 
-        OcrItem item = new OcrItem("123", "활명수", "활명수", BigDecimal.ONE, "병", 3, 3, new BigDecimal("0.95"));
+        OcrItem item = new OcrItem("123", "활명수", "활명수", BigDecimal.ONE, "병", 3, 3, new BigDecimal("0.95"), null);
         given(ocrPort.extractFromImage(downloadUrl)).willReturn(new OcrResult(List.of(item), "식약처"));
 
         RegisterPrescriptionResponse expectedResponse = new RegisterPrescriptionResponse(10L, com.pillmate.prescription.domain.model.OcrStatus.DONE, Collections.emptyList());
@@ -90,10 +90,10 @@ class OcrAndRegisterPrescriptionUseCaseTest {
         given(fileStoragePort.issueDownloadUrl(any(), any())).willReturn("http://url");
         OcrItem matched = new OcrItem(
                 "200500823", "오페나딘서방정50밀리그람", "오페나딘서방정50밀리그램",
-                new BigDecimal("50"), "mg", 2, 7, new BigDecimal("0.95"));
+                new BigDecimal("50"), "mg", 2, 7, new BigDecimal("0.95"), null);
         OcrItem unmatched = new OcrItem(
                 null, "동광나자티딘캡슐150mg Nizatidine 150mg", null,
-                new BigDecimal("150"), "mg", 2, 7, new BigDecimal("0.95"));
+                new BigDecimal("150"), "mg", 2, 7, new BigDecimal("0.95"), null);
         given(ocrPort.extractFromImage(any()))
                 .willReturn(new OcrResult(List.of(matched, unmatched), "식약처"));
 
