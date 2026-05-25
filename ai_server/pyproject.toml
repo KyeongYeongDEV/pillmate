@@ -13,6 +13,8 @@ dependencies = [
     "langchain-postgres>=0.0.12",
     "asyncpg>=0.29",
     "httpx>=0.27",
+    "jamotools>=0.1.10",
+    "python-Levenshtein>=0.25.1",
 ]
 
 [project.optional-dependencies]
