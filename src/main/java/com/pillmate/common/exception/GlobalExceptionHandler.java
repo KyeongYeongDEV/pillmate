@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     private HttpStatus resolveStatus(ErrorCode code) {
         return switch (code) {
             case DRUG_NOT_FOUND, GROUP_NOT_FOUND, PRESCRIPTION_NOT_FOUND, SCHEDULE_NOT_FOUND,
-                 GROUP_INVITE_CODE_INVALID -> HttpStatus.NOT_FOUND;
+                 GROUP_INVITE_CODE_INVALID, REPORT_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case GROUP_ACCESS_DENIED -> HttpStatus.FORBIDDEN;
             case GROUP_INVITE_CODE_EXPIRED -> HttpStatus.GONE;
             case GROUP_INVITE_CODE_USED, GROUP_ALREADY_MEMBER, SCHEDULE_CONFLICT -> HttpStatus.CONFLICT;
@@ -45,6 +45,8 @@ public class GlobalExceptionHandler {
             case OCR_UPSTREAM_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
             case OCR_UPSTREAM_FAILED -> HttpStatus.BAD_GATEWAY;
             case OCR_EMPTY -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case REPORT_REFRESH_RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
+            case REPORT_GENERATION_FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }

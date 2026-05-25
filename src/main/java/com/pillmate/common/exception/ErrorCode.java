@@ -25,6 +25,9 @@ public enum ErrorCode {
     OCR_UPSTREAM_FAILED("PILL_051", "OCR 서비스 호출에 실패했습니다."),
     OCR_REQUEST_INVALID("PILL_052", "OCR 요청이 잘못되었습니다."),
     OCR_EMPTY("PILL_053", "처방전에서 추출된 약품 정보가 없습니다."),
+    REPORT_NOT_FOUND("PILL_060", "건강 리포트를 찾을 수 없습니다."),
+    REPORT_REFRESH_RATE_LIMITED("PILL_061", "리포트 새로고침은 하루 1회만 가능합니다."),
+    REPORT_GENERATION_FAILED("PILL_062", "리포트 생성에 실패했습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;
