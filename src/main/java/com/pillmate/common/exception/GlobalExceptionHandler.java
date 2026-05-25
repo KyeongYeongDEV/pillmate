@@ -34,8 +34,11 @@ public class GlobalExceptionHandler {
 
     private HttpStatus resolveStatus(ErrorCode code) {
         return switch (code) {
-            case DRUG_NOT_FOUND, GROUP_NOT_FOUND, PRESCRIPTION_NOT_FOUND, SCHEDULE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case DRUG_NOT_FOUND, GROUP_NOT_FOUND, PRESCRIPTION_NOT_FOUND, SCHEDULE_NOT_FOUND,
+                 GROUP_INVITE_CODE_INVALID -> HttpStatus.NOT_FOUND;
             case GROUP_ACCESS_DENIED -> HttpStatus.FORBIDDEN;
+            case GROUP_INVITE_CODE_EXPIRED -> HttpStatus.GONE;
+            case GROUP_INVITE_CODE_USED, GROUP_ALREADY_MEMBER -> HttpStatus.CONFLICT;
             case DRUG_SEARCH_EMPTY_QUERY, SCHEDULE_CONFLICT, INVALID_REQUEST,
                  PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY,
                  OCR_REQUEST_INVALID -> HttpStatus.BAD_REQUEST;

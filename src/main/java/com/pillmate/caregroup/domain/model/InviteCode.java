@@ -43,10 +43,12 @@ public class InviteCode {
         ic.createdBy = createdBy;
         ic.code = UUID.randomUUID().toString().replaceAll("[^A-Z0-9]", "")
                       .toUpperCase().substring(0, 6);
-        ic.expiresAt = Instant.now().plus(24, ChronoUnit.HOURS);
+        ic.expiresAt = Instant.now().plus(INVITE_CODE_TTL_DAYS, ChronoUnit.DAYS);
         ic.createdAt = Instant.now();
         return ic;
     }
+
+    private static final int INVITE_CODE_TTL_DAYS = 7;
 
     public static InviteCode ofExpired(String code, Long careGroupId, Long createdBy) {
         InviteCode ic = new InviteCode();
@@ -67,6 +69,16 @@ public class InviteCode {
     }
 
     public void markUsed() {
+        this.usedAt = Instant.now();
+    }
+
+    public void consume() {
+        if (isExpired()) {
+            throw new IllegalStateException("InviteCode expired");
+        }
+        if (this.usedAt != null) {
+            throw new IllegalStateException("InviteCode already used");
+        }
         this.usedAt = Instant.now();
     }
 }
