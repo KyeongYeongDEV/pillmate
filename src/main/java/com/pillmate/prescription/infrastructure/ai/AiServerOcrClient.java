@@ -11,17 +11,24 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
 public class AiServerOcrClient implements OcrPort {
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
-    public AiServerOcrClient(RestClient.Builder builder, @Value("${ai-server.base-url}") String baseUrl) {
+    public AiServerOcrClient(RestClient.Builder builder,
+                              @Value("${ai-server.base-url}") String baseUrl,
+                              ObjectMapper objectMapper) {
         this.restClient = builder.baseUrl(baseUrl).build();
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -42,7 +49,7 @@ public class AiServerOcrClient implements OcrPort {
                         throw new PillmateException(ErrorCode.OCR_UPSTREAM_FAILED);
                     })
                     .body(AiServerOcrResponse.class)
-                    .toOcrResult();
+                    .toOcrResult(objectMapper);
         } catch (ResourceAccessException e) {
             log.error("OCR server connection failed: {}", e.getMessage());
             throw new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT);
@@ -52,8 +59,8 @@ public class AiServerOcrClient implements OcrPort {
     private record AiServerOcrRequest(String image_url) {}
 
     private record AiServerOcrResponse(List<AiServerOcrItem> items, String source) {
-        public OcrResult toOcrResult() {
-            return new OcrResult(items.stream().map(AiServerOcrItem::toOcrItem).toList(), source);
+        public OcrResult toOcrResult(ObjectMapper mapper) {
+            return new OcrResult(items.stream().map(item -> item.toOcrItem(mapper)).toList(), source);
         }
     }
 
@@ -65,10 +72,25 @@ public class AiServerOcrClient implements OcrPort {
             String dose_unit,
             Integer frequency,
             Integer duration_days,
-            BigDecimal confidence
+            BigDecimal confidence,
+            String decision,
+            String decision_reason,
+            List<Map<String, Object>> candidate_options
     ) {
-        public OcrItem toOcrItem() {
-            return new OcrItem(kd_code, name_raw, matched_name, dose_amount, dose_unit, frequency, duration_days, confidence, null);
+        public OcrItem toOcrItem(ObjectMapper mapper) {
+            String candidateOptionsJson = serializeOptions(mapper);
+            String decisionType = decision != null ? decision : "AUTO";
+            return new OcrItem(kd_code, name_raw, matched_name, dose_amount, dose_unit,
+                    frequency, duration_days, confidence, null, decisionType, candidateOptionsJson);
+        }
+
+        private String serializeOptions(ObjectMapper mapper) {
+            if (candidate_options == null || candidate_options.isEmpty()) return null;
+            try {
+                return mapper.writeValueAsString(candidate_options);
+            } catch (JsonProcessingException e) {
+                return null;
+            }
         }
     }
 }

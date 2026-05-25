@@ -17,6 +17,15 @@ public interface OcrPort {
             Integer frequency,
             Integer durationDays,
             BigDecimal confidence,
-            String imageUrl
-    ) {}
+            String imageUrl,
+            String decision,
+            String candidateOptionsJson
+    ) {
+        public OcrItem(String kdCode, String nameRaw, String matchedName, BigDecimal doseAmount,
+                       String doseUnit, Integer frequency, Integer durationDays,
+                       BigDecimal confidence, String imageUrl) {
+            this(kdCode, nameRaw, matchedName, doseAmount, doseUnit, frequency, durationDays,
+                    confidence, imageUrl, "AUTO", null);
+        }
+    }
 }

@@ -3,15 +3,20 @@ package com.pillmate.prescription.presentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
+import com.pillmate.prescription.application.ResolveCandidateUseCase;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
+import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
+import com.pillmate.prescription.domain.model.CandidateDecisionType;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
+import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
 import com.pillmate.prescription.presentation.dto.UploadUrlRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,10 +33,14 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,6 +53,8 @@ class PrescriptionControllerTest {
     @MockitoBean GetUploadUrlUseCase getUploadUrlUseCase;
     @MockitoBean RegisterPrescriptionService registerPrescriptionService;
     @MockitoBean OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
+    @MockitoBean GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
+    @MockitoBean ResolveCandidateUseCase resolveCandidateUseCase;
 
     @Test
     @DisplayName("POST /prescriptions/upload-url → 200 + uploadUrl/objectKey/expiresAt")
@@ -151,6 +162,31 @@ class PrescriptionControllerTest {
                 .andExpect(jsonPath("$.data.items[0].drugId").value(101))
                 .andExpect(jsonPath("$.data.items[1].drugId").doesNotExist())
                 .andExpect(jsonPath("$.data.items[1].nameRaw").value("동광나자티딘캡슐"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/{id}/candidates → 200 + 미해결 후보 목록")
+    void getCandidates_returns200() throws Exception {
+        given(getUnresolvedCandidatesUseCase.getUnresolved(1L))
+                .willReturn(List.of(new UnresolvedCandidateDto(
+                        null, 0, CandidateDecisionType.CONFIRM, "ambiguous",
+                        "[{\"drugId\":12320}]")));
+
+        mockMvc.perform(get("/prescriptions/1/candidates"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].decisionType").value("CONFIRM"))
+                .andExpect(jsonPath("$.data[0].reason").value("ambiguous"));
+    }
+
+    @Test
+    @DisplayName("PUT /prescriptions/{id}/candidates/{idx}/resolve → 200")
+    void resolveCandidate_returns200() throws Exception {
+        doNothing().when(resolveCandidateUseCase).resolve(anyLong(), anyInt(), anyLong(), any());
+
+        mockMvc.perform(put("/prescriptions/1/candidates/0/resolve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ResolveCandidateRequest(12320L))))
+                .andExpect(status().isOk());
     }
 
     private RegisterPrescriptionRequest validRegisterRequest() {

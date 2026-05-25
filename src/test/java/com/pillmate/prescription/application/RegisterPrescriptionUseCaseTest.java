@@ -1,5 +1,6 @@
 package com.pillmate.prescription.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.prescription.application.dto.DrugItem;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
@@ -34,6 +35,7 @@ class RegisterPrescriptionUseCaseTest {
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
     @Mock CareGroupGuard careGroupGuard;
+    @Mock ObjectMapper objectMapper;
     @InjectMocks RegisterPrescriptionService sut;
 
     @Test

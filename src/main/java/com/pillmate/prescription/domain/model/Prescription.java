@@ -54,6 +54,9 @@ public class Prescription {
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescribedDrug> drugs = new ArrayList<>();
 
+    @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PrescribedDrugCandidate> candidates = new ArrayList<>();
+
     public static Prescription create(Long careGroupId, Long patientId,
                                       String imageKey, LocalDate prescribedAt) {
         Prescription p = new Prescription();
@@ -70,6 +73,17 @@ public class Prescription {
         return Collections.unmodifiableList(drugs);
     }
 
+    public List<PrescribedDrugCandidate> getCandidates() {
+        return Collections.unmodifiableList(candidates);
+    }
+
+    public void attachCandidates(List<PrescribedDrugCandidate> newCandidates) {
+        for (PrescribedDrugCandidate c : newCandidates) {
+            c.assignTo(this);
+            candidates.add(c);
+        }
+    }
+
     public void updateImageKey(String imageKey) {
         this.imageKey = imageKey;
     }
@@ -84,7 +98,7 @@ public class Prescription {
     }
 
     public void markOcrDone() {
-        if (hasUnmatchedDrug() || hasLowConfidenceDrug()) {
+        if (hasUnmatchedDrug() || hasLowConfidenceDrug() || hasUnresolvedCandidate()) {
             this.ocrStatus = OcrStatus.MANUAL;
             return;
         }
@@ -105,6 +119,10 @@ public class Prescription {
 
     private boolean hasLowConfidenceDrug() {
         return drugs.stream().anyMatch(this::isBelowMinConfidence);
+    }
+
+    private boolean hasUnresolvedCandidate() {
+        return candidates.stream().anyMatch(c -> !c.isResolved());
     }
 
     private boolean isBelowMinConfidence(PrescribedDrug drug) {

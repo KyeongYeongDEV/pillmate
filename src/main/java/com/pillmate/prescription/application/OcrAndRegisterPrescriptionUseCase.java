@@ -66,7 +66,9 @@ public class OcrAndRegisterPrescriptionUseCase {
                 ocrItem.doseUnit(),
                 ocrItem.frequency(),
                 ocrItem.durationDays(),
-                ocrItem.confidence()
+                ocrItem.confidence(),
+                ocrItem.decision(),
+                ocrItem.candidateOptionsJson()
         );
     }
 }
