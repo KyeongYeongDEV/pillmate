@@ -5,6 +5,7 @@ import com.pillmate.caregroup.domain.repository.CareGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +15,5 @@ class CareGroupRepositoryImpl implements CareGroupRepository {
 
     @Override public CareGroup save(CareGroup g) { return jpa.save(g); }
     @Override public Optional<CareGroup> findById(Long id) { return jpa.findById(id); }
+    @Override public List<CareGroup> findAllById(List<Long> ids) { return jpa.findAllById(ids); }
 }

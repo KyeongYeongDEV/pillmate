@@ -11,4 +11,6 @@ interface InviteCodeJpaRepository extends JpaRepository<InviteCode, Long> {
 
     @Query("SELECT i FROM InviteCode i WHERE i.code = :code AND i.usedAt IS NULL AND i.expiresAt > CURRENT_TIMESTAMP")
     Optional<InviteCode> findUsableByCode(@Param("code") String code);
+
+    Optional<InviteCode> findByCode(String code);
 }

@@ -7,4 +7,5 @@ import java.util.Optional;
 public interface InviteCodeRepository {
     InviteCode save(InviteCode inviteCode);
     Optional<InviteCode> findUsableByCode(String code);
+    Optional<InviteCode> findByCode(String code);
 }
