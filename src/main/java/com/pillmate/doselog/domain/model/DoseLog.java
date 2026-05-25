@@ -1,12 +1,19 @@
 package com.pillmate.doselog.domain.model;
 
-import com.pillmate.common.exception.ErrorCode;
-import com.pillmate.common.exception.PillmateException;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 
 @Entity
@@ -14,6 +21,8 @@ import java.time.Instant;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DoseLog {
+
+    private static final Duration DELAYED_THRESHOLD = Duration.ofMinutes(30);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,22 +54,37 @@ public class DoseLog {
         return log;
     }
 
-    public void take(Long checkedBy) {
-        if (status != DoseStatus.PENDING) {
-            throw new PillmateException(ErrorCode.INVALID_REQUEST);
+    public void take(Long checkedBy, Clock clock) {
+        if (status == DoseStatus.TAKEN) {
+            return;
         }
         this.status = DoseStatus.TAKEN;
         this.checkedBy = checkedBy;
-        this.checkedAt = Instant.now();
+        this.checkedAt = Instant.now(clock);
     }
 
-    public void skip(Long checkedBy, String reason) {
-        if (status != DoseStatus.PENDING) {
-            throw new PillmateException(ErrorCode.INVALID_REQUEST);
+    public void take(Long checkedBy) {
+        take(checkedBy, Clock.systemUTC());
+    }
+
+    public void skip(Long checkedBy, String reason, Clock clock) {
+        if (status == DoseStatus.SKIPPED) {
+            return;
         }
         this.status = DoseStatus.SKIPPED;
         this.checkedBy = checkedBy;
-        this.checkedAt = Instant.now();
+        this.checkedAt = Instant.now(clock);
         this.skipReason = reason;
+    }
+
+    public void skip(Long checkedBy, String reason) {
+        skip(checkedBy, reason, Clock.systemUTC());
+    }
+
+    public boolean isDelayed(Clock clock) {
+        if (status != DoseStatus.PENDING) {
+            return false;
+        }
+        return Instant.now(clock).isAfter(scheduledAt.plus(DELAYED_THRESHOLD));
     }
 }

@@ -38,6 +38,9 @@ public class Schedule {
     private LocalDate endDate;
 
     @Column(nullable = false)
+    private boolean active;
+
+    @Column(nullable = false)
     private Long createdBy;
 
     @Column(nullable = false, updatable = false)
@@ -53,6 +56,7 @@ public class Schedule {
         s.timeOfDay = timeOfDay;
         s.startDate = startDate;
         s.endDate = endDate;
+        s.active = true;
         s.createdBy = createdBy;
         s.createdAt = Instant.now();
         return s;
@@ -60,5 +64,17 @@ public class Schedule {
 
     public boolean overlapsWith(LocalDate otherStart, LocalDate otherEnd) {
         return !startDate.isAfter(otherEnd) && !endDate.isBefore(otherStart);
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void updateTimeOfDay(TimeOfDay newTimeOfDay) {
+        this.timeOfDay = newTimeOfDay;
+    }
+
+    public void updateEndDate(LocalDate newEndDate) {
+        this.endDate = newEndDate;
     }
 }

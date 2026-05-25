@@ -28,7 +28,7 @@ public class CreateScheduleUseCase {
         List<Schedule> existing = scheduleRepository.findActiveByPatientAndTime(
                 req.patientId(), req.timeOfDay(), req.startDate());
 
-        if (conflictChecker.hasConflict(req.patientId(), req.timeOfDay(),
+        if (conflictChecker.hasConflict(req.patientId(), req.drugId(), req.timeOfDay(),
                 req.startDate(), req.endDate(), existing)) {
             throw new PillmateException(ErrorCode.SCHEDULE_CONFLICT);
         }
