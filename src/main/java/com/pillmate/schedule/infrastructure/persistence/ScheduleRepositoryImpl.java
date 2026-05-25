@@ -28,4 +28,9 @@ class ScheduleRepositoryImpl implements ScheduleRepository {
     public List<Schedule> findAllByPatientId(Long patientId) {
         return jpa.findAllByPatientId(patientId);
     }
+
+    @Override
+    public List<Schedule> findByPatientIdAndActiveOrderByTimeOfDayAsc(Long patientId, boolean active) {
+        return jpa.findByPatientIdAndActiveOrderByTimeOfDayAsc(patientId, active);
+    }
 }

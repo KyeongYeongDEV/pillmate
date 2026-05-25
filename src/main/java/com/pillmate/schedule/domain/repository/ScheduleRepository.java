@@ -12,4 +12,5 @@ public interface ScheduleRepository {
     Optional<Schedule> findById(Long id);
     List<Schedule> findActiveByPatientAndTime(Long patientId, TimeOfDay timeOfDay, LocalDate date);
     List<Schedule> findAllByPatientId(Long patientId);
+    List<Schedule> findByPatientIdAndActiveOrderByTimeOfDayAsc(Long patientId, boolean active);
 }
