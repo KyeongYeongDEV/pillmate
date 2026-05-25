@@ -16,6 +16,7 @@
 3. **의료 안전**: 출처 없는 의료 정보 응답 금지, 식약처 DB 검증 필수
 4. **오버엔지니어링 금지**: Phase 1은 단일 서버, MSA/Kafka는 Phase 3/4
 5. **Ubiquitous Language**: `.claude/contexts/ubiquitous-language.md`의 용어만 사용
+6. **DB 데이터 삭제 절대 금지** (2026-05-25 사용자 명시): 어떤 에이전트도(CTO·BE·FE·QA-Claude·QA-Gemini) `DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는)` 절대 X. 사용자 명시 동의 + spec 명시한 경우만 예외. 상세 `.claude/rules/common/db-safety.md`
 
 위반 시 PR 차단. 자세한 규칙은 `.claude/rules/`를 참조.
 

@@ -15,7 +15,9 @@ rules/
 │   ├── tdd-cycle.md
 │   ├── no-overengineering.md
 │   ├── cost-aware.md
-│   └── medical-safety.md
+│   ├── medical-safety.md
+│   ├── db-safety.md         ★ 2026-05-25 신규 — 모든 에이전트 DB 삭제 금지
+│   └── clean-code.md
 ├── java/               # Spring Boot 백엔드
 │   ├── spring-boot.md
 │   ├── jpa.md
@@ -32,6 +34,7 @@ rules/
 
 위반 시 다음 순서로 차단:
 1. **medical-safety** — 환자 안전 (즉시 차단)
-2. **ddd-layered** — 아키텍처 무결성 (PR 차단)
-3. **tdd-cycle** — 테스트 우선 (PR 차단)
-4. 나머지 — 리뷰 코멘트
+2. **db-safety** — DB 데이터 보호 (즉시 차단) ★ 2026-05-25 추가
+3. **ddd-layered** — 아키텍처 무결성 (PR 차단)
+4. **tdd-cycle** — 테스트 우선 (PR 차단)
+5. 나머지 — 리뷰 코멘트

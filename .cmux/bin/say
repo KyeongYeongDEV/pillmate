@@ -11,16 +11,23 @@ source "$RUNTIME"
 role="${1:-}"; message="${2:-}"
 [[ -z "$role" || -z "$message" ]] && { echo "Usage: say <be|fe|dev|qa-claude|qa-gemini> \"message\"" >&2; exit 1; }
 
+DB_SAFETY="[DB 데이터 삭제 절대 금지 — DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는) X. 사용자 명시 동의 + spec 명시 시만 예외. 룰: .claude/rules/common/db-safety.md] "
+prefix=""
 case "$role" in
-  be|be-dev)    target="${BE_DEV_SURFACE:-$DEV_SURFACE}" ;;
-  fe|fe-dev)    target="$FE_DEV_SURFACE" ;;
-  dev)          target="${BE_DEV_SURFACE:-$DEV_SURFACE}" ;;   # legacy alias → BE
-  qa-claude)    target="$QA_CLAUDE_SURFACE" ;;
-  qa-gemini)    target="$QA_GEMINI_SURFACE" ;;
+  be|be-dev)    target="${BE_DEV_SURFACE:-$DEV_SURFACE}"
+                prefix="$DB_SAFETY" ;;
+  fe|fe-dev)    target="$FE_DEV_SURFACE"
+                prefix="$DB_SAFETY" ;;
+  dev)          target="${BE_DEV_SURFACE:-$DEV_SURFACE}"
+                prefix="$DB_SAFETY" ;;
+  qa-claude)    target="$QA_CLAUDE_SURFACE"
+                prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25 참조. .cmux/prompts/qa-claude.md 룰 따름.] " ;;
+  qa-gemini)    target="$QA_GEMINI_SURFACE"
+                prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25(drug_embeddings 4736건 삭제)에서 정책 재확립. GEMINI.md + .cmux/prompts/qa-gemini.md 룰 절대 따름. 발견은 보고만, 수정 X.] " ;;
   *)            echo "✗ unknown role: $role" >&2; exit 1 ;;
 esac
 
-cmux send-panel --panel "$target" --workspace "$CMUX_WORKSPACE" -- "$message"
+cmux send-panel --panel "$target" --workspace "$CMUX_WORKSPACE" -- "${prefix}${message}"
 sleep 0.5
 cmux send-key-panel --panel "$target" --workspace "$CMUX_WORKSPACE" Enter >/dev/null
 echo "→ sent to $role ($target)"

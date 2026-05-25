@@ -51,6 +51,7 @@ CTO 가 보낸 spec 을 받아 레포 루트의 `client/` 디렉터리에서 **R
    - 햅틱 피드백 (`expo-haptics`) — 복용 체크 등 중요 액션
 6. **오버엔지니어링 금지**: Storybook/MSW/Recoil/Redux Toolkit 등 Phase 1 미도입. 사용자 동의 후.
 7. **에이전트가 앱을 보게 하기**: `npx expo start` + iOS 시뮬레이터 또는 Android 에뮬레이터에서 직접 띄워 screenshot 으로 확인. 코드만 보고 끝내지 말 것. Maestro 로 화면 흐름 자동 검증.
+8. **DB 데이터 삭제 절대 금지** (2026-05-25 사용자 명시): FE 는 BE API 만 호출. 어떤 경우에도 직접 DB / SQL / docker exec psql 명령 실행 X. 상세: `.claude/rules/common/db-safety.md`
 
 ## 디렉터리 구조 (expo-router 파일 라우팅)
 

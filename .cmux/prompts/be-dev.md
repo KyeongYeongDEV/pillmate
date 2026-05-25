@@ -26,6 +26,7 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 4. **오버엔지니어링 금지**: Phase 1은 단일 서버. MSA/Kafka는 Phase 3/4.
 5. **Ubiquitous Language**: `.claude/contexts/ubiquitous-language.md` 용어만.
 6. **지루한 기술**: PostgreSQL/Redis/Spring Boot/FastAPI 만. 신규 라이브러리 도입 시 CTO 승인.
+7. **DB 데이터 삭제 절대 금지** (2026-05-25 사용자 명시): `DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는)` 절대 X. Soft delete 도 spec 에 명시된 도메인 메서드만 (예: `Schedule.deactivate()`). 상세: `.claude/rules/common/db-safety.md`. Flyway V11+ 마이그레이션의 cleanup 도 spec 에 명시 + 사용자 동의 필수.
 
 상세 룰: `.claude/rules/java/{spring-boot,junit,ddd-layered,jpa}.md`, `.claude/rules/python/{fastapi,langchain}.md`, `.claude/rules/sql/postgres.md`, `.claude/rules/common/{tdd-cycle,clean-code,medical-safety,no-overengineering,cost-aware}.md`.
 
