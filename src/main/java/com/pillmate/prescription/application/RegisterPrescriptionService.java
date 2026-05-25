@@ -10,6 +10,7 @@ import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import com.pillmate.common.security.CareGroupGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,11 @@ public class RegisterPrescriptionService {
 
     private final PrescriptionRepository prescriptionRepository;
     private final DrugLookupPort drugLookupPort;
+    private final CareGroupGuard careGroupGuard;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
+        careGroupGuard.requireAccessible(command.careGroupId());
         requireNonEmptyItems(command.items());
 
         Prescription prescription = Prescription.create(

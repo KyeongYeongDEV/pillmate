@@ -7,6 +7,7 @@ import com.pillmate.schedule.application.dto.CreateScheduleResponse;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.schedule.domain.service.ScheduleConflictChecker;
+import com.pillmate.common.security.CareGroupGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +20,11 @@ public class CreateScheduleUseCase {
 
     private final ScheduleRepository scheduleRepository;
     private final ScheduleConflictChecker conflictChecker;
+    private final CareGroupGuard careGroupGuard;
 
     @Transactional
     public CreateScheduleResponse create(CreateScheduleRequest req, Long createdBy) {
+        careGroupGuard.requireAccessible(req.careGroupId());
         List<Schedule> existing = scheduleRepository.findActiveByPatientAndTime(
                 req.patientId(), req.timeOfDay(), req.startDate());
 

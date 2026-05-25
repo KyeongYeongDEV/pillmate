@@ -9,6 +9,7 @@ import com.pillmate.prescription.application.port.FileStoragePort;
 import com.pillmate.prescription.application.port.OcrPort;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;
 import com.pillmate.prescription.application.port.OcrPort.OcrResult;
+import com.pillmate.common.security.CareGroupGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,9 +28,11 @@ public class OcrAndRegisterPrescriptionUseCase {
     private final FileStoragePort fileStoragePort;
     private final OcrPort ocrPort;
     private final RegisterPrescriptionService registerPrescriptionService;
+    private final CareGroupGuard careGroupGuard;
 
     public RegisterPrescriptionResponse ocrAndRegister(
             Long careGroupId, Long patientId, LocalDate prescribedAt, String imageKey) {
+        careGroupGuard.requireAccessible(careGroupId);
         String downloadUrl = fileStoragePort.issueDownloadUrl(imageKey, OCR_DOWNLOAD_TTL);
         OcrResult ocrResult = ocrPort.extractFromImage(downloadUrl);
         

@@ -6,6 +6,7 @@ import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.application.port.FileStoragePort;
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.prescription.application.port.OcrPort;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;
 import com.pillmate.prescription.application.port.OcrPort.OcrResult;
@@ -44,6 +45,9 @@ class OcrAndRegisterPrescriptionUseCaseTest {
 
     @Mock
     private RegisterPrescriptionService registerPrescriptionService;
+
+    @Mock
+    private CareGroupGuard careGroupGuard;
 
     @Test
     @DisplayName("OCR 결과가 있으면 처방전을 등록하고 응답을 반환한다")

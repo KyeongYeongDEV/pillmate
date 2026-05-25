@@ -8,6 +8,7 @@ import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import com.pillmate.common.security.CareGroupGuard;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ class RegisterPrescriptionUseCaseTest {
 
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
+    @Mock CareGroupGuard careGroupGuard;
     @InjectMocks RegisterPrescriptionService sut;
 
     @Test
