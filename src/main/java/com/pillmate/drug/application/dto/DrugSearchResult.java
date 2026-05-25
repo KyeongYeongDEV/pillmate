@@ -8,7 +8,8 @@ public record DrugSearchResult(
         String name,
         String ingredient,
         String efficacy,
-        String form
+        String form,
+        String imageUrl
 ) {
     public static DrugSearchResult from(Drug drug) {
         return new DrugSearchResult(
@@ -17,7 +18,8 @@ public record DrugSearchResult(
                 drug.getName(),
                 drug.getIngredient(),
                 drug.getEfficacy(),
-                drug.getForm()
+                drug.getForm(),
+                drug.getItemImage()
         );
     }
 }

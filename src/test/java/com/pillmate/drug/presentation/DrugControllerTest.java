@@ -36,7 +36,8 @@ class DrugControllerTest {
     void search_returns200() throws Exception {
         given(searchDrugUseCase.search("타이레놀"))
                 .willReturn(List.of(new DrugSearchResult(
-                        1L, SAMPLE_KD_CODE, SAMPLE_NAME, "아세트아미노펜 500mg", "해열, 진통", "정")));
+                        1L, SAMPLE_KD_CODE, SAMPLE_NAME, "아세트아미노펜 500mg", "해열, 진통", "정",
+                        "https://nedrug.mfds.go.kr/pbp/cmn/itemImageDownload/147426411393800131")));
 
         mockMvc.perform(get("/drugs/search").param("q", "타이레놀"))
                 .andExpect(status().isOk())
@@ -60,7 +61,8 @@ class DrugControllerTest {
         given(getDrugDetailUseCase.getDetail(SAMPLE_KD_CODE))
                 .willReturn(new DrugDetailResponse(1L, SAMPLE_KD_CODE, SAMPLE_NAME,
                         "아세트아미노펜 500mg", "해열, 진통", "1회 1-2정, 1일 3-4회",
-                        "간 손상 주의", "정", "한국얀센", "식품의약품안전처"));
+                        "간 손상 주의", "정", "한국얀센", "식품의약품안전처",
+                        "https://nedrug.mfds.go.kr/pbp/cmn/itemImageDownload/147426411393800131"));
 
         mockMvc.perform(get("/drugs/" + SAMPLE_KD_CODE))
                 .andExpect(status().isOk())

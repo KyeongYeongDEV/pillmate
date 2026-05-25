@@ -41,6 +41,9 @@ public class Drug {
     @Column(length = 100)
     private String company;
 
+    @Column(name = "item_image", columnDefinition = "TEXT")
+    private String itemImage;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DrugStatus status;

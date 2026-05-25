@@ -12,7 +12,8 @@ public record DrugDetailResponse(
         String sideEffect,
         String form,
         String company,
-        String source
+        String source,
+        String imageUrl
 ) {
     public static DrugDetailResponse from(Drug drug) {
         return new DrugDetailResponse(
@@ -25,7 +26,8 @@ public record DrugDetailResponse(
                 drug.getSideEffect(),
                 drug.getForm(),
                 drug.getCompany(),
-                drug.getSource()
+                drug.getSource(),
+                drug.getItemImage()
         );
     }
 }
