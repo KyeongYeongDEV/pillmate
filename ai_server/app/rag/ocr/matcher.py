@@ -12,12 +12,13 @@ from app.rag.ocr.normalizer import (
     normalize_drug_name,
 )
 from app.rag.ocr.parser import ParsedItem
+from app.rag.ocr.rrf import MatchDecision
 
 logger = logging.getLogger(__name__)
 
 VECTOR_MIN_SCORE = Decimal("0.6")
 
-MatchStage = Literal["ilike", "token", "fuzzy", "ingredient", "vector", "none"]
+MatchStage = Literal["ilike", "token", "fuzzy", "ingredient", "vector", "exact_fast", "rrf", "none"]
 
 
 @dataclass(frozen=True)
@@ -29,8 +30,10 @@ class MatchCandidate:
 
 @dataclass(frozen=True)
 class MatchResult:
-    item: OcrItem
+    item: OcrItem | None
     stage: MatchStage
+    final_score: float = 0.0
+    decision: MatchDecision | None = None
 
 
 class IlikeDrugSearch(Protocol):
@@ -59,6 +62,7 @@ class _NullFuzzySearch(FuzzyDrugSearch):
         return None
 
 
+# Deprecated — use RrfMatcher for multi-retriever RRF-based matching.
 class DrugMatcher:
     def __init__(
         self,
