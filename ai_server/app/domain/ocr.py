@@ -4,6 +4,8 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
@@ -37,6 +39,23 @@ class OcrItem(BaseModel):
     confidence: Decimal = Field(ge=OCR_CONFIDENCE_FLOOR, le=OCR_CONFIDENCE_CEIL)
 
 
+class OcrItemWithDecision(OcrItem):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    decision: Literal["AUTO", "CONFIRM", "MANUAL"] = "AUTO"
+    decision_reason: str = "confident"
+    candidate_options: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class MatchDecisionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["AUTO", "CONFIRM", "MANUAL"]
+    primary: OcrItem | None
+    options: list[OcrItem] = Field(default_factory=list)
+    reason: str
+
+
 class PrescriptionOcrRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -47,7 +66,7 @@ class PrescriptionOcrRequest(BaseModel):
 class PrescriptionOcrResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    items: list[OcrItem]
+    items: list[OcrItemWithDecision]
     source: Literal["식품의약품안전처"] = MFDS_SOURCE
 
 

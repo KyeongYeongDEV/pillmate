@@ -5,6 +5,7 @@ from typing import Protocol
 
 from app.domain.ocr import (
     OcrItem,
+    OcrItemWithDecision,
     PrescriptionOcrRequest,
     PrescriptionOcrResponse,
     RawOcrItem,
@@ -62,9 +63,39 @@ class OcrPrescriptionService:
     ) -> tuple[PrescriptionOcrResponse, list[MatchStage]]:
         raw_items = await self._vision.extract(image_bytes)
         results = await self._match_all(raw_items)
-        items = [result.item for result in results]
+        items = [self._to_decision_item(result, raw) for result, raw in zip(results, raw_items)]
         stages = [result.stage for result in results]
         return PrescriptionOcrResponse(items=items), stages
+
+    def _to_decision_item(self, result: MatchResult, raw: RawOcrItem) -> OcrItemWithDecision:
+        if result.item is not None:
+            return OcrItemWithDecision(**result.item.model_dump())
+        decision = result.decision
+        if decision is None or decision.primary is None:
+            return OcrItemWithDecision(
+                kd_code=None,
+                name_raw=raw.name_raw,
+                confidence=raw.confidence,
+                decision="MANUAL",
+                decision_reason="no_match",
+            )
+        primary = decision.primary
+        return OcrItemWithDecision(
+            kd_code=primary.item_seq,
+            name_raw=raw.name_raw,
+            matched_name=primary.name,
+            dose_amount=primary.dose_amount,
+            dose_unit=primary.dose_unit,
+            confidence=raw.confidence,
+            decision=decision.type.value,
+            decision_reason=decision.reason,
+            candidate_options=[
+                {"item_seq": c.item_seq, "name": c.name,
+                 "dose_amount": str(c.dose_amount) if c.dose_amount else None,
+                 "dose_unit": c.dose_unit}
+                for c in (decision.options or [])
+            ],
+        )
 
     async def _match_all(self, raw_items: list[RawOcrItem]) -> list[MatchResult]:
         parsed_items = [parse_drug_item(raw.name_raw) for raw in raw_items]

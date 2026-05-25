@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Protocol
 
+from app.rag.ocr.decider import MatchDecider
 from app.rag.ocr.matcher import MatchResult
 from app.rag.ocr.parser import ParsedItem
 from app.rag.ocr.reranker import DomainReranker
@@ -31,10 +32,12 @@ class RrfMatcher:
         exact_single: ExactSinglePort,
         retrievers: dict[str, MultiRetrieverPort],
         reranker: DomainReranker | None = None,
+        decider: MatchDecider | None = None,
     ) -> None:
         self._exact_single = exact_single
         self._retrievers = retrievers
         self._reranker = reranker or DomainReranker()
+        self._decider = decider or MatchDecider()
 
     async def match(self, parsed: ParsedItem) -> MatchResult:
         if not parsed.is_valid:
@@ -60,16 +63,12 @@ class RrfMatcher:
             return self._manual(reason="no_match")
 
         ranked = self._reranker.rerank(parsed, fused[:_RERANK_TOP_N])
+        decision = self._decider.decide(parsed, ranked)
         return MatchResult(
             item=None,
             stage="rrf",
             final_score=ranked[0].final_score,
-            decision=MatchDecision(
-                type=MatchDecisionType.AUTO,
-                primary=ranked[0],
-                options=ranked[:3],
-                reason="rrf",
-            ),
+            decision=decision,
         )
 
     async def _run_rrf(self, parsed: ParsedItem) -> list[Candidate]:
