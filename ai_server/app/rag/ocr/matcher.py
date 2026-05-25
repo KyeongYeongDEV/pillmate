@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 VECTOR_MIN_SCORE = Decimal("0.6")
 
-MatchStage = Literal["ilike", "token", "ingredient", "vector", "none"]
+MatchStage = Literal["ilike", "token", "fuzzy", "ingredient", "vector", "none"]
 
 
 @dataclass(frozen=True)
@@ -45,8 +45,17 @@ class VectorDrugSearch(Protocol):
     async def search(self, name: str) -> MatchCandidate | None: ...
 
 
+class FuzzyDrugSearch(Protocol):
+    async def search(self, name: str) -> MatchCandidate | None: ...
+
+
 class _NullIngredientSearch(IngredientSearch):
     async def search(self, ingredient: str) -> MatchCandidate | None:
+        return None
+
+
+class _NullFuzzySearch(FuzzyDrugSearch):
+    async def search(self, name: str) -> MatchCandidate | None:
         return None
 
 
@@ -56,10 +65,12 @@ class DrugMatcher:
         ilike: IlikeDrugSearch,
         vector: VectorDrugSearch,
         ingredient: IngredientSearch | None = None,
+        fuzzy: FuzzyDrugSearch | None = None,
     ):
         self._ilike = ilike
         self._vector = vector
         self._ingredient = ingredient or _NullIngredientSearch()
+        self._fuzzy = fuzzy or _NullFuzzySearch()
 
     async def match(self, parsed: ParsedItem, raw: RawOcrItem) -> MatchResult:
         if not parsed.is_valid:
@@ -82,6 +93,10 @@ class DrugMatcher:
             hit = await self._ilike_or_none(token)
             if hit is not None:
                 return hit, "token"
+
+        fuzzy_hit = await self._fuzzy.search(name_raw)
+        if fuzzy_hit is not None:
+            return fuzzy_hit, "fuzzy"
 
         english = first_english_token(name_raw)
         if english:
