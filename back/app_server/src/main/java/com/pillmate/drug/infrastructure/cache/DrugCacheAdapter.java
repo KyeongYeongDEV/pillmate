@@ -17,7 +17,7 @@ import java.util.Optional;
 class DrugCacheAdapter implements DrugCachePort {
 
     private static final String KEY_PREFIX = "DRUG:";
-    private static final Duration TTL = Duration.ofHours(24);
+    private static final Duration TTL = Duration.ofMinutes(55);
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;

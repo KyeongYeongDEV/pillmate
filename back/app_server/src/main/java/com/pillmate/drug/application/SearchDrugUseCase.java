@@ -18,6 +18,7 @@ public class SearchDrugUseCase {
     private static final int DEFAULT_LIMIT = 20;
 
     private final DrugRepository drugRepository;
+    private final DrugImageUrlResolver drugImageUrlResolver;
 
     public List<DrugSearchResult> search(String query) {
         if (query == null || query.isBlank()) {
@@ -25,7 +26,7 @@ public class SearchDrugUseCase {
         }
         return drugRepository.searchByKeyword(query.trim(), DEFAULT_LIMIT)
                 .stream()
-                .map(DrugSearchResult::from)
+                .map(drug -> DrugSearchResult.from(drug, drugImageUrlResolver.resolve(drug)))
                 .toList();
     }
 }

@@ -15,7 +15,7 @@ public record DrugDetailResponse(
         String source,
         String imageUrl
 ) {
-    public static DrugDetailResponse from(Drug drug) {
+    public static DrugDetailResponse from(Drug drug, String imageUrl) {
         return new DrugDetailResponse(
                 drug.getId(),
                 drug.getKdCode(),
@@ -27,7 +27,11 @@ public record DrugDetailResponse(
                 drug.getForm(),
                 drug.getCompany(),
                 drug.getSource(),
-                drug.getItemImage()
+                imageUrl
         );
+    }
+
+    public static DrugDetailResponse from(Drug drug) {
+        return from(drug, drug.getItemImage());
     }
 }

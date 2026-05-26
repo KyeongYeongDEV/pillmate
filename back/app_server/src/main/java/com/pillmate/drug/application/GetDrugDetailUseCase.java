@@ -4,6 +4,7 @@ import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.drug.application.dto.DrugDetailResponse;
 import com.pillmate.drug.application.port.DrugCachePort;
+import com.pillmate.drug.domain.model.Drug;
 import com.pillmate.drug.domain.repository.DrugRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class GetDrugDetailUseCase {
 
     private final DrugRepository drugRepository;
     private final DrugCachePort drugCachePort;
+    private final DrugImageUrlResolver drugImageUrlResolver;
 
     public DrugDetailResponse getDetail(String kdCode) {
         return drugCachePort.get(kdCode)
@@ -23,9 +25,9 @@ public class GetDrugDetailUseCase {
     }
 
     private DrugDetailResponse loadFromRepositoryAndCache(String kdCode) {
-        DrugDetailResponse response = drugRepository.findByKdCode(kdCode)
-                .map(DrugDetailResponse::from)
+        Drug drug = drugRepository.findByKdCode(kdCode)
                 .orElseThrow(() -> new PillmateException(ErrorCode.DRUG_NOT_FOUND));
+        DrugDetailResponse response = DrugDetailResponse.from(drug, drugImageUrlResolver.resolve(drug));
         drugCachePort.put(kdCode, response);
         return response;
     }

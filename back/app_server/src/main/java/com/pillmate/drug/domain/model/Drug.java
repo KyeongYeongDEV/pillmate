@@ -44,6 +44,9 @@ public class Drug {
     @Column(name = "item_image", columnDefinition = "TEXT")
     private String itemImage;
 
+    @Column(name = "image_s3_key", length = 255)
+    private String imageS3Key;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DrugStatus status;
@@ -72,6 +75,10 @@ public class Drug {
 
     public boolean isActive() {
         return this.status == DrugStatus.ACTIVE;
+    }
+
+    public boolean hasS3CachedImage() {
+        return imageS3Key != null && !imageS3Key.isBlank();
     }
 
     public void revoke() {

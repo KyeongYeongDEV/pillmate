@@ -11,7 +11,7 @@ public record DrugSearchResult(
         String form,
         String imageUrl
 ) {
-    public static DrugSearchResult from(Drug drug) {
+    public static DrugSearchResult from(Drug drug, String imageUrl) {
         return new DrugSearchResult(
                 drug.getId(),
                 drug.getKdCode(),
@@ -19,7 +19,11 @@ public record DrugSearchResult(
                 drug.getIngredient(),
                 drug.getEfficacy(),
                 drug.getForm(),
-                drug.getItemImage()
+                imageUrl
         );
+    }
+
+    public static DrugSearchResult from(Drug drug) {
+        return from(drug, drug.getItemImage());
     }
 }

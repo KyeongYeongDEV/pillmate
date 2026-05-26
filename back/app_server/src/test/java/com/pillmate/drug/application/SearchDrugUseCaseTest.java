@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 class SearchDrugUseCaseTest {
 
     @Mock DrugRepository drugRepository;
+    @Mock DrugImageUrlResolver drugImageUrlResolver;
     @InjectMocks SearchDrugUseCase sut;
 
     @Test
