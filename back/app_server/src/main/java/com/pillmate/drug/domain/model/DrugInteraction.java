@@ -38,6 +38,20 @@ public class DrugInteraction {
     @Column(name = "synced_at", nullable = false)
     private Instant syncedAt;
 
+    public static DrugInteraction create(
+            String drugCodeA, String drugCodeB, String type,
+            String severity, String description, String source, Instant syncedAt) {
+        DrugInteraction i = new DrugInteraction();
+        i.drugCodeA = drugCodeA;
+        i.drugCodeB = drugCodeB;
+        i.type = type;
+        i.severity = severity;
+        i.description = description;
+        i.source = source;
+        i.syncedAt = syncedAt;
+        return i;
+    }
+
     public boolean isCritical() {
         return "CRITICAL".equals(this.severity);
     }

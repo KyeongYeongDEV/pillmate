@@ -10,6 +10,7 @@ import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import com.pillmate.common.security.CareGroupGuard;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +26,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
 @DisplayName("RegisterPrescriptionUseCase — 처방전 등록 (부분 매칭 허용)")
@@ -36,7 +39,13 @@ class RegisterPrescriptionUseCaseTest {
     @Mock DrugLookupPort drugLookupPort;
     @Mock CareGroupGuard careGroupGuard;
     @Mock ObjectMapper objectMapper;
+    @Mock CheckInteractionsUseCase checkInteractionsUseCase;
     @InjectMocks RegisterPrescriptionService sut;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(checkInteractionsUseCase.check(anyList())).thenReturn(List.of());
+    }
 
     @Test
     @DisplayName("모든 kdCode 매칭 + 모든 confidence ≥ 0.7 → DONE 상태로 저장")

@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.prescription.application.dto.DrugItem;
+import com.pillmate.prescription.application.dto.InteractionWarning;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
+import com.pillmate.prescription.domain.model.InteractionSeverity;
 import com.pillmate.prescription.domain.model.CandidateDecisionType;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
@@ -35,6 +37,7 @@ public class RegisterPrescriptionService {
     private final DrugLookupPort drugLookupPort;
     private final CareGroupGuard careGroupGuard;
     private final ObjectMapper objectMapper;
+    private final CheckInteractionsUseCase checkInteractionsUseCase;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
@@ -50,13 +53,18 @@ public class RegisterPrescriptionService {
         prescription.attachCandidates(candidates);
         prescription.markOcrDone();
 
+        List<InteractionWarning> warnings = checkInteractionsUseCase.check(extractMatchedKdCodes(registered));
+        if (hasCriticalWarning(warnings)) {
+            prescription.markManualReview();
+        }
+
         Prescription saved = prescriptionRepository.save(prescription);
         int unresolvedCount = candidates.size();
-        log.info("PrescriptionRegistered prescriptionId={} ocrStatus={} itemCount={} unmatched={} unresolved={}",
+        log.info("PrescriptionRegistered prescriptionId={} ocrStatus={} itemCount={} unmatched={} unresolved={} ddiWarnings={}",
                 saved.getId(), saved.getOcrStatus(), registered.size(),
-                countUnmatched(registered), unresolvedCount);
+                countUnmatched(registered), unresolvedCount, warnings.size());
 
-        return new RegisterPrescriptionResponse(saved.getId(), saved.getOcrStatus(), registered, unresolvedCount);
+        return new RegisterPrescriptionResponse(saved.getId(), saved.getOcrStatus(), registered, unresolvedCount, warnings);
     }
 
     private void requireNonEmptyItems(List<DrugItem> items) {
@@ -149,6 +157,17 @@ public class RegisterPrescriptionService {
                 .durationDays(item.durationDays())
                 .confidence(item.confidence())
                 .build();
+    }
+
+    private List<String> extractMatchedKdCodes(List<RegisteredDrugItem> registered) {
+        return registered.stream()
+                .filter(it -> it.kdCode() != null)
+                .map(RegisteredDrugItem::kdCode)
+                .toList();
+    }
+
+    private boolean hasCriticalWarning(List<InteractionWarning> warnings) {
+        return warnings.stream().anyMatch(w -> w.severity() == InteractionSeverity.CRITICAL);
     }
 
     private long countUnmatched(List<RegisteredDrugItem> items) {
