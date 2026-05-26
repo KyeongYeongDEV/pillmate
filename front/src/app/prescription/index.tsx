@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet,
 } from 'react-native';
@@ -9,8 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import PillVisual from '@/components/common/PillVisual';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { reset, removeItem, setPatientId } from '@/store/slices/prescriptionFlowSlice';
-import { useGetMyPatientsQuery } from '@/store/slices/groupApi';
+import { reset, removeItem } from '@/store/slices/prescriptionFlowSlice';
 
 const RECENT = [
   { date: '11.10', title: '정형외과 처방', drugCount: 2 },
@@ -21,13 +20,6 @@ const RECENT = [
 export default function PrescriptionRegisterHub() {
   const dispatch = useAppDispatch();
   const selectedItems = useAppSelector(s => s.prescriptionFlow.items);
-  const selectedPatientId = useAppSelector(s => s.prescriptionFlow.patientId);
-  const { data: patients = [] } = useGetMyPatientsQuery();
-
-  // 단일 환자면 자동 선택
-  useEffect(() => {
-    if (patients.length === 1) dispatch(setPatientId(patients[0].userId));
-  }, [patients, dispatch]);
 
   const handleCamera = useCallback(() => {
     dispatch(reset());
@@ -63,7 +55,7 @@ export default function PrescriptionRegisterHub() {
         <Pressable onPress={() => router.back()} accessibilityLabel="뒤로" accessibilityRole="button" style={styles.headerBtn}>
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>처방전 등록</Text>
+        <Text style={styles.headerTitle}>내 처방전 등록</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -79,29 +71,6 @@ export default function PrescriptionRegisterHub() {
             <Text style={styles.heroSub}>AI가 1.4초 만에 약을 인식해{'\n'}자동으로 등록해드려요</Text>
           </View>
         </View>
-
-        {/* 환자 선택 — 복수 환자 있을 때만 표시 */}
-        {patients.length > 1 && (
-          <View style={styles.patientSection}>
-            <Text style={styles.patientLabel}>누구의 처방전인가요?</Text>
-            <View style={styles.patientRow}>
-              {patients.map(p => (
-                <Pressable
-                  key={p.userId}
-                  style={[styles.patientChip, selectedPatientId === p.userId && styles.patientChipOn]}
-                  onPress={() => dispatch(setPatientId(p.userId))}
-                  accessibilityLabel={p.name}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selectedPatientId === p.userId }}
-                >
-                  <Text style={[styles.patientChipTxt, selectedPatientId === p.userId && styles.patientChipTxtOn]}>
-                    {p.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
 
         {/* 카메라 CTA (메인) */}
         <Pressable
@@ -259,20 +228,6 @@ const styles = StyleSheet.create({
   recentDate: { ...typography.caption1, color: colors.labelAlternative, width: 40 },
   recentName: { ...typography.body2n, color: colors.labelNormal, flex: 1, fontWeight: '600' },
   recentCount: { ...typography.caption1, color: colors.labelAlternative },
-  patientSection: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r14,
-    borderWidth: 1, borderColor: colors.line, padding: space.s16, gap: space.s10,
-  },
-  patientLabel: { ...typography.label1n, color: colors.labelNeutral, fontWeight: '700' },
-  patientRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
-  patientChip: {
-    paddingHorizontal: space.s14, paddingVertical: space.s10,
-    borderRadius: radius.r10, borderWidth: 1.5, borderColor: colors.line,
-    backgroundColor: colors.bgAlt,
-  },
-  patientChipOn: { borderColor: colors.primaryNormal, backgroundColor: '#EBF3FF' },
-  patientChipTxt: { ...typography.body2n, color: colors.labelAlternative },
-  patientChipTxtOn: { color: colors.primaryNormal, fontWeight: '700' },
   searchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: space.s10,
     backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s16,

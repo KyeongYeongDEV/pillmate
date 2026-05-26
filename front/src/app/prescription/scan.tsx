@@ -7,7 +7,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addFromOcr, setImageKey } from '@/store/slices/prescriptionFlowSlice';
-import { useAppSelector } from '@/store/hooks';
 import { prescriptionApi } from '@/lib/api/prescription';
 
 export default function ScanScreen() {
@@ -17,21 +16,18 @@ export default function ScanScreen() {
   const [loading, setLoading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const dispatch = useAppDispatch();
-  const patientId = useAppSelector(s => s.prescriptionFlow.patientId) ?? 1;
 
   const processImage = useCallback(
     async (uri: string) => {
       setLoading(true);
       try {
-        // Phase 1: upload-url → S3 PUT → OCR
+        // Phase 1: upload-url → S3 PUT → OCR (BE identifies user from JWT)
         const uploadResp = await prescriptionApi.issueUploadUrl({
-          patientId,
           contentType: 'image/jpeg',
         });
         dispatch(setImageKey(uploadResp.objectKey));
         await prescriptionApi.uploadToS3(uploadResp.uploadUrl, uri);
         const ocrResp = await prescriptionApi.ocr({
-          patientId,
           prescribedAt: new Date().toISOString().slice(0, 10),
           imageKey: uploadResp.objectKey,
         });
