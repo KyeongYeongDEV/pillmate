@@ -1,0 +1,28 @@
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { ScheduleDay } from '@/types/schedule';
+
+const MOCK_SCHEDULE: ScheduleDay = {
+  date: '2025-11-24',
+  totalCount: 6,
+  doneCount: 4,
+  slots: [
+    { id: 'morning', time: '08:00', label: '아침',    state: 'done', items: ['암로디핀 5mg', '메트포르민 500mg'] },
+    { id: 'noon',    time: '12:30', label: '점심',    state: 'now',  items: ['메트포르민 500mg', '글리메피리드 2mg'] },
+    { id: 'evening', time: '19:00', label: '저녁',    state: 'wait', items: ['아토르바스타틴 10mg'] },
+    { id: 'bedtime', time: '22:00', label: '취침 전', state: 'wait', items: ['오메가-3 1000mg'] },
+  ],
+};
+
+export const scheduleApiSlice = createApi({
+  reducerPath: 'scheduleApi',
+  baseQuery: fetchBaseQuery({ baseUrl: '' }),
+  keepUnusedDataFor: 30,
+  endpoints: (build) => ({
+    getDaySchedule: build.query<ScheduleDay, { patientId: number; date: string }>({
+      // Phase 2: replace queryFn with query: (args) => `/schedules?patientId=${args.patientId}&date=${args.date}`
+      queryFn: async () => ({ data: MOCK_SCHEDULE }),
+    }),
+  }),
+});
+
+export const { useGetDayScheduleQuery } = scheduleApiSlice;
