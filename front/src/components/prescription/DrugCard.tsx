@@ -1,0 +1,159 @@
+import React, { memo, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Image } from 'expo-image';
+import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { OCR_MIN_CONFIDENCE, MFDS_SOURCE } from '@/lib/constants';
+import type { DrugListItem, DrugSlots } from '@/types/prescription';
+import SlotToggle from './SlotToggle';
+import DoseStepper from './DoseStepper';
+
+interface Props {
+  item: DrugListItem;
+  onSlotsChange: (id: string, slots: DrugSlots) => void;
+  onDoseChange: (id: string, amount: number) => void;
+  onRemove: (id: string) => void;
+}
+
+function DrugCard({ item, onSlotsChange, onDoseChange, onRemove }: Props) {
+  const handleSlotsChange = useCallback(
+    (slots: DrugSlots) => onSlotsChange(item.id, slots),
+    [item.id, onSlotsChange],
+  );
+  const handleDoseChange = useCallback(
+    (amount: number) => onDoseChange(item.id, amount),
+    [item.id, onDoseChange],
+  );
+  const handleRemove = useCallback(() => onRemove(item.id), [item.id, onRemove]);
+
+  const { borderColor, isLowConf, isUnmatched } = useMemo(() => {
+    const unmatched = item.kdCode === null && item.source === 'OCR_AUTO';
+    const lowConf = item.confidence !== null && item.confidence < OCR_MIN_CONFIDENCE;
+    return {
+      isUnmatched: unmatched,
+      isLowConf: lowConf,
+      borderColor: unmatched
+        ? colors.statusCautionary
+        : lowConf
+          ? '#ff9200'
+          : colors.line,
+    };
+  }, [item.kdCode, item.source, item.confidence]);
+
+  const sourceLabel = item.source === 'MANUAL_INPUT'
+    ? `출처: 사용자 입력 (${MFDS_SOURCE} 미검증)`
+    : `출처: ${MFDS_SOURCE}`;
+
+  return (
+    <View
+      style={[styles.card, { borderColor }]}
+      accessibilityLabel={`약 카드: ${item.matchedName ?? item.nameRaw}`}
+    >
+      {/* 상단 행 */}
+      <View style={styles.topRow}>
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.thumbnail}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            placeholder={{ blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' }}
+            accessibilityLabel="약 이미지"
+          />
+        ) : (
+          <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
+            <Text style={styles.pillEmoji}>💊</Text>
+          </View>
+        )}
+        <View style={styles.nameBlock}>
+          <Text style={styles.name} numberOfLines={2}>{item.matchedName ?? item.nameRaw}</Text>
+          {item.matchedName && item.matchedName !== item.nameRaw && (
+            <Text style={styles.nameRaw} numberOfLines={1}>{item.nameRaw}</Text>
+          )}
+          <Text style={styles.source}>{sourceLabel}</Text>
+        </View>
+        <View style={styles.rightCol}>
+          {isLowConf && (
+            <View style={styles.warnBadge} accessibilityLabel="신뢰도 낮음">
+              <Text style={styles.warnIcon}>⚠️</Text>
+            </View>
+          )}
+          {item.confidence !== null && (
+            <Text style={[styles.conf, isLowConf && styles.confLow]}>
+              {Math.round(item.confidence * 100)}%
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* 미매칭 경고 */}
+      {isUnmatched && (
+        <View style={styles.unmatchedBanner}>
+          <Text style={styles.unmatchedText}>
+            ⚠️ 식약처 DB에서 자동 확인되지 않았어요. 약사·의사와 상담하세요.
+          </Text>
+        </View>
+      )}
+
+      {/* 복용량 */}
+      <View style={styles.doseRow}>
+        <Text style={styles.sectionLabel}>1회 복용량</Text>
+        <DoseStepper
+          value={item.doseAmount}
+          unit={item.doseUnit}
+          onChange={handleDoseChange}
+        />
+      </View>
+
+      {/* 4슬롯 토글 */}
+      <View style={styles.slotSection}>
+        <Text style={styles.sectionLabel}>복용 시간대</Text>
+        <SlotToggle slots={item.slots} onChange={handleSlotsChange} />
+      </View>
+
+      {/* 삭제 */}
+      <Pressable onPress={handleRemove} style={styles.removeBtn} accessibilityLabel="약 삭제" accessibilityRole="button">
+        <Text style={styles.removeTxt}>삭제</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.bgNormal,
+    borderRadius: radius.r16,
+    borderWidth: 1,
+    padding: space.s16,
+    gap: space.s12,
+    ...shadows.small,
+  },
+  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12 },
+  thumbnail: { width: 56, height: 56, borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumbnailPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  pillEmoji: { fontSize: 28 },
+  nameBlock: { flex: 1 },
+  name: { ...typography.body1n, color: colors.labelNormal },
+  nameRaw: { ...typography.caption1, color: colors.labelAlternative, marginTop: 2 },
+  source: { ...typography.caption1, color: colors.labelAssistive, marginTop: 4 },
+  rightCol: { alignItems: 'flex-end', gap: space.s4 },
+  warnBadge: {
+    width: 28, height: 28, borderRadius: radius.r8,
+    backgroundColor: '#FFF3E0', alignItems: 'center', justifyContent: 'center',
+  },
+  warnIcon: { fontSize: 14 },
+  conf: { ...typography.caption1, color: colors.statusPositive, fontWeight: '700' },
+  confLow: { color: colors.statusNegative },
+  unmatchedBanner: {
+    backgroundColor: '#FFFBE6',
+    borderRadius: radius.r8,
+    padding: space.s8,
+  },
+  unmatchedText: { ...typography.caption1, color: colors.labelNeutral },
+  doseRow: { gap: space.s6 },
+  slotSection: { gap: space.s6 },
+  sectionLabel: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600' },
+  removeBtn: { alignSelf: 'flex-end' },
+  removeTxt: { ...typography.label2, color: colors.statusNegative },
+});
+
+export default memo(DrugCard);
