@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import gc
 import json
 import logging
 import os
@@ -51,8 +52,9 @@ S3_KEY_PREFIX = "drugs/images"
 CONTENT_TYPE = "image/jpeg"
 MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
 REQUEST_TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
-DEFAULT_CONCURRENCY = 4
+DEFAULT_CONCURRENCY = int(os.environ.get("PILLMATE_DRUG_IMG_WORKERS", "2"))
 RPS_LIMIT = 5  # 식약처 5 RPS
+CHECKPOINT_FLUSH_INTERVAL = 100  # N건마다 checkpoint 저장 + GC
 
 SELECT_SQL = """
 SELECT kd_code, item_image
@@ -171,7 +173,7 @@ async def run_async(args: argparse.Namespace) -> int:
     bucket = os.environ.get("S3_BUCKET_NAME", "pillmate-prescriptions")
     done_codes = load_checkpoint() if args.resume else set()
 
-    pool = await asyncpg.create_pool(_dsn(), min_size=1, max_size=args.concurrency + 1) \
+    pool = await asyncpg.create_pool(_dsn(), min_size=1, max_size=args.concurrency + 2) \
         if not args.dry_run else None
     s3 = _s3_client() if not args.dry_run else None
 
@@ -196,19 +198,25 @@ async def run_async(args: argparse.Namespace) -> int:
                     row["kd_code"], row["item_image"], args.dry_run)
 
         success = 0
+        batch_start = 0
         async with httpx.AsyncClient() as http:
-            results = await asyncio.gather(*[bounded(r) for r in pending])
-
-        for i, ok in enumerate(results):
-            if ok:
-                done_codes.add(pending[i]["kd_code"])
-                success += 1
-
-        if not args.dry_run:
-            save_checkpoint(done_codes)
+            while batch_start < len(pending):
+                batch = pending[batch_start: batch_start + CHECKPOINT_FLUSH_INTERVAL]
+                results = await asyncio.gather(*[bounded(r) for r in batch])
+                for i, ok in enumerate(results):
+                    if ok:
+                        done_codes.add(batch[i]["kd_code"])
+                        success += 1
+                batch_start += CHECKPOINT_FLUSH_INTERVAL
+                if not args.dry_run:
+                    save_checkpoint(done_codes)
+                    gc.collect()
+                total_target = len(pending) + len(done_codes)
+                pct = len(done_codes) / total_target * 100 if total_target else 0
+                logger.info("배치완료: 누적=%d / 전체대상=%d (%.1f%%)", len(done_codes), total_target, pct)
 
         failures_count = sum(1 for _ in open(FAILURES_PATH)) if FAILURES_PATH.exists() else 0
-        logger.info("완료: 성공=%d 실패=%d 누적=%d", success, len(results) - success, len(done_codes))
+        logger.info("완료: 성공=%d 실패=%d 누적=%d", success, len(pending) - success, len(done_codes))
         logger.info("failures.jsonl 라인 수: %d", failures_count)
 
     finally:
