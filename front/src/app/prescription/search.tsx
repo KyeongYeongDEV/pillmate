@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, FlatList, ScrollView, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -18,6 +18,7 @@ import type { DrugSearchResult } from '@/types/prescription';
 
 const MFDS_SOURCE = '식품의약품안전처 의약품안전나라';
 const INITIAL_RECENT = ['메트포르민', '오메가-3', '글리메피리드'];
+const TOAST_DURATION_MS = 1800;
 
 export default function DrugSearchScreen() {
   const dispatch = useAppDispatch();
@@ -32,6 +33,10 @@ export default function DrugSearchScreen() {
   const [query, setQuery] = useState(initialQ ?? '');
   const [debouncedQuery, setDebouncedQuery] = useState(initialQ ?? '');
   const [recentSearches, setRecentSearches] = useState<string[]>(INITIAL_RECENT);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastDrug, setToastDrug] = useState('');
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -42,11 +47,20 @@ export default function DrugSearchScreen() {
     skip: !debouncedQuery,
   });
 
+  const showToast = useCallback((drugName: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastDrug(drugName);
+    setToastVisible(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(TOAST_DURATION_MS - 360),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start();
+    toastTimer.current = setTimeout(() => setToastVisible(false), TOAST_DURATION_MS);
+  }, [toastOpacity]);
+
   const handleAdd = useCallback((item: DrugSearchResult) => {
-    if (addedKdCodes.has(item.kdCode)) {
-      Alert.alert('이미 추가된 약', `${item.name}은(는) 이미 처방전에 추가되어 있습니다.`);
-      return;
-    }
+    if (addedKdCodes.has(item.kdCode)) return;
     dispatch(addFromSearch({
       kdCode: item.kdCode,
       nameRaw: item.name,
@@ -54,8 +68,13 @@ export default function DrugSearchScreen() {
       imageUrl: item.imageUrl,
     }));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  }, [dispatch, addedKdCodes]);
+    showToast(item.name);
+    // Stay on search screen — user can add multiple drugs
+  }, [dispatch, addedKdCodes, showToast]);
+
+  const handleDetail = useCallback((item: DrugSearchResult) => {
+    router.push(`/drug/${item.kdCode}`);
+  }, []);
 
   const handleClear = useCallback(() => setQuery(''), []);
 
@@ -77,7 +96,6 @@ export default function DrugSearchScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* 검색바 + 취소 */}
       <View style={styles.topBar}>
         <DrugSearchBar
           value={query}
@@ -95,7 +113,6 @@ export default function DrugSearchScreen() {
         </Pressable>
       </View>
 
-      {/* 검색 모드 필터 */}
       <View style={styles.filterRow}>
         <View style={[styles.filterChip, styles.filterActive]}>
           <Text style={styles.filterActiveTxt}>✨ AI 의미 검색</Text>
@@ -145,6 +162,7 @@ export default function DrugSearchScreen() {
                 query={debouncedQuery}
                 alreadyAdded={addedKdCodes.has(item.kdCode)}
                 onAdd={handleAdd}
+                onDetail={handleDetail}
               />
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -162,7 +180,6 @@ export default function DrugSearchScreen() {
             />
             <CategoryGrid onSelect={handleCategorySelect} />
 
-            {/* AI 힌트 카드 */}
             <View style={styles.aiHint}>
               <View style={styles.aiHintIcon}>
                 <Text style={styles.aiHintIconTxt}>✨</Text>
@@ -177,6 +194,15 @@ export default function DrugSearchScreen() {
           </ScrollView>
         )}
       </KeyboardAvoidingView>
+
+      {/* Toast — "처방전에 추가됨" */}
+      {toastVisible && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
+          <Text style={styles.toastTxt} numberOfLines={1}>
+            ✓ 처방전에 추가됨
+          </Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -230,4 +256,10 @@ const styles = StyleSheet.create({
   aiHintBody: { flex: 1 },
   aiHintTitle: { fontSize: 13, fontWeight: '700', color: colors.violet45, letterSpacing: -0.005 },
   aiHintSub: { fontSize: 12, color: colors.violet45, marginTop: 4, lineHeight: 18, opacity: 0.85 },
+  toast: {
+    position: 'absolute', bottom: space.s24, alignSelf: 'center',
+    backgroundColor: colors.labelNormal, borderRadius: radius.r20,
+    paddingHorizontal: space.s20, paddingVertical: space.s10,
+  },
+  toastTxt: { ...typography.label2, color: colors.bgNormal, fontWeight: '600' },
 });

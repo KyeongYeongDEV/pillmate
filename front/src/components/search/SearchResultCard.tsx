@@ -11,11 +11,18 @@ interface SearchResultCardProps {
   query: string;
   alreadyAdded: boolean;
   onAdd: (item: DrugSearchResult) => void;
+  onDetail: (item: DrugSearchResult) => void;
 }
 
-function SearchResultCard({ item, query, alreadyAdded, onAdd }: SearchResultCardProps) {
+function SearchResultCard({ item, query, alreadyAdded, onAdd, onDetail }: SearchResultCardProps) {
   return (
-    <View style={styles.card}>
+    <Pressable
+      testID={`detail-btn-${item.kdCode}`}
+      style={styles.card}
+      onPress={() => onDetail(item)}
+      accessibilityLabel={`${item.name} 상세 보기`}
+      accessibilityRole="button"
+    >
       <PillVisual size={40} colorA="#a5c8f5" colorB="#d0e8ff" />
       <View style={styles.info}>
         <View style={styles.nameRow}>
@@ -28,7 +35,14 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd }: SearchResultCard
         </View>
         <Text style={styles.sub} numberOfLines={1}>{item.company ?? '—'}</Text>
       </View>
+
+      {/* info icon — visual indicator that card row = detail (not interactive, outer Pressable handles it) */}
+      <View style={styles.infoIcon}>
+        <Feather name="info" size={14} color={colors.labelAssistive} />
+      </View>
+
       <Pressable
+        testID={`add-btn-${item.kdCode}`}
         style={[styles.addBtn, alreadyAdded && styles.addBtnDone]}
         onPress={() => onAdd(item)}
         disabled={alreadyAdded}
@@ -41,7 +55,7 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd }: SearchResultCard
           color={alreadyAdded ? colors.statusPositive : colors.labelNormal}
         />
       </Pressable>
-    </View>
+    </Pressable>
   );
 }
 
@@ -62,6 +76,7 @@ const styles = StyleSheet.create({
   },
   addedBadgeText: { fontSize: 10, fontWeight: '700', color: colors.primaryNormal, letterSpacing: 0.02 },
   sub: { ...typography.caption1, color: colors.labelAlternative, marginTop: 1 },
+  infoIcon: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
   addBtn: {
     width: 32, height: 32, borderRadius: radius.r8,
     backgroundColor: colors.fillNormal,

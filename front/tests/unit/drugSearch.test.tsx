@@ -71,24 +71,24 @@ describe('DrugSearchBar', () => {
 
 describe('SearchResultCard', () => {
   it('약 이름 렌더', () => {
-    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={jest.fn()} />);
+    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={jest.fn()} onDetail={jest.fn()} />);
     expect(screen.getByText('암로디핀정 5mg')).toBeTruthy();
   });
 
   it('제약사 렌더', () => {
-    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={jest.fn()} />);
+    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={jest.fn()} onDetail={jest.fn()} />);
     expect(screen.getByText('한미약품')).toBeTruthy();
   });
 
   it('alreadyAdded=true → 추가됨 뱃지 표시', () => {
-    render(<SearchResultCard item={DRUG} query="" alreadyAdded onAdd={jest.fn()} />);
+    render(<SearchResultCard item={DRUG} query="" alreadyAdded onAdd={jest.fn()} onDetail={jest.fn()} />);
     expect(screen.getByText('추가됨')).toBeTruthy();
   });
 
   it('onAdd 콜백 호출', () => {
     const onAdd = jest.fn();
-    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={onAdd} />);
-    fireEvent.press(screen.getByRole('button', { name: '암로디핀정 5mg 추가' }));
+    render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={onAdd} onDetail={jest.fn()} />);
+    fireEvent.press(screen.getByTestId(`add-btn-${DRUG.kdCode}`));
     expect(onAdd).toHaveBeenCalledWith(DRUG);
   });
 });
