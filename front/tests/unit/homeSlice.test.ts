@@ -11,11 +11,11 @@ function makeStore() {
 }
 
 describe('homeSlice', () => {
-  it('초기 상태: activeGroupId=null, unreadCount=0', () => {
+  it('초기 상태: activeGroupId=null, unreadCount=4', () => {
     const store = makeStore();
     const state = store.getState().home;
     expect(state.activeGroupId).toBeNull();
-    expect(state.unreadCount).toBe(0);
+    expect(state.unreadCount).toBe(4);
   });
 
   it('setActiveGroup: 그룹 ID 설정', () => {
@@ -41,7 +41,7 @@ describe('homeSlice', () => {
     const store = makeStore();
     store.dispatch(incrementUnread());
     store.dispatch(incrementUnread());
-    expect(store.getState().home.unreadCount).toBe(2);
+    expect(store.getState().home.unreadCount).toBe(6); // initialState=4, +2
   });
 
   it('clearUnread: 0으로 초기화', () => {

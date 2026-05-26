@@ -7,7 +7,7 @@ interface HomeState {
 
 const initialState: HomeState = {
   activeGroupId: null,
-  unreadCount: 0,
+  unreadCount: 4, // 디자인 mock 일치 — Phase 2에서 서버 값으로 교체
 };
 
 const homeSlice = createSlice({
