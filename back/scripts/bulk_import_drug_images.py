@@ -134,51 +134,51 @@ def upload_to_s3(s3: Any, bucket: str, key: str, data: bytes) -> None:
 
 
 async def process_one(
-    sem: asyncio.Semaphore,
+    rps_lock: asyncio.Lock,
     http: httpx.AsyncClient,
-    db: asyncpg.Connection,
+    pool: asyncpg.Pool | None,
     s3: Any,
     bucket: str,
     kd_code: str,
     item_image: str,
     dry_run: bool,
 ) -> bool:
-    async with sem:
-        try:
-            image_data = await fetch_image(http, item_image)
-            if image_data is None:
-                append_failure({"kd_code": kd_code, "url": item_image, "reason": "download_failed"})
-                return False
+    async with rps_lock:
+        await asyncio.sleep(1.0 / RPS_LIMIT)
 
-            s3_key = f"{S3_KEY_PREFIX}/{kd_code}.jpg"
-
-            if not dry_run:
-                await asyncio.get_event_loop().run_in_executor(
-                    None, upload_to_s3, s3, bucket, s3_key, image_data)
-                await db.execute(UPDATE_SQL, s3_key, kd_code)
-
-            return True
-        except Exception as exc:
-            append_failure({"kd_code": kd_code, "url": item_image, "reason": str(exc)})
-            logger.warning("처리 실패 kd_code=%s: %s", kd_code, exc)
+    try:
+        image_data = await fetch_image(http, item_image)
+        if image_data is None:
+            append_failure({"kd_code": kd_code, "url": item_image, "reason": "download_failed"})
             return False
+
+        s3_key = f"{S3_KEY_PREFIX}/{kd_code}.jpg"
+
+        if not dry_run:
+            await asyncio.get_event_loop().run_in_executor(
+                None, upload_to_s3, s3, bucket, s3_key, image_data)
+            async with pool.acquire() as conn:
+                await conn.execute(UPDATE_SQL, s3_key, kd_code)
+
+        return True
+    except Exception as exc:
+        append_failure({"kd_code": kd_code, "url": item_image, "reason": str(exc)})
+        logger.warning("처리 실패 kd_code=%s: %s", kd_code, exc)
+        return False
 
 
 async def run_async(args: argparse.Namespace) -> int:
     bucket = os.environ.get("S3_BUCKET_NAME", "pillmate-prescriptions")
     done_codes = load_checkpoint() if args.resume else set()
 
-    db = await asyncpg.connect(_dsn()) if not args.dry_run else None
+    pool = await asyncpg.create_pool(_dsn(), min_size=1, max_size=args.concurrency + 1) \
+        if not args.dry_run else None
     s3 = _s3_client() if not args.dry_run else None
 
     try:
-        rows: list[asyncpg.Record]
-        if args.dry_run:
-            query_conn = await asyncpg.connect(_dsn())
-            rows = await query_conn.fetch(SELECT_SQL)
-            await query_conn.close()
-        else:
-            rows = await db.fetch(SELECT_SQL)
+        query_conn = await asyncpg.connect(_dsn())
+        rows = await query_conn.fetch(SELECT_SQL)
+        await query_conn.close()
 
         pending = [r for r in rows if r["kd_code"] not in done_codes]
         if args.limit:
@@ -186,19 +186,18 @@ async def run_async(args: argparse.Namespace) -> int:
 
         logger.info("처리 대상: %d건 (checkpoint skip: %d)", len(pending), len(done_codes))
 
+        rps_lock = asyncio.Lock()
         sem = asyncio.Semaphore(args.concurrency)
-        interval = 1.0 / RPS_LIMIT
+
+        async def bounded(row: asyncpg.Record) -> bool:
+            async with sem:
+                return await process_one(
+                    rps_lock, http, pool, s3, bucket,
+                    row["kd_code"], row["item_image"], args.dry_run)
 
         success = 0
         async with httpx.AsyncClient() as http:
-            tasks = []
-            for row in pending:
-                tasks.append(process_one(
-                    sem, http, db, s3, bucket,
-                    row["kd_code"], row["item_image"], args.dry_run))
-                await asyncio.sleep(interval)
-
-            results = await asyncio.gather(*tasks)
+            results = await asyncio.gather(*[bounded(r) for r in pending])
 
         for i, ok in enumerate(results):
             if ok:
@@ -213,8 +212,8 @@ async def run_async(args: argparse.Namespace) -> int:
         logger.info("failures.jsonl 라인 수: %d", failures_count)
 
     finally:
-        if db:
-            await db.close()
+        if pool:
+            await pool.close()
 
     return 0
 
