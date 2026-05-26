@@ -17,7 +17,6 @@ import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
-import com.pillmate.common.security.CareGroupGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,18 +34,15 @@ public class RegisterPrescriptionService {
 
     private final PrescriptionRepository prescriptionRepository;
     private final DrugLookupPort drugLookupPort;
-    private final CareGroupGuard careGroupGuard;
     private final ObjectMapper objectMapper;
     private final CheckInteractionsUseCase checkInteractionsUseCase;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
-        careGroupGuard.requireAccessible(command.careGroupId());
         requireNonEmptyItems(command.items());
 
         Prescription prescription = Prescription.create(
-                command.careGroupId(), command.patientId(),
-                command.imageKey(), command.prescribedAt());
+                command.patientId(), command.imageKey(), command.prescribedAt());
 
         List<RegisteredDrugItem> registered = appendDrugsAndCollect(prescription, command.items());
         List<PrescribedDrugCandidate> candidates = buildCandidates(command.items(), registered);

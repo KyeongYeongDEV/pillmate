@@ -20,4 +20,19 @@ interface MembershipJpaRepository extends JpaRepository<Membership, Long> {
               AND m1.userId = :viewer AND m2.userId = :target
             """)
     boolean existsSharedGroup(@Param("viewer") Long viewer, @Param("target") Long target);
+
+    @Query("""
+            SELECT (COUNT(m1) > 0) FROM Membership m1, Membership m2
+            WHERE m1.careGroupId = m2.careGroupId
+              AND m1.userId = :guardian AND m1.role = 'GUARDIAN'
+              AND m2.userId = :patient  AND m2.role = 'PATIENT'
+            """)
+    boolean existsByGuardianAndPatient(@Param("guardian") Long guardian, @Param("patient") Long patient);
+
+    @Query("""
+            SELECT DISTINCT m2.userId FROM Membership m1, Membership m2
+            WHERE m1.careGroupId = m2.careGroupId
+              AND m1.userId = :viewer AND m2.userId <> :viewer
+            """)
+    List<Long> findGroupMemberUserIds(@Param("viewer") Long viewer);
 }

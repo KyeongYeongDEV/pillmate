@@ -10,7 +10,7 @@ import com.pillmate.prescription.domain.model.InteractionSeverity;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
-import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.UserContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,13 +35,13 @@ class RegisterPrescriptionWithDdiTest {
 
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
-    @Mock CareGroupGuard careGroupGuard;
     @Mock ObjectMapper objectMapper;
     @Mock CheckInteractionsUseCase checkInteractionsUseCase;
     @InjectMocks RegisterPrescriptionService sut;
 
     @BeforeEach
     void setUp() {
+        UserContext.set(2L);
         given(prescriptionRepository.save(any(Prescription.class)))
                 .willAnswer(inv -> inv.getArgument(0));
         given(drugLookupPort.findByKdCode("200500823"))
@@ -90,6 +90,6 @@ class RegisterPrescriptionWithDdiTest {
         List<DrugItem> items = List.of(
                 new DrugItem("200500823", "이트라코나졸캡슐", BigDecimal.ONE, "캡슐", 1, 7, new BigDecimal("0.95")),
                 new DrugItem("200300001", "심바스타틴정", BigDecimal.ONE, "정", 1, 7, new BigDecimal("0.95")));
-        return new RegisterPrescriptionCommand(1L, 2L, LocalDate.of(2026, 5, 26), null, items);
+        return new RegisterPrescriptionCommand(2L, LocalDate.of(2026, 5, 26), null, items);
     }
 }

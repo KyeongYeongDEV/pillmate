@@ -33,6 +33,8 @@ public enum ErrorCode {
     REPORT_NOT_FOUND("PILL_060", "건강 리포트를 찾을 수 없습니다."),
     REPORT_REFRESH_RATE_LIMITED("PILL_061", "리포트 새로고침은 하루 1회만 가능합니다."),
     REPORT_GENERATION_FAILED("PILL_062", "리포트 생성에 실패했습니다."),
+    PATIENT_ACCESS_DENIED("PILL_016", "해당 환자의 데이터에 접근 권한이 없습니다."),
+    ACTIVITY_FEED_NOT_FOUND("PILL_070", "활동 피드를 찾을 수 없습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;

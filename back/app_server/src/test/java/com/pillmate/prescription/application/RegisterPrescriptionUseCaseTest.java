@@ -9,7 +9,7 @@ import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
-import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.UserContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,13 +37,13 @@ class RegisterPrescriptionUseCaseTest {
 
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
-    @Mock CareGroupGuard careGroupGuard;
-    @Mock ObjectMapper objectMapper;
+@Mock ObjectMapper objectMapper;
     @Mock CheckInteractionsUseCase checkInteractionsUseCase;
     @InjectMocks RegisterPrescriptionService sut;
 
     @BeforeEach
     void setUp() {
+        UserContext.set(2L);
         lenient().when(checkInteractionsUseCase.check(anyList())).thenReturn(List.of());
     }
 
@@ -148,6 +148,6 @@ class RegisterPrescriptionUseCaseTest {
 
     private RegisterPrescriptionCommand command(List<DrugItem> items) {
         return new RegisterPrescriptionCommand(
-                1L, 2L, LocalDate.of(2026, 5, 23), "prescriptions/uuid.jpg", items);
+                2L, LocalDate.of(2026, 5, 23), "prescriptions/uuid.jpg", items);
     }
 }

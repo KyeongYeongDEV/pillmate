@@ -33,7 +33,7 @@ public class Prescription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long careGroupId;
 
     @Column(nullable = false)
@@ -57,10 +57,8 @@ public class Prescription {
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescribedDrugCandidate> candidates = new ArrayList<>();
 
-    public static Prescription create(Long careGroupId, Long patientId,
-                                      String imageKey, LocalDate prescribedAt) {
+    public static Prescription create(Long patientId, String imageKey, LocalDate prescribedAt) {
         Prescription p = new Prescription();
-        p.careGroupId = careGroupId;
         p.patientId = patientId;
         p.imageKey = imageKey;
         p.prescribedAt = prescribedAt;

@@ -42,7 +42,7 @@ class ResolveCandidateServiceTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     private Prescription prescriptionWithCandidate(String optionsJson) {
-        Prescription p = Prescription.create(1L, 2L, "prescriptions/uuid.jpg", LocalDate.now());
+        Prescription p = Prescription.create(2L, "prescriptions/uuid.jpg", LocalDate.now());
         PrescribedDrugCandidate candidate = PrescribedDrugCandidate.create(
                 0, CandidateDecisionType.CONFIRM, "ambiguous", optionsJson);
         p.attachCandidates(List.of(candidate));

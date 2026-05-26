@@ -32,7 +32,7 @@ class GetUnresolvedCandidatesServiceTest {
     @Test
     @DisplayName("미해결 candidate가 있으면 목록으로 반환된다")
     void getUnresolved_returnsUnresolvedCandidates() {
-        Prescription prescription = Prescription.create(1L, 2L, "prescriptions/uuid.jpg", LocalDate.now());
+        Prescription prescription = Prescription.create(2L, "prescriptions/uuid.jpg", LocalDate.now());
         PrescribedDrugCandidate candidate = PrescribedDrugCandidate.create(
                 0, CandidateDecisionType.CONFIRM, "ambiguous", "[{\"drugId\": 12320}]");
         prescription.attachCandidates(List.of(candidate));

@@ -12,7 +12,7 @@ import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
-import com.pillmate.prescription.presentation.dto.UploadUrlRequest;
+import com.pillmate.common.security.UserContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,16 +38,16 @@ public class PrescriptionController {
     private final ResolveCandidateUseCase resolveCandidateUseCase;
 
     @PostMapping("/upload-url")
-    public ResponseEntity<ApiResponse<UploadUrlResponse>> issueUploadUrl(
-            @Valid @RequestBody UploadUrlRequest request) {
-        UploadUrlResponse response = getUploadUrlUseCase.issue(request.careGroupId());
+    public ResponseEntity<ApiResponse<UploadUrlResponse>> issueUploadUrl() {
+        UploadUrlResponse response = getUploadUrlUseCase.issue();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<RegisterPrescriptionResponse>> register(
             @Valid @RequestBody RegisterPrescriptionRequest request) {
-        RegisterPrescriptionResponse response = registerPrescriptionService.register(request.toCommand());
+        RegisterPrescriptionResponse response = registerPrescriptionService.register(
+                request.toCommand(UserContext.get()));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -55,7 +55,6 @@ public class PrescriptionController {
     public ResponseEntity<ApiResponse<RegisterPrescriptionResponse>> ocrRegister(
             @Valid @RequestBody OcrRegisterRequest request) {
         RegisterPrescriptionResponse response = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
-                request.careGroupId(), request.patientId(),
                 request.prescribedAt(), request.imageKey());
         return ResponseEntity.ok(ApiResponse.success(response));
     }

@@ -12,15 +12,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record RegisterPrescriptionRequest(
-        @NotNull Long careGroupId,
-        @NotNull Long patientId,
         @NotNull LocalDate prescribedAt,
         @NotBlank String imageKey,
         @NotEmpty @Valid List<Item> items
 ) {
-    public RegisterPrescriptionCommand toCommand() {
+    public RegisterPrescriptionCommand toCommand(Long patientId) {
         return new RegisterPrescriptionCommand(
-                careGroupId, patientId, prescribedAt, imageKey,
+                patientId, prescribedAt, imageKey,
                 items.stream().map(Item::toDrugItem).toList());
     }
 

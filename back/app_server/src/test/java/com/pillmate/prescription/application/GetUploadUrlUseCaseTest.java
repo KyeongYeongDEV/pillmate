@@ -1,8 +1,11 @@
 package com.pillmate.prescription.application;
 
+import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.application.port.FileStoragePort;
 import com.pillmate.prescription.application.port.FileStoragePort.PresignedUploadUrl;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +33,12 @@ class GetUploadUrlUseCaseTest {
         return new GetUploadUrlUseCase(fileStoragePort, fixedClock);
     }
 
+    @BeforeEach
+    void setUp() { UserContext.set(1L); }
+
+    @AfterEach
+    void tearDown() { UserContext.clear(); }
+
     @Test
     @DisplayName("UUID 기반 객체키 + presigned URL + expiresAt 반환")
     void issue_returnsUuidKey_withExpiresAt() {
@@ -37,7 +46,7 @@ class GetUploadUrlUseCaseTest {
         given(fileStoragePort.generatePutUrl(anyString()))
                 .willReturn(new PresignedUploadUrl("https://s3.amazonaws.com/pillmate/prescriptions/abc.jpg?sig=x", expiresAt));
 
-        UploadUrlResponse response = sut().issue(1L);
+        UploadUrlResponse response = sut().issue();
 
         assertThat(response.uploadUrl()).startsWith("https://s3");
         assertThat(response.objectKey()).startsWith("prescriptions/").endsWith(".jpg");
@@ -50,7 +59,7 @@ class GetUploadUrlUseCaseTest {
         given(fileStoragePort.generatePutUrl(anyString()))
                 .willReturn(new PresignedUploadUrl("https://presigned", FIXED_NOW.plusSeconds(300)));
 
-        UploadUrlResponse response = sut().issue(1L);
+        UploadUrlResponse response = sut().issue();
 
         assertThat(response.objectKey()).startsWith("prescriptions/2026/05/");
     }
@@ -61,7 +70,7 @@ class GetUploadUrlUseCaseTest {
         given(fileStoragePort.generatePutUrl(anyString()))
                 .willReturn(new PresignedUploadUrl("https://presigned", FIXED_NOW.plusSeconds(300)));
 
-        UploadUrlResponse response = sut().issue(99L);
+        UploadUrlResponse response = sut().issue();
 
         assertThat(response.objectKey())
                 .matches("^prescriptions/\\d{4}/\\d{2}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.jpg$");

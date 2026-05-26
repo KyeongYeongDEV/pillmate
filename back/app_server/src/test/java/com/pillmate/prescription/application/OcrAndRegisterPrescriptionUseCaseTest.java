@@ -2,14 +2,15 @@ package com.pillmate.prescription.application;
 
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.application.port.FileStoragePort;
-import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.prescription.application.port.OcrPort;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;
 import com.pillmate.prescription.application.port.OcrPort.OcrResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,24 +38,19 @@ class OcrAndRegisterPrescriptionUseCaseTest {
     @InjectMocks
     private OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
 
-    @Mock
-    private FileStoragePort fileStoragePort;
+    @Mock private FileStoragePort fileStoragePort;
+    @Mock private OcrPort ocrPort;
+    @Mock private RegisterPrescriptionService registerPrescriptionService;
 
-    @Mock
-    private OcrPort ocrPort;
-
-    @Mock
-    private RegisterPrescriptionService registerPrescriptionService;
-
-    @Mock
-    private CareGroupGuard careGroupGuard;
+    @BeforeEach
+    void setUp() {
+        UserContext.set(2L);
+    }
 
     @Test
     @DisplayName("OCR 결과가 있으면 처방전을 등록하고 응답을 반환한다")
     void ocrAndRegister_whenAiServerReturnsItems_callsRegisterAndReturnsResponse() {
         // given
-        Long careGroupId = 1L;
-        Long patientId = 2L;
         LocalDate prescribedAt = LocalDate.of(2026, 5, 23);
         String imageKey = "prescriptions/2026/05/uuid.jpg";
         String downloadUrl = "http://presigned-get-url";
@@ -64,22 +60,21 @@ class OcrAndRegisterPrescriptionUseCaseTest {
         OcrItem item = new OcrItem("123", "활명수", "활명수", BigDecimal.ONE, "병", 3, 3, new BigDecimal("0.95"), null);
         given(ocrPort.extractFromImage(downloadUrl)).willReturn(new OcrResult(List.of(item), "식약처"));
 
-        RegisterPrescriptionResponse expectedResponse = new RegisterPrescriptionResponse(10L, com.pillmate.prescription.domain.model.OcrStatus.DONE, Collections.emptyList());
+        RegisterPrescriptionResponse expectedResponse = new RegisterPrescriptionResponse(10L, OcrStatus.DONE, Collections.emptyList());
         given(registerPrescriptionService.register(any(RegisterPrescriptionCommand.class))).willReturn(expectedResponse);
 
         // when
-        RegisterPrescriptionResponse actualResponse = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(careGroupId, patientId, prescribedAt, imageKey);
+        RegisterPrescriptionResponse actualResponse = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(prescribedAt, imageKey);
 
         // then
         assertThat(actualResponse).isEqualTo(expectedResponse);
         verify(fileStoragePort).issueDownloadUrl(eq(imageKey), eq(Duration.ofMinutes(10)));
-        
+
         ArgumentCaptor<RegisterPrescriptionCommand> captor = ArgumentCaptor.forClass(RegisterPrescriptionCommand.class);
         verify(registerPrescriptionService).register(captor.capture());
-        
+
         RegisterPrescriptionCommand command = captor.getValue();
-        assertThat(command.careGroupId()).isEqualTo(careGroupId);
-        assertThat(command.patientId()).isEqualTo(patientId);
+        assertThat(command.patientId()).isEqualTo(2L);
         assertThat(command.items()).hasSize(1);
         assertThat(command.items().get(0).kdCode()).isEqualTo("123");
     }
@@ -103,7 +98,7 @@ class OcrAndRegisterPrescriptionUseCaseTest {
                 .willReturn(manual);
 
         RegisterPrescriptionResponse actual = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
-                1L, 2L, LocalDate.of(2026, 5, 24), "prescriptions/2026/05/uuid.jpg");
+                LocalDate.of(2026, 5, 24), "prescriptions/2026/05/uuid.jpg");
 
         assertThat(actual.ocrStatus()).isEqualTo(OcrStatus.MANUAL);
         ArgumentCaptor<RegisterPrescriptionCommand> captor =
@@ -116,12 +111,10 @@ class OcrAndRegisterPrescriptionUseCaseTest {
     @Test
     @DisplayName("OCR 결과가 비어있으면 OCR_EMPTY 예외를 던진다")
     void ocrAndRegister_whenAiServerReturnsEmpty_throwsOcrEmpty() {
-        // given
         given(fileStoragePort.issueDownloadUrl(any(), any())).willReturn("http://url");
         given(ocrPort.extractFromImage(any())).willReturn(new OcrResult(Collections.emptyList(), "unknown"));
 
-        // when & then
-        assertThatThrownBy(() -> ocrAndRegisterPrescriptionUseCase.ocrAndRegister(1L, 2L, LocalDate.now(), "key"))
+        assertThatThrownBy(() -> ocrAndRegisterPrescriptionUseCase.ocrAndRegister(LocalDate.now(), "key"))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_EMPTY);
     }

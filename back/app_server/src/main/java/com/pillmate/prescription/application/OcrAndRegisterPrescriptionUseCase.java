@@ -9,7 +9,7 @@ import com.pillmate.prescription.application.port.FileStoragePort;
 import com.pillmate.prescription.application.port.OcrPort;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;
 import com.pillmate.prescription.application.port.OcrPort.OcrResult;
-import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,19 +28,16 @@ public class OcrAndRegisterPrescriptionUseCase {
     private final FileStoragePort fileStoragePort;
     private final OcrPort ocrPort;
     private final RegisterPrescriptionService registerPrescriptionService;
-    private final CareGroupGuard careGroupGuard;
 
-    public RegisterPrescriptionResponse ocrAndRegister(
-            Long careGroupId, Long patientId, LocalDate prescribedAt, String imageKey) {
-        careGroupGuard.requireAccessible(careGroupId);
+    public RegisterPrescriptionResponse ocrAndRegister(LocalDate prescribedAt, String imageKey) {
+        Long patientId = UserContext.get();
         String downloadUrl = fileStoragePort.issueDownloadUrl(imageKey, OCR_DOWNLOAD_TTL);
         OcrResult ocrResult = ocrPort.extractFromImage(downloadUrl);
-        
+
         validateOcrResult(ocrResult);
-        
-        RegisterPrescriptionCommand command = mapToRegisterCommand(
-                careGroupId, patientId, prescribedAt, imageKey, ocrResult);
-        
+
+        RegisterPrescriptionCommand command = mapToRegisterCommand(patientId, prescribedAt, imageKey, ocrResult);
+
         return registerPrescriptionService.register(command);
     }
 
@@ -51,11 +48,11 @@ public class OcrAndRegisterPrescriptionUseCase {
     }
 
     private RegisterPrescriptionCommand mapToRegisterCommand(
-            Long careGroupId, Long patientId, LocalDate prescribedAt, String imageKey, OcrResult ocrResult) {
+            Long patientId, LocalDate prescribedAt, String imageKey, OcrResult ocrResult) {
         List<DrugItem> items = ocrResult.items().stream()
                 .map(this::toDrugItem)
                 .toList();
-        return new RegisterPrescriptionCommand(careGroupId, patientId, prescribedAt, imageKey, items);
+        return new RegisterPrescriptionCommand(patientId, prescribedAt, imageKey, items);
     }
 
     private DrugItem toDrugItem(OcrItem ocrItem) {

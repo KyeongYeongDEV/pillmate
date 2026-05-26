@@ -17,7 +17,6 @@ import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
-import com.pillmate.prescription.presentation.dto.UploadUrlRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,15 +58,14 @@ class PrescriptionControllerTest {
     @Test
     @DisplayName("POST /prescriptions/upload-url → 200 + uploadUrl/objectKey/expiresAt")
     void postUploadUrl_returns200() throws Exception {
-        given(getUploadUrlUseCase.issue(1L))
+        given(getUploadUrlUseCase.issue())
                 .willReturn(new UploadUrlResponse(
                         "https://s3.test/key?sig=x",
                         "prescriptions/2026/05/uuid.jpg",
                         Instant.parse("2026-05-23T03:05:00Z")));
 
         mockMvc.perform(post("/prescriptions/upload-url")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new UploadUrlRequest(1L))))
+                        .header("X-User-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.uploadUrl").value("https://s3.test/key?sig=x"))
                 .andExpect(jsonPath("$.data.objectKey").value("prescriptions/2026/05/uuid.jpg"))
@@ -86,6 +84,7 @@ class PrescriptionControllerTest {
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
                         .content(objectMapper.writeValueAsString(validRegisterRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.prescriptionId").value(42))
@@ -96,17 +95,18 @@ class PrescriptionControllerTest {
     @Test
     @DisplayName("POST /prescriptions/ocr → 200 + prescriptionId 반환")
     void postOcrRegister_returns200() throws Exception {
-        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(anyLong(), anyLong(), any(), anyString()))
+        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(any(LocalDate.class), anyString()))
                 .willReturn(new RegisterPrescriptionResponse(
                         42L, OcrStatus.DONE,
                         List.of(new RegisteredDrugItem(
                                 101L, "KD-001", "타이레놀", "타이레놀500mg",
                                 new BigDecimal("0.95"), "https://nedrug/img1"))));
 
-        OcrRegisterRequest req = new OcrRegisterRequest(1L, 2L, LocalDate.of(2026, 5, 23), "imageKey");
+        OcrRegisterRequest req = new OcrRegisterRequest(LocalDate.of(2026, 5, 23), "imageKey");
 
         mockMvc.perform(post("/prescriptions/ocr")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.prescriptionId").value(42));
@@ -115,13 +115,14 @@ class PrescriptionControllerTest {
     @Test
     @DisplayName("POST /prescriptions/ocr → 504 when upstream timeout")
     void postOcrRegister_returns504_whenUpstreamTimeout() throws Exception {
-        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(anyLong(), anyLong(), any(), anyString()))
+        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(any(LocalDate.class), anyString()))
                 .willThrow(new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT));
 
-        OcrRegisterRequest req = new OcrRegisterRequest(1L, 2L, LocalDate.of(2026, 5, 23), "imageKey");
+        OcrRegisterRequest req = new OcrRegisterRequest(LocalDate.of(2026, 5, 23), "imageKey");
 
         mockMvc.perform(post("/prescriptions/ocr")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isGatewayTimeout())
                 .andExpect(jsonPath("$.error.code").value("PILL_050"));
@@ -131,10 +132,11 @@ class PrescriptionControllerTest {
     @DisplayName("POST /prescriptions items 비어있으면 400")
     void postRegister_returns400_whenItemsEmpty() throws Exception {
         RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
-                1L, 2L, LocalDate.of(2026, 5, 23), "prescriptions/2026/05/uuid.jpg", List.of());
+                LocalDate.of(2026, 5, 23), "prescriptions/2026/05/uuid.jpg", List.of());
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest());
     }
@@ -155,6 +157,7 @@ class PrescriptionControllerTest {
 
         mockMvc.perform(post("/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
                         .content(objectMapper.writeValueAsString(validRegisterRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.prescriptionId").value(99))
@@ -191,7 +194,7 @@ class PrescriptionControllerTest {
 
     private RegisterPrescriptionRequest validRegisterRequest() {
         return new RegisterPrescriptionRequest(
-                1L, 2L, LocalDate.of(2026, 5, 23),
+                LocalDate.of(2026, 5, 23),
                 "prescriptions/2026/05/uuid.jpg",
                 List.of(new RegisterPrescriptionRequest.Item(
                         "KD-001", "타이레놀", new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95"))));

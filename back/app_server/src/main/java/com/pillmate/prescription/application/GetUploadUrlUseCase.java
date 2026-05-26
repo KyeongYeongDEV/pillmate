@@ -3,6 +3,7 @@ package com.pillmate.prescription.application;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.application.port.FileStoragePort;
 import com.pillmate.prescription.application.port.FileStoragePort.PresignedUploadUrl;
+import com.pillmate.common.security.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,11 @@ public class GetUploadUrlUseCase {
     private final FileStoragePort fileStoragePort;
     private final Clock clock;
 
-    public UploadUrlResponse issue(Long careGroupId) {
+    public UploadUrlResponse issue() {
+        Long userId = UserContext.get();
         String objectKey = buildObjectKey();
         PresignedUploadUrl presigned = fileStoragePort.generatePutUrl(objectKey);
-        log.info("PresignedUrlIssued careGroupId={} objectKey={}", careGroupId, objectKey);
+        log.info("PresignedUrlIssued userId={} objectKey={}", userId, objectKey);
         return new UploadUrlResponse(presigned.url(), objectKey, presigned.expiresAt());
     }
 
