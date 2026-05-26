@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSearchDrugsQuery } from '@/store/slices/drugApi';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -22,14 +22,15 @@ const INITIAL_RECENT = ['메트포르민', '오메가-3', '글리메피리드'];
 export default function DrugSearchScreen() {
   const dispatch = useAppDispatch();
   const existingItems = useAppSelector(s => s.prescriptionFlow.items);
+  const { q: initialQ } = useLocalSearchParams<{ q?: string }>();
 
   const addedKdCodes = useMemo(
     () => new Set(existingItems.map(i => i.kdCode).filter((k): k is string => k !== null)),
     [existingItems],
   );
 
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [query, setQuery] = useState(initialQ ?? '');
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQ ?? '');
   const [recentSearches, setRecentSearches] = useState<string[]>(INITIAL_RECENT);
 
   useEffect(() => {
