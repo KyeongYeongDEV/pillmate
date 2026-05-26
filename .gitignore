@@ -16,7 +16,9 @@ application-prod.yml
 # Java / Spring Boot (Gradle)
 # ==============================
 build/
+back/build/
 .gradle/
+back/.gradle/
 out/
 *.class
 *.jar
@@ -34,6 +36,7 @@ __pycache__/
 *.pyd
 .Python
 .venv/
+back/.venv
 venv/
 env/
 .uv/
@@ -86,14 +89,25 @@ jacoco/
 *.exec
 
 # ==============================
+# React Native / Expo (front/)
+# ==============================
+front/node_modules/
+front/.expo/
+front/dist/
+front/.env
+
+# ==============================
 # Docker
 # ==============================
 docker-compose.override.yml
+back/docker-compose.override.yml
 
 # ==============================
 # 식약처 API 적재 체크포인트
 # ==============================
 .mfds_bulk_checkpoint.json
+back/.mfds_bulk_checkpoint.json
+back/.drug_embed_checkpoint.json
 
 # ==============================
 # 임시 파일

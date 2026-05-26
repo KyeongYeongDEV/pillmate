@@ -54,7 +54,22 @@
       "Bash(git -c commit.gpgsign=false commit -m \"Docs : 임베딩 공급자 OpenAI text-embedding-3-small\\(768\\) 허용 명시\")",
       "Bash(cmux send-panel *)",
       "Bash(cmux send-key-panel *)",
-      "Bash(curl -sS -X POST http://localhost:8080/api/v1/prescriptions/upload-url -H 'Content-Type: application/json' -d '{\"careGroupId\":1}')"
+      "Bash(curl -sS -X POST http://localhost:8080/api/v1/prescriptions/upload-url -H 'Content-Type: application/json' -d '{\"careGroupId\":1}')",
+      "Bash(awk -F'/' '{print $7}')",
+      "Bash(awk -F'/com/pillmate/' '{print $2}')",
+      "Bash(awk -F'/' '{print $1}')",
+      "Bash(cmux list-panels *)",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say be *)",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say fe *)",
+      "Bash(git -C /Users/user/Downloads/pillmate add .cmux/prompts/be-dev.md .cmux/prompts/fe-dev.md .cmux/setup-team-be-fe.sh .cmux/bin/say)",
+      "Bash(git -c commit.gpgsign=false commit -m \"Feat : cmux 팀 BE/FE 분리 셋업 \\(be-dev/fe-dev 프롬프트 + 5패널 setup + say be|fe\\)\")",
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(git -c commit.gpgsign=false commit -m \"Docs\\(cmux\\) : FE 룰을 React Native + Expo 크로스플랫폼으로 전환\")",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say qa-claude 'QA backfill 라운드 1. T-OCR-FIX 시리즈 3개\\(T-OCR-FIX, T-OCR-FIX2, T-OCR-FIX3\\) 코드 관점 검증. **read-only — docker 재빌드 금지, 코드 수정 금지, git checkout 금지** \\(BE-Dev이 T010 진행 중\\). *)",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say qa-gemini 'QA backfill 라운드 1. T008\\(caregroup\\) + T009\\(schedule/doselog\\) E2E 실행 관점 검증. **read-only — docker 재빌드 금지, 코드 수정 금지** \\(BE-Dev이 T010 진행 중\\). *)",
+      "Bash(git -c commit.gpgsign=false commit -m \"Docs\\(rules\\) : DB 데이터 삭제 절대 금지 전체 에이전트 룰 + QA read-only 강화 \\(2026-05-25 사고 후속\\)\")",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say qa-claude 'QA backfill 라운드 2. T-OCR-B 단독 검증. read-only. **docker compose build/up X, 코드 수정 X, git checkout X** \\(BE가 T-OCR-C 진행 중\\). *)",
+      "Bash(/Users/user/Downloads/pillmate/.cmux/bin/say qa-claude 'QA backfill 라운드 3. T-OCR-C + T-OCR-D 묶음 검증. read-only. docker 변경 X, 코드 수정 X, git checkout X. BE-Dev은 T-OCR-E 진행 중. *)"
     ]
   }
 }

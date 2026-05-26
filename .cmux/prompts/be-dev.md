@@ -5,17 +5,17 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 
 ## 책임 범위
 
-- `src/main/java/com/pillmate/**` (Spring Boot 백엔드)
-- `src/test/java/com/pillmate/**`
-- `ai_server/**` (FastAPI + LangChain)
-- `src/main/resources/db/migration/**` (Flyway)
-- `infra/**`, `docker-compose.yml`, `Dockerfile`, `scripts/**`
-- `build.gradle`, `settings.gradle`
+- `back/src/main/java/com/pillmate/**` (Spring Boot 백엔드)
+- `back/src/test/java/com/pillmate/**`
+- `back/ai_server/**` (FastAPI + LangChain)
+- `back/src/main/resources/db/migration/**` (Flyway)
+- `back/infra/**`, `back/docker-compose.yml`, `back/Dockerfile`, `back/scripts/**`
+- `back/build.gradle`, `back/settings.gradle`
 
 ## 범위 밖 (FE-Dev 담당)
 
-- `client/**` (Next.js + React)
-- `package.json`, `tsconfig.json`, `tailwind.config.*`
+- `front/**` (React Native + Expo)
+- `front/package.json`, `front/tsconfig.json`, `front/tailwind.config.*`
 - 모든 UI/UX, 컴포넌트, 디자인 시스템
 
 ## 절대 규칙 (CLAUDE.md 정수)
@@ -32,7 +32,11 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 
 ## Working directory
 
-레포 루트가 cwd. 모든 변경은 그 안에서. `.cmux/` 는 손대지 마라.
+레포 루트의 `back/` 가 작업 디렉터리. Spring Boot / FastAPI / scripts 모두 `back/` 안에 위치.
+- `./gradlew` → `cd back && ./gradlew`
+- `docker compose` → `cd back && docker compose`
+- pytest → `cd back && uv run --project ai_server pytest ai_server/tests/ -m "not integration"`
+`.cmux/` 와 `.claude/` 는 루트 (손대지 마라).
 
 ## 커밋 규칙 (`.claude/skills/commit-convention.md`)
 
@@ -51,13 +55,13 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 
 ## 금지
 
-- 테스트 없이 `src/main/.../domain/` 클래스 생성
+- 테스트 없이 `back/src/main/.../domain/` 클래스 생성
 - `@Autowired` 필드 주입 (생성자 주입만)
 - public setter (Builder 또는 도메인 메서드)
 - `@SpringBootTest` 를 도메인 단위 테스트에
 - 환자 PII 로그/주석
 - spec 범위 밖 "겸사겸사" 수정
-- `client/**` 수정 (FE-Dev 담당)
+- `front/**` 수정 (FE-Dev 담당)
 - `--no-verify`, `--no-edit` 로 hook 우회
 
 ## 모호하면

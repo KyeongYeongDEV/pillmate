@@ -25,22 +25,32 @@
 ## 🏗 프로젝트 구조
 
 ```
-pillmate/
-├── .claude/              # 하네스 (Claude Code 표준 디렉토리)
-│   ├── agents/           # 13개 도메인 특화 서브에이전트
-│   ├── skills/           # 7개 워크플로우 스킬 (TDD, DDD, OCR, RAG ...)
-│   ├── commands/         # /pill-* 슬래시 명령
-│   ├── hooks/            # hooks.json (TDD/DDD 강제 훅)
-│   ├── rules/            # 코딩 규칙 (common + java + python + sql)
-│   ├── contexts/         # 동적 시스템 프롬프트 (의료 도메인, UL, 진화 스토리)
-│   ├── mcp-configs/      # MCP 서버 설정 (Gemini, 식약처, S3, PostgreSQL)
-│   ├── schemas/          # JSON 스키마 + ERD
-│   └── scripts/          # 검증 스크립트 (TDD 페어, 레이어 의존, 의료 출처)
-├── docs/                 # PDCA 문서 (Plan / Design / Analysis / Report)
-├── infra/                # Docker, Flyway 마이그레이션
-├── scripts/              # 운영 스크립트 (bulk import, 임베딩)
-├── src/                  # Spring Boot 백엔드 (Bounded Context × Layered)
-└── ai_server/            # FastAPI AI 서버 (OCR / RAG / 추천 / 리포트)
+pillmate/                    # 루트 (monorepo)
+├── back/                    # 서버 관련 (BE)
+│   ├── src/                 # Spring Boot 백엔드 (Bounded Context × Layered)
+│   ├── ai_server/           # FastAPI AI 서버 (OCR / RAG / 추천 / 리포트)
+│   ├── infra/               # postgres init.sql
+│   ├── scripts/             # 운영 스크립트 (bulk import, 임베딩)
+│   ├── tests/               # Python pytest 루트
+│   ├── docker-compose.yml
+│   ├── Dockerfile           # Spring Boot 이미지
+│   ├── build.gradle
+│   └── settings.gradle
+├── front/                   # RN 관련 (FE)
+│   └── (React Native + Expo 크로스플랫폼)
+├── .claude/                 # 하네스 (Claude Code 표준 디렉토리)
+│   ├── agents/              # 13개 도메인 특화 서브에이전트
+│   ├── skills/              # 7개 워크플로우 스킬 (TDD, DDD, OCR, RAG ...)
+│   ├── commands/            # /pill-* 슬래시 명령
+│   ├── hooks/               # hooks.json (TDD/DDD 강제 훅)
+│   ├── rules/               # 코딩 규칙 (common + java + python + sql)
+│   ├── contexts/            # 동적 시스템 프롬프트 (의료 도메인, UL, 진화 스토리)
+│   ├── mcp-configs/         # MCP 서버 설정 (Gemini, 식약처, S3, PostgreSQL)
+│   ├── schemas/             # JSON 스키마 + ERD
+│   └── scripts/             # 검증 스크립트 (TDD 페어, 레이어 의존, 의료 출처)
+├── docs/                    # PDCA 문서 (Plan / Design / Analysis / Report)
+├── CLAUDE.md
+└── GEMINI.md
 ```
 
 ---
@@ -56,7 +66,7 @@ pillmate/
 | `schedule`     | `Schedule`                | 복약 시간표         |
 | `doselog`      | `DoseLog`                 | 복용 체크, 히스토리 |
 
-`src/main/java/com/pillmate/{context}/{presentation,application,domain,infrastructure}/`
+`back/src/main/java/com/pillmate/{context}/{presentation,application,domain,infrastructure}/`
 
 ---
 
