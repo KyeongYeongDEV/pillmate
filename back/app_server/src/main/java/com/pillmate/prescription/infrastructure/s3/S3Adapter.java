@@ -51,6 +51,8 @@ class S3Adapter implements FileStoragePort {
         GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(objectKey)
+                .responseContentType(PUT_CONTENT_TYPE)
+                .responseContentDisposition("inline")
                 .build();
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
                 .signatureDuration(ttl)
