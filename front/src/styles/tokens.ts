@@ -17,6 +17,16 @@ export const colors = {
   violet45: '#5b37ed',         // --c-violet-45
   violet95: '#f0ecfe',         // --c-violet-95
 
+  // Orange palette
+  orange40: '#d47800',         // --c-orange-40
+  orange95: '#fef4e6',         // --c-orange-95
+
+  // Blue extended
+  blue95: '#eaf2fe',           // --c-blue-95
+
+  // Cyan
+  cyan50: '#00bdde',           // --c-cyan-50
+
   // Semantic label
   labelNormal:      '#171719',                 // --c-coolNeutral-10
   labelStrong:      '#000000',

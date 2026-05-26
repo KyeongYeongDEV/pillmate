@@ -5,6 +5,8 @@ import home from './slices/homeSlice';
 import { prescriptionApiSlice } from './slices/prescriptionApi';
 import { drugApiSlice } from './slices/drugApi';
 import { activityApi } from './slices/activityApi';
+import { scheduleApiSlice } from './slices/scheduleApi';
+import { chatApiSlice } from './slices/chatApi';
 
 export const store = configureStore({
   reducer: {
@@ -13,12 +15,16 @@ export const store = configureStore({
     [prescriptionApiSlice.reducerPath]: prescriptionApiSlice.reducer,
     [drugApiSlice.reducerPath]: drugApiSlice.reducer,
     [activityApi.reducerPath]: activityApi.reducer,
+    [scheduleApiSlice.reducerPath]: scheduleApiSlice.reducer,
+    [chatApiSlice.reducerPath]: chatApiSlice.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
       prescriptionApiSlice.middleware,
       drugApiSlice.middleware,
       activityApi.middleware,
+      scheduleApiSlice.middleware,
+      chatApiSlice.middleware,
     ),
 });
 
