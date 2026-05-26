@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Avatar from '@/components/common/Avatar';
 import { colors, space, radius } from '@/styles/tokens';
 import type { GroupMember } from '@/types/group';
@@ -7,12 +7,18 @@ import type { GroupMember } from '@/types/group';
 interface Props {
   member: GroupMember;
   isFirst?: boolean;
+  onPress?: (member: GroupMember) => void;
 }
 
-function MemberCard({ member, isFirst }: Props) {
+function MemberCard({ member, isFirst, onPress }: Props) {
   const isPatient = member.role === '환자';
   return (
-    <View style={[styles.row, !isFirst && styles.borderTop]}>
+    <Pressable
+      style={[styles.row, !isFirst && styles.borderTop]}
+      onPress={() => onPress?.(member)}
+      accessibilityLabel={`${member.name} ${member.role}`}
+      accessibilityRole="button"
+    >
       <View>
         <Avatar name={member.name[0]} tint={member.tint} size={44} />
         {member.online && <View style={styles.onlineDot} />}
@@ -29,7 +35,7 @@ function MemberCard({ member, isFirst }: Props) {
           {member.role}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

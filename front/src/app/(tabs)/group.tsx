@@ -26,6 +26,8 @@ export default function GroupScreen() {
   const handleInvite = useCallback(() => { /* Phase 2: invite sheet */ }, []);
   const handleQr    = useCallback(() => { /* Phase 2: QR sheet */ }, []);
   const handleCopy  = useCallback(() => { /* Phase 2: clipboard */ }, []);
+  // Phase 2-FE: patientId 로 처방전/스케줄 조회 화면 진입
+  const handleMemberPress = useCallback((_member: GroupMember) => { /* Phase 2: router.push(`/patient/${member.id}`) */ }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -64,7 +66,9 @@ export default function GroupScreen() {
         {/* members */}
         <Text style={styles.sectionLabel}>구성원 · {MEMBERS.length}</Text>
         <View style={styles.listCard}>
-          {MEMBERS.map((m, i) => <MemberCard key={m.id} member={m} isFirst={i === 0} />)}
+          {MEMBERS.map((m, i) => (
+            <MemberCard key={m.id} member={m} isFirst={i === 0} onPress={handleMemberPress} />
+          ))}
         </View>
 
         {/* invite code */}

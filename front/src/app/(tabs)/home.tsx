@@ -1,10 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -12,12 +8,14 @@ import { createSelector } from 'reselect';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUnread } from '@/store/slices/homeSlice';
+import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import type { RootState } from '@/store';
 import GroupSelector from '@/components/home/GroupSelector';
 import NotificationBell from '@/components/home/NotificationBell';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
-import ActivityFeedItem, { FeedActivity } from '@/components/home/ActivityFeedItem';
+import ActivityFeedItem from '@/components/home/ActivityFeedItem';
+import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
 import { MFDS_SOURCE } from '@/lib/constants';
 
 const selectHome = createSelector(
@@ -32,16 +30,13 @@ const MOCK_SLOTS: TimeSlot[] = [
   { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'] },
 ];
 
-const MOCK_FEED: FeedActivity[] = [
-  { id: 1, who: '할머니', tint: '#FF7B2E', text: '아침약 2개를 복용했어요', time: '8:12' },
-  { id: 2, who: '엄마',   tint: '#6541F2', text: '새 처방전을 등록했어요',  time: '7:40' },
-  { id: 3, who: '시스템', tint: '#878A93', text: '내일 처방 1일 남았어요',  time: '7:00' },
-];
-
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
   const { unreadCount } = useAppSelector(selectHome);
   const [showInsight, setShowInsight] = useState(true);
+
+  const { data: feed = [], isLoading: feedLoading, isError: feedError } =
+    useGetRecentActivityQuery(undefined, { pollingInterval: 30_000 });
 
   const handleBellPress = useCallback(() => dispatch(clearUnread()), [dispatch]);
   const handleSlotPress = useCallback((_slot: TimeSlot) => { /* Phase 2: BottomSheet */ }, []);
@@ -108,14 +103,11 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.feedCard}>
-            {MOCK_FEED.map((item, idx) => (
-              <React.Fragment key={item.id}>
-                <ActivityFeedItem item={item} />
-                {idx < MOCK_FEED.length - 1 && <View style={styles.separator} />}
-              </React.Fragment>
-            ))}
-          </View>
+          <FamilyActivityFeed
+            feed={feed}
+            isLoading={feedLoading}
+            isError={feedError}
+          />
         </View>
 
         {/* Medical safety footer — always visible */}
@@ -129,11 +121,49 @@ export default function HomeScreen() {
   );
 }
 
+interface FamilyActivityFeedProps {
+  feed: ActivityFeedItemType[];
+  isLoading: boolean;
+  isError: boolean;
+}
+
+function FamilyActivityFeed({ feed = [], isLoading, isError }: FamilyActivityFeedProps) {
+  if (isLoading) {
+    return (
+      <View style={styles.feedPlaceholder} testID="activity-loading">
+        <ActivityIndicator size="small" color={colors.primaryBase} />
+        <Text style={styles.feedPlaceholderTxt}>활동 불러오는 중…</Text>
+      </View>
+    );
+  }
+  if (isError) {
+    return (
+      <View style={styles.feedPlaceholder} testID="activity-error">
+        <Text style={styles.feedPlaceholderTxt}>활동을 불러올 수 없어요</Text>
+      </View>
+    );
+  }
+  if (feed.length === 0) {
+    return (
+      <View style={styles.feedPlaceholder} testID="activity-empty">
+        <Text style={styles.feedPlaceholderTxt}>아직 가족 활동이 없어요</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.feedCard} testID="activity-data">
+      {feed.map((item, idx) => (
+        <React.Fragment key={item.id}>
+          <ActivityFeedItem item={item} />
+          {idx < feed.length - 1 && <View style={styles.separator} />}
+        </React.Fragment>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bgAlt,
-  },
+  safe: { flex: 1, backgroundColor: colors.bgAlt },
   header: {
     backgroundColor: colors.bgNormal,
     paddingHorizontal: space.s20,
@@ -148,85 +178,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: space.s12,
   },
-  greeting: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.labelNormal,
-    letterSpacing: -0.6,
-  },
-  subtitle: {
-    ...typography.label1n,
-    color: colors.labelAlternative,
-    marginTop: 2,
-  },
+  greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6 },
+  subtitle: { ...typography.label1n, color: colors.labelAlternative, marginTop: 2 },
   progressTrack: {
-    height: 8,
-    borderRadius: radius.full,
-    backgroundColor: colors.fillStrong,
-    marginTop: space.s16,
-    overflow: 'hidden',
+    height: 8, borderRadius: radius.full, backgroundColor: colors.fillStrong,
+    marginTop: space.s16, overflow: 'hidden',
   },
-  progressFill: {
-    width: '67%',
-    height: '100%',
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBase,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: space.s16,
-    gap: space.s20,
-    paddingBottom: space.s40,
-  },
-  section: {
-    gap: space.s10,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.labelNormal,
-  },
-  sectionDate: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.labelAlternative,
-  },
-  viewAll: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryNormal,
-  },
+  progressFill: { width: '67%', height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryBase },
+  scroll: { flex: 1 },
+  scrollContent: { padding: space.s16, gap: space.s20, paddingBottom: space.s40 },
+  section: { gap: space.s10 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.labelNormal },
+  sectionDate: { fontSize: 13, fontWeight: '600', color: colors.labelAlternative },
+  viewAll: { fontSize: 13, fontWeight: '600', color: colors.primaryNormal },
   feedCard: {
-    backgroundColor: colors.bgNormal,
-    borderRadius: radius.r16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    overflow: 'hidden',
-    ...shadows.small,
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, overflow: 'hidden', ...shadows.small,
   },
-  separator: {
-    height: 1,
-    backgroundColor: colors.line,
-    marginLeft: 64,
+  feedPlaceholder: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, padding: space.s20,
+    alignItems: 'center', gap: space.s8,
   },
+  feedPlaceholderTxt: { ...typography.body2r, color: colors.labelAlternative },
+  separator: { height: 1, backgroundColor: colors.line, marginLeft: 64 },
   safetyFooter: {
-    padding: space.s12,
-    borderRadius: radius.r12,
-    backgroundColor: '#F0F7FF',
-    borderWidth: 1,
-    borderColor: '#C8DDFF',
+    padding: space.s12, borderRadius: radius.r12, backgroundColor: '#F0F7FF',
+    borderWidth: 1, borderColor: '#C8DDFF',
   },
-  safetyText: {
-    ...typography.caption1,
-    color: colors.labelAlternative,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
+  safetyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center', lineHeight: 18 },
 });
