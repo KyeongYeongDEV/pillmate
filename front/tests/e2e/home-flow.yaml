@@ -1,0 +1,47 @@
+appId: com.pillmate.client
+---
+- launchApp:
+    clearState: true
+
+# 홈 화면 진입 확인
+- assertVisible:
+    text: "오늘의 복약"
+
+# 진행률 카드 확인
+- assertVisible:
+    id: "today-progress-card"
+  optional: true
+
+# 시간대 카드 확인
+- assertVisible:
+    text: "아침"
+- assertVisible:
+    text: "점심"
+- assertVisible:
+    text: "저녁"
+- assertVisible:
+    text: "취침"
+
+# 의료 안전 푸터 확인
+- assertVisible:
+    text: "식품의약품안전처"
+
+# FAB 탭 → 처방전 등록 화면 이동
+- tapOn:
+    description: "처방전 등록"
+- assertVisible:
+    text: "처방전 등록"
+
+# 뒤로 가서 홈으로
+- pressKey: Back
+
+# 홈 탭으로 복귀
+- tapOn:
+    description: "홈"
+- assertVisible:
+    text: "오늘의 복약"
+
+# 알림 벨 탭
+- tapOn:
+    description: "알림"
+  optional: true

@@ -20,7 +20,8 @@ const SEVERITY_COLORS: Record<InsightSeverity, { border: string; bg: string; ico
 };
 
 function InsightCard({ severity, message, detail, onClose, onDetail }: InsightCardProps) {
-  const theme = SEVERITY_COLORS[severity];
+  // Fallback to WARN if severity is not recognized (e.g. unexpected API response)
+  const theme = SEVERITY_COLORS[severity] ?? SEVERITY_COLORS.WARN;
 
   const handleClose = useCallback(() => onClose?.(), [onClose]);
   const handleDetail = useCallback(() => onDetail?.(), [onDetail]);

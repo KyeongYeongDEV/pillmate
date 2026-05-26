@@ -91,11 +91,11 @@ export default function HomeScreen() {
 
   const todayProgress = progress ?? MOCK_PROGRESS;
   const activityFeed = activityData ?? MOCK_ACTIVITY;
-  const insightData = showInsight ? (insight ?? {
-    severity: 'WARN' as const,
-    message: '저녁약을 자주 빠뜨려요',
-    detail: '지난 30일 중 7일(23%) 메트포르민 누락',
-  }) : null;
+  // Use mock insight until API is implemented; validate severity against known values
+  const KNOWN_SEVERITIES = ['INFO', 'WARN', 'CRITICAL'] as const;
+  const rawInsight = insight ?? { severity: 'WARN' as const, message: '저녁약을 자주 빠뜨려요', detail: '지난 30일 중 7일(23%) 메트포르민 누락' };
+  const validSeverity = KNOWN_SEVERITIES.includes(rawInsight.severity as any) ? rawInsight.severity as 'INFO' | 'WARN' | 'CRITICAL' : 'WARN';
+  const insightData = showInsight ? { ...rawInsight, severity: validSeverity } : null;
 
   const handleSlotPress = useCallback((slot: TimeSlot) => {
     // Phase 2: open BottomSheet with slot detail

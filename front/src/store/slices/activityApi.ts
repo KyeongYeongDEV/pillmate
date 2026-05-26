@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { API_BASE_URL } from '@/lib/api/client';
+import { API_BASE_URL, type ApiEnvelope } from '@/lib/api/client';
 import { getToken } from '@/lib/auth/storage';
 
 export interface ActivityItem {
@@ -40,6 +40,8 @@ export const activityApi = createApi({
     }),
     getInsights: build.query<{ severity: 'INFO' | 'WARN' | 'CRITICAL'; message: string; detail: string } | null, { patientId: number }>({
       query: ({ patientId }) => `/reports/insights?patientId=${patientId}`,
+      // Unwrap Spring Boot envelope { data, message, ... }
+      transformResponse: (raw: ApiEnvelope<{ severity: 'INFO' | 'WARN' | 'CRITICAL'; message: string; detail: string }>) => raw.data ?? null,
       keepUnusedDataFor: 300,
     }),
   }),
