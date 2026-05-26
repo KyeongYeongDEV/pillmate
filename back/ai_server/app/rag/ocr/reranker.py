@@ -10,6 +10,7 @@ DOSE_MISMATCH_PENALTY: float = -0.5
 FORM_MATCH_BONUS: float = 0.2
 ALIAS_PRODUCT_BONUS: float = 0.1
 ALIAS_INGREDIENT_BONUS: float = 0.05
+ALIAS_USER_BONUS: float = 0.03
 JAMO_PENALTY_PER_CHAR: float = 0.05
 
 
@@ -42,6 +43,8 @@ class DomainReranker:
             return ALIAS_PRODUCT_BONUS
         if c.alias_source == "ingredient":
             return ALIAS_INGREDIENT_BONUS
+        if c.alias_source == "user":
+            return ALIAS_USER_BONUS
         return 0.0
 
     def _jamo_score(self, parsed: ParsedItem, c: Candidate) -> float:
