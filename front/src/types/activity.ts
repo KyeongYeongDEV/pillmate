@@ -1,17 +1,13 @@
-export type ActivitySeverity = 'INFO' | 'WARN' | 'CRITICAL';
+export type ActivitySeverity = 'INFO' | 'WARN';
 
-export type ActivityType =
-  | 'DOSE_TAKEN'
-  | 'DOSE_MISSED'
-  | 'PRESCRIPTION_REGISTERED'
-  | 'PRESCRIPTION_UPDATED'
-  | 'SYSTEM';
+export type ActivityType = 'DOSE_TAKEN' | 'DOSE_MISSED';
+
+export type TimeSlot = 'MORNING' | 'NOON' | 'EVENING' | 'BEDTIME';
 
 export interface ActivityFeedItem {
-  id: number;
-  actorUserId: number;
-  actorName: string;
+  actorNickname: string;
   activityType: ActivityType;
+  timeSlot: TimeSlot;
   summary: string;
   severity: ActivitySeverity;
   occurredAt: string; // ISO 8601

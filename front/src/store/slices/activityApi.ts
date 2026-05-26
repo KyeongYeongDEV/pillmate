@@ -3,35 +3,32 @@ import type { ActivityFeedItem } from '@/types/activity';
 
 const MOCK_FEED: ActivityFeedItem[] = [
   {
-    id: 1,
-    actorUserId: 2,
-    actorName: '박순자',
+    actorNickname: '할머니',
     activityType: 'DOSE_TAKEN',
+    timeSlot: 'MORNING',
     summary: '아침약 2개를 복용했어요',
     severity: 'INFO',
     occurredAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
   },
   {
-    id: 2,
-    actorUserId: 1,
-    actorName: '나',
-    activityType: 'PRESCRIPTION_REGISTERED',
-    summary: '새 처방전을 등록했어요',
-    severity: 'INFO',
-    occurredAt: new Date(Date.now() - 26 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    actorUserId: 2,
-    actorName: '박순자',
+    actorNickname: '아들',
     activityType: 'DOSE_MISSED',
+    timeSlot: 'BEDTIME',
     summary: '취침 전 약을 놓치셨어요',
     severity: 'WARN',
     occurredAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
   },
+  {
+    actorNickname: '할머니',
+    activityType: 'DOSE_TAKEN',
+    timeSlot: 'NOON',
+    summary: '점심약 3개를 복용했어요',
+    severity: 'INFO',
+    occurredAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  },
 ];
 
-// Phase 2: BE GET /api/v1/activity 연결 시 fetchBaseQuery + real endpoint 로 교체
+// Phase 2: BE GET /api/v1/activity 연결 시 fetchBaseQuery + real endpoint 교체
 export const activityApi = createApi({
   reducerPath: 'activityApi',
   baseQuery: fakeBaseQuery(),
@@ -45,16 +42,7 @@ export const activityApi = createApi({
 
 export const { useGetRecentActivityQuery } = activityApi;
 
-// Legacy types — backward compat (Phase 2 삭제 예정)
-export interface ActivityItem {
-  id: number;
-  actorName: string;
-  actorEmoji: string;
-  action: string;
-  detail: string;
-  occurredAt: string;
-}
-
+// TodayProgressCard에서 참조 (Phase 2에서 별도 API로 분리 예정)
 export interface TodayProgress {
   taken: number;
   total: number;

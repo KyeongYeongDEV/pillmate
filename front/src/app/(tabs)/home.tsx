@@ -153,7 +153,7 @@ function FamilyActivityFeed({ feed = [], isLoading, isError }: FamilyActivityFee
   return (
     <View style={styles.feedCard} testID="activity-data">
       {feed.map((item, idx) => (
-        <React.Fragment key={item.id}>
+        <React.Fragment key={`${item.actorNickname}-${item.occurredAt}`}>
           <ActivityFeedItem item={item} />
           {idx < feed.length - 1 && <View style={styles.separator} />}
         </React.Fragment>
