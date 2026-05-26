@@ -5,9 +5,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Feather } from '@expo/vector-icons';
+import PillVisual from '@/components/common/PillVisual';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
-import { useAppDispatch } from '@/store/hooks';
-import { reset } from '@/store/slices/prescriptionFlowSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { reset, removeItem } from '@/store/slices/prescriptionFlowSlice';
 
 const RECENT = [
   { date: '11.10', title: '정형외과 처방', drugCount: 2 },
@@ -17,6 +19,7 @@ const RECENT = [
 
 export default function PrescriptionRegisterHub() {
   const dispatch = useAppDispatch();
+  const selectedItems = useAppSelector(s => s.prescriptionFlow.items);
 
   const handleCamera = useCallback(() => {
     dispatch(reset());
@@ -40,6 +43,10 @@ export default function PrescriptionRegisterHub() {
     dispatch(reset());
     router.push('/prescription/manual' as any);
   }, [dispatch]);
+
+  const handleSearch = useCallback(() => {
+    router.push('/prescription/search' as any);
+  }, []);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -104,6 +111,41 @@ export default function PrescriptionRegisterHub() {
             <Text style={styles.secondaryTxt}>직접 입력</Text>
           </Pressable>
         </View>
+
+        {/* 약 검색 CTA */}
+        <Pressable
+          style={styles.searchBtn}
+          onPress={handleSearch}
+          accessibilityLabel="약 검색하기"
+          accessibilityRole="button"
+        >
+          <Feather name="search" size={18} color={colors.primaryBase} />
+          <Text style={styles.searchBtnTxt}>약 검색하기</Text>
+          <Feather name="chevron-right" size={16} color={colors.labelAlternative} style={styles.searchChevron} />
+        </Pressable>
+
+        {/* 추가된 약 목록 */}
+        {selectedItems.length > 0 && (
+          <View style={styles.selectedSection}>
+            <Text style={styles.selectedTitle}>추가된 약 · {selectedItems.length}개</Text>
+            {selectedItems.map(item => (
+              <View key={item.id} style={styles.selectedItem}>
+                <PillVisual size={32} colorA="#a5c8f5" colorB="#d0e8ff" />
+                <Text style={styles.selectedName} numberOfLines={1}>
+                  {item.matchedName ?? item.nameRaw}
+                </Text>
+                <Pressable
+                  onPress={() => dispatch(removeItem(item.id))}
+                  accessibilityLabel={`${item.matchedName ?? item.nameRaw} 제거`}
+                  accessibilityRole="button"
+                  style={styles.removeItemBtn}
+                >
+                  <Feather name="x" size={14} color={colors.labelAlternative} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* 촬영 팁 */}
         <View style={styles.tipCard}>
@@ -186,4 +228,27 @@ const styles = StyleSheet.create({
   recentDate: { ...typography.caption1, color: colors.labelAlternative, width: 40 },
   recentName: { ...typography.body2n, color: colors.labelNormal, flex: 1, fontWeight: '600' },
   recentCount: { ...typography.caption1, color: colors.labelAlternative },
+  searchBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s10,
+    backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s16,
+    borderWidth: 1.5, borderColor: colors.primaryBase, borderStyle: 'dashed',
+  },
+  searchBtnTxt: { ...typography.body2n, color: colors.primaryBase, fontWeight: '600', flex: 1 },
+  searchChevron: { marginLeft: 'auto' },
+  selectedSection: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: colors.line, overflow: 'hidden',
+  },
+  selectedTitle: {
+    fontSize: 11, fontWeight: '700', color: colors.labelAlternative,
+    letterSpacing: 0.06, paddingHorizontal: space.s14, paddingVertical: space.s10,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
+  },
+  selectedItem: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s10,
+    paddingHorizontal: space.s14, paddingVertical: space.s10,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
+  },
+  selectedName: { ...typography.label1n, color: colors.labelNormal, flex: 1, fontWeight: '600' },
+  removeItemBtn: { padding: space.s4 },
 });
