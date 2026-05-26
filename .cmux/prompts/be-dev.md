@@ -5,12 +5,12 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 
 ## 책임 범위
 
-- `back/src/main/java/com/pillmate/**` (Spring Boot 백엔드)
-- `back/src/test/java/com/pillmate/**`
+- `back/app_server/src/main/java/com/pillmate/**` (Spring Boot 백엔드)
+- `back/app_server/src/test/java/com/pillmate/**`
 - `back/ai_server/**` (FastAPI + LangChain)
-- `back/src/main/resources/db/migration/**` (Flyway)
-- `back/infra/**`, `back/docker-compose.yml`, `back/Dockerfile`, `back/scripts/**`
-- `back/build.gradle`, `back/settings.gradle`
+- `back/app_server/src/main/resources/db/migration/**` (Flyway)
+- `back/infra/**`, `back/docker-compose.yml`, `back/app_server/Dockerfile`, `back/scripts/**`
+- `back/app_server/build.gradle`, `back/app_server/settings.gradle`
 
 ## 범위 밖 (FE-Dev 담당)
 
@@ -32,10 +32,20 @@ CTO가 보낸 spec을 받아 레포 루트에서 **백엔드(Spring Boot + FastA
 
 ## Working directory
 
-레포 루트의 `back/` 가 작업 디렉터리. Spring Boot / FastAPI / scripts 모두 `back/` 안에 위치.
-- `./gradlew` → `cd back && ./gradlew`
-- `docker compose` → `cd back && docker compose`
-- pytest → `cd back && uv run --project ai_server pytest ai_server/tests/ -m "not integration"`
+```
+back/
+├── app_server/   ← Spring Boot (./gradlew, src/, Dockerfile)
+├── ai_server/    ← FastAPI (pytest, Dockerfile)
+├── infra/
+├── scripts/
+└── docker-compose.yml
+```
+
+- **Spring Boot**: `cd back/app_server && ./gradlew <task>`
+- **Docker Compose**: `cd back && docker compose up -d`
+- **pytest**: `cd back/ai_server && ../.venv/bin/python -m pytest tests/ -m 'not integration'`
+- **scripts**: `cd back && python scripts/<script>.py`
+
 `.cmux/` 와 `.claude/` 는 루트 (손대지 마라).
 
 ## 커밋 규칙 (`.claude/skills/commit-convention.md`)

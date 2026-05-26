@@ -20,7 +20,7 @@ RUN pip install \
     "psycopg[binary]>=3.1" \
     "sqlalchemy>=2.0"
 
-COPY ai_server/app ./app
+COPY app ./app
 
 EXPOSE 8001
 

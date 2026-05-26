@@ -26,7 +26,7 @@
 - `git status/log/diff`
 - `docker ps/logs` / `docker exec ... psql -c "SELECT ..."`
 - `curl` (테스트 데이터, 환자 PII X)
-- 단위 테스트 (`cd back && uv run --project ai_server pytest ai_server/tests/ -m "not integration"`, `cd back && ./gradlew test`)
+- 단위 테스트 (`cd back/ai_server && ../.venv/bin/python -m pytest tests/ -m "not integration"`, `cd back/app_server && ./gradlew test`)
 
 ## 모호하면
 

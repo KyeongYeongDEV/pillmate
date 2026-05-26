@@ -27,15 +27,11 @@
 ```
 pillmate/                    # 루트 (monorepo)
 ├── back/                    # 서버 관련 (BE)
-│   ├── src/                 # Spring Boot 백엔드 (Bounded Context × Layered)
+│   ├── app_server/          # Spring Boot (src/, build.gradle, gradlew, Dockerfile)
 │   ├── ai_server/           # FastAPI AI 서버 (OCR / RAG / 추천 / 리포트)
 │   ├── infra/               # postgres init.sql
 │   ├── scripts/             # 운영 스크립트 (bulk import, 임베딩)
-│   ├── tests/               # Python pytest 루트
-│   ├── docker-compose.yml
-│   ├── Dockerfile           # Spring Boot 이미지
-│   ├── build.gradle
-│   └── settings.gradle
+│   └── docker-compose.yml
 ├── front/                   # RN 관련 (FE)
 │   └── (React Native + Expo 크로스플랫폼)
 ├── .claude/                 # 하네스 (Claude Code 표준 디렉토리)
@@ -66,7 +62,7 @@ pillmate/                    # 루트 (monorepo)
 | `schedule`     | `Schedule`                | 복약 시간표         |
 | `doselog`      | `DoseLog`                 | 복용 체크, 히스토리 |
 
-`back/src/main/java/com/pillmate/{context}/{presentation,application,domain,infrastructure}/`
+`back/app_server/src/main/java/com/pillmate/{context}/{presentation,application,domain,infrastructure}/`
 
 ---
 

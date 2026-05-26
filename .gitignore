@@ -16,9 +16,9 @@ application-prod.yml
 # Java / Spring Boot (Gradle)
 # ==============================
 build/
-back/build/
+back/app_server/build/
 .gradle/
-back/.gradle/
+back/app_server/.gradle/
 out/
 *.class
 *.jar
