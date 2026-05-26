@@ -40,6 +40,9 @@ public class DrugAlias {
     @Column(name = "confidence", nullable = false)
     private int confidence;
 
+    @Column(name = "is_verified", nullable = false)
+    private boolean verified;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -52,7 +55,13 @@ public class DrugAlias {
         a.itemSeq = itemSeq;
         a.source = source;
         a.confidence = confidence;
+        a.verified = false;
         a.createdAt = Instant.now();
         return a;
+    }
+
+    public void verify() {
+        this.verified = true;
+        this.confidence = 100;
     }
 }

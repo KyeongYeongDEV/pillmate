@@ -9,6 +9,8 @@ public enum ErrorCode {
     DRUG_NOT_FOUND("PILL_001", "약을 찾을 수 없습니다."),
     DRUG_SEARCH_EMPTY_QUERY("PILL_002", "검색어를 입력해주세요."),
     DRUG_INTERACTION_CHECK_FAILED("PILL_003", "약물 상호작용 확인에 실패했습니다."),
+    ITEM_SEQ_NOT_FOUND("PILL_006", "해당 item_seq 의 약품을 찾을 수 없습니다."),
+    ALIAS_NOT_FOUND("PILL_007", "약품 alias 를 찾을 수 없습니다."),
     GROUP_NOT_FOUND("PILL_010", "케어 그룹을 찾을 수 없습니다."),
     GROUP_ACCESS_DENIED("PILL_011", "해당 그룹에 접근 권한이 없습니다."),
     GROUP_INVITE_CODE_INVALID("PILL_012", "유효하지 않은 초대 코드입니다."),
