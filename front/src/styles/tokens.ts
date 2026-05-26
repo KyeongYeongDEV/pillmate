@@ -1,30 +1,53 @@
+// Design tokens — exact match with 디자인/styles/tokens.css
+
 export const colors = {
-  primaryNormal: '#005eeb',
-  primaryStrong: '#0054d1',
-  primaryHeavy:  '#003e9c',
-  labelNormal:      '#171719',
+  // Primary blue
+  primaryNormal: '#005eeb',    // --c-blue-45
+  primaryStrong: '#0054d1',    // --c-blue-40
+  primaryHeavy:  '#003e9c',    // --c-blue-30
+  primaryBase:   '#0066ff',    // --c-blue-50 (C.accentBlue)
+
+  // Green palette
+  green30: '#006e25',          // --c-green-30
+  green40: '#009632',          // --c-green-40
+  green90: '#acfcc7',          // --c-green-90
+  green95: '#d9ffe6',          // --c-green-95
+
+  // Violet palette
+  violet45: '#5b37ed',         // --c-violet-45
+  violet95: '#f0ecfe',         // --c-violet-95
+
+  // Semantic label
+  labelNormal:      '#171719',                 // --c-coolNeutral-10
   labelStrong:      '#000000',
-  labelNeutral:     'rgba(46, 47, 51, 0.88)',
-  labelAlternative: 'rgba(55, 56, 60, 0.61)',
-  labelAssistive:   'rgba(55, 56, 60, 0.28)',
+  labelNeutral:     'rgba(46, 47, 51, 0.88)', // --label-neutral
+  labelAlternative: 'rgba(55, 56, 60, 0.61)', // --label-alternative
+  labelAssistive:   'rgba(55, 56, 60, 0.28)', // --label-assistive
   labelDisable:     'rgba(55, 56, 60, 0.16)',
+
+  // Backgrounds
   bgNormal:   '#ffffff',
-  bgAlt:      '#f7f7f8',
+  bgAlt:      '#f7f7f8',       // --c-coolNeutral-99
   bgElevated: '#ffffff',
-  bgDim:      'rgba(0, 0, 0, 0.08)',
-  bgStrong:   'rgba(0, 0, 0, 0.28)',
-  statusPositive:   '#00bf40',
+
+  // Fill
+  fillNormal: 'rgba(112, 115, 124, 0.08)',  // --fill-normal
+  fillStrong: '#e1e2e4',                    // --c-coolNeutral-96 (--fill-strong)
+
+  // Line / border
+  line:          'rgba(112, 115, 124, 0.22)', // --line-normal
+  lineSolidNorm: '#c2c4c8',                   // --c-coolNeutral-90
+
+  // Status
+  statusPositive:   '#00bf40',  // --c-green-50
   statusCautionary: '#ff9200',
   statusNegative:   '#ff4242',
-  accentBlue:      '#0066ff',
-  accentLightBlue: '#00aeff',
-  accentViolet:    '#6541f2',
-  accentPink:      '#f553da',
-  accentOrange:    '#ff9200',
-  accentRedOrange: '#ff5e00',
-  accentLime:      '#58cf04',
-  accentGreen:     '#00bf40',
-  line: '#e5e5ea',
+
+  // Accent
+  accentViolet: '#6541f2',
+
+  // Inactive tab
+  tabInactive: '#878a93',      // --c-coolNeutral-60
 } as const;
 
 export const radius = {
@@ -32,8 +55,8 @@ export const radius = {
 } as const;
 
 export const space = {
-  s2: 2, s4: 4, s6: 6, s8: 8, s10: 10, s12: 12, s16: 16, s20: 20,
-  s24: 24, s32: 32, s40: 40, s48: 48, s64: 64,
+  s2: 2, s4: 4, s6: 6, s8: 8, s10: 10, s12: 12, s14: 14, s16: 16, s18: 18, s20: 20,
+  s24: 24, s28: 28, s32: 32, s40: 40, s48: 48, s64: 64,
 } as const;
 
 export const typography = {
@@ -60,4 +83,9 @@ export const shadows = {
   small:  { shadowOffset:{width:0,height:4}, shadowOpacity:0.06, shadowRadius:6, elevation:2 },
   medium: { shadowOffset:{width:0,height:10},shadowOpacity:0.07, shadowRadius:15,elevation:4 },
   large:  { shadowOffset:{width:0,height:16},shadowOpacity:0.08, shadowRadius:24,elevation:8 },
+
+  // Specific domain shadows (from design)
+  timeSlotDone: { shadowColor: '#26C76C', shadowOffset:{width:0,height:6}, shadowOpacity:0.10, shadowRadius:18, elevation:3 },
+  timeSlotNow:  { shadowColor: '#0066ff', shadowOffset:{width:0,height:4}, shadowOpacity:0.06, shadowRadius:12, elevation:2 },
+  fab:          { shadowColor: '#0066ff', shadowOffset:{width:0,height:8}, shadowOpacity:0.38, shadowRadius:20, elevation:12 },
 } as const;

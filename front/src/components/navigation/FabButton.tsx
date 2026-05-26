@@ -1,31 +1,23 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { colors } from '@/styles/tokens';
+import { colors, shadows } from '@/styles/tokens';
 
 interface FabButtonProps {
   onPress: () => void;
 }
 
 function FabButton({ onPress }: FabButtonProps) {
-  const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress();
-  };
-
   return (
-    <View style={styles.container}>
+    <View style={styles.wrapper}>
       <Pressable
-        onPress={handlePress}
+        onPress={onPress}
         style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
         accessibilityLabel="처방전 등록"
         accessibilityRole="button"
         accessibilityHint="처방전 등록 화면으로 이동합니다"
       >
-        <View style={styles.gradient}>
-          <Ionicons name="add" size={32} color="#fff" />
-        </View>
+        <Ionicons name="add" size={30} color="#fff" />
       </Pressable>
     </View>
   );
@@ -34,35 +26,23 @@ function FabButton({ onPress }: FabButtonProps) {
 export default React.memo(FabButton);
 
 const styles = StyleSheet.create({
-  container: {
-    width: 64,
-    height: 64,
-    // -8px overflow above tabBar
-    marginTop: -8,
+  wrapper: {
+    width: 80,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    shadowColor: colors.primaryNormal,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryBase,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: colors.bgNormal,
+    ...shadows.fab,
   },
   fabPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.96 }],
-  },
-  gradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    // Gradient primary blue (primaryNormal → primaryStrong)
-    backgroundColor: colors.primaryNormal,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

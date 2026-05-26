@@ -1,13 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
   ScrollView,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
-  ListRenderItem,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -15,170 +12,109 @@ import { createSelector } from 'reselect';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUnread } from '@/store/slices/homeSlice';
-import {
-  useGetRecentActivityQuery,
-  useGetTodayDoseProgressQuery,
-  useGetInsightsQuery,
-  ActivityItem,
-} from '@/store/slices/activityApi';
 import type { RootState } from '@/store';
 import GroupSelector from '@/components/home/GroupSelector';
 import NotificationBell from '@/components/home/NotificationBell';
-import TodayProgressCard from '@/components/home/TodayProgressCard';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
-import ActivityFeedItem from '@/components/home/ActivityFeedItem';
-import { ACTIVITY_POLL_INTERVAL_MS, MFDS_SOURCE } from '@/lib/constants';
+import ActivityFeedItem, { FeedActivity } from '@/components/home/ActivityFeedItem';
+import { MFDS_SOURCE } from '@/lib/constants';
 
-// Selectors
 const selectHome = createSelector(
   (state: RootState) => state.home,
   (home) => home,
 );
 
-// Phase 1 mock data — BE activityApi not yet implemented
-const MOCK_ACTIVITY: ActivityItem[] = [
-  {
-    id: 1,
-    actorName: '할머니',
-    actorEmoji: '👴',
-    action: '아침약 2개 복용 완료',
-    detail: '',
-    occurredAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    actorName: '엄마',
-    actorEmoji: '👩',
-    action: '새 처방전 등록',
-    detail: '감기약',
-    occurredAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    actorName: 'AI',
-    actorEmoji: '✨',
-    action: '주간 리포트가 도착했어요',
-    detail: '',
-    occurredAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-  },
-];
-
 const MOCK_SLOTS: TimeSlot[] = [
-  { id: 'morning', label: '아침', time: '08:00', drugCount: 2, status: 'done' },
-  { id: 'noon', label: '점심', time: '12:00', drugCount: 3, status: 'current' },
-  { id: 'evening', label: '저녁', time: '19:00', drugCount: 2, status: 'pending' },
-  { id: 'bedtime', label: '취침', time: '22:00', drugCount: 1, status: 'pending' },
+  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'] },
+  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'] },
+  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'] },
+  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'] },
 ];
 
-const MOCK_PROGRESS = { taken: 4, total: 6, nextScheduleTime: '12:00', nextScheduleLabel: '점심약' };
+const MOCK_FEED: FeedActivity[] = [
+  { id: 1, who: '할머니', tint: '#FF7B2E', text: '아침약 2개를 복용했어요', time: '8:12' },
+  { id: 2, who: '엄마',   tint: '#6541F2', text: '새 처방전을 등록했어요',  time: '7:40' },
+  { id: 3, who: '시스템', tint: '#878A93', text: '내일 처방 1일 남았어요',  time: '7:00' },
+];
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
-  const { unreadCount, activeGroupId } = useAppSelector(selectHome);
+  const { unreadCount } = useAppSelector(selectHome);
   const [showInsight, setShowInsight] = useState(true);
 
-  // Phase 1: API not yet implemented — fall back to mock
-  const { data: progress } = useGetTodayDoseProgressQuery(
-    { patientId: 1 },
-    { skip: false },
-  );
-  const { data: insight } = useGetInsightsQuery({ patientId: 1 });
-  const { data: activityData } = useGetRecentActivityQuery(
-    { groupId: activeGroupId ?? 1, limit: 5 },
-    { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
-  );
-
-  const todayProgress = progress ?? MOCK_PROGRESS;
-  const activityFeed = activityData ?? MOCK_ACTIVITY;
-  // Use mock insight until API is implemented; validate severity against known values
-  const KNOWN_SEVERITIES = ['INFO', 'WARN', 'CRITICAL'] as const;
-  const rawInsight = insight ?? { severity: 'WARN' as const, message: '저녁약을 자주 빠뜨려요', detail: '지난 30일 중 7일(23%) 메트포르민 누락' };
-  const validSeverity = KNOWN_SEVERITIES.includes(rawInsight.severity as any) ? rawInsight.severity as 'INFO' | 'WARN' | 'CRITICAL' : 'WARN';
-  const insightData = showInsight ? { ...rawInsight, severity: validSeverity } : null;
-
-  const handleSlotPress = useCallback((slot: TimeSlot) => {
-    // Phase 2: open BottomSheet with slot detail
-  }, []);
-
-  const handleBellPress = useCallback(() => {
-    dispatch(clearUnread());
-    // Phase 2: navigate to notification list
-  }, [dispatch]);
-
-  const handleActivityPress = useCallback((_item: ActivityItem) => {
-    // Phase 2: navigate to activity detail
-  }, []);
-
-  const renderActivity: ListRenderItem<ActivityItem> = useCallback(
-    ({ item }) => <ActivityFeedItem item={item} onPress={handleActivityPress} />,
-    [handleActivityPress],
-  );
-
-  const keyExtractor = useCallback((item: ActivityItem) => String(item.id), []);
-
-  const getItemLayout = useCallback(
-    (_: unknown, index: number) => ({ length: 60, offset: 60 * index, index }),
-    [],
-  );
+  const handleBellPress = useCallback(() => dispatch(clearUnread()), [dispatch]);
+  const handleSlotPress = useCallback((_slot: TimeSlot) => { /* Phase 2: BottomSheet */ }, []);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      {/* Sticky Header */}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <GroupSelector
-          groupName="우리 가족 (할머니 댁)"
-          onPress={() => {/* Phase 2: BottomSheet group list */}}
-        />
-        <NotificationBell count={unreadCount} onPress={handleBellPress} />
+        <View style={styles.headerTopRow}>
+          <GroupSelector
+            groupName="할머니 댁 · 3명"
+            onPress={() => { /* Phase 2: group switcher */ }}
+          />
+          <NotificationBell count={unreadCount} onPress={handleBellPress} />
+        </View>
+
+        <Text style={styles.greeting}>안녕하세요, 민지님</Text>
+        <Text style={styles.subtitle}>오늘 할머니 복약 4/6 완료</Text>
+
+        <View style={styles.progressTrack}>
+          <View style={styles.progressFill} />
+        </View>
       </View>
 
+      {/* ── Body ── */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Progress Card */}
-        <TodayProgressCard progress={todayProgress} />
-
-        {/* Time Slot Cards */}
+        {/* 오늘의 복약 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>오늘의 복약</Text>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>오늘의 복약</Text>
+            <Text style={styles.sectionDate}>11월 24일 월</Text>
+          </View>
           <TimeSlotCards slots={MOCK_SLOTS} onSlotPress={handleSlotPress} />
         </View>
 
-        {/* AI Insight Card */}
-        {insightData && (
-          <InsightCard
-            severity={insightData.severity}
-            message={insightData.message}
-            detail={insightData.detail}
-            onClose={() => setShowInsight(false)}
-            onDetail={() => router.push('/report' as any)}
-          />
+        {/* AI 인사이트 */}
+        {showInsight && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>AI 인사이트</Text>
+            <InsightCard
+              severity="WARN"
+              message="저녁약을 3일째 빠뜨렸어요"
+              detail="메트포르민을 거르면 혈당 조절이 어려워질 수 있어요. 저녁 식사 후 바로 복용하는 습관을 들여보세요."
+              onClose={() => setShowInsight(false)}
+              onDetail={() => router.push('/report' as any)}
+            />
+          </View>
         )}
 
-        {/* Activity Feed */}
-        <View style={styles.feedSection}>
-          <View style={styles.feedHeader}>
+        {/* 가족 활동 */}
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>가족 활동</Text>
             <Pressable
-              accessibilityLabel="전체 보기"
+              accessibilityLabel="전체보기"
               accessibilityRole="button"
-              onPress={() => {/* Phase 2: /activity */}}
+              onPress={() => { /* Phase 2: /activity */ }}
             >
-              <Text style={styles.feedMore}>전체 보기 →</Text>
+              <Text style={styles.viewAll}>전체보기</Text>
             </Pressable>
           </View>
+
           <View style={styles.feedCard}>
-            <FlatList
-              data={activityFeed}
-              renderItem={renderActivity}
-              keyExtractor={keyExtractor}
-              getItemLayout={getItemLayout}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+            {MOCK_FEED.map((item, idx) => (
+              <React.Fragment key={item.id}>
+                <ActivityFeedItem item={item} />
+                {idx < MOCK_FEED.length - 1 && <View style={styles.separator} />}
+              </React.Fragment>
+            ))}
           </View>
         </View>
 
@@ -194,45 +130,78 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgAlt },
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bgAlt,
+  },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.s16,
-    paddingVertical: space.s12,
     backgroundColor: colors.bgNormal,
+    paddingHorizontal: space.s20,
+    paddingTop: space.s12,
+    paddingBottom: space.s20,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  scroll: { flex: 1 },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: space.s12,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.labelNormal,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    ...typography.label1n,
+    color: colors.labelAlternative,
+    marginTop: 2,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: radius.full,
+    backgroundColor: colors.fillStrong,
+    marginTop: space.s16,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    width: '67%',
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBase,
+  },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     padding: space.s16,
-    gap: space.s16,
+    gap: space.s20,
     paddingBottom: space.s40,
   },
   section: {
     gap: space.s10,
   },
-  sectionTitle: {
-    ...typography.label2,
-    color: colors.labelAlternative,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  feedSection: {
-    gap: space.s10,
-  },
-  feedHeader: {
+  sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  feedMore: {
-    ...typography.label2,
-    color: colors.primaryNormal,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.labelNormal,
+  },
+  sectionDate: {
+    fontSize: 13,
     fontWeight: '600',
+    color: colors.labelAlternative,
+  },
+  viewAll: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryNormal,
   },
   feedCard: {
     backgroundColor: colors.bgNormal,

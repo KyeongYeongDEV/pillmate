@@ -1,16 +1,18 @@
 import React, { useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Icon from '@/components/common/Icon';
+import PillVisual from '@/components/common/PillVisual';
+import { colors, space, radius, shadows } from '@/styles/tokens';
 
-export type SlotStatus = 'done' | 'current' | 'pending';
+export type SlotState = 'done' | 'now' | 'wait';
 
 export interface TimeSlot {
   id: string;
   label: string;
   time: string;
+  state: SlotState;
   drugCount: number;
-  status: SlotStatus;
+  pillColors: string[];
 }
 
 interface TimeSlotCardsProps {
@@ -18,121 +20,127 @@ interface TimeSlotCardsProps {
   onSlotPress?: (slot: TimeSlot) => void;
 }
 
-const STATUS_COLORS: Record<SlotStatus, string> = {
-  done: '#EDF7EF',
-  current: '#EEF4FF',
-  pending: colors.bgAlt,
+const CARD_STYLE: Record<SlotState, object> = {
+  done: { backgroundColor: colors.bgNormal, borderWidth: 1.5, borderColor: colors.green90, ...shadows.timeSlotDone },
+  now:  { backgroundColor: colors.bgAlt,    borderWidth: 1.5, borderColor: colors.primaryNormal, ...shadows.timeSlotNow },
+  wait: { backgroundColor: colors.bgAlt,    borderWidth: 1,   borderColor: colors.line },
 };
 
-const STATUS_ICON_COLOR: Record<SlotStatus, string> = {
-  done: colors.statusPositive,
-  current: colors.primaryNormal,
-  pending: colors.labelAlternative,
+const LABEL_COLOR: Record<SlotState, string> = {
+  done: colors.green40,
+  now:  colors.primaryNormal,
+  wait: colors.labelAssistive,
 };
 
-const STATUS_LABEL: Record<SlotStatus, string> = {
-  done: '완료',
-  current: '복용시간',
-  pending: '대기',
+const STATUS_TEXT: Record<SlotState, (count: number) => string> = {
+  done: () => '복용 완료',
+  now:  () => '복용 중이에요',
+  wait: (n) => `${n}개 예정`,
 };
 
-interface SlotCardProps {
+const STATUS_TEXT_COLOR: Record<SlotState, string> = {
+  done: colors.green30,
+  now:  colors.labelNormal,
+  wait: colors.labelNeutral,
+};
+
+interface SlotItemProps {
   slot: TimeSlot;
   onPress: (slot: TimeSlot) => void;
 }
 
-function SlotCard({ slot, onPress }: SlotCardProps) {
+function SlotItem({ slot, onPress }: SlotItemProps) {
   const handlePress = useCallback(() => onPress(slot), [onPress, slot]);
-  const bgColor = STATUS_COLORS[slot.status];
-  const iconColor = STATUS_ICON_COLOR[slot.status];
 
   return (
     <Pressable
-      style={[styles.card, { backgroundColor: bgColor }, slot.status === 'current' && styles.cardCurrent]}
+      style={[styles.card, CARD_STYLE[slot.state]]}
       onPress={handlePress}
-      accessibilityLabel={`${slot.label} ${slot.time} ${slot.drugCount}개 ${STATUS_LABEL[slot.status]}`}
+      accessibilityLabel={`${slot.label} ${slot.time} ${STATUS_TEXT[slot.state](slot.drugCount)}`}
       accessibilityRole="button"
     >
-      <View style={styles.iconRow}>
-        {slot.status === 'done' ? (
-          <Ionicons name="checkmark-circle" size={24} color={iconColor} />
-        ) : slot.status === 'current' ? (
-          <Ionicons name="ellipse" size={14} color={iconColor} />
-        ) : (
-          <Ionicons name="ellipse-outline" size={14} color={iconColor} />
+      {/* Checkbox */}
+      <View style={[styles.checkbox, slot.state === 'done' && styles.checkboxDone]}>
+        {slot.state === 'done' && (
+          <Icon name="check" size={20} color="#fff" />
         )}
-        <Text style={[styles.statusLabel, { color: iconColor }]}>{STATUS_LABEL[slot.status]}</Text>
       </View>
-      <Text style={styles.slotLabel}>{slot.label}</Text>
-      <Text style={styles.slotTime}>{slot.time}</Text>
-      <Text style={styles.drugCount}>💊 {slot.drugCount}개</Text>
+
+      {/* Text */}
+      <View style={styles.textArea}>
+        <Text style={[styles.slotLabel, { color: LABEL_COLOR[slot.state] }]}>
+          {slot.label} · {slot.time}
+        </Text>
+        <Text style={[styles.statusText, { color: STATUS_TEXT_COLOR[slot.state] }]}>
+          {STATUS_TEXT[slot.state](slot.drugCount)}
+        </Text>
+      </View>
+
+      {/* Pill visual */}
+      <PillVisual
+        size={32}
+        colorA={slot.pillColors[0] ?? '#aaa'}
+        colorB={slot.pillColors[1]}
+        dimmed={slot.state === 'wait'}
+      />
     </Pressable>
   );
 }
 
-const MemoSlotCard = React.memo(SlotCard);
+const MemoSlotItem = React.memo(SlotItem);
 
 function TimeSlotCards({ slots, onSlotPress }: TimeSlotCardsProps) {
-  const handlePress = useCallback((slot: TimeSlot) => {
-    onSlotPress?.(slot);
-  }, [onSlotPress]);
+  const handlePress = useCallback((slot: TimeSlot) => onSlotPress?.(slot), [onSlotPress]);
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
+    <View style={styles.list}>
       {slots.map((slot) => (
-        <MemoSlotCard key={slot.id} slot={slot} onPress={handlePress} />
+        <MemoSlotItem key={slot.id} slot={slot} onPress={handlePress} />
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 export default React.memo(TimeSlotCards);
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: space.s2,
+  list: {
     gap: space.s10,
-    paddingVertical: space.s4,
   },
   card: {
-    width: 100,
-    borderRadius: radius.r16,
-    padding: space.s12,
-    gap: space.s4,
-    borderWidth: 1,
-    borderColor: colors.line,
-    ...shadows.small,
-  },
-  cardCurrent: {
-    borderColor: colors.primaryNormal,
-    borderWidth: 1.5,
-  },
-  iconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.s4,
-    marginBottom: space.s2,
+    gap: space.s12,
+    borderRadius: radius.r16,
+    padding: space.s16,
   },
-  statusLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+  checkbox: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    borderWidth: 2,
+    borderColor: colors.labelAssistive,
+    backgroundColor: colors.bgNormal,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxDone: {
+    backgroundColor: colors.statusPositive,
+    borderColor: colors.statusPositive,
+  },
+  textArea: {
+    flex: 1,
+    gap: 2,
   },
   slotLabel: {
-    ...typography.label1n,
-    color: colors.labelNormal,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
-  slotTime: {
-    ...typography.caption1,
-    color: colors.labelAlternative,
-  },
-  drugCount: {
-    ...typography.caption1,
-    color: colors.labelNeutral,
-    marginTop: space.s2,
+  statusText: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
   },
 });

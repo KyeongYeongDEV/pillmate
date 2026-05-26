@@ -1,41 +1,48 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 
+jest.mock('@expo/vector-icons', () => ({
+  Feather:  ({ name }: any) => null,
+  Ionicons: ({ name }: any) => null,
+}));
+
 const slots: TimeSlot[] = [
-  { id: 'morning', label: '아침', time: '08:00', drugCount: 2, status: 'done' },
-  { id: 'noon', label: '점심', time: '12:00', drugCount: 3, status: 'current' },
-  { id: 'evening', label: '저녁', time: '19:00', drugCount: 2, status: 'pending' },
-  { id: 'bedtime', label: '취침', time: '22:00', drugCount: 1, status: 'pending' },
+  { id: 'morning', label: '아침',    time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'] },
+  { id: 'noon',    label: '점심',    time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1'] },
+  { id: 'evening', label: '저녁',    time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'] },
+  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'] },
 ];
 
 describe('TimeSlotCards', () => {
   it('4개 시간대 카드 렌더', () => {
     render(<TimeSlotCards slots={slots} />);
-    expect(screen.getByText('아침')).toBeTruthy();
-    expect(screen.getByText('점심')).toBeTruthy();
-    expect(screen.getByText('저녁')).toBeTruthy();
-    expect(screen.getByText('취침')).toBeTruthy();
+    expect(screen.getByText(/아침/)).toBeTruthy();
+    expect(screen.getByText(/점심/)).toBeTruthy();
+    expect(screen.getByText(/저녁/)).toBeTruthy();
+    expect(screen.getByText(/취침 전/)).toBeTruthy();
   });
 
-  it('완료 상태 레이블', () => {
+  it('done 상태 — 복용 완료 표시', () => {
     render(<TimeSlotCards slots={slots} />);
-    expect(screen.getByText('완료')).toBeTruthy();
+    expect(screen.getByText('복용 완료')).toBeTruthy();
   });
 
-  it('현재 상태 레이블', () => {
+  it('now 상태 — 복용 중이에요 표시', () => {
     render(<TimeSlotCards slots={slots} />);
-    expect(screen.getByText('복용시간')).toBeTruthy();
+    expect(screen.getByText('복용 중이에요')).toBeTruthy();
   });
 
-  it('대기 상태 레이블', () => {
+  it('wait 상태 — N개 예정 표시', () => {
     render(<TimeSlotCards slots={slots} />);
-    const pendingLabels = screen.getAllByText('대기');
-    expect(pendingLabels.length).toBe(2);
+    const waitItems = screen.getAllByText(/개 예정/);
+    expect(waitItems.length).toBe(2);
   });
 
-  it('약 개수 표시', () => {
-    render(<TimeSlotCards slots={slots} />);
-    expect(screen.getByText('💊 3개')).toBeTruthy();
+  it('슬롯 탭 시 onSlotPress 호출', () => {
+    const onSlotPress = jest.fn();
+    render(<TimeSlotCards slots={slots} onSlotPress={onSlotPress} />);
+    fireEvent.press(screen.getByText('복용 완료'));
+    expect(onSlotPress).toHaveBeenCalledWith(slots[0]);
   });
 });
