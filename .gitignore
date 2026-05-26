@@ -134,3 +134,10 @@ worktrees/
 # ==============================
 .bkit-memory.json
 .pdca-status.json
+
+# ==============================
+# DB 백업 (의료 PII 포함 — 절대 git 적재 금지)
+# ==============================
+back/.backups/
+back/.backups/*
+!back/.backups/.gitkeep
