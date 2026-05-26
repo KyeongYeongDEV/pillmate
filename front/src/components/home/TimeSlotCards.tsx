@@ -1,5 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Icon from '@/components/common/Icon';
 import PillVisual from '@/components/common/PillVisual';
 import { colors, space, radius, shadows } from '@/styles/tokens';
@@ -32,10 +33,10 @@ const LABEL_COLOR: Record<SlotState, string> = {
   wait: colors.labelAssistive,
 };
 
-const STATUS_TEXT: Record<SlotState, (count: number) => string> = {
+const STATUS_TEXT: Record<SlotState, () => string> = {
   done: () => '복용 완료',
-  now:  () => '복용 중이에요',
-  wait: (n) => `${n}개 예정`,
+  now:  () => '지금 드세요',
+  wait: () => '복용 대기',
 };
 
 const STATUS_TEXT_COLOR: Record<SlotState, string> = {
@@ -51,19 +52,18 @@ interface SlotItemProps {
 
 function SlotItem({ slot, onPress }: SlotItemProps) {
   const handlePress = useCallback(() => onPress(slot), [onPress, slot]);
+  const isDone = slot.state === 'done';
 
   return (
     <Pressable
       style={[styles.card, CARD_STYLE[slot.state]]}
       onPress={handlePress}
-      accessibilityLabel={`${slot.label} ${slot.time} ${STATUS_TEXT[slot.state](slot.drugCount)}`}
+      accessibilityLabel={`${slot.label} ${slot.time} 복용 체크`}
       accessibilityRole="button"
     >
-      {/* Checkbox */}
-      <View style={[styles.checkbox, slot.state === 'done' && styles.checkboxDone]}>
-        {slot.state === 'done' && (
-          <Icon name="check" size={20} color="#fff" />
-        )}
+      {/* Checkbox — syncs with done state */}
+      <View style={[styles.checkbox, isDone && styles.checkboxDone]}>
+        {isDone && <Icon name="check" size={20} color="#fff" />}
       </View>
 
       {/* Text */}
@@ -72,16 +72,16 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
           {slot.label} · {slot.time}
         </Text>
         <Text style={[styles.statusText, { color: STATUS_TEXT_COLOR[slot.state] }]}>
-          {STATUS_TEXT[slot.state](slot.drugCount)}
+          {STATUS_TEXT[slot.state]()}
         </Text>
       </View>
 
-      {/* Pill visual */}
+      {/* Pill visual — dimmed when not done */}
       <PillVisual
         size={32}
         colorA={slot.pillColors[0] ?? '#aaa'}
         colorB={slot.pillColors[1]}
-        dimmed={slot.state === 'wait'}
+        dimmed={!isDone}
       />
     </Pressable>
   );
@@ -89,12 +89,25 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
 
 const MemoSlotItem = React.memo(SlotItem);
 
-function TimeSlotCards({ slots, onSlotPress }: TimeSlotCardsProps) {
-  const handlePress = useCallback((slot: TimeSlot) => onSlotPress?.(slot), [onSlotPress]);
+// State managed internally so the component can self-test toggle and
+// Phase 2 will swap this for doseLog API calls.
+function TimeSlotCards({ slots: initialSlots, onSlotPress }: TimeSlotCardsProps) {
+  const [stateMap, setStateMap] = useState<Record<string, SlotState>>(
+    () => Object.fromEntries(initialSlots.map(s => [s.id, s.state])),
+  );
+
+  const handlePress = useCallback(async (slot: TimeSlot) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const nextState: SlotState = stateMap[slot.id] === 'done' ? 'wait' : 'done';
+    setStateMap(prev => ({ ...prev, [slot.id]: nextState }));
+    onSlotPress?.({ ...slot, state: nextState });
+  }, [stateMap, onSlotPress]);
+
+  const displaySlots = initialSlots.map(s => ({ ...s, state: stateMap[s.id] ?? s.state }));
 
   return (
     <View style={styles.list}>
-      {slots.map((slot) => (
+      {displaySlots.map((slot) => (
         <MemoSlotItem key={slot.id} slot={slot} onPress={handlePress} />
       ))}
     </View>
