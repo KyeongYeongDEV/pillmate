@@ -18,7 +18,9 @@ RUN pip install \
     "httpx>=0.27" \
     "openai>=1.30" \
     "psycopg[binary]>=3.1" \
-    "sqlalchemy>=2.0"
+    "sqlalchemy>=2.0" \
+    "jamotools>=0.1.10" \
+    "python-Levenshtein>=0.25.1"
 
 COPY app ./app
 
