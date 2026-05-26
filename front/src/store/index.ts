@@ -7,6 +7,7 @@ import { drugApiSlice } from './slices/drugApi';
 import { activityApi } from './slices/activityApi';
 import { scheduleApiSlice } from './slices/scheduleApi';
 import { chatApiSlice } from './slices/chatApi';
+import { groupApi } from './slices/groupApi';
 
 export const store = configureStore({
   reducer: {
@@ -17,6 +18,7 @@ export const store = configureStore({
     [activityApi.reducerPath]: activityApi.reducer,
     [scheduleApiSlice.reducerPath]: scheduleApiSlice.reducer,
     [chatApiSlice.reducerPath]: chatApiSlice.reducer,
+    [groupApi.reducerPath]: groupApi.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
@@ -25,6 +27,7 @@ export const store = configureStore({
       activityApi.middleware,
       scheduleApiSlice.middleware,
       chatApiSlice.middleware,
+      groupApi.middleware,
     ),
 });
 

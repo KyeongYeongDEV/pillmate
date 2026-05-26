@@ -4,6 +4,7 @@ import type { DrugListItem, DrugSlots, DrugSource, OcrItem, OcrStatus } from '@/
 interface PrescriptionFlowState {
   items: DrugListItem[];
   prescriptionId: number | null;
+  patientId: number | null;
   ocrStatus: OcrStatus | null;
   memo: string;
   imageKey: string | null;
@@ -12,6 +13,7 @@ interface PrescriptionFlowState {
 const initialState: PrescriptionFlowState = {
   items: [],
   prescriptionId: null,
+  patientId: null,
   ocrStatus: null,
   memo: '',
   imageKey: null,
@@ -47,6 +49,9 @@ const prescriptionFlowSlice = createSlice({
   reducers: {
     setImageKey(state, action: PayloadAction<string>) {
       state.imageKey = action.payload;
+    },
+    setPatientId(state, action: PayloadAction<number>) {
+      state.patientId = action.payload;
     },
     setOcrStatus(state, action: PayloadAction<OcrStatus>) {
       state.ocrStatus = action.payload;
@@ -114,7 +119,7 @@ const prescriptionFlowSlice = createSlice({
 });
 
 export const {
-  setImageKey, setOcrStatus, setPrescriptionId,
+  setImageKey, setOcrStatus, setPrescriptionId, setPatientId,
   addFromOcr, addFromSearch, addManual,
   updateSlots, updateDoseAmount, removeItem,
   setMemo, reset,

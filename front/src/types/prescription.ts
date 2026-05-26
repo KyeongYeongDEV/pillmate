@@ -55,7 +55,6 @@ export interface Candidate {
 }
 
 export interface UploadUrlInput {
-  careGroupId: number;
   patientId: number;
   contentType: string;
 }
@@ -66,7 +65,6 @@ export interface UploadUrlResponse {
 }
 
 export interface OcrInput {
-  careGroupId: number;
   patientId: number;
   prescribedAt: string;
   imageKey: string;

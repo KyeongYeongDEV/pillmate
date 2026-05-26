@@ -5,6 +5,7 @@ import prescriptionFlowReducer, {
   updateSlots,
   updateDoseAmount,
   removeItem,
+  setPatientId,
   reset,
 } from '../../src/store/slices/prescriptionFlowSlice';
 import type { OcrItem } from '../../src/types/prescription';
@@ -12,6 +13,7 @@ import type { OcrItem } from '../../src/types/prescription';
 const initialState = {
   items: [],
   prescriptionId: null,
+  patientId: null,
   ocrStatus: null,
   memo: '',
   imageKey: null,
@@ -141,6 +143,18 @@ describe('prescriptionFlowSlice', () => {
       }));
       state = prescriptionFlowReducer(state, reset());
       expect(state).toEqual(initialState);
+    });
+  });
+
+  describe('setPatientId', () => {
+    it('sets patientId and retains other state', () => {
+      const state = prescriptionFlowReducer(initialState, setPatientId(42));
+      expect(state.patientId).toBe(42);
+      expect(state.items).toHaveLength(0);
+    });
+
+    it('patientId is null in initial state (careGroupId 의존성 없음)', () => {
+      expect(initialState.patientId).toBeNull();
     });
   });
 });
