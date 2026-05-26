@@ -24,6 +24,7 @@ const COLORS = [
   { id: 'orange',    hex: '#FFC06E', label: '주황' },
   { id: 'violet',    hex: '#C0B0FF', label: '보라' },
   { id: 'lime',      hex: '#ACFCC7', label: '연두' },
+  { id: 'black',     hex: '#1A1A1A', label: '기타' },
 ] as const;
 const DURATION_PRESETS = ['7일', '14일', '30일', '90일', '장기'] as const;
 const DOSE_UNITS = ['정', '캡슐', 'mL', 'mg'] as const;
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s12 },
   colorItem: { alignItems: 'center', gap: space.s4, width: 44 },
   colorCircle: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.line },
-  colorCircleOn: { borderWidth: 2, borderColor: colors.labelNormal },
+  colorCircleOn: { borderWidth: 2.5, borderColor: colors.primaryNormal },
   colorLabel: { ...typography.caption1, color: colors.labelAssistive },
   colorLabelOn: { color: colors.labelNormal, fontWeight: '700' },
   doseRow: { gap: space.s8 },
