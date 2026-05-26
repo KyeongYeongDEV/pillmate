@@ -1,0 +1,32 @@
+appId: com.pillmate.app
+---
+- launchApp
+
+# 탭 처방전 아이콘 탭
+- tapOn:
+    text: "처방전"
+
+# 처방전 등록 화면 진입
+- assertVisible: "처방전 등록"
+- assertVisible: "카메라로 촬영하기"
+- assertVisible: "갤러리에서"
+- assertVisible: "직접 입력"
+
+# 직접 입력 경로
+- tapOn:
+    text: "직접 입력"
+- assertVisible: "약 직접 추가"
+- assertVisible: "식약처 DB 자동 검증을 받지 않아요"
+
+# 약 이름 입력
+- tapOn:
+    text: "약 이름 입력"
+- inputText: "영양제 비타민D"
+
+# 아침 슬롯 선택
+- tapOn:
+    accessibilityLabel: "아침 복용"
+
+# 추가 버튼
+- tapOn:
+    text: "추가하기"
