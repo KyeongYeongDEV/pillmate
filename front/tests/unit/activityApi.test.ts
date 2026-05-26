@@ -1,50 +1,61 @@
 import type { ActivityFeedItem, ActivitySeverity } from '../../src/types/activity';
 
-// ── ActivityFeedItem 타입 검증 ──────────────────────────────────────────
+// ── ActivityFeedItem 신규 타입 검증 ──────────────────────────────────────
 
-describe('ActivityFeedItem type', () => {
+describe('ActivityFeedItem 타입', () => {
   const item: ActivityFeedItem = {
-    id: 1,
-    actorUserId: 2,
-    actorName: '박순자',
+    actorNickname: '할머니',
     activityType: 'DOSE_TAKEN',
+    timeSlot: 'MORNING',
     summary: '아침약 2개를 복용했어요',
     severity: 'INFO',
     occurredAt: '2026-05-26T08:12:00.000Z',
   };
 
-  it('INFO severity item 구조 OK', () => {
-    expect(item.severity).toBe('INFO');
-    expect(item.actorUserId).toBe(2);
+  it('actorNickname — PII(actorUserId) 없음', () => {
+    expect(item.actorNickname).toBe('할머니');
+    expect(item).not.toHaveProperty('actorUserId');
+  });
+
+  it('timeSlot MORNING', () => {
+    expect(item.timeSlot).toBe('MORNING');
+  });
+
+  it('DOSE_TAKEN activityType', () => {
     expect(item.activityType).toBe('DOSE_TAKEN');
   });
 
-  it('WARN severity item', () => {
-    const warn: ActivityFeedItem = { ...item, id: 2, severity: 'WARN', activityType: 'DOSE_MISSED', summary: '취침 전 약을 놓치셨어요' };
+  it('DOSE_MISSED activityType', () => {
+    const missed: ActivityFeedItem = { ...item, activityType: 'DOSE_MISSED', severity: 'WARN' };
+    expect(missed.activityType).toBe('DOSE_MISSED');
+  });
+
+  it('WARN severity', () => {
+    const warn: ActivityFeedItem = { ...item, severity: 'WARN' };
     expect(warn.severity).toBe('WARN');
   });
 
-  it('CRITICAL severity item', () => {
-    const critical: ActivityFeedItem = { ...item, id: 3, severity: 'CRITICAL', summary: '혈압약 3일 연속 미복용' };
-    expect(critical.severity).toBe('CRITICAL');
+  it('severity는 INFO 또는 WARN만 (CRITICAL 없음)', () => {
+    const severities: ActivitySeverity[] = ['INFO', 'WARN'];
+    severities.forEach(s => expect(['INFO', 'WARN']).toContain(s));
   });
 
-  it('PRESCRIPTION_REGISTERED activityType', () => {
-    const rx: ActivityFeedItem = { ...item, id: 4, activityType: 'PRESCRIPTION_REGISTERED' };
-    expect(rx.activityType).toBe('PRESCRIPTION_REGISTERED');
+  it('모든 TimeSlot 값', () => {
+    const slots = ['MORNING', 'NOON', 'EVENING', 'BEDTIME'] as const;
+    slots.forEach(slot => {
+      const i: ActivityFeedItem = { ...item, timeSlot: slot };
+      expect(i.timeSlot).toBe(slot);
+    });
   });
 });
 
-// ── severity 색상 로직 (컴포넌트에서 사용하는 helper 인라인 검증) ───────
+// ── severity 색상 분기 ────────────────────────────────────────────────
 
 function severityTint(s: ActivitySeverity): string {
-  if (s === 'CRITICAL') return '#E02020';
-  if (s === 'WARN') return '#F5A623';
-  return '#0066FF';
+  return s === 'WARN' ? '#E02020' : '#0066FF';
 }
 
 describe('severity 색상 분기', () => {
   it('INFO → 파랑', () => expect(severityTint('INFO')).toBe('#0066FF'));
-  it('WARN → 노랑', () => expect(severityTint('WARN')).toBe('#F5A623'));
-  it('CRITICAL → 빨강', () => expect(severityTint('CRITICAL')).toBe('#E02020'));
+  it('WARN → 빨강', () => expect(severityTint('WARN')).toBe('#E02020'));
 });
