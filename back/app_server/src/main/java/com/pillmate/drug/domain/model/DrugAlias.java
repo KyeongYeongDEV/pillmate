@@ -2,8 +2,6 @@ package com.pillmate.drug.domain.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,7 +31,6 @@ public class DrugAlias {
     @Column(name = "item_seq", nullable = false, length = 20)
     private String itemSeq;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
     private AliasSource source;
 
