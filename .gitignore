@@ -37,6 +37,9 @@ __pycache__/
 .Python
 .venv/
 back/.venv
+back/ai_server/.venv/
+back/ai_server/__pycache__/
+back/ai_server/.pytest_cache/
 venv/
 env/
 .uv/
