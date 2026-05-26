@@ -96,7 +96,7 @@ describe('SearchResultCard', () => {
 // ── CategoryGrid ──────────────────────────────────────────────────────
 
 describe('CategoryGrid', () => {
-  it('6개 카테고리 모두 렌더', () => {
+  it('7개 카테고리 모두 렌더', () => {
     render(<CategoryGrid onSelect={jest.fn()} />);
     expect(screen.getByText('고혈압')).toBeTruthy();
     expect(screen.getByText('당뇨')).toBeTruthy();
@@ -104,6 +104,7 @@ describe('CategoryGrid', () => {
     expect(screen.getByText('소화제')).toBeTruthy();
     expect(screen.getByText('진통제')).toBeTruthy();
     expect(screen.getByText('감기')).toBeTruthy();
+    expect(screen.getByText('기타')).toBeTruthy();
   });
 
   it('카테고리 클릭 시 onSelect 호출', () => {

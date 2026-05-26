@@ -11,6 +11,7 @@ const CATEGORIES: Category[] = [
   { name: '소화제',   icon: '胃', tint: colors.green95, fg: colors.green40 },
   { name: '진통제',   icon: '痛', tint: colors.blue95,  fg: colors.primaryNormal },
   { name: '감기',     icon: '冒', tint: '#e0f9fd', fg: '#007a91' },
+  { name: '기타',     icon: '其', tint: '#1a1a1a', fg: '#ffffff' },
 ];
 
 interface CategoryGridProps {
@@ -18,12 +19,13 @@ interface CategoryGridProps {
 }
 
 export default function CategoryGrid({ onSelect }: CategoryGridProps) {
-  const rows: Category[][] = [CATEGORIES.slice(0, 3), CATEGORIES.slice(3, 6)];
+  const topRows: Category[][] = [CATEGORIES.slice(0, 3), CATEGORIES.slice(3, 6)];
+  const extra = CATEGORIES.slice(6);
   return (
     <View style={styles.section}>
       <Text style={styles.label}>카테고리로 찾기</Text>
       <View style={styles.grid}>
-        {rows.map((row, ri) => (
+        {topRows.map((row, ri) => (
           <View key={ri} style={styles.row}>
             {row.map(cat => (
               <Pressable
@@ -41,6 +43,24 @@ export default function CategoryGrid({ onSelect }: CategoryGridProps) {
             ))}
           </View>
         ))}
+        {extra.length > 0 && (
+          <View style={styles.row}>
+            {extra.map(cat => (
+              <Pressable
+                key={cat.name}
+                style={[styles.cell, styles.cellWide]}
+                onPress={() => onSelect(cat.name)}
+                accessibilityLabel={`${cat.name} 카테고리 검색`}
+                accessibilityRole="button"
+              >
+                <View style={[styles.iconBox, { backgroundColor: cat.tint }]}>
+                  <Text style={[styles.catIcon, { color: cat.fg }]}>{cat.icon}</Text>
+                </View>
+                <Text style={[styles.catName, { color: cat.fg }]}>{cat.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -65,4 +85,5 @@ const styles = StyleSheet.create({
   },
   catIcon: { fontSize: 18, fontWeight: '700' },
   catName: { ...typography.label2, color: colors.labelNormal, fontWeight: '600', textAlign: 'center' },
+  cellWide: { flex: 0, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: space.s10 },
 });
