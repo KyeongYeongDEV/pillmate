@@ -6,6 +6,7 @@ export interface MedSlot {
   label: string;
   state: MedState;
   items: string[];
+  doseLogId?: number;
 }
 
 export interface ScheduleDay {

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Icon from '@/components/common/Icon';
 import { colors, space } from '@/styles/tokens';
 import { MFDS_SOURCE } from '@/lib/constants';
@@ -8,13 +8,15 @@ import type { MedSlot } from '@/types/schedule';
 interface Props {
   slot: MedSlot;
   isFirst?: boolean;
+  onPress?: (slot: MedSlot) => void;
 }
 
-function MedTimeRow({ slot, isFirst }: Props) {
+function MedTimeRow({ slot, isFirst, onPress }: Props) {
   const done = slot.state === 'done';
   const now  = slot.state === 'now';
+  const handlePress = useCallback(() => onPress?.(slot), [onPress, slot]);
 
-  return (
+  const rowContent = (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
       <View style={styles.timeCol}>
         <Text style={[styles.time, done && styles.muted]}>{slot.time}</Text>
@@ -36,6 +38,19 @@ function MedTimeRow({ slot, isFirst }: Props) {
       </View>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`${slot.label} ${slot.time} 복용 체크`}
+      >
+        {rowContent}
+      </Pressable>
+    );
+  }
+  return rowContent;
 }
 
 export default React.memo(MedTimeRow);
