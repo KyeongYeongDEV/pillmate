@@ -14,6 +14,7 @@ export interface TimeSlot {
   state: SlotState;
   drugCount: number;
   pillColors: string[];
+  doseLogId?: number;
 }
 
 interface TimeSlotCardsProps {

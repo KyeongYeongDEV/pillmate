@@ -9,6 +9,7 @@ import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUnread } from '@/store/slices/homeSlice';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
+import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
 import type { RootState } from '@/store';
 import GroupSelector from '@/components/home/GroupSelector';
 import NotificationBell from '@/components/home/NotificationBell';
@@ -16,7 +17,7 @@ import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
 import ActivityFeedItem from '@/components/home/ActivityFeedItem';
 import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
-import { MFDS_SOURCE } from '@/lib/constants';
+import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 
 const selectHome = createSelector(
   (state: RootState) => state.home,
@@ -24,22 +25,28 @@ const selectHome = createSelector(
 );
 
 const MOCK_SLOTS: TimeSlot[] = [
-  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'] },
-  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'] },
-  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'] },
-  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'] },
+  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'], doseLogId: 1 },
+  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'], doseLogId: 2 },
+  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'],            doseLogId: 3 },
+  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'],            doseLogId: 4 },
 ];
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
   const { unreadCount } = useAppSelector(selectHome);
   const [showInsight, setShowInsight] = useState(true);
+  const [checkDose] = useCheckDoseMutation();
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
-    useGetRecentActivityQuery(undefined, { pollingInterval: 30_000 });
+    useGetRecentActivityQuery(undefined, { pollingInterval: ACTIVITY_POLL_INTERVAL_MS });
 
   const handleBellPress = useCallback(() => dispatch(clearUnread()), [dispatch]);
-  const handleSlotPress = useCallback((_slot: TimeSlot) => { /* Phase 2: BottomSheet */ }, []);
+
+  const handleSlotPress = useCallback((slot: TimeSlot) => {
+    if (!slot.doseLogId) return;
+    const action = slot.state === 'done' ? 'TAKE' : 'SKIP';
+    checkDose({ doseLogId: slot.doseLogId, action });
+  }, [checkDose]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
