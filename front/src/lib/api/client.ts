@@ -56,6 +56,8 @@ async function buildHeaders(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    // Phase 1 dummy user header — replaced by real JWT extraction in auth integration
+    "X-User-Id": "1",
     ...(base as Record<string, string> | undefined),
   };
   if (withAuth) {
