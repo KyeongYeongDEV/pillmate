@@ -7,10 +7,10 @@ export const MOCK_SCHEDULE: ScheduleDay = {
   totalCount: 6,
   doneCount: 4,
   slots: [
-    { id: 'morning', time: '08:00', label: '아침',    state: 'done', items: ['암로디핀 5mg', '메트포르민 500mg'], doseLogId: 4 },
-    { id: 'noon',    time: '12:30', label: '점심',    state: 'now',  items: ['메트포르민 500mg', '글리메피리드 2mg'], doseLogId: 5 },
-    { id: 'evening', time: '19:00', label: '저녁',    state: 'wait', items: ['아토르바스타틴 10mg'], doseLogId: 6 },
-    { id: 'bedtime', time: '22:00', label: '취침 전', state: 'wait', items: ['오메가-3 1000mg'], doseLogId: 7 },
+    { id: 'morning', time: '08:00', label: '아침',    state: 'done', items: ['암로디핀 5mg', '메트포르민 500mg'],       doseLogId: 4, drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'] },
+    { id: 'noon',    time: '12:30', label: '점심',    state: 'now',  items: ['메트포르민 500mg', '글리메피리드 2mg'],   doseLogId: 5, drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'] },
+    { id: 'evening', time: '19:00', label: '저녁',    state: 'wait', items: ['아토르바스타틴 10mg'],                   doseLogId: 6, drugCount: 2, pillColors: ['#C4B5FD'] },
+    { id: 'bedtime', time: '22:00', label: '취침 전', state: 'wait', items: ['오메가-3 1000mg'],                       doseLogId: 7, drugCount: 1, pillColors: ['#0066FF'] },
   ],
 };
 
