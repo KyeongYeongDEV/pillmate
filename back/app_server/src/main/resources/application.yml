@@ -28,6 +28,17 @@ spring:
     baseline-on-migrate: false
     validate-on-migrate: true
 
+---
+# local / dev 환경: SEED 마이그레이션 추가 실행 (운영 배포 시 SPRING_PROFILES_ACTIVE=production 으로 이 섹션 비활성화)
+spring:
+  config:
+    activate:
+      on-profile: local
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/migration-dev
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
