@@ -25,10 +25,10 @@ const selectHome = createSelector(
 );
 
 const MOCK_SLOTS: TimeSlot[] = [
-  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'], doseLogId: 1 },
-  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'], doseLogId: 2 },
-  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'],            doseLogId: 3 },
-  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'],            doseLogId: 4 },
+  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'], doseLogId: 4 },
+  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'], doseLogId: 5 },
+  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'],            doseLogId: 6 },
+  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'],            doseLogId: 7 },
 ];
 
 export default function HomeScreen() {
