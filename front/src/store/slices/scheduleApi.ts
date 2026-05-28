@@ -2,7 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ScheduleDay } from '@/types/schedule';
 
-const MOCK_SCHEDULE: ScheduleDay = {
+export const MOCK_SCHEDULE: ScheduleDay = {
   date: '2025-11-24',
   totalCount: 6,
   doneCount: 4,

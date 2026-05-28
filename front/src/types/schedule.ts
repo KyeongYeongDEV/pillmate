@@ -7,6 +7,8 @@ export interface MedSlot {
   state: MedState;
   items: string[];
   doseLogId?: number;
+  drugCount?: number;
+  pillColors?: string[];
 }
 
 export interface ScheduleDay {
