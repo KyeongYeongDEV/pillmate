@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Icon from '@/components/common/Icon';
@@ -62,12 +62,10 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
       accessibilityLabel={`${slot.label} ${slot.time} 복용 체크`}
       accessibilityRole="button"
     >
-      {/* Checkbox — syncs with done state */}
       <View style={[styles.checkbox, isDone && styles.checkboxDone]}>
         {isDone && <Icon name="check" size={20} color="#fff" />}
       </View>
 
-      {/* Text */}
       <View style={styles.textArea}>
         <Text style={[styles.slotLabel, { color: LABEL_COLOR[slot.state] }]}>
           {slot.label} · {slot.time}
@@ -77,7 +75,6 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
         </Text>
       </View>
 
-      {/* Pill visual — dimmed when not done */}
       <PillVisual
         size={32}
         colorA={slot.pillColors[0] ?? '#aaa'}
@@ -90,25 +87,17 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
 
 const MemoSlotItem = React.memo(SlotItem);
 
-// State managed internally so the component can self-test toggle and
-// Phase 2 will swap this for doseLog API calls.
-function TimeSlotCards({ slots: initialSlots, onSlotPress }: TimeSlotCardsProps) {
-  const [stateMap, setStateMap] = useState<Record<string, SlotState>>(
-    () => Object.fromEntries(initialSlots.map(s => [s.id, s.state])),
-  );
-
+// Stateless: slot state is owned by parent via Redux doseStateSlice overlay.
+// Parent applies slice state before passing props — no internal stateMap.
+function TimeSlotCards({ slots, onSlotPress }: TimeSlotCardsProps) {
   const handlePress = useCallback(async (slot: TimeSlot) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const nextState: SlotState = stateMap[slot.id] === 'done' ? 'wait' : 'done';
-    setStateMap(prev => ({ ...prev, [slot.id]: nextState }));
-    onSlotPress?.({ ...slot, state: nextState });
-  }, [stateMap, onSlotPress]);
-
-  const displaySlots = initialSlots.map(s => ({ ...s, state: stateMap[s.id] ?? s.state }));
+    onSlotPress?.(slot);
+  }, [onSlotPress]);
 
   return (
     <View style={styles.list}>
-      {displaySlots.map((slot) => (
+      {slots.map((slot) => (
         <MemoSlotItem key={slot.id} slot={slot} onPress={handlePress} />
       ))}
     </View>
