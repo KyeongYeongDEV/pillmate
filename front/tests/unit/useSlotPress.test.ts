@@ -84,4 +84,14 @@ describe('useSlotPress', () => {
     act(() => { result.current(DOSE_LOG_ID, 'done'); });
     expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'SKIP' });
   });
+
+  it('state=done + lockedAt 정확히 60초 전 → 경계값 잠금 완료', () => {
+    // LOCK_DURATION_MS = 60_000ms: now - lockedAt >= 60000 → locked
+    const lockedAt = Date.now() - LOCK_DURATION_MS;
+    mockSelector.mockReturnValue(makeMap(lockedAt));
+    const { result } = renderHook(() => useSlotPress());
+    act(() => { result.current(DOSE_LOG_ID, 'done'); });
+    expect(alertSpy).toHaveBeenCalledWith('취소 불가', '복약 완료는 60초 후 취소할 수 없습니다.');
+    expect(checkDose).not.toHaveBeenCalled();
+  });
 });
