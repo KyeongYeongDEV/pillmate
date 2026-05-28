@@ -35,6 +35,9 @@ public enum ErrorCode {
     REPORT_GENERATION_FAILED("PILL_062", "리포트 생성에 실패했습니다."),
     PATIENT_ACCESS_DENIED("PILL_016", "해당 환자의 데이터에 접근 권한이 없습니다."),
     ACTIVITY_FEED_NOT_FOUND("PILL_070", "활동 피드를 찾을 수 없습니다."),
+    NOTIFICATION_NOT_FOUND("PILL_080", "알림을 찾을 수 없습니다."),
+    NOT_NOTIFICATION_OWNER("PILL_081", "해당 알림에 접근 권한이 없습니다."),
+    INVALID_NOTIFICATION_DOSE_LOG("PILL_082", "알림 발송 대상 복약 기록을 찾을 수 없습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;
