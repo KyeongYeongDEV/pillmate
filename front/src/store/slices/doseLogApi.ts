@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken } from '@/lib/auth/storage';
 import type { CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
-import { markDone, markWait } from './doseStateSlice';
+import { markDone, markWait, markDoneNoLock } from './doseStateSlice';
 
 export const doseLogApiSlice = createApi({
   reducerPath: 'doseLogApi',
@@ -30,12 +30,32 @@ export const doseLogApiSlice = createApi({
         try {
           await queryFulfilled;
         } catch {
-          // revert on network failure
-          dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDone({ doseLogId }));
+          // Revert on network failure; markDoneNoLock avoids restarting the 60s timer
+          dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId }));
+        }
+      },
+    }),
+
+    // T-BE-NOTIFY-GROUP pending: swallow 404/501 and warn
+    notifyGroup: build.mutation<void, number>({
+      query: (doseLogId) => ({
+        url: `/dose-logs/${doseLogId}/notify-group`,
+        method: 'POST',
+      }),
+      async onQueryStarted(doseLogId, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (err: any) {
+          const status = err?.error?.status;
+          if (status === 404 || status === 501) {
+            console.warn(`[notifyGroup] BE endpoint not yet implemented (${status}) for doseLogId=${doseLogId}`);
+          } else {
+            console.warn(`[notifyGroup] unexpected error for doseLogId=${doseLogId}`, err);
+          }
         }
       },
     }),
   }),
 });
 
-export const { useCheckDoseMutation } = doseLogApiSlice;
+export const { useCheckDoseMutation, useNotifyGroupMutation } = doseLogApiSlice;
