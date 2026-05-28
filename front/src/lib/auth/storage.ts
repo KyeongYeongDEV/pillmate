@@ -14,3 +14,8 @@ export async function getToken(): Promise<string | null> {
 export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
 }
+
+// Phase 1: 하드코딩 1 반환. Phase T-BE-USER-AUTH 에서 SecureStore 조회로 교체 예정.
+export async function getCurrentUserId(): Promise<number | null> {
+  return 1;
+}
