@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken } from '@/lib/auth/storage';
 import type { CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
+import { markDone, markWait } from './doseStateSlice';
 
 export const doseLogApiSlice = createApi({
   reducerPath: 'doseLogApi',
@@ -24,6 +25,15 @@ export const doseLogApiSlice = createApi({
         body,
       }),
       invalidatesTags: ['Schedule', 'DoseLog', 'Activity'],
+      async onQueryStarted({ doseLogId, action }, { dispatch, queryFulfilled }) {
+        dispatch(action === 'TAKE' ? markDone({ doseLogId }) : markWait({ doseLogId }));
+        try {
+          await queryFulfilled;
+        } catch {
+          // revert on network failure
+          dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDone({ doseLogId }));
+        }
+      },
     }),
   }),
 });
