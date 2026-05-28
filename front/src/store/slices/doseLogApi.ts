@@ -1,21 +1,11 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { API_BASE_URL } from '@/lib/api/client';
-import { getToken } from '@/lib/auth/storage';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
 import { markDone, markWait, markDoneNoLock } from './doseStateSlice';
 
 export const doseLogApiSlice = createApi({
   reducerPath: 'doseLogApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    prepareHeaders: async (headers) => {
-      const token = await getToken();
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      // Phase 1 dummy user header — replaced by real JWT in auth integration
-      headers.set('X-User-Id', '1');
-      return headers;
-    },
-  }),
+  baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Schedule', 'DoseLog', 'Activity'],
   endpoints: (build) => ({
     checkDose: build.mutation<DoseLogResponse, CheckDoseInput>({

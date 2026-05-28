@@ -1,6 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { getToken } from '@/lib/auth/storage';
-import { API_BASE_URL } from '@/lib/api/client';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type {
   Candidate,
@@ -12,16 +11,7 @@ import type {
 
 export const prescriptionApiSlice = createApi({
   reducerPath: 'prescriptionApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    prepareHeaders: async (headers) => {
-      const token = await getToken();
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      // Phase 1 dummy user header
-      headers.set('X-User-Id', '1');
-      return headers;
-    },
-  }),
+  baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Prescription', 'Candidate'],
   endpoints: (build) => ({
     issueUploadUrl: build.mutation<UploadUrlResponse, UploadUrlInput>({

@@ -1,20 +1,11 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { API_BASE_URL } from '@/lib/api/client';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import { getToken } from '@/lib/auth/storage';
 import type { ActivityFeedItem } from '@/types/activity';
 
 export const activityApi = createApi({
   reducerPath: 'activityApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    prepareHeaders: async (headers) => {
-      const token = await getToken();
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      headers.set('X-User-Id', '1');
-      return headers;
-    },
-  }),
+  baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Activity'],
   endpoints: (build) => ({
     getRecentActivity: build.query<ActivityFeedItem[], void>({
