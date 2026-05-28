@@ -5,10 +5,12 @@ import { configureStore } from '@reduxjs/toolkit';
 import { scheduleApiSlice } from '@/store/slices/scheduleApi';
 import { doseLogApiSlice } from '@/store/slices/doseLogApi';
 import { activityApi } from '@/store/slices/activityApi';
+import doseState from '@/store/slices/doseStateSlice';
 
 function makeTestStore() {
   return configureStore({
     reducer: {
+      doseState,
       [scheduleApiSlice.reducerPath]: scheduleApiSlice.reducer,
       [doseLogApiSlice.reducerPath]: doseLogApiSlice.reducer,
       [activityApi.reducerPath]: activityApi.reducer,
