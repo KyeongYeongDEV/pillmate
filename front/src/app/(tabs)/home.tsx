@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
 } from 'react-native';
@@ -9,7 +9,7 @@ import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUnread } from '@/store/slices/homeSlice';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
-import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
+import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
 import GroupSelector from '@/components/home/GroupSelector';
 import NotificationBell from '@/components/home/NotificationBell';
@@ -36,28 +36,24 @@ export default function HomeScreen() {
   const { unreadCount } = useAppSelector(selectHome);
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const [showInsight, setShowInsight] = useState(true);
-  const [checkDose] = useCheckDoseMutation();
+  const handleBellPress = useMemo(() => () => dispatch(clearUnread()), [dispatch]);
+  const pressSlot = useSlotPress();
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(undefined, { pollingInterval: ACTIVITY_POLL_INTERVAL_MS });
 
   const slots = useMemo(
-    () => MOCK_SLOTS.map(s => ({
-      ...s,
-      state: s.doseLogId != null ? (doseStateMap[s.doseLogId] ?? s.state) : s.state,
-    })),
+    () => MOCK_SLOTS.map(s => {
+      const entry = s.doseLogId != null ? doseStateMap[s.doseLogId] : undefined;
+      return { ...s, state: (entry?.state ?? s.state) as typeof s.state };
+    }),
     [doseStateMap],
   );
 
-  const slotsKey = slots.map(s => `${s.id}:${s.state}`).join(',');
-
-  const handleBellPress = useCallback(() => dispatch(clearUnread()), [dispatch]);
-
-  const handleSlotPress = useCallback((slot: TimeSlot) => {
-    if (!slot.doseLogId) return;
-    const next = slot.state === 'done' ? 'SKIP' : 'TAKE';
-    checkDose({ doseLogId: slot.doseLogId, action: next });
-  }, [checkDose]);
+  const handleSlotPress = useMemo(
+    () => (slot: TimeSlot) => pressSlot(slot.doseLogId, slot.state),
+    [pressSlot],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -91,7 +87,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
             <Text style={styles.sectionDate}>11월 24일 월</Text>
           </View>
-          <TimeSlotCards key={slotsKey} slots={slots} onSlotPress={handleSlotPress} />
+          <TimeSlotCards slots={slots} onSlotPress={handleSlotPress} />
         </View>
 
         {/* AI 인사이트 */}

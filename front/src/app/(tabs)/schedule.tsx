@@ -1,16 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import { colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
-import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
 import { useAppSelector } from '@/store/hooks';
+import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
-import type { MedSlot } from '@/types/schedule';
+import type { MedSlot, MedState } from '@/types/schedule';
 
 const LEGEND: [string, string][] = [
   ['전체 복용', colors.statusPositive],
@@ -22,24 +21,24 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function ScheduleScreen() {
   const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
-  const [checkDose] = useCheckDoseMutation();
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
+  const pressSlot = useSlotPress();
 
-  const slots: MedSlot[] = scheduleDay?.slots ?? [];
-  const displaySlots = slots.map(s => ({
-    ...s,
-    state: s.doseLogId != null ? (doseStateMap[s.doseLogId] ?? s.state) : s.state,
-  }));
+  const rawSlots: MedSlot[] = scheduleDay?.slots ?? [];
+  const displaySlots = useMemo(
+    () => rawSlots.map(s => {
+      const entry = s.doseLogId != null ? doseStateMap[s.doseLogId] : undefined;
+      return { ...s, state: (entry?.state ?? s.state) as MedState };
+    }),
+    [rawSlots, doseStateMap],
+  );
 
   const handleAdd = useCallback(() => { /* Phase 2: navigate to prescription upload */ }, []);
 
-  const handleSlotPress = useCallback(async (slot: MedSlot) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (!slot.doseLogId) return;
-    const current = slot.doseLogId != null ? (doseStateMap[slot.doseLogId] ?? slot.state) : slot.state;
-    const action = current === 'done' ? 'SKIP' : 'TAKE';
-    checkDose({ doseLogId: slot.doseLogId, action });
-  }, [doseStateMap, checkDose]);
+  const handleSlotPress = useMemo(
+    () => (slot: MedSlot) => pressSlot(slot.doseLogId, slot.state),
+    [pressSlot],
+  );
 
   const doneCount = displaySlots.filter(s => s.state === 'done').length;
 
@@ -84,7 +83,7 @@ export default function ScheduleScreen() {
         <View style={styles.todayArea}>
           <View style={styles.todayHeader}>
             <Text style={styles.todayLabel}>오늘 · 11월 24일 월</Text>
-            <Text style={styles.todayCount}>복약 {doneCount} / {slots.length} 완료</Text>
+            <Text style={styles.todayCount}>복약 {doneCount} / {displaySlots.length} 완료</Text>
           </View>
           <View style={styles.medCard}>
             {displaySlots.map((slot, i) => (
