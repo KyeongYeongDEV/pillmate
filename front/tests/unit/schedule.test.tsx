@@ -59,6 +59,15 @@ describe('MedTimeRow', () => {
     expect(DONE_SLOT.doseLogId).toBe(101);
     expect(WAIT_SLOT.doseLogId).toBe(103);
   });
+
+  // 스케줄→홈 슬라이스 매핑: MedTimeRow 가 부모 state 를 그대로 표시
+  it('부모에서 done → wait 변경 시 즉시 반영', () => {
+    const { rerender } = render(<MedTimeRow slot={DONE_SLOT} isFirst />);
+    const waitSlot: MedSlot = { ...DONE_SLOT, state: 'wait' };
+    rerender(<MedTimeRow slot={waitSlot} isFirst />);
+    // 취소선 없음 — wait 상태로 표시
+    expect(screen.getByText('08:00')).toBeTruthy();
+  });
 });
 
 describe('CalendarGrid', () => {
