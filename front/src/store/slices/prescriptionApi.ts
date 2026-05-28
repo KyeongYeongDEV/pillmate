@@ -23,7 +23,7 @@ export const prescriptionApiSlice = createApi({
     }),
     getCandidates: build.query<Candidate[], number>({
       query: (id) => `/prescriptions/${id}/candidates`,
-      transformResponse: (response: ApiEnvelope<Candidate[]>) => response.data ?? [],
+      transformResponse: (response: ApiEnvelope<Candidate[]>) => response?.data ?? [],
       providesTags: (_r, _e, id) => [{ type: 'Candidate', id }],
     }),
     resolveCandidate: build.mutation<void, { prescriptionId: number; candidateId: number; selectedDrugId: number }>({

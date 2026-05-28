@@ -10,7 +10,7 @@ export const activityApi = createApi({
   endpoints: (build) => ({
     getRecentActivity: build.query<ActivityFeedItem[], void>({
       query: () => '/activity',
-      transformResponse: (response: ApiEnvelope<ActivityFeedItem[]>) => response.data ?? [],
+      transformResponse: (response: ApiEnvelope<ActivityFeedItem[]>) => response?.data ?? [],
       providesTags: ['Activity'],
       keepUnusedDataFor: 30,
     }),
