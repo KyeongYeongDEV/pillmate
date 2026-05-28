@@ -8,10 +8,10 @@ const MOCK_SCHEDULE: ScheduleDay = {
   totalCount: 6,
   doneCount: 4,
   slots: [
-    { id: 'morning', time: '08:00', label: '아침',    state: 'done', items: ['암로디핀 5mg', '메트포르민 500mg'], doseLogId: 101 },
-    { id: 'noon',    time: '12:30', label: '점심',    state: 'now',  items: ['메트포르민 500mg', '글리메피리드 2mg'], doseLogId: 102 },
-    { id: 'evening', time: '19:00', label: '저녁',    state: 'wait', items: ['아토르바스타틴 10mg'], doseLogId: 103 },
-    { id: 'bedtime', time: '22:00', label: '취침 전', state: 'wait', items: ['오메가-3 1000mg'], doseLogId: 104 },
+    { id: 'morning', time: '08:00', label: '아침',    state: 'done', items: ['암로디핀 5mg', '메트포르민 500mg'], doseLogId: 1 },
+    { id: 'noon',    time: '12:30', label: '점심',    state: 'now',  items: ['메트포르민 500mg', '글리메피리드 2mg'], doseLogId: 2 },
+    { id: 'evening', time: '19:00', label: '저녁',    state: 'wait', items: ['아토르바스타틴 10mg'], doseLogId: 3 },
+    { id: 'bedtime', time: '22:00', label: '취침 전', state: 'wait', items: ['오메가-3 1000mg'], doseLogId: 4 },
   ],
 };
 

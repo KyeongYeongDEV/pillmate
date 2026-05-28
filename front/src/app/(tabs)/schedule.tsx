@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -8,7 +8,9 @@ import MedTimeRow from '@/components/schedule/MedTimeRow';
 import { colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
-import type { MedSlot, MedState } from '@/types/schedule';
+import { useAppSelector } from '@/store/hooks';
+import type { RootState } from '@/store';
+import type { MedSlot } from '@/types/schedule';
 
 const LEGEND: [string, string][] = [
   ['전체 복용', colors.statusPositive],
@@ -21,22 +23,23 @@ const TODAY = new Date().toISOString().slice(0, 10);
 export default function ScheduleScreen() {
   const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
   const [checkDose] = useCheckDoseMutation();
-  const [stateMap, setStateMap] = useState<Record<string, MedState>>({});
+  const doseStateMap = useAppSelector((state: RootState) => state.doseState);
 
   const slots: MedSlot[] = scheduleDay?.slots ?? [];
-  const displaySlots = slots.map(s => ({ ...s, state: (stateMap[s.id] ?? s.state) as MedState }));
+  const displaySlots = slots.map(s => ({
+    ...s,
+    state: s.doseLogId != null ? (doseStateMap[s.doseLogId] ?? s.state) : s.state,
+  }));
 
   const handleAdd = useCallback(() => { /* Phase 2: navigate to prescription upload */ }, []);
 
   const handleSlotPress = useCallback(async (slot: MedSlot) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const current = stateMap[slot.id] ?? slot.state;
-    const next: MedState = current === 'done' ? 'wait' : 'done';
-    setStateMap(prev => ({ ...prev, [slot.id]: next }));
-    if (slot.doseLogId) {
-      checkDose({ doseLogId: slot.doseLogId, action: next === 'done' ? 'TAKE' : 'SKIP' });
-    }
-  }, [stateMap, checkDose]);
+    if (!slot.doseLogId) return;
+    const current = slot.doseLogId != null ? (doseStateMap[slot.doseLogId] ?? slot.state) : slot.state;
+    const action = current === 'done' ? 'SKIP' : 'TAKE';
+    checkDose({ doseLogId: slot.doseLogId, action });
+  }, [doseStateMap, checkDose]);
 
   const doneCount = displaySlots.filter(s => s.state === 'done').length;
 

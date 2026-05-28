@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
 } from 'react-native';
@@ -34,18 +34,29 @@ const MOCK_SLOTS: TimeSlot[] = [
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
   const { unreadCount } = useAppSelector(selectHome);
+  const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const [showInsight, setShowInsight] = useState(true);
   const [checkDose] = useCheckDoseMutation();
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(undefined, { pollingInterval: ACTIVITY_POLL_INTERVAL_MS });
 
+  const slots = useMemo(
+    () => MOCK_SLOTS.map(s => ({
+      ...s,
+      state: s.doseLogId != null ? (doseStateMap[s.doseLogId] ?? s.state) : s.state,
+    })),
+    [doseStateMap],
+  );
+
+  const slotsKey = slots.map(s => `${s.id}:${s.state}`).join(',');
+
   const handleBellPress = useCallback(() => dispatch(clearUnread()), [dispatch]);
 
   const handleSlotPress = useCallback((slot: TimeSlot) => {
     if (!slot.doseLogId) return;
-    const action = slot.state === 'done' ? 'TAKE' : 'SKIP';
-    checkDose({ doseLogId: slot.doseLogId, action });
+    const next = slot.state === 'done' ? 'SKIP' : 'TAKE';
+    checkDose({ doseLogId: slot.doseLogId, action: next });
   }, [checkDose]);
 
   return (
@@ -80,7 +91,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
             <Text style={styles.sectionDate}>11월 24일 월</Text>
           </View>
-          <TimeSlotCards slots={MOCK_SLOTS} onSlotPress={handleSlotPress} />
+          <TimeSlotCards key={slotsKey} slots={slots} onSlotPress={handleSlotPress} />
         </View>
 
         {/* AI 인사이트 */}
