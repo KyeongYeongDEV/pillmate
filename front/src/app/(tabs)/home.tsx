@@ -18,18 +18,17 @@ import InsightCard from '@/components/home/InsightCard';
 import ActivityFeedItem from '@/components/home/ActivityFeedItem';
 import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
 import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
+import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
+import { medSlotToTimeSlot } from '@/lib/scheduleUtils';
+import type { MedState } from '@/types/schedule';
+
+const TODAY = new Date().toISOString().slice(0, 10);
 
 const selectHome = createSelector(
   (state: RootState) => state.home,
   (home) => home,
 );
 
-const MOCK_SLOTS: TimeSlot[] = [
-  { id: 'morning', label: '아침',   time: '8:00',  state: 'done', drugCount: 2, pillColors: ['#A8D4FF', '#FFAA6B'], doseLogId: 4 },
-  { id: 'noon',    label: '점심',   time: '12:30', state: 'now',  drugCount: 3, pillColors: ['#FFB3C1', '#F5F5F5'], doseLogId: 5 },
-  { id: 'evening', label: '저녁',   time: '19:00', state: 'wait', drugCount: 2, pillColors: ['#C4B5FD'],            doseLogId: 6 },
-  { id: 'bedtime', label: '취침 전', time: '22:00', state: 'wait', drugCount: 1, pillColors: ['#0066FF'],            doseLogId: 7 },
-];
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
@@ -42,12 +41,15 @@ export default function HomeScreen() {
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(undefined, { pollingInterval: ACTIVITY_POLL_INTERVAL_MS });
 
+  const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
+  const rawSlots = scheduleDay?.slots ?? [];
+
   const slots = useMemo(
-    () => MOCK_SLOTS.map(s => {
+    () => rawSlots.map(s => {
       const entry = s.doseLogId != null ? doseStateMap[s.doseLogId] : undefined;
-      return { ...s, state: (entry?.state ?? s.state) as typeof s.state };
+      return medSlotToTimeSlot({ ...s, state: (entry?.state ?? s.state) as MedState });
     }),
-    [doseStateMap],
+    [rawSlots, doseStateMap],
   );
 
   const handleSlotPress = useMemo(
