@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_BASE_URL } from '@/lib/api/client';
+import type { ApiEnvelope } from '@/lib/api/client';
 import { getToken } from '@/lib/auth/storage';
 import type { ActivityFeedItem } from '@/types/activity';
 
@@ -18,6 +19,7 @@ export const activityApi = createApi({
   endpoints: (build) => ({
     getRecentActivity: build.query<ActivityFeedItem[], void>({
       query: () => '/activity',
+      transformResponse: (response: ApiEnvelope<ActivityFeedItem[]>) => response.data ?? [],
       providesTags: ['Activity'],
       keepUnusedDataFor: 30,
     }),

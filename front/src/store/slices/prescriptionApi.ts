@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { getToken } from '@/lib/auth/storage';
 import { API_BASE_URL } from '@/lib/api/client';
+import type { ApiEnvelope } from '@/lib/api/client';
 import type {
   Candidate,
   OcrInput,
@@ -32,6 +33,7 @@ export const prescriptionApiSlice = createApi({
     }),
     getCandidates: build.query<Candidate[], number>({
       query: (id) => `/prescriptions/${id}/candidates`,
+      transformResponse: (response: ApiEnvelope<Candidate[]>) => response.data ?? [],
       providesTags: (_r, _e, id) => [{ type: 'Candidate', id }],
     }),
     resolveCandidate: build.mutation<void, { prescriptionId: number; candidateId: number; selectedDrugId: number }>({
