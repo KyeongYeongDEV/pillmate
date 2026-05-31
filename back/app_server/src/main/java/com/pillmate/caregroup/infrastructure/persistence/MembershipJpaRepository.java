@@ -13,6 +13,7 @@ interface MembershipJpaRepository extends JpaRepository<Membership, Long> {
     List<Membership> findByCareGroupId(Long careGroupId);
     boolean existsByCareGroupIdAndUserId(Long careGroupId, Long userId);
     List<Membership> findByUserId(Long userId);
+    Optional<Membership> findFirstByUserIdAndPinnedTrue(Long userId);
 
     @Query("""
             SELECT (COUNT(m1) > 0) FROM Membership m1, Membership m2

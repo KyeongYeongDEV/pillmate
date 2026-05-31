@@ -14,4 +14,5 @@ public interface MembershipRepository {
     boolean existsSharedGroup(Long viewerUserId, Long targetUserId);
     boolean existsByGuardianAndPatient(Long guardianUserId, Long patientUserId);
     List<Long> findGroupMemberUserIds(Long viewerUserId);
+    Optional<Membership> findPinnedByUserId(Long userId);
 }

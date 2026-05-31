@@ -33,6 +33,9 @@ public class Membership {
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
 
+    @Column(name = "is_pinned", nullable = false)
+    private boolean pinned;
+
     public static Membership of(Long careGroupId, Long userId, MemberRole role, Long invitedBy) {
         Membership m = new Membership();
         m.careGroupId = careGroupId;
@@ -40,10 +43,23 @@ public class Membership {
         m.role = role;
         m.invitedBy = invitedBy;
         m.joinedAt = Instant.now();
+        m.pinned = false;
         return m;
     }
 
     public boolean isAdmin() {
         return this.role == MemberRole.ADMIN;
+    }
+
+    public boolean isPinned() {
+        return this.pinned;
+    }
+
+    public void pin() {
+        this.pinned = true;
+    }
+
+    public void unpin() {
+        this.pinned = false;
     }
 }

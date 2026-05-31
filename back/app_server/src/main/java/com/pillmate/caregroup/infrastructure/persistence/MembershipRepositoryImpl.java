@@ -21,4 +21,5 @@ class MembershipRepositoryImpl implements MembershipRepository {
     @Override public boolean existsSharedGroup(Long v, Long t) { return jpa.existsSharedGroup(v, t); }
     @Override public boolean existsByGuardianAndPatient(Long g, Long p) { return jpa.existsByGuardianAndPatient(g, p); }
     @Override public List<Long> findGroupMemberUserIds(Long v) { return jpa.findGroupMemberUserIds(v); }
+    @Override public Optional<Membership> findPinnedByUserId(Long u) { return jpa.findFirstByUserIdAndPinnedTrue(u); }
 }
