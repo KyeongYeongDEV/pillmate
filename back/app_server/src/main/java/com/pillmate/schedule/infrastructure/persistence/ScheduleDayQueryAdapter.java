@@ -24,7 +24,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
             LEFT JOIN drugs d ON d.id = s.drug_id
             LEFT JOIN dose_logs dl
                    ON dl.schedule_id = s.id
-                  AND dl.scheduled_at::date = :date
+                  AND (dl.scheduled_at AT TIME ZONE 'Asia/Seoul')::date = :date
             WHERE s.patient_id = :pid
               AND s.active = TRUE
               AND s.start_date <= :date
