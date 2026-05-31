@@ -3,7 +3,10 @@ package com.pillmate.activity.application;
 import com.pillmate.activity.application.dto.ActivityFeedItem;
 import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +27,11 @@ public class ActivityFeedQueryService {
     private final UserRepository userRepository;
 
     public List<ActivityFeedItem> query(Long viewerId, int limit) {
-        List<Long> memberIds = membershipRepository.findGroupMemberUserIds(viewerId);
+        return query(viewerId, null, limit);
+    }
+
+    public List<ActivityFeedItem> query(Long viewerId, Long groupId, int limit) {
+        List<Long> memberIds = resolveMemberIds(viewerId, groupId);
         if (memberIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -32,6 +39,19 @@ public class ActivityFeedQueryService {
         Map<Long, String> nameById = buildNameMap(memberIds);
         return feeds.stream()
                 .map(f -> ActivityFeedItem.from(f, nameById.getOrDefault(f.getActorUserId(), "멤버")))
+                .toList();
+    }
+
+    private List<Long> resolveMemberIds(Long viewerId, Long groupId) {
+        if (groupId == null) {
+            return membershipRepository.findGroupMemberUserIds(viewerId);
+        }
+        if (!membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerId)) {
+            throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
+        }
+        return membershipRepository.findByCareGroupId(groupId).stream()
+                .map(Membership::getUserId)
+                .filter(id -> !id.equals(viewerId))
                 .toList();
     }
 

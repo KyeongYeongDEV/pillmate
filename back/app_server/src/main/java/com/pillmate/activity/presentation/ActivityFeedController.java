@@ -24,9 +24,11 @@ public class ActivityFeedController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ActivityFeedItem>>> getActivity(
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) Long groupId) {
         Long viewerId = UserContext.get();
-        List<ActivityFeedItem> feeds = activityFeedQueryService.query(viewerId, Math.min(limit, DEFAULT_LIMIT));
+        List<ActivityFeedItem> feeds = activityFeedQueryService.query(
+                viewerId, groupId, Math.min(limit, DEFAULT_LIMIT));
         return ResponseEntity.ok(ApiResponse.success(feeds));
     }
 }
