@@ -8,8 +8,11 @@ export const activityApi = createApi({
   baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Activity'],
   endpoints: (build) => ({
-    getRecentActivity: build.query<ActivityFeedItem[], void>({
-      query: () => '/activity',
+    getRecentActivity: build.query<ActivityFeedItem[], { groupId?: number } | void>({
+      query: (arg) => {
+        const groupId = arg && 'groupId' in arg ? arg.groupId : undefined;
+        return groupId != null ? `/activity?groupId=${groupId}` : '/activity';
+      },
       transformResponse: (response: ApiEnvelope<ActivityFeedItem[]>) => response?.data ?? [],
       providesTags: ['Activity'],
       keepUnusedDataFor: 30,
