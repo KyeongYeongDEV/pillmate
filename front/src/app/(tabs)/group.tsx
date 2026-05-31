@@ -1,104 +1,134 @@
-import React, { useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import Avatar from '@/components/common/Avatar';
-import MemberCard from '@/components/group/MemberCard';
-import ActivityItem from '@/components/group/ActivityItem';
-import { colors, space, radius, typography } from '@/styles/tokens';
-import type { GroupMember, GroupActivity } from '@/types/group';
-
-const MEMBERS: GroupMember[] = [
-  { id: '1', name: '박순자', sub: '환자 · 만 72세', role: '환자',  tint: '#FF7B2E', online: true },
-  { id: '2', name: '김민지', sub: '딸 · 본인',       role: '보호자', tint: '#0066FF', online: true,  isMe: true },
-  { id: '3', name: '김지훈', sub: '아들',             role: '보호자', tint: '#6541F2', online: false },
-];
-
-const ACTIVITIES: GroupActivity[] = [
-  { id: '1', who: '박순자', whoLabel: '할머니', tint: '#FF7B2E', time: '오늘 12:34', kind: 'done',  title: '점심약 2개를 복용했어요', detail: ['메트포르민 500mg', '글리메피리드 2mg'], pills: ['#FF7B2E', '#fff'] },
-  { id: '2', who: 'PillMate AI', whoLabel: 'AI', tint: '#6541F2', time: '오늘 09:10', kind: 'ai', title: '저녁약 미복용 패턴', detail: '지난 7일 중 3일 빠뜨리셨어요. 알림 시간을 조정해볼까요?', cta: '알림 조정' },
-  { id: '3', who: '김민지', whoLabel: '딸', tint: '#0066FF', time: '오늘 07:40', kind: 'rx',  title: '새 처방전을 등록했어요', detail: '내과 진료 · 약 5개 추가' },
-  { id: '4', who: '박순자', whoLabel: '할머니', tint: '#FF7B2E', time: '어제 22:30', kind: 'miss', title: '취침 전 약을 놓치셨어요', detail: ['오메가-3 1000mg'] },
-  { id: '5', who: '김지훈', whoLabel: '아들', tint: '#6541F2', time: '어제 20:14', kind: 'note', title: '메모를 남겼어요', detail: '"엄마, 오늘 어지러우셨다고 하셨어요. 다음 진료에서 여쭤봐요."' },
-];
+import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
+import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
+import GroupCard from '@/components/group/GroupCard';
+import type { MyGroupSummary } from '@/types/caregroup';
 
 export default function GroupScreen() {
-  const handleInvite = useCallback(() => { /* Phase 2: invite sheet */ }, []);
-  const handleQr    = useCallback(() => { /* Phase 2: QR sheet */ }, []);
-  const handleCopy  = useCallback(() => { /* Phase 2: clipboard */ }, []);
-  // Phase 2-FE: patientId 로 처방전/스케줄 조회 화면 진입
-  const handleMemberPress = useCallback((_member: GroupMember) => { /* Phase 2: router.push(`/patient/${member.id}`) */ }, []);
+  const [filter, setFilter] = useState<GroupFilter>('전체');
+  const { data: groups = [], isLoading, isError } = useGetMyGroupsQuery();
+  const [pinGroup] = usePinGroupMutation();
+  const [unpinGroup] = useUnpinGroupMutation();
+
+  const filteredGroups = useMemo(() => applyFilter(groups, filter), [groups, filter]);
+  const pinnedGroup = useMemo(() => groups.find(g => g.pinned) ?? null, [groups]);
+  const unpinnedGroups = useMemo(
+    () => filteredGroups.filter(g => !g.pinned),
+    [filteredGroups],
+  );
+
+  const handleCardPress = useCallback((groupId: number) => {
+    router.push(`/group/${groupId}` as any);
+  }, []);
+
+  const handlePinToggle = useCallback(async (groupId: number, currentlyPinned: boolean) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (currentlyPinned) {
+      unpinGroup(groupId);
+    } else {
+      pinGroup(groupId);
+    }
+  }, [pinGroup, unpinGroup]);
+
+  const handleCreate = useCallback(() => {
+    router.push('/group/create' as any);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>케어 그룹</Text>
-        <Pressable accessibilityLabel="그룹 설정" accessibilityRole="button">
-          <Feather name="settings" size={22} color={colors.labelNormal} />
-        </Pressable>
+        <Text style={styles.headerTitle}>그룹</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.headerCount}>{groups.length}개</Text>
+          <Pressable accessibilityLabel="그룹 검색" accessibilityRole="button" hitSlop={8}>
+            <Feather name="search" size={20} color={colors.labelNormal} />
+          </Pressable>
+        </View>
       </View>
 
+      <FilterChips selected={filter} onSelect={setFilter} />
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* group hero */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroTop}>
-            <View style={styles.avatarStack}>
-              <View style={styles.av0}><Avatar name="박" tint="#FF7B2E" size={44} /></View>
-              <View style={styles.av1}><Avatar name="민" tint="#0066FF" size={44} /></View>
-              <View style={styles.avMore}><Text style={styles.avMoreText}>+1</Text></View>
-            </View>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName}>할머니 댁</Text>
-              <Text style={styles.heroSub}>3명 · 보호자 2 · 환자 1</Text>
-            </View>
-          </View>
-          <View style={styles.heroActions}>
-            <Pressable style={styles.inviteBtn} onPress={handleInvite} accessibilityLabel="초대하기" accessibilityRole="button">
-              <Feather name="plus" size={18} color="#fff" />
-              <Text style={styles.inviteBtnText}>초대하기</Text>
-            </Pressable>
-            <Pressable style={styles.qrBtn} onPress={handleQr} accessibilityLabel="QR 코드" accessibilityRole="button">
-              <Feather name="grid" size={20} color={colors.labelNormal} />
-            </Pressable>
-          </View>
-        </View>
+        {isLoading && <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />}
+        {isError && <ErrorPlaceholder />}
 
-        {/* members */}
-        <Text style={styles.sectionLabel}>구성원 · {MEMBERS.length}</Text>
-        <View style={styles.listCard}>
-          {MEMBERS.map((m, i) => (
-            <MemberCard key={m.id} member={m} isFirst={i === 0} onPress={handleMemberPress} />
+        {/* 📌 고정됨 */}
+        {pinnedGroup && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>📌 고정됨</Text>
+            <GroupCard
+              group={pinnedGroup}
+              onPress={handleCardPress}
+              onPinToggle={handlePinToggle}
+              isPinned
+            />
+          </View>
+        )}
+
+        {/* 모든 그룹 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>모든 그룹 · {filteredGroups.length}</Text>
+          {unpinnedGroups.map((g) => (
+            <GroupCard
+              key={g.groupId}
+              group={g}
+              onPress={handleCardPress}
+              onPinToggle={handlePinToggle}
+            />
           ))}
+          {unpinnedGroups.length === 0 && !isLoading && (
+            <Text style={styles.emptyText}>표시할 그룹이 없어요</Text>
+          )}
         </View>
 
-        {/* invite code */}
-        <View style={styles.inviteCodeCard}>
-          <View style={styles.inviteCodeRow}>
-            <View>
-              <Text style={styles.inviteCodeLabel}>초대 코드</Text>
-              <Text style={styles.inviteCode}>3F9-K2P</Text>
-            </View>
-            <Pressable style={styles.copyBtn} onPress={handleCopy} accessibilityLabel="초대 코드 복사" accessibilityRole="button">
-              <Text style={styles.copyText}>복사</Text>
-            </Pressable>
-          </View>
-          <Text style={styles.inviteExpiry}>유효 시간 23분 · 가족에게 코드 또는 QR을 전송하세요.</Text>
-        </View>
-
-        {/* activity */}
-        <View style={styles.activityHeader}>
-          <Text style={styles.activityTitle}>그룹 활동</Text>
-          <Text style={styles.activityAll}>전체보기</Text>
-        </View>
-        <Text style={styles.activitySub}>최근 일주일</Text>
-        <View style={styles.activityList}>
-          {ACTIVITIES.map((item, i) => (
-            <ActivityItem key={item.id} item={item} isLast={i === ACTIVITIES.length - 1} />
-          ))}
-        </View>
+        {/* 새 그룹 CTA */}
+        <Pressable
+          style={styles.ctaCard}
+          onPress={handleCreate}
+          accessibilityLabel="새 그룹 만들기"
+          accessibilityRole="button"
+        >
+          <Feather name="plus-circle" size={22} color={colors.primaryBase} />
+          <Text style={styles.ctaText}>새 그룹 만들기</Text>
+          <Feather name="chevron-right" size={18} color={colors.labelAlternative} />
+        </Pressable>
       </ScrollView>
+
+      {/* FAB */}
+      <Pressable
+        style={styles.fab}
+        onPress={handleCreate}
+        accessibilityLabel="그룹 만들기"
+        accessibilityRole="button"
+      >
+        <Feather name="plus" size={24} color="#fff" />
+      </Pressable>
     </SafeAreaView>
   );
+}
+
+function ErrorPlaceholder() {
+  return (
+    <View style={styles.errorBox}>
+      <Text style={styles.errorText}>그룹 목록을 불러올 수 없어요</Text>
+    </View>
+  );
+}
+
+function applyFilter(groups: MyGroupSummary[], filter: GroupFilter): MyGroupSummary[] {
+  if (filter === '전체') return groups;
+  if (filter === '내가 환자') return groups.filter(g => g.role === '환자');
+  if (filter === '내가 보호자') return groups.filter(g => g.role === '보호자');
+  if (filter === '비공개') return [];
+  return groups;
 }
 
 const styles = StyleSheet.create({
@@ -109,58 +139,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  headerCount: { fontSize: 13, color: colors.labelAlternative, fontWeight: '600' },
   scroll: { flex: 1 },
-  content: { padding: space.s16, gap: space.s16, paddingBottom: 80 },
-  heroCard: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r20,
-    padding: 22, borderWidth: 1, borderColor: colors.line, gap: space.s18,
+  content: { paddingVertical: space.s16, gap: space.s8, paddingBottom: 100 },
+  loader: { marginTop: space.s40 },
+  section: { paddingHorizontal: space.s16, gap: space.s10 },
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06,
   },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.s14 },
-  avatarStack: { position: 'relative', width: 88, height: 44 },
-  av0: { position: 'absolute', left: 0, top: 0 },
-  av1: { position: 'absolute', left: 20, top: 0 },
-  avMore: {
-    position: 'absolute', left: 40, top: 0, width: 44, height: 44,
-    borderRadius: 22, backgroundColor: colors.bgNormal,
-    borderWidth: 1.5, borderColor: colors.line,
+  emptyText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
+  errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
+  errorText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center' },
+  ctaCard: {
+    marginHorizontal: space.s16,
+    flexDirection: 'row', alignItems: 'center', gap: space.s12,
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    padding: space.s16, borderWidth: 1, borderColor: colors.line,
+    ...shadows.small,
+  },
+  ctaText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primaryBase },
+  fab: {
+    position: 'absolute', bottom: 24, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.primaryBase,
     alignItems: 'center', justifyContent: 'center',
+    ...shadows.medium,
   },
-  avMoreText: { fontSize: 14, fontWeight: '700', color: colors.labelAlternative },
-  heroInfo: { flex: 1, marginLeft: space.s28 },
-  heroName: { fontSize: 18, fontWeight: '700', letterSpacing: -0.015, color: colors.labelNormal },
-  heroSub: { fontSize: 13, color: colors.labelAlternative, marginTop: 2 },
-  heroActions: { flexDirection: 'row', gap: space.s8 },
-  inviteBtn: {
-    flex: 1, height: 42, borderRadius: radius.r10,
-    backgroundColor: colors.labelNormal, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: space.s6,
-  },
-  inviteBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  qrBtn: {
-    width: 42, height: 42, borderRadius: radius.r10,
-    backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
-  },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
-  listCard: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
-    borderWidth: 1, borderColor: colors.line, overflow: 'hidden',
-  },
-  inviteCodeCard: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
-    padding: space.s18, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line,
-  },
-  inviteCodeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  inviteCodeLabel: { fontSize: 11, color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
-  inviteCode: { fontSize: 22, fontWeight: '700', letterSpacing: 0.08, marginTop: 4, color: colors.labelNormal },
-  copyBtn: {
-    paddingHorizontal: space.s14, paddingVertical: space.s8,
-    borderRadius: radius.full, backgroundColor: colors.fillNormal,
-  },
-  copyText: { fontSize: 13, fontWeight: '600', color: colors.labelNormal },
-  inviteExpiry: { fontSize: 12, color: colors.labelAlternative, marginTop: space.s8, lineHeight: 17 },
-  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 },
-  activityTitle: { fontSize: 13, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  activityAll: { fontSize: 12, color: colors.primaryBase, fontWeight: '600' },
-  activitySub: { fontSize: 11, color: colors.labelAlternative, marginTop: -space.s8 },
-  activityList: {},
 });

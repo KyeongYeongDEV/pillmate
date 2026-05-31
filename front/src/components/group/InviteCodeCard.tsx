@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { View, Text, StyleSheet, Pressable, Platform, Share } from 'react-native';
 import { colors, space, radius } from '@/styles/tokens';
 import type { InviteCodeView } from '@/types/caregroup';
 
@@ -10,7 +9,7 @@ interface InviteCodeCardProps {
 
 function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
   const handleCopy = useCallback(async () => {
-    await Clipboard.setStringAsync(inviteCode.code);
+    await Share.share({ message: inviteCode.code, title: 'PillMate 초대 코드' });
   }, [inviteCode.code]);
 
   const expiryText = formatExpiry(inviteCode.expiresAt);
