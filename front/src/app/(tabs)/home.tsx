@@ -9,9 +9,9 @@ import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearUnread } from '@/store/slices/homeSlice';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
+import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
 import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
-import GroupSelector from '@/components/home/GroupSelector';
 import NotificationBell from '@/components/home/NotificationBell';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
@@ -38,8 +38,14 @@ export default function HomeScreen() {
   const handleBellPress = useMemo(() => () => dispatch(clearUnread()), [dispatch]);
   const pressSlot = useSlotPress();
 
+  const { data: groups = [] } = useGetMyGroupsQuery();
+  const pinnedGroupId = useMemo(() => groups.find(g => g.pinned)?.groupId ?? undefined, [groups]);
+
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
-    useGetRecentActivityQuery(undefined, { pollingInterval: ACTIVITY_POLL_INTERVAL_MS });
+    useGetRecentActivityQuery(
+      pinnedGroupId != null ? { groupId: pinnedGroupId } : undefined,
+      { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
+    );
 
   const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
   const rawSlots = scheduleDay?.slots ?? [];
@@ -62,10 +68,9 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <GroupSelector
-            groupName="할머니 댁 · 3명"
-            onPress={() => { /* Phase 2: group switcher */ }}
-          />
+          <Text style={styles.pinnedGroupLabel}>
+            {groups.find(g => g.pinned)?.name ?? 'PillMate'}
+          </Text>
           <NotificationBell count={unreadCount} onPress={handleBellPress} />
         </View>
 
@@ -194,6 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: space.s12,
   },
+  pinnedGroupLabel: { fontSize: 14, fontWeight: '700', color: colors.labelNormal },
   greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6 },
   subtitle: { ...typography.label1n, color: colors.labelAlternative, marginTop: 2 },
   progressTrack: {
