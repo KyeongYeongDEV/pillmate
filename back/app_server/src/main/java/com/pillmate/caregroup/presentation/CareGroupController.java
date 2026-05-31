@@ -10,7 +10,7 @@ import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
-import com.pillmate.caregroup.application.dto.MyGroupItem;
+import com.pillmate.caregroup.application.dto.MyGroupSummary;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
@@ -66,7 +66,7 @@ public class CareGroupController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MyGroupItem>>> listMyGroups() {
+    public ResponseEntity<ApiResponse<List<MyGroupSummary>>> listMyGroups() {
         Long userId = UserContext.get();
         return ResponseEntity.ok(ApiResponse.success(listMyGroupsUseCase.listMyGroups(userId)));
     }
