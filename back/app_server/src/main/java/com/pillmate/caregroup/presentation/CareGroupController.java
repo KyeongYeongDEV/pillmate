@@ -4,6 +4,8 @@ import com.pillmate.caregroup.application.CreateCareGroupUseCase;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
+import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupItem;
@@ -12,6 +14,7 @@ import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +35,8 @@ public class CareGroupController {
     private final JoinGroupUseCase joinGroupUseCase;
     private final IssueInviteCodeUseCase issueInviteCodeUseCase;
     private final ListMyGroupsUseCase listMyGroupsUseCase;
+    private final PinGroupUseCase pinGroupUseCase;
+    private final UnpinGroupUseCase unpinGroupUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -61,5 +66,19 @@ public class CareGroupController {
     public ResponseEntity<ApiResponse<List<MyGroupItem>>> listMyGroups() {
         Long userId = UserContext.get();
         return ResponseEntity.ok(ApiResponse.success(listMyGroupsUseCase.listMyGroups(userId)));
+    }
+
+    @PostMapping("/{groupId}/pin")
+    public ResponseEntity<ApiResponse<Void>> pin(@PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        pinGroupUseCase.pin(groupId, userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @DeleteMapping("/{groupId}/pin")
+    public ResponseEntity<ApiResponse<Void>> unpin(@PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        unpinGroupUseCase.unpin(groupId, userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }
