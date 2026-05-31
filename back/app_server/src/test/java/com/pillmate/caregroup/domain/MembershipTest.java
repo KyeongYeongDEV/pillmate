@@ -25,4 +25,33 @@ class MembershipTest {
 
         assertThat(m.isAdmin()).isFalse();
     }
+
+    @Test
+    @DisplayName("기본 pinned=false")
+    void create_defaultNotPinned() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+
+        assertThat(m.isPinned()).isFalse();
+    }
+
+    @Test
+    @DisplayName("pin() 호출 시 isPinned=true")
+    void pin_marksPinnedTrue() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+
+        m.pin();
+
+        assertThat(m.isPinned()).isTrue();
+    }
+
+    @Test
+    @DisplayName("unpin() 호출 시 isPinned=false")
+    void unpin_marksPinnedFalse() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+        m.pin();
+
+        m.unpin();
+
+        assertThat(m.isPinned()).isFalse();
+    }
 }
