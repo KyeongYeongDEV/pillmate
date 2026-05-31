@@ -1,12 +1,14 @@
 package com.pillmate.caregroup.presentation;
 
 import com.pillmate.caregroup.application.CreateCareGroupUseCase;
+import com.pillmate.caregroup.application.GetGroupDetailUseCase;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
+import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupItem;
 import com.pillmate.caregroup.domain.model.MemberRole;
@@ -37,6 +39,7 @@ public class CareGroupController {
     private final ListMyGroupsUseCase listMyGroupsUseCase;
     private final PinGroupUseCase pinGroupUseCase;
     private final UnpinGroupUseCase unpinGroupUseCase;
+    private final GetGroupDetailUseCase getGroupDetailUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -80,5 +83,11 @@ public class CareGroupController {
         Long userId = UserContext.get();
         unpinGroupUseCase.unpin(groupId, userId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupDetailResponse>> getDetail(@PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(getGroupDetailUseCase.detail(groupId, userId)));
     }
 }

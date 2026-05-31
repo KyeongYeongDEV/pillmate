@@ -13,4 +13,7 @@ interface InviteCodeJpaRepository extends JpaRepository<InviteCode, Long> {
     Optional<InviteCode> findUsableByCode(@Param("code") String code);
 
     Optional<InviteCode> findByCode(String code);
+
+    @Query("SELECT i FROM InviteCode i WHERE i.careGroupId = :gid AND i.usedAt IS NULL AND i.expiresAt > CURRENT_TIMESTAMP ORDER BY i.createdAt DESC LIMIT 1")
+    Optional<InviteCode> findActiveByCareGroupId(@Param("gid") Long careGroupId);
 }

@@ -15,4 +15,5 @@ class InviteCodeRepositoryImpl implements InviteCodeRepository {
     @Override public InviteCode save(InviteCode c) { return jpa.save(c); }
     @Override public Optional<InviteCode> findUsableByCode(String code) { return jpa.findUsableByCode(code); }
     @Override public Optional<InviteCode> findByCode(String code) { return jpa.findByCode(code); }
+    @Override public Optional<InviteCode> findActiveByCareGroupId(Long gid) { return jpa.findActiveByCareGroupId(gid); }
 }

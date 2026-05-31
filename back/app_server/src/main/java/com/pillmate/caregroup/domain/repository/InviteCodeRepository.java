@@ -8,4 +8,5 @@ public interface InviteCodeRepository {
     InviteCode save(InviteCode inviteCode);
     Optional<InviteCode> findUsableByCode(String code);
     Optional<InviteCode> findByCode(String code);
+    Optional<InviteCode> findActiveByCareGroupId(Long careGroupId);
 }
