@@ -1,5 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
+import type { ApiEnvelope } from '@/lib/api/client';
 import type { ScheduleDay } from '@/types/schedule';
 
 export const MOCK_SCHEDULE: ScheduleDay = {
@@ -21,8 +22,8 @@ export const scheduleApiSlice = createApi({
   keepUnusedDataFor: 30,
   endpoints: (build) => ({
     getDaySchedule: build.query<ScheduleDay, string>({
-      // Phase 2: replace queryFn with query: (date) => `/schedules/day?date=${date}`
-      queryFn: async () => ({ data: MOCK_SCHEDULE }),
+      query: (date) => `/schedules/day?date=${date}`,
+      transformResponse: (response: ApiEnvelope<ScheduleDay>) => response?.data ?? MOCK_SCHEDULE,
       providesTags: ['Schedule'],
     }),
   }),
