@@ -1,0 +1,37 @@
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
+import type { ApiEnvelope } from '@/lib/api/client';
+import type { MyGroupSummary, GroupDetailResponse } from '@/types/caregroup';
+
+export const caregroupApiSlice = createApi({
+  reducerPath: 'caregroupApi',
+  baseQuery: createPillmateBaseQuery(),
+  tagTypes: ['Group', 'GroupDetail', 'Activity'],
+  endpoints: (build) => ({
+    getMyGroups: build.query<MyGroupSummary[], void>({
+      query: () => '/groups',
+      transformResponse: (response: ApiEnvelope<MyGroupSummary[]>) => response?.data ?? [],
+      providesTags: ['Group'],
+    }),
+    getGroupDetail: build.query<GroupDetailResponse | null, number>({
+      query: (id) => `/groups/${id}`,
+      transformResponse: (response: ApiEnvelope<GroupDetailResponse>) => response?.data ?? null,
+      providesTags: (_result, _error, id) => [{ type: 'GroupDetail', id }],
+    }),
+    pinGroup: build.mutation<void, number>({
+      query: (id) => ({ url: `/groups/${id}/pin`, method: 'POST' }),
+      invalidatesTags: ['Group'],
+    }),
+    unpinGroup: build.mutation<void, number>({
+      query: (id) => ({ url: `/groups/${id}/pin`, method: 'DELETE' }),
+      invalidatesTags: ['Group'],
+    }),
+  }),
+});
+
+export const {
+  useGetMyGroupsQuery,
+  useGetGroupDetailQuery,
+  usePinGroupMutation,
+  useUnpinGroupMutation,
+} = caregroupApiSlice;
