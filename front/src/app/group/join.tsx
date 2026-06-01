@@ -41,7 +41,14 @@ export default function JoinGroupScreen() {
           <Feather name="x" size={22} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>초대 코드로 참여</Text>
-        <View style={{ width: 22 }} />
+        <Pressable
+          onPress={() => router.replace('/group/scan' as any)}
+          accessibilityLabel="QR 스캔으로 참여"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Feather name="maximize" size={22} color={colors.labelNormal} />
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView style={styles.body} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

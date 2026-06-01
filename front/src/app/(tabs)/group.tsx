@@ -61,8 +61,13 @@ export default function GroupScreen() {
           <Text style={styles.headerTitle}>그룹</Text>
           <Text style={styles.headerSub}>{groups.length}개 · 안 읽음 {totalUnread}</Text>
         </View>
-        <Pressable accessibilityLabel="그룹 검색" accessibilityRole="button" hitSlop={8}>
-          <Feather name="search" size={22} color={colors.labelNormal} />
+        <Pressable
+          onPress={() => router.push('/group/scan' as any)}
+          accessibilityLabel="QR 스캔으로 가입"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Feather name="maximize" size={22} color={colors.labelNormal} />
         </Pressable>
       </View>
 
@@ -121,7 +126,7 @@ export default function GroupScreen() {
         accessibilityLabel="그룹 만들기"
         accessibilityRole="button"
       >
-        <Feather name="plus" size={24} color="#fff" />
+        <Feather name="plus" size={24} color={colors.staticWhite} />
       </Pressable>
     </SafeAreaView>
   );
