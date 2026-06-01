@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import type { MyGroupSummary, GroupDetailResponse } from '@/types/caregroup';
+import type { MyGroupSummary, GroupDetailResponse, InviteCodeView } from '@/types/caregroup';
 
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
@@ -26,6 +26,11 @@ export const caregroupApiSlice = createApi({
       query: (id) => ({ url: `/groups/${id}/pin`, method: 'DELETE' }),
       invalidatesTags: ['Group'],
     }),
+    issueInviteCode: build.mutation<InviteCodeView | null, number>({
+      query: (groupId) => ({ url: `/groups/${groupId}/invite-codes`, method: 'POST' }),
+      transformResponse: (response: ApiEnvelope<InviteCodeView>) => response?.data ?? null,
+      invalidatesTags: (_result, _error, groupId) => [{ type: 'GroupDetail', id: groupId }],
+    }),
   }),
 });
 
@@ -34,5 +39,6 @@ export const {
   useGetGroupDetailQuery,
   usePinGroupMutation,
   useUnpinGroupMutation,
+  useIssueInviteCodeMutation,
 } = caregroupApiSlice;
 

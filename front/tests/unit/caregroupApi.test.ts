@@ -57,6 +57,17 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
     expect(endpoints).toHaveProperty('unpinGroup');
   });
 
+  it('caregroupApiSlice — issueInviteCode mutation 존재', () => {
+    const endpoints = caregroupApiSlice.endpoints;
+    expect(endpoints).toHaveProperty('issueInviteCode');
+  });
+
+  it('issueInviteCode — POST /groups/{id}/invite-codes 호출', () => {
+    const groupId = 4;
+    const action = (caregroupApiSlice.endpoints.issueInviteCode as any).initiate(groupId);
+    expect(typeof action).toBe('function');
+  });
+
   it('pinned 그룹 필터링 — pinned:true 첫 항목', () => {
     const groups: MyGroupSummary[] = [
       { groupId: 1, name: 'A', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: false },
