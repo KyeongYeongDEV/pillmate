@@ -86,6 +86,13 @@ export const space = {
   s24: 24, s28: 28, s32: 32, s40: 40, s48: 48, s64: 64,
 } as const;
 
+// Font families — Pretendard JP 로드되면 사용, 없으면 system fallback (iOS: San Francisco / Android: Roboto)
+// 핸드오프 명세: "Pretendard JP", "Pretendard Variable", system fallback
+export const fontFamily = {
+  sans: 'Pretendard',
+  mono: 'Menlo',
+} as const;
+
 export const typography = {
   display1:  { fontSize: 56, lineHeight: 72, fontWeight: '700' as const },
   display2:  { fontSize: 40, lineHeight: 52, fontWeight: '700' as const },
