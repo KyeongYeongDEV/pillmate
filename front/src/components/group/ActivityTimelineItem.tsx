@@ -1,29 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
 import { colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
 
-const ACTIVITY_TINTS: Record<string, string> = {
+interface DotColorMap {
+  [key: string]: string;
+}
+
+const DOT_COLOR: DotColorMap = {
   DOSE_TAKEN: colors.statusPositive,
   DOSE_MISSED: colors.statusNegative,
+  AI_INSIGHT: colors.violet45,
+  AI_REPORT: colors.violet45,
   PRESCRIPTION_ADDED: colors.primaryBase,
+  COMMENT: colors.cyan50,
+  MEMBER_JOINED: colors.pink46,
 };
 
-const ACTIVITY_LABEL: Record<string, string> = {
-  DOSE_TAKEN: '복용',
-  DOSE_MISSED: '미복용',
-  PRESCRIPTION_ADDED: '처방전',
-};
+const DEFAULT_DOT = colors.labelAlternative;
 
 interface ActivityTimelineItemProps {
   item: ActivityView;
   isLast?: boolean;
+  whoLabel?: string;
 }
 
-function ActivityTimelineItem({ item, isLast }: ActivityTimelineItemProps) {
-  const dotColor = ACTIVITY_TINTS[item.activityType] ?? colors.labelAlternative;
-  const label = ACTIVITY_LABEL[item.activityType] ?? item.activityType;
+function ActivityTimelineItem({ item, isLast, whoLabel }: ActivityTimelineItemProps) {
+  const dotColor = DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
+  const isMiss = item.activityType === 'DOSE_MISSED';
 
   return (
     <View style={styles.wrapper}>
@@ -33,14 +39,24 @@ function ActivityTimelineItem({ item, isLast }: ActivityTimelineItemProps) {
       </View>
       <View style={[styles.card, isLast ? styles.cardLast : styles.cardSpaced]}>
         <View style={styles.head}>
-          <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={24} />
-          <Text style={styles.actor}>{item.actorName}</Text>
-          <View style={[styles.chip, { backgroundColor: `${dotColor}20` }]}>
-            <Text style={[styles.chipText, { color: dotColor }]}>{label}</Text>
+          <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={28} />
+          <View style={styles.headTextCol}>
+            <Text style={styles.actor}>
+              <Text style={styles.actorName}>{item.actorName}</Text>
+              {whoLabel && <Text style={styles.actorLabel}> · {whoLabel}</Text>}
+            </Text>
           </View>
           <Text style={styles.time}>{formatRelativeTime(item.occurredAt)}</Text>
         </View>
-        <Text style={styles.summary}>{item.summary}</Text>
+
+        <View style={styles.titleRow}>
+          {isMiss && (
+            <View style={styles.warnBadge}>
+              <Feather name="alert-triangle" size={11} color={colors.red40} />
+            </View>
+          )}
+          <Text style={styles.title}>{item.summary}</Text>
+        </View>
       </View>
     </View>
   );
@@ -59,21 +75,31 @@ function formatRelativeTime(iso: string): string {
 export default React.memo(ActivityTimelineItem);
 
 const styles = StyleSheet.create({
-  wrapper: { flexDirection: 'row', gap: space.s12 },
-  rail: { width: 14, alignItems: 'center', paddingTop: 14 },
-  line: { position: 'absolute', top: 18, bottom: -2, width: 2, backgroundColor: colors.line, left: 6 },
+  wrapper: { flexDirection: 'row', gap: space.s14 },
+  rail: { width: 14, alignItems: 'center', paddingTop: 18 },
+  line: { position: 'absolute', top: 22, bottom: -2, width: 2, backgroundColor: colors.line, left: 6 },
   dot: { width: 10, height: 10, borderRadius: 5 },
   card: {
     flex: 1, backgroundColor: colors.bgNormal,
-    borderRadius: radius.r12, padding: space.s12,
-    borderWidth: 1, borderColor: colors.line, gap: space.s6,
+    borderRadius: radius.r14, padding: space.s14,
+    borderWidth: 1, borderColor: colors.line, gap: space.s8,
   },
-  cardSpaced: { marginBottom: space.s10 },
+  cardSpaced: { marginBottom: space.s12 },
   cardLast: {},
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
-  actor: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.labelNormal },
-  chip: { paddingHorizontal: space.s6, paddingVertical: 2, borderRadius: radius.r4 },
-  chipText: { fontSize: 10, fontWeight: '600' },
-  time: { fontSize: 11, color: colors.labelAlternative },
-  summary: { fontSize: 13, color: colors.labelAlternative, lineHeight: 18 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  headTextCol: { flex: 1 },
+  actor: { fontSize: 13, color: colors.labelNormal },
+  actorName: { fontWeight: '700' },
+  actorLabel: { color: colors.labelAlternative },
+  time: { fontSize: 12, fontWeight: '500', color: colors.labelAlternative },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
+  warnBadge: {
+    width: 16, height: 16, borderRadius: 4,
+    backgroundColor: colors.red95,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  title: {
+    flex: 1, fontSize: 15, fontWeight: '700', color: colors.labelNormal,
+    letterSpacing: -0.15, lineHeight: 21,
+  },
 });

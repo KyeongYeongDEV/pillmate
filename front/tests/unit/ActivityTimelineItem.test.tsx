@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react-native';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import type { ActivityView } from '@/types/caregroup';
 
+jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+
 const DONE: ActivityView = {
   actorName: '박순자',
   activityType: 'DOSE_TAKEN',
@@ -20,22 +22,17 @@ const MISSED: ActivityView = {
 describe('ActivityTimelineItem', () => {
   it('actorName 렌더', () => {
     render(<ActivityTimelineItem item={DONE} />);
-    expect(screen.getByText('박순자')).toBeTruthy();
+    expect(screen.getByText(/박순자/)).toBeTruthy();
   });
 
-  it('summary 렌더', () => {
+  it('summary 렌더 (title)', () => {
     render(<ActivityTimelineItem item={DONE} />);
     expect(screen.getByText('아침약 2개 복용')).toBeTruthy();
   });
 
-  it('DOSE_TAKEN — "복용" chip 렌더', () => {
-    render(<ActivityTimelineItem item={DONE} />);
-    expect(screen.getByText('복용')).toBeTruthy();
-  });
-
-  it('DOSE_MISSED — "미복용" chip 렌더', () => {
+  it('DOSE_MISSED summary 렌더', () => {
     render(<ActivityTimelineItem item={MISSED} />);
-    expect(screen.getByText('미복용')).toBeTruthy();
+    expect(screen.getByText('저녁약을 놓치셨어요')).toBeTruthy();
   });
 
   it('5분 전 포맷', () => {
@@ -46,5 +43,10 @@ describe('ActivityTimelineItem', () => {
   it('1시간 전 포맷', () => {
     render(<ActivityTimelineItem item={MISSED} />);
     expect(screen.getByText('1시간 전')).toBeTruthy();
+  });
+
+  it('whoLabel prop — 별칭 렌더 (예: "· 할머니")', () => {
+    render(<ActivityTimelineItem item={DONE} whoLabel="할머니" />);
+    expect(screen.getByText(/할머니/)).toBeTruthy();
   });
 });
