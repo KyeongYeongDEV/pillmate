@@ -8,10 +8,8 @@ import { Feather } from '@expo/vector-icons';
 import { colors, space, radius, typography } from '@/styles/tokens';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
+import { extractInviteCode } from '@/lib/inviteCode';
 import type { ApiEnvelope } from '@/lib/api/client';
-
-const INVITE_CODE_LEN = 6;
-const QR_PREFIX = 'PILLMATE:JOIN:';
 
 export default function ScanGroupQrScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -121,18 +119,6 @@ function Header() {
       <View style={{ width: 22 }} />
     </View>
   );
-}
-
-export function extractInviteCode(payload: string): string | null {
-  if (!payload) return null;
-  const trimmed = payload.trim();
-  const raw = trimmed.startsWith(QR_PREFIX)
-    ? trimmed.slice(QR_PREFIX.length)
-    : trimmed;
-  const code = raw.toUpperCase();
-  if (code.length !== INVITE_CODE_LEN) return null;
-  if (!/^[A-Z0-9]+$/.test(code)) return null;
-  return code;
 }
 
 async function joinGroup(code: string): Promise<number> {

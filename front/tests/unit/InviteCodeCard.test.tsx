@@ -31,4 +31,14 @@ describe('InviteCodeCard', () => {
   it('inviteCode=undefined — 크래시 없음', () => {
     expect(() => render(<InviteCodeCard inviteCode={undefined} />)).not.toThrow();
   });
+
+  it('유효한 inviteCode — QR 이미지 영역 렌더 (a11y label "초대 코드 QR")', () => {
+    render(<InviteCodeCard inviteCode={VALID} />);
+    expect(screen.getByLabelText('초대 코드 QR')).toBeTruthy();
+  });
+
+  it('inviteCode=null — QR 영역 미렌더', () => {
+    render(<InviteCodeCard inviteCode={null} />);
+    expect(screen.queryByLabelText('초대 코드 QR')).toBeNull();
+  });
 });
