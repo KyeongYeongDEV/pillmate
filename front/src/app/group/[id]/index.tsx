@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -10,7 +10,7 @@ import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
+import { useGetGroupDetailQuery, useIssueInviteCodeMutation } from '@/store/slices/caregroupApi';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
 
@@ -25,6 +25,15 @@ export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
   const { data: detail, isLoading, isError } = useGetGroupDetailQuery(groupId);
+  const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
+
+  const handleIssueInvite = async () => {
+    try {
+      await issueInviteCode(groupId).unwrap();
+    } catch (e: any) {
+      Alert.alert('초대 코드 발급 실패', e?.data?.error?.message ?? e?.message ?? '잠시 후 다시 시도해 주세요');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -63,13 +72,21 @@ export default function GroupDetailScreen() {
           </View>
           <View style={styles.inviteRow}>
             <Pressable
-              style={styles.inviteBtn}
-              onPress={() => {}}
+              style={[styles.inviteBtn, isIssuing && styles.inviteBtnDisabled]}
+              onPress={handleIssueInvite}
+              disabled={isIssuing}
               accessibilityLabel="초대하기"
               accessibilityRole="button"
+              accessibilityState={{ disabled: isIssuing, busy: isIssuing }}
             >
-              <Feather name="plus" size={18} color={colors.staticWhite} />
-              <Text style={styles.inviteBtnText}>초대하기</Text>
+              {isIssuing ? (
+                <ActivityIndicator size="small" color={colors.staticWhite} />
+              ) : (
+                <>
+                  <Feather name="plus" size={18} color={colors.staticWhite} />
+                  <Text style={styles.inviteBtnText}>초대하기</Text>
+                </>
+              )}
             </Pressable>
             <Pressable
               style={styles.scanIconBtn}
@@ -185,6 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: space.s6,
   },
   inviteBtnText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
+  inviteBtnDisabled: { opacity: 0.6 },
   scanIconBtn: {
     width: 42, height: 42, borderRadius: radius.r10,
     alignItems: 'center', justifyContent: 'center',
