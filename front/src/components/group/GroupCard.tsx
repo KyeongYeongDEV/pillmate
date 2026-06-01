@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AvatarStack from '@/components/common/AvatarStack';
+import Avatar from '@/components/common/Avatar';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { resolveEventStyle, isPersonalGroup, composeGroupDesc } from '@/lib/groupCardHelpers';
 import type { MyGroupSummary } from '@/types/caregroup';
 
 interface GroupCardProps {
@@ -12,50 +14,80 @@ interface GroupCardProps {
   isPinned?: boolean;
 }
 
+const PERSONAL_AVATAR_TINT = '#0066FF';
+
 function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
+  const personal = isPersonalGroup(group);
+  const desc = composeGroupDesc(group);
+  const eventStyle = resolveEventStyle(group.lastActivity?.activityType);
+  const hasUnread = group.unreadCount > 0;
+
   return (
     <Pressable
-      style={[styles.card, isPinned && styles.pinnedCard]}
+      style={[
+        styles.card,
+        (isPinned || hasUnread) && styles.cardHighlight,
+      ]}
       onPress={() => onPress(group.groupId)}
       accessibilityLabel={`${group.name} 그룹, ${group.memberCount}명`}
       accessibilityRole="button"
     >
-      <View style={styles.topRow}>
-        <AvatarStack names={group.membersPreview} size={36} />
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
-          <Text style={styles.sub}>{group.memberCount}명 · {group.role}</Text>
-        </View>
-        <Pressable
-          onPress={() => onPinToggle(group.groupId, group.pinned)}
-          accessibilityLabel={group.pinned ? '핀 해제' : '고정하기'}
-          accessibilityRole="button"
-          hitSlop={8}
-        >
-          <Feather
-            name="bookmark"
-            size={18}
-            color={group.pinned ? colors.primaryBase : colors.labelAssistive}
-          />
-        </Pressable>
+      <View style={styles.avatarCol}>
+        {personal
+          ? <Avatar name={group.membersPreview[0]?.[0] ?? '나'} tint={PERSONAL_AVATAR_TINT} size={44} />
+          : <AvatarStack names={group.membersPreview} size={28} />}
       </View>
 
-      {group.lastActivity && (
-        <View style={styles.lastActivity}>
-          <Text style={styles.lastActivityText} numberOfLines={1}>
-            {group.lastActivity.summary}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.bottomRow}>
-        {group.unreadCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{group.unreadCount}</Text>
+      <View style={styles.contentCol}>
+        <View style={styles.row1}>
+          <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
+          {personal && (
+            <View style={styles.privateBadge}>
+              <Text style={styles.privateBadgeText}>비공개</Text>
+            </View>
+          )}
+          <View style={styles.row1Right}>
+            {group.lastActivity && (
+              <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
+            )}
+            <Pressable
+              onPress={() => onPinToggle(group.groupId, group.pinned)}
+              accessibilityLabel={group.pinned ? '핀 해제' : '고정하기'}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={styles.pinBtn}
+            >
+              <Feather
+                name="bookmark"
+                size={14}
+                color={group.pinned ? colors.primaryBase : colors.labelAssistive}
+              />
+            </Pressable>
           </View>
-        )}
+        </View>
+
+        <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
+
         {group.lastActivity && (
-          <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
+          <View style={styles.row3}>
+            <View style={[styles.chip, { backgroundColor: eventStyle.bg }]}>
+              <View style={[styles.chipDot, { backgroundColor: eventStyle.dot }]} />
+              <Text style={[styles.chipText, { color: eventStyle.fg }]} numberOfLines={1}>
+                {group.lastActivity.activityType === 'DOSE_MISSED' ? '미복용' :
+                 group.lastActivity.activityType === 'DOSE_TAKEN' ? '복용' :
+                 group.lastActivity.activityType === 'AI_INSIGHT' ? 'AI' :
+                 group.lastActivity.activityType === 'PRESCRIPTION_ADDED' ? '처방전' : '활동'}
+              </Text>
+            </View>
+            <Text style={styles.lastActivityText} numberOfLines={1}>
+              {group.lastActivity.summary}
+            </Text>
+            {hasUnread && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{group.unreadCount}</Text>
+              </View>
+            )}
+          </View>
         )}
       </View>
     </Pressable>
@@ -77,35 +109,53 @@ export default React.memo(GroupCard);
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.bgNormal,
-    borderRadius: radius.r16,
-    padding: space.s16,
+    borderRadius: radius.r14,
+    padding: space.s14,
     borderWidth: 1,
     borderColor: colors.line,
-    gap: space.s10,
-    ...shadows.small,
+    flexDirection: 'row',
+    gap: space.s12,
+    alignItems: 'flex-start',
+    marginBottom: space.s8,
   },
-  pinnedCard: {
-    borderColor: colors.primaryBase,
-    backgroundColor: '#F0F6FF',
+  cardHighlight: {
+    borderColor: colors.blue90,
+    shadowColor: colors.primaryBase,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
-  info: { flex: 1 },
-  name: { ...typography.headline1, color: colors.labelNormal, letterSpacing: -0.01 },
-  sub: { fontSize: 12, color: colors.labelAlternative, marginTop: 2 },
-  lastActivity: {
-    backgroundColor: colors.bgAlt,
-    borderRadius: radius.r8,
-    paddingHorizontal: space.s10,
-    paddingVertical: space.s6,
+  avatarCol: { width: 52, height: 44, flexShrink: 0 },
+  contentCol: { flex: 1, minWidth: 0 },
+  row1: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
+  row1Right: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  name: {
+    fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.18,
+    flexShrink: 1,
   },
-  lastActivityText: { fontSize: 13, color: colors.labelAlternative, lineHeight: 18 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space.s8 },
+  privateBadge: {
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: radius.r4, backgroundColor: colors.fillNormal,
+  },
+  privateBadgeText: { fontSize: 10, fontWeight: '700', color: colors.labelAlternative },
+  time: { fontSize: 12, color: colors.labelAlternative, fontWeight: '500' },
+  pinBtn: { padding: 2 },
+  desc: { fontSize: 12, color: colors.labelAlternative, marginTop: 2 },
+  row3: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s4,
+    paddingHorizontal: space.s8, paddingVertical: 3,
+    borderRadius: radius.full, flexShrink: 0,
+  },
+  chipDot: { width: 4, height: 4, borderRadius: 2 },
+  chipText: { fontSize: 11, fontWeight: '600' },
+  lastActivityText: { flex: 1, fontSize: 13, fontWeight: '500', color: colors.labelNeutral },
   badge: {
     minWidth: 18, height: 18, borderRadius: 9,
-    backgroundColor: colors.statusNegative,
+    backgroundColor: colors.primaryBase,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 5,
   },
-  badgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
-  time: { fontSize: 11, color: colors.labelAlternative },
+  badgeText: { fontSize: 11, fontWeight: '700', color: colors.staticWhite },
 });
