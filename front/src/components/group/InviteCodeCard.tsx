@@ -1,7 +1,10 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Share } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { colors, space, radius, fontFamily } from '@/styles/tokens';
 import type { InviteCodeView } from '@/types/caregroup';
+
+const QR_SIZE = 132;
 
 interface InviteCodeCardProps {
   inviteCode: InviteCodeView | null | undefined;
@@ -40,6 +43,14 @@ function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
           <Text style={styles.copyText}>복사</Text>
         </Pressable>
       </View>
+      <View style={styles.qrBox} accessibilityLabel="초대 코드 QR" accessibilityRole="image">
+        <QRCode
+          value={inviteCode.code}
+          size={QR_SIZE}
+          color={colors.labelNormal}
+          backgroundColor={colors.bgNormal}
+        />
+      </View>
       <Text style={styles.expiry}>{expiryText}</Text>
     </View>
   );
@@ -76,6 +87,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: colors.fillNormal,
   },
   copyText: { fontSize: 13, fontWeight: '600', color: colors.labelNormal },
-  expiry: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17 },
+  qrBox: {
+    alignSelf: 'center',
+    padding: space.s10,
+    borderRadius: radius.r12,
+    backgroundColor: colors.bgNormal,
+    marginTop: space.s4,
+  },
+  expiry: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17, textAlign: 'center' },
   fallbackText: { fontSize: 14, color: colors.labelAlternative, marginTop: 4 },
 });
