@@ -4,13 +4,23 @@ import { colors, space, radius } from '@/styles/tokens';
 import type { InviteCodeView } from '@/types/caregroup';
 
 interface InviteCodeCardProps {
-  inviteCode: InviteCodeView;
+  inviteCode: InviteCodeView | null | undefined;
 }
 
 function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
   const handleCopy = useCallback(async () => {
+    if (!inviteCode) return;
     await Share.share({ message: inviteCode.code, title: 'PillMate 초대 코드' });
-  }, [inviteCode.code]);
+  }, [inviteCode]);
+
+  if (!inviteCode) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.label}>초대 코드</Text>
+        <Text style={styles.fallbackText}>초대 코드가 없어요</Text>
+      </View>
+    );
+  }
 
   const expiryText = formatExpiry(inviteCode.expiresAt);
 
@@ -64,4 +74,5 @@ const styles = StyleSheet.create({
   },
   copyText: { fontSize: 13, fontWeight: '600', color: colors.labelNormal },
   expiry: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17 },
+  fallbackText: { fontSize: 14, color: colors.labelAlternative, marginTop: 4 },
 });
