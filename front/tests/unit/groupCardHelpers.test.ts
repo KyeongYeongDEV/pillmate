@@ -1,4 +1,4 @@
-import { resolveEventStyle, isPersonalGroup, composeGroupDesc } from '@/lib/groupCardHelpers';
+import { resolveEventStyle, isPersonalGroup, composeGroupDesc, getActivityLabel } from '@/lib/groupCardHelpers';
 import { colors } from '@/styles/tokens';
 import type { MyGroupSummary } from '@/types/caregroup';
 
@@ -47,6 +47,33 @@ describe('isPersonalGroup', () => {
 
   it('memberCount=2 → not personal', () => {
     expect(isPersonalGroup({ ...baseGroup, memberCount: 2 })).toBe(false);
+  });
+});
+
+describe('getActivityLabel', () => {
+  it('DOSE_TAKEN → "복용"', () => {
+    expect(getActivityLabel('DOSE_TAKEN')).toBe('복용');
+  });
+
+  it('DOSE_MISSED → "미복용"', () => {
+    expect(getActivityLabel('DOSE_MISSED')).toBe('미복용');
+  });
+
+  it('AI_INSIGHT / AI_REPORT → "AI"', () => {
+    expect(getActivityLabel('AI_INSIGHT')).toBe('AI');
+    expect(getActivityLabel('AI_REPORT')).toBe('AI');
+  });
+
+  it('PRESCRIPTION_ADDED → "처방전"', () => {
+    expect(getActivityLabel('PRESCRIPTION_ADDED')).toBe('처방전');
+  });
+
+  it('unknown type → "활동" fallback', () => {
+    expect(getActivityLabel('UNKNOWN_XYZ')).toBe('활동');
+  });
+
+  it('undefined → "활동" fallback', () => {
+    expect(getActivityLabel(undefined)).toBe('활동');
   });
 });
 
