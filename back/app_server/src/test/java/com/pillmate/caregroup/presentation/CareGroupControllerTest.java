@@ -1,0 +1,60 @@
+package com.pillmate.caregroup.presentation;
+
+import com.pillmate.caregroup.application.CreateCareGroupUseCase;
+import com.pillmate.caregroup.application.GetGroupDetailUseCase;
+import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
+import com.pillmate.caregroup.application.JoinGroupUseCase;
+import com.pillmate.caregroup.application.ListMyGroupsUseCase;
+import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.UnpinGroupUseCase;
+import com.pillmate.caregroup.domain.model.MemberRole;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@DisplayName("CareGroupController — join (POST + GET)")
+@WebMvcTest(CareGroupController.class)
+class CareGroupControllerTest {
+
+    private static final String CODE = "INV12345";
+    private static final Long USER_ID = 7L;
+    private static final Long GROUP_ID = 42L;
+
+    @Autowired MockMvc mockMvc;
+    @MockitoBean CreateCareGroupUseCase createCareGroupUseCase;
+    @MockitoBean JoinGroupUseCase joinGroupUseCase;
+    @MockitoBean IssueInviteCodeUseCase issueInviteCodeUseCase;
+    @MockitoBean ListMyGroupsUseCase listMyGroupsUseCase;
+    @MockitoBean PinGroupUseCase pinGroupUseCase;
+    @MockitoBean UnpinGroupUseCase unpinGroupUseCase;
+    @MockitoBean GetGroupDetailUseCase getGroupDetailUseCase;
+
+    @Test
+    @DisplayName("POST /groups/join/{code} → 200 + groupId")
+    void joinPost_returns200() throws Exception {
+        given(joinGroupUseCase.join(CODE, USER_ID, MemberRole.PATIENT)).willReturn(GROUP_ID);
+
+        mockMvc.perform(post("/groups/join/" + CODE).header("X-User-Id", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groupId").value(GROUP_ID));
+    }
+
+    @Test
+    @DisplayName("GET /groups/join/{code} → 200 + groupId (호환성)")
+    void joinGet_returns200() throws Exception {
+        given(joinGroupUseCase.join(CODE, USER_ID, MemberRole.PATIENT)).willReturn(GROUP_ID);
+
+        mockMvc.perform(get("/groups/join/" + CODE).header("X-User-Id", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groupId").value(GROUP_ID));
+    }
+}

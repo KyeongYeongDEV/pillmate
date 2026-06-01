@@ -56,6 +56,17 @@ public class CareGroupController {
         return ResponseEntity.ok(ApiResponse.success(issueInviteCodeUseCase.issue(groupId, userId)));
     }
 
+    @PostMapping("/join/{code}")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> joinViaPost(
+            @PathVariable String code,
+            @RequestParam(defaultValue = "PATIENT") String role) {
+        return join(code, role);
+    }
+
+    /**
+     * @deprecated 호환성 유지용 — 새 클라이언트는 POST /groups/join/{code} 사용
+     */
+    @Deprecated
     @GetMapping("/join/{code}")
     public ResponseEntity<ApiResponse<Map<String, Long>>> join(
             @PathVariable String code,
