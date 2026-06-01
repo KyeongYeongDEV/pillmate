@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import AvatarStack from '@/components/common/AvatarStack';
 import Avatar from '@/components/common/Avatar';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
@@ -46,24 +45,9 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
               <Text style={styles.privateBadgeText}>비공개</Text>
             </View>
           )}
-          <View style={styles.row1Right}>
-            {group.lastActivity && (
-              <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
-            )}
-            <Pressable
-              onPress={() => onPinToggle(group.groupId, group.pinned)}
-              accessibilityLabel={group.pinned ? '핀 해제' : '고정하기'}
-              accessibilityRole="button"
-              hitSlop={8}
-              style={styles.pinBtn}
-            >
-              <Feather
-                name="bookmark"
-                size={14}
-                color={group.pinned ? colors.primaryBase : colors.labelAssistive}
-              />
-            </Pressable>
-          </View>
+          {group.lastActivity && (
+            <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
+          )}
         </View>
 
         <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
@@ -129,7 +113,6 @@ const styles = StyleSheet.create({
   avatarCol: { width: 52, height: 44, flexShrink: 0 },
   contentCol: { flex: 1, minWidth: 0 },
   row1: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
-  row1Right: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   name: {
     fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.18,
     flexShrink: 1,
@@ -139,8 +122,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.r4, backgroundColor: colors.fillNormal,
   },
   privateBadgeText: { fontSize: 10, fontWeight: '700', color: colors.labelAlternative },
-  time: { fontSize: 12, color: colors.labelAlternative, fontWeight: '500' },
-  pinBtn: { padding: 2 },
+  time: { fontSize: 12, color: colors.labelAlternative, fontWeight: '500', marginLeft: 'auto' },
   desc: { fontSize: 12, color: colors.labelAlternative, marginTop: 2 },
   row3: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s8 },
   chip: {

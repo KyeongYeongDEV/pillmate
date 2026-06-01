@@ -24,6 +24,10 @@ export default function GroupScreen() {
     () => filteredGroups.filter(g => !g.pinned),
     [filteredGroups],
   );
+  const totalUnread = useMemo(
+    () => groups.reduce((sum, g) => sum + g.unreadCount, 0),
+    [groups],
+  );
 
   const handleCardPress = useCallback((groupId: number) => {
     router.push(`/group/${groupId}` as any);
@@ -45,13 +49,21 @@ export default function GroupScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>그룹</Text>
-        <View style={styles.headerRight}>
-          <Text style={styles.headerCount}>{groups.length}개</Text>
-          <Pressable accessibilityLabel="그룹 검색" accessibilityRole="button" hitSlop={8}>
-            <Feather name="search" size={20} color={colors.labelNormal} />
-          </Pressable>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityLabel="뒤로가기"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Feather name="chevron-left" size={26} color={colors.labelNormal} />
+        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>그룹</Text>
+          <Text style={styles.headerSub}>{groups.length}개 · 안 읽음 {totalUnread}</Text>
         </View>
+        <Pressable accessibilityLabel="그룹 검색" accessibilityRole="button" hitSlop={8}>
+          <Feather name="search" size={22} color={colors.labelNormal} />
+        </Pressable>
       </View>
 
       <FilterChips selected={filter} onSelect={setFilter} />
@@ -130,9 +142,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
+  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
-  headerCount: { fontSize: 13, color: colors.labelAlternative, fontWeight: '600' },
+  headerSub: { fontSize: 11, color: colors.labelAlternative, fontWeight: '500' },
   scroll: { flex: 1 },
   content: { paddingVertical: space.s16, gap: space.s8, paddingBottom: 100 },
   loader: { marginTop: space.s40 },
