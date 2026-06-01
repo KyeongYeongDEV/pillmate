@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import AvatarStack from '@/components/common/AvatarStack';
 import Avatar from '@/components/common/Avatar';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { resolveEventStyle, isPersonalGroup, composeGroupDesc } from '@/lib/groupCardHelpers';
+import { resolveEventStyle, isPersonalGroup, composeGroupDesc, getActivityLabel } from '@/lib/groupCardHelpers';
 import type { MyGroupSummary } from '@/types/caregroup';
 
 interface GroupCardProps {
@@ -13,7 +13,7 @@ interface GroupCardProps {
   isPinned?: boolean;
 }
 
-const PERSONAL_AVATAR_TINT = '#0066FF';
+const PERSONAL_AVATAR_TINT = colors.guardianBlue;
 
 function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
   const personal = isPersonalGroup(group);
@@ -57,10 +57,7 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
             <View style={[styles.chip, { backgroundColor: eventStyle.bg }]}>
               <View style={[styles.chipDot, { backgroundColor: eventStyle.dot }]} />
               <Text style={[styles.chipText, { color: eventStyle.fg }]} numberOfLines={1}>
-                {group.lastActivity.activityType === 'DOSE_MISSED' ? '미복용' :
-                 group.lastActivity.activityType === 'DOSE_TAKEN' ? '복용' :
-                 group.lastActivity.activityType === 'AI_INSIGHT' ? 'AI' :
-                 group.lastActivity.activityType === 'PRESCRIPTION_ADDED' ? '처방전' : '활동'}
+                {getActivityLabel(group.lastActivity.activityType)}
               </Text>
             </View>
             <Text style={styles.lastActivityText} numberOfLines={1}>

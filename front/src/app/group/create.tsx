@@ -69,7 +69,7 @@ export default function CreateGroupScreen() {
           accessibilityRole="button"
         >
           {loading
-            ? <ActivityIndicator color="#fff" />
+            ? <ActivityIndicator color={colors.staticWhite} />
             : <Text style={styles.submitText}>그룹 만들기</Text>}
         </Pressable>
       </KeyboardAvoidingView>
@@ -118,5 +118,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
   },
   submitBtnDisabled: { backgroundColor: colors.fillStrong },
-  submitText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  submitText: { fontSize: 16, fontWeight: '700', color: colors.staticWhite },
 });

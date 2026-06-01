@@ -38,6 +38,23 @@ export function isPersonalGroup(group: MyGroupSummary): boolean {
   return group.memberCount === PRIVATE_MEMBER_COUNT;
 }
 
+const ACTIVITY_LABEL: Record<string, string> = {
+  DOSE_TAKEN: '복용',
+  DOSE_MISSED: '미복용',
+  AI_INSIGHT: 'AI',
+  AI_REPORT: 'AI',
+  PRESCRIPTION_ADDED: '처방전',
+  COMMENT: '메모',
+  MEMBER_JOINED: '멤버',
+};
+
+const DEFAULT_LABEL = '활동';
+
+export function getActivityLabel(activityType: string | undefined): string {
+  if (!activityType) return DEFAULT_LABEL;
+  return ACTIVITY_LABEL[activityType] ?? DEFAULT_LABEL;
+}
+
 export function composeGroupDesc(group: MyGroupSummary): string {
   if (isPersonalGroup(group)) return '본인만 · 비공개';
   const preview = group.membersPreview.slice(0, 3).join('·');

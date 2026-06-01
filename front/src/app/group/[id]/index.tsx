@@ -15,10 +15,10 @@ import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
 
 const ROLE_TINTS: Record<string, string> = {
-  '환자': '#FF7B2E',
-  '보호자': '#0066FF',
-  PATIENT: '#FF7B2E',
-  GUARDIAN: '#0066FF',
+  '환자': colors.patientOrange,
+  '보호자': colors.guardianBlue,
+  PATIENT: colors.patientOrange,
+  GUARDIAN: colors.guardianBlue,
 };
 
 export default function GroupDetailScreen() {
@@ -67,7 +67,7 @@ export default function GroupDetailScreen() {
             accessibilityLabel="초대하기"
             accessibilityRole="button"
           >
-            <Feather name="plus" size={18} color="#fff" />
+            <Feather name="plus" size={18} color={colors.staticWhite} />
             <Text style={styles.inviteBtnText}>초대하기</Text>
           </Pressable>
         </View>
@@ -142,7 +142,7 @@ function memberViewToGroupMember(m: MemberView): GroupMember {
     name: m.name,
     sub: roleLabel,
     role: roleLabel as GroupMember['role'],
-    tint: ROLE_TINTS[m.role] ?? '#888',
+    tint: ROLE_TINTS[m.role] ?? colors.fallbackGray,
     online: false,
   };
 }
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.labelNormal, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: space.s6,
   },
-  inviteBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  inviteBtnText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
   listCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,

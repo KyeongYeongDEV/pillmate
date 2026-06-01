@@ -74,5 +74,5 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17 },
   detailStr: { fontSize: 13, color: colors.labelAlternative, lineHeight: 19 },
   ctaBtn: { alignSelf: 'flex-start', paddingHorizontal: space.s12, paddingVertical: space.s6, borderRadius: radius.r8, backgroundColor: colors.labelNormal },
-  ctaText: { fontSize: 12, fontWeight: '600', color: '#fff' },
+  ctaText: { fontSize: 12, fontWeight: '600', color: colors.staticWhite },
 });

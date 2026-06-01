@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   onlineDot: {
     position: 'absolute', right: -1, bottom: -1,
     width: 12, height: 12, borderRadius: 6,
-    backgroundColor: colors.statusPositive, borderWidth: 2, borderColor: '#fff',
+    backgroundColor: colors.statusPositive, borderWidth: 2, borderColor: colors.staticWhite,
   },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },

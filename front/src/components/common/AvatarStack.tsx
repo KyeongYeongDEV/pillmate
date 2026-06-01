@@ -6,7 +6,13 @@ import { colors, radius } from '@/styles/tokens';
 const OVERLAP = 18;
 const MAX_VISIBLE = 3;
 
-const TINTS = ['#FF7B2E', '#0066FF', '#6541F2', '#00BFA5', '#E91E63'];
+const TINTS = [
+  colors.patientOrange,
+  colors.guardianBlue,
+  colors.accentViolet,
+  colors.accentTeal,
+  colors.accentPink,
+];
 
 interface AvatarStackProps {
   names: string[];
