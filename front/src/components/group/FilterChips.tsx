@@ -13,44 +13,59 @@ interface FilterChipsProps {
 
 function FilterChips({ selected, onSelect }: FilterChipsProps) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.container}
-    >
-      {FILTERS.map((f) => {
-        const active = f === selected;
-        return (
-          <Pressable
-            key={f}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => onSelect(f)}
-            accessibilityLabel={`${f} 필터`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-          >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{f}</Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.wrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
+        {FILTERS.map((f) => {
+          const active = f === selected;
+          return (
+            <Pressable
+              key={f}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => onSelect(f)}
+              accessibilityLabel={`${f} 필터`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{f}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
 export default React.memo(FilterChips);
 
+const CHIP_HEIGHT = 36;
+
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', gap: space.s8, paddingHorizontal: space.s16 },
+  wrapper: { height: CHIP_HEIGHT, marginVertical: space.s4 },
+  container: {
+    flexDirection: 'row',
+    gap: space.s6,
+    paddingHorizontal: space.s20,
+    alignItems: 'center',
+  },
   chip: {
+    height: CHIP_HEIGHT,
     paddingHorizontal: space.s12,
-    paddingVertical: 7,
     borderRadius: radius.full,
     backgroundColor: colors.fillNormal,
-    borderWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   chipActive: {
     backgroundColor: colors.labelNormal,
   },
-  chipText: { fontSize: 12, fontWeight: '500', color: colors.labelAlternative },
+  chipText: {
+    fontSize: 12, fontWeight: '500', color: colors.labelAlternative,
+    lineHeight: 16, includeFontPadding: false,
+  },
   chipTextActive: { color: colors.staticWhite, fontWeight: '700' },
 });
