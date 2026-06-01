@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Share } from 'react-native';
-import { colors, space, radius } from '@/styles/tokens';
+import { colors, space, radius, fontFamily } from '@/styles/tokens';
 import type { InviteCodeView } from '@/types/caregroup';
 
 interface InviteCodeCardProps {
@@ -67,7 +67,10 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   label: { fontSize: 11, color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
-  code: { fontSize: 22, fontWeight: '700', letterSpacing: 0.08, marginTop: 4, color: colors.labelNormal },
+  code: {
+    fontSize: 22, fontWeight: '700', letterSpacing: 1.76, marginTop: 4,
+    color: colors.labelNormal, fontFamily: fontFamily.mono,
+  },
   copyBtn: {
     paddingHorizontal: space.s14, paddingVertical: space.s8,
     borderRadius: radius.full, backgroundColor: colors.fillNormal,

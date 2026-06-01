@@ -42,17 +42,15 @@ export default React.memo(FilterChips);
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', gap: space.s8, paddingHorizontal: space.s16 },
   chip: {
-    paddingHorizontal: space.s14,
-    paddingVertical: space.s6,
+    paddingHorizontal: space.s12,
+    paddingVertical: 7,
     borderRadius: radius.full,
-    backgroundColor: colors.bgNormal,
-    borderWidth: 1,
-    borderColor: colors.line,
+    backgroundColor: colors.fillNormal,
+    borderWidth: 0,
   },
   chipActive: {
-    backgroundColor: colors.primaryBase,
-    borderColor: colors.primaryBase,
+    backgroundColor: colors.labelNormal,
   },
-  chipText: { fontSize: 13, fontWeight: '600', color: colors.labelAlternative },
-  chipTextActive: { color: '#fff' },
+  chipText: { fontSize: 12, fontWeight: '500', color: colors.labelAlternative },
+  chipTextActive: { color: colors.staticWhite, fontWeight: '700' },
 });
