@@ -44,6 +44,13 @@ export const colors = {
   // Static
   staticWhite: '#ffffff',
 
+  // Member tint palette (avatar identity colors — patient/guardian/etc)
+  patientOrange: '#FF7B2E',    // 환자 기본 tint
+  guardianBlue:  '#0066FF',    // 보호자 기본 tint (=primaryBase, alias)
+  accentTeal:    '#00BFA5',    // member tint 4
+  accentPink:    '#E91E63',    // member tint 5
+  fallbackGray:  '#888888',    // role unknown fallback
+
   // Semantic label
   labelNormal:      '#171719',                 // --c-coolNeutral-10
   labelStrong:      '#000000',
