@@ -23,9 +23,26 @@ export const colors = {
 
   // Blue extended
   blue95: '#eaf2fe',           // --c-blue-95
+  blue99: '#f7fbff',           // --c-blue-99
+  blue90: '#c9defe',           // --c-blue-90
+
+  // Red palette (handoff Groups.html)
+  red95: '#feecec',            // --c-red-95
+  red40: '#e52222',            // --c-red-40
+  red50: '#ff4242',            // --c-red-50
+
+  // Yellow (note kind, handoff fallback — tokens.css 정의 X)
+  yellow95: '#FEF4A8',
+  yellow40: '#8a6f2a',         // note fg
+
+  // Pink (member event)
+  pink46: '#e846cd',           // --c-pink-46
 
   // Cyan
   cyan50: '#00bdde',           // --c-cyan-50
+
+  // Static
+  staticWhite: '#ffffff',
 
   // Semantic label
   labelNormal:      '#171719',                 // --c-coolNeutral-10
