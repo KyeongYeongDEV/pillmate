@@ -33,6 +33,7 @@ class UnpinGroupUseCaseTest {
     void unpin_pinnedGroup_unpins() {
         Membership membership = Membership.of(GROUP_ID, USER_ID, MemberRole.PATIENT, null);
         membership.pin();
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(true);
         given(membershipRepository.findByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(Optional.of(membership));
 
         sut.unpin(GROUP_ID, USER_ID);
@@ -42,11 +43,13 @@ class UnpinGroupUseCaseTest {
     }
 
     @Test
-    @DisplayName("멤버십 없으면 noop (idempotent)")
-    void unpin_nonMember_isNoop() {
-        given(membershipRepository.findByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(Optional.empty());
+    @DisplayName("비멤버 unpin 호출 시 GROUP_ACCESS_DENIED 예외 (defense-in-depth)")
+    void unpin_nonMember_throws() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(false);
 
-        sut.unpin(GROUP_ID, USER_ID);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> sut.unpin(GROUP_ID, USER_ID))
+                .isInstanceOf(com.pillmate.common.exception.PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", com.pillmate.common.exception.ErrorCode.GROUP_ACCESS_DENIED);
 
         verify(membershipRepository, never()).save(any());
     }
