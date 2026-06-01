@@ -9,6 +9,7 @@ import { colors, space, radius, typography } from '@/styles/tokens';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
 import { extractInviteCode } from '@/lib/inviteCode';
+import { safeBack } from '@/lib/router/safeBack';
 import type { ApiEnvelope } from '@/lib/api/client';
 
 export default function ScanGroupQrScreen() {
@@ -112,7 +113,7 @@ export default function ScanGroupQrScreen() {
 function Header() {
   return (
     <View style={styles.header}>
-      <Pressable onPress={() => router.back()} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
+      <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
         <Feather name="x" size={22} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>QR로 그룹 가입</Text>

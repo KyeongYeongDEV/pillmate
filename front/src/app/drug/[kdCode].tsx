@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useGetDrugDetailQuery } from '@/store/slices/drugApi';
 import DrugHero from '@/components/drug/DrugHero';
@@ -13,6 +13,7 @@ import InteractionWarningCard from '@/components/drug/InteractionWarningCard';
 import SideEffectChips from '@/components/drug/SideEffectChips';
 import SourceCard from '@/components/drug/SourceCard';
 import { colors, space, typography } from '@/styles/tokens';
+import { safeBack } from '@/lib/router/safeBack';
 
 export default function DrugDetailScreen() {
   const { kdCode } = useLocalSearchParams<{ kdCode: string }>();
@@ -30,7 +31,7 @@ export default function DrugDetailScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={styles.errorText}>약 정보를 불러올 수 없습니다.</Text>
-        <Pressable onPress={() => router.back()} style={styles.errorBack}>
+        <Pressable onPress={() => safeBack('/(tabs)/drugs')} style={styles.errorBack}>
           <Text style={styles.errorBackTxt}>뒤로 가기</Text>
         </Pressable>
       </SafeAreaView>
@@ -42,7 +43,7 @@ export default function DrugDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack('/(tabs)/drugs')}
           style={styles.backBtn}
           accessibilityLabel="뒤로 가기"
           accessibilityRole="button"

@@ -10,6 +10,7 @@ import PillVisual from '@/components/common/PillVisual';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { reset, removeItem } from '@/store/slices/prescriptionFlowSlice';
+import { safeBack } from '@/lib/router/safeBack';
 
 const RECENT = [
   { date: '11.10', title: '정형외과 처방', drugCount: 2 },
@@ -52,7 +53,7 @@ export default function PrescriptionRegisterHub() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="뒤로" accessibilityRole="button" style={styles.headerBtn}>
+        <Pressable onPress={() => safeBack('/(tabs)/prescriptions')} accessibilityLabel="뒤로" accessibilityRole="button" style={styles.headerBtn}>
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>내 처방전 등록</Text>

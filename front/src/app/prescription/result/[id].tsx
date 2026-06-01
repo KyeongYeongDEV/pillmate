@@ -15,6 +15,7 @@ import type { RootState } from '@/store';
 import type { DrugSlots } from '@/types/prescription';
 import DrugCard from '@/components/prescription/DrugCard';
 import OcrStatusBanner from '@/components/prescription/OcrStatusBanner';
+import { safeBack } from '@/lib/router/safeBack';
 
 // selector 메모이제이션 — 불필요 리렌더 방지
 const selectFlow = createSelector(
@@ -80,7 +81,7 @@ export default function ResultScreen() {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerBtn} accessibilityLabel="뒤로" accessibilityRole="button">
+        <Pressable onPress={() => safeBack('/(tabs)/prescriptions')} style={styles.headerBtn} accessibilityLabel="뒤로" accessibilityRole="button">
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>AI 인식 결과</Text>

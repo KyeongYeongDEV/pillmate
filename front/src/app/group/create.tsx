@@ -4,13 +4,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { colors, space, radius, typography } from '@/styles/tokens';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
+import { safeBack } from '@/lib/router/safeBack';
 
 const MAX_NAME_LEN = 30;
 
@@ -27,7 +27,7 @@ export default function CreateGroupScreen() {
     setError(null);
     try {
       await createGroup(name.trim());
-      router.back();
+      safeBack('/(tabs)/group');
     } catch (e: any) {
       setError(e?.message ?? '그룹 생성에 실패했어요');
     } finally {
@@ -38,7 +38,7 @@ export default function CreateGroupScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
+        <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
           <Feather name="x" size={22} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>새 그룹 만들기</Text>

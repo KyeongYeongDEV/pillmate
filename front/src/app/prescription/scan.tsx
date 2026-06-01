@@ -8,6 +8,7 @@ import { colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addFromOcr, setImageKey } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
+import { safeBack } from '@/lib/router/safeBack';
 
 export default function ScanScreen() {
   const { galleryUri } = useLocalSearchParams<{ galleryUri?: string }>();
@@ -88,7 +89,7 @@ export default function ScanScreen() {
 
       {/* 상단 컨트롤 */}
       <View style={styles.top}>
-        <Pressable onPress={() => router.back()} style={styles.circle} accessibilityLabel="닫기" accessibilityRole="button">
+        <Pressable onPress={() => safeBack('/prescription')} style={styles.circle} accessibilityLabel="닫기" accessibilityRole="button">
           <Text style={styles.circleIcon}>✕</Text>
         </Pressable>
         <View style={styles.aiBadge}>

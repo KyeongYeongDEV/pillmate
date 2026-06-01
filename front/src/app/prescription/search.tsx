@@ -15,6 +15,7 @@ import RecentSearchChips from '@/components/search/RecentSearchChips';
 import CategoryGrid from '@/components/search/CategoryGrid';
 import { colors, space, radius, typography } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
+import { safeBack } from '@/lib/router/safeBack';
 
 const MFDS_SOURCE = '식품의약품안전처 의약품안전나라';
 const INITIAL_RECENT = ['메트포르민', '오메가-3', '글리메피리드'];
@@ -104,7 +105,7 @@ export default function DrugSearchScreen() {
           autoFocus
         />
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack('/prescription')}
           accessibilityLabel="취소"
           accessibilityRole="button"
           style={styles.cancelBtn}

@@ -4,7 +4,6 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
@@ -13,6 +12,7 @@ import DrugSearchAutocomplete from '@/components/prescription/DrugSearchAutocomp
 import SlotToggle from '@/components/prescription/SlotToggle';
 import DoseStepper from '@/components/prescription/DoseStepper';
 import type { DrugSearchResult, DrugSlots } from '@/types/prescription';
+import { safeBack } from '@/lib/router/safeBack';
 
 const SHAPES = ['원형', '타원형', '캡슐', '기타'] as const;
 const COLORS = [
@@ -63,14 +63,14 @@ export default function ManualScreen() {
       slots,
     }));
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.back();
+    safeBack('/prescription');
   }, [nameRaw, doseAmount, doseUnit, slots, durationPreset, dispatch]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerBtn} accessibilityLabel="닫기" accessibilityRole="button">
+        <Pressable onPress={() => safeBack('/prescription')} style={styles.headerBtn} accessibilityLabel="닫기" accessibilityRole="button">
           <Text style={styles.headerBtnTxt}>✕</Text>
         </Pressable>
         <View>

@@ -11,6 +11,7 @@ import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from 
 import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
 import GroupCard from '@/components/group/GroupCard';
 import { applyGroupFilter } from '@/lib/groupFilter';
+import { safeBack } from '@/lib/router/safeBack';
 
 export default function GroupScreen() {
   const [filter, setFilter] = useState<GroupFilter>('전체');
@@ -50,7 +51,7 @@ export default function GroupScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack('/(tabs)/home')}
           accessibilityLabel="뒤로가기"
           accessibilityRole="button"
           hitSlop={8}

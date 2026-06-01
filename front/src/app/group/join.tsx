@@ -10,6 +10,7 @@ import { colors, space, radius, typography } from '@/styles/tokens';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
 import type { ApiEnvelope } from '@/lib/api/client';
+import { safeBack } from '@/lib/router/safeBack';
 
 const INVITE_CODE_LEN = 6;
 
@@ -26,7 +27,7 @@ export default function JoinGroupScreen() {
     setError(null);
     try {
       await joinGroup(code.trim().toUpperCase());
-      router.back();
+      safeBack('/(tabs)/group');
     } catch (e: any) {
       setError(e?.message ?? '그룹 참여에 실패했어요');
     } finally {
@@ -37,7 +38,7 @@ export default function JoinGroupScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
+        <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
           <Feather name="x" size={22} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>초대 코드로 참여</Text>

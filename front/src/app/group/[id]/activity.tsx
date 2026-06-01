@@ -3,12 +3,13 @@ import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { colors, space, typography } from '@/styles/tokens';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import DaySection from '@/components/group/DaySection';
+import { safeBack } from '@/lib/router/safeBack';
 import type { ActivityView } from '@/types/caregroup';
 import type { ActivityFeedItem } from '@/types/activity';
 
@@ -42,7 +43,7 @@ export default function ActivityScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
+        <Pressable onPress={() => safeBack(`/group/${groupId}`)} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
           <Feather name="chevron-left" size={26} color={colors.labelNormal} />
         </Pressable>
         <View style={styles.headerTitleCol}>

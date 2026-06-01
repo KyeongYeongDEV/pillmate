@@ -11,6 +11,7 @@ import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { useGetGroupDetailQuery, useIssueInviteCodeMutation } from '@/store/slices/caregroupApi';
+import { safeBack } from '@/lib/router/safeBack';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
 
@@ -147,7 +148,7 @@ function Header({ title }: { title: string }) {
   return (
     <View style={styles.header}>
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => safeBack('/(tabs)/group')}
         accessibilityLabel="뒤로가기"
         accessibilityRole="button"
         hitSlop={8}
