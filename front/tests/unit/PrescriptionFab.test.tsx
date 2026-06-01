@@ -9,6 +9,7 @@ jest.mock('expo-haptics', () => ({
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
+  useSegments: () => ['(tabs)', 'home'],
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -28,5 +29,16 @@ describe('PrescriptionFab', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(router.push).toHaveBeenCalledWith('/prescription');
+  });
+
+  it('그룹 탭 → null 렌더 (단일 FAB 정책)', () => {
+    jest.resetModules();
+    jest.doMock('expo-router', () => ({
+      router: { push: jest.fn() },
+      useSegments: () => ['(tabs)', 'group'],
+    }));
+    const PrescriptionFabGroup = require('@/components/navigation/PrescriptionFab').default;
+    const { toJSON } = render(<PrescriptionFabGroup />);
+    expect(toJSON()).toBeNull();
   });
 });

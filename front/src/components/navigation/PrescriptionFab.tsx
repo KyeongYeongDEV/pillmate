@@ -2,17 +2,21 @@ import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadows } from '@/styles/tokens';
 
 const BAR_H = 56;
 const FAB_D = 56;
 
-// Rendered outside the tab bar navigator so it is never clipped by the bar container.
-// The FAB center sits exactly at the bar's top edge.
+// 그룹 탭은 자체 FAB (새 그룹 만들기) 가 있으므로 충돌 회피 — 단일 FAB 정책
+const SCREENS_WITHOUT_PRESCRIPTION_FAB = new Set(['group']);
+
 function PrescriptionFab() {
   const insets = useSafeAreaInsets();
+  const segments = useSegments();
+  const currentTab = segments[segments.length - 1] as string | undefined;
+  if (currentTab && SCREENS_WITHOUT_PRESCRIPTION_FAB.has(currentTab)) return null;
 
   const handlePress = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   ctaText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primaryBase },
   fab: {
-    position: 'absolute', bottom: 24, right: 20,
+    position: 'absolute', bottom: 24, right: 16,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.primaryBase,
     alignItems: 'center', justifyContent: 'center',
