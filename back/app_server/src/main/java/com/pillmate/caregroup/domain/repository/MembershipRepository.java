@@ -15,4 +15,5 @@ public interface MembershipRepository {
     boolean existsByGuardianAndPatient(Long guardianUserId, Long patientUserId);
     List<Long> findGroupMemberUserIds(Long viewerUserId);
     Optional<Membership> findPinnedByUserId(Long userId);
+    Membership saveAndFlush(Membership membership);
 }

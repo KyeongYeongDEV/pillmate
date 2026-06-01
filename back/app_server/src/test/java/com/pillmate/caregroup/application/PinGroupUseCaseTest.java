@@ -46,7 +46,7 @@ class PinGroupUseCaseTest {
     }
 
     @Test
-    @DisplayName("기존 핀 그룹과 신규 그룹 다르면 기존 핀 해제 + 신규 핀")
+    @DisplayName("기존 핀 그룹과 신규 그룹 다르면 기존 핀 해제 (flush) + 신규 핀")
     void pin_existingDifferent_unpinThenPin() {
         Membership existing = Membership.of(GROUP_B, USER_ID, MemberRole.PATIENT, null);
         existing.pin();
@@ -58,12 +58,12 @@ class PinGroupUseCaseTest {
 
         assertThat(existing.isPinned()).isFalse();
         assertThat(target.isPinned()).isTrue();
-        verify(membershipRepository).save(existing);
+        verify(membershipRepository).saveAndFlush(existing);
         verify(membershipRepository).save(target);
     }
 
     @Test
-    @DisplayName("이미 같은 그룹 핀이면 noop")
+    @DisplayName("이미 같은 그룹 핀이면 noop (save 호출 X)")
     void pin_alreadyPinned_isIdempotent() {
         Membership target = Membership.of(GROUP_A, USER_ID, MemberRole.PATIENT, null);
         target.pin();
@@ -73,6 +73,8 @@ class PinGroupUseCaseTest {
         sut.pin(GROUP_A, USER_ID);
 
         assertThat(target.isPinned()).isTrue();
+        verify(membershipRepository, never()).save(any());
+        verify(membershipRepository, never()).saveAndFlush(any());
     }
 
     @Test

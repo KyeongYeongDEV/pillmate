@@ -19,16 +19,20 @@ public class PinGroupUseCase {
         Membership target = membershipRepository.findByCareGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
 
-        membershipRepository.findPinnedByUserId(userId).ifPresent(existing -> {
-            if (!existing.getCareGroupId().equals(groupId)) {
-                existing.unpin();
-                membershipRepository.save(existing);
-            }
-        });
+        unpinExistingPin(userId, groupId);
 
         if (!target.isPinned()) {
             target.pin();
+            membershipRepository.save(target);
         }
-        membershipRepository.save(target);
+    }
+
+    private void unpinExistingPin(Long userId, Long targetGroupId) {
+        membershipRepository.findPinnedByUserId(userId).ifPresent(existing -> {
+            if (!existing.getCareGroupId().equals(targetGroupId)) {
+                existing.unpin();
+                membershipRepository.saveAndFlush(existing);
+            }
+        });
     }
 }
