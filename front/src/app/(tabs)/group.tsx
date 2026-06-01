@@ -10,7 +10,7 @@ import { colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
 import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
 import GroupCard from '@/components/group/GroupCard';
-import type { MyGroupSummary } from '@/types/caregroup';
+import { applyGroupFilter } from '@/lib/groupFilter';
 
 export default function GroupScreen() {
   const [filter, setFilter] = useState<GroupFilter>('전체');
@@ -18,7 +18,7 @@ export default function GroupScreen() {
   const [pinGroup] = usePinGroupMutation();
   const [unpinGroup] = useUnpinGroupMutation();
 
-  const filteredGroups = useMemo(() => applyFilter(groups, filter), [groups, filter]);
+  const filteredGroups = useMemo(() => applyGroupFilter(groups, filter), [groups, filter]);
   const pinnedGroup = useMemo(() => groups.find(g => g.pinned) ?? null, [groups]);
   const unpinnedGroups = useMemo(
     () => filteredGroups.filter(g => !g.pinned),
@@ -121,14 +121,6 @@ function ErrorPlaceholder() {
       <Text style={styles.errorText}>그룹 목록을 불러올 수 없어요</Text>
     </View>
   );
-}
-
-function applyFilter(groups: MyGroupSummary[], filter: GroupFilter): MyGroupSummary[] {
-  if (filter === '전체') return groups;
-  if (filter === '내가 환자') return groups.filter(g => g.role === '환자');
-  if (filter === '내가 보호자') return groups.filter(g => g.role === '보호자');
-  if (filter === '비공개') return [];
-  return groups;
 }
 
 const styles = StyleSheet.create({
