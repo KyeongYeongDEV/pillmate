@@ -1,10 +1,12 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Share } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors, space, radius, fontFamily } from '@/styles/tokens';
 import type { InviteCodeView } from '@/types/caregroup';
 
 const QR_SIZE = 132;
+const EMPTY_ICON_SIZE = 28;
 
 interface InviteCodeCardProps {
   inviteCode: InviteCodeView | null | undefined;
@@ -18,9 +20,18 @@ function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
 
   if (!inviteCode) {
     return (
-      <View style={styles.card}>
-        <Text style={styles.label}>초대 코드</Text>
-        <Text style={styles.fallbackText}>초대 코드가 없어요</Text>
+      <View
+        style={styles.emptyCard}
+        accessibilityLabel="초대 코드 없음"
+        accessibilityRole="summary"
+      >
+        <View style={styles.emptyIconWrap}>
+          <Feather name="maximize" size={EMPTY_ICON_SIZE} color={colors.labelAssistive} />
+        </View>
+        <View style={styles.emptyTextCol}>
+          <Text style={styles.emptyTitle}>아직 발급된 초대가 없어요</Text>
+          <Text style={styles.emptyCaption}>위 초대하기를 누르면 코드와 QR이 생성돼요</Text>
+        </View>
       </View>
     );
   }
@@ -72,10 +83,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.r16,
     padding: space.s18,
     borderWidth: 1,
-    borderStyle: Platform.OS === 'ios' ? 'solid' : 'dashed',
+    borderStyle: 'solid',
     borderColor: colors.line,
     gap: space.s8,
   },
+  emptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.s12,
+    backgroundColor: colors.bgNormal,
+    borderRadius: radius.r14,
+    paddingVertical: space.s14,
+    paddingHorizontal: space.s14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.line,
+  },
+  emptyIconWrap: {
+    width: 40, height: 40, borderRadius: radius.r10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.fillNormal,
+  },
+  emptyTextCol: { flex: 1, gap: 2 },
+  emptyTitle: { fontSize: 14, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
+  emptyCaption: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   label: { fontSize: 11, color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
   code: {
@@ -95,5 +126,4 @@ const styles = StyleSheet.create({
     marginTop: space.s4,
   },
   expiry: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17, textAlign: 'center' },
-  fallbackText: { fontSize: 14, color: colors.labelAlternative, marginTop: 4 },
 });

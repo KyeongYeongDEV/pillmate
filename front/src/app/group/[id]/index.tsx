@@ -61,15 +61,28 @@ export default function GroupDetailScreen() {
               <Text style={styles.heroSub}>{detail.memberCount}명</Text>
             </View>
           </View>
-          <Pressable
-            style={styles.inviteBtn}
-            onPress={() => {}}
-            accessibilityLabel="초대하기"
-            accessibilityRole="button"
-          >
-            <Feather name="plus" size={18} color={colors.staticWhite} />
-            <Text style={styles.inviteBtnText}>초대하기</Text>
-          </Pressable>
+          <View style={styles.inviteRow}>
+            <Pressable
+              style={styles.inviteBtn}
+              onPress={() => {}}
+              accessibilityLabel="초대하기"
+              accessibilityRole="button"
+            >
+              <Feather name="plus" size={18} color={colors.staticWhite} />
+              <Text style={styles.inviteBtnText}>초대하기</Text>
+            </Pressable>
+            <Pressable
+              style={styles.scanIconBtn}
+              onPress={() => router.push('/group/scan' as any)}
+              accessibilityLabel="QR 스캔으로 가입"
+              accessibilityRole="button"
+            >
+              <Feather name="maximize" size={20} color={colors.labelNormal} />
+            </Pressable>
+          </View>
+
+          {/* 초대 코드 (헤더 카드 안 — 초대하기 버튼 바로 밑) */}
+          <InviteCodeCard inviteCode={detail.inviteCode} />
         </View>
 
         {/* 구성원 */}
@@ -83,9 +96,6 @@ export default function GroupDetailScreen() {
             />
           ))}
         </View>
-
-        {/* 초대 코드 */}
-        <InviteCodeCard inviteCode={detail.inviteCode} />
 
         {/* 활동 타임라인 (상단 5건) */}
         <View style={styles.activityHeader}>
@@ -167,12 +177,19 @@ const styles = StyleSheet.create({
   heroInfo: { flex: 1, marginLeft: space.s8 },
   heroName: { fontSize: 18, fontWeight: '700', letterSpacing: -0.015, color: colors.labelNormal },
   heroSub: { fontSize: 13, color: colors.labelAlternative, marginTop: 2 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
   inviteBtn: {
+    flex: 1,
     height: 42, borderRadius: radius.r10,
     backgroundColor: colors.labelNormal, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: space.s6,
   },
   inviteBtnText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
+  scanIconBtn: {
+    width: 42, height: 42, borderRadius: radius.r10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.fillNormal,
+  },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
   listCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
