@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors, space, radius, fontFamily } from '@/styles/tokens';
+import { useCountdown } from '@/hooks/useCountdown';
 import type { InviteCodeView } from '@/types/caregroup';
 
 const QR_SIZE = 132;
@@ -10,9 +11,12 @@ const EMPTY_ICON_SIZE = 28;
 
 interface InviteCodeCardProps {
   inviteCode: InviteCodeView | null | undefined;
+  onExpire?: () => void;
 }
 
-function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
+function InviteCodeCard({ inviteCode, onExpire }: InviteCodeCardProps) {
+  const { remainingSeconds } = useCountdown(inviteCode?.expiresAt ?? null, onExpire);
+
   const handleCopy = useCallback(async () => {
     if (!inviteCode) return;
     await Share.share({ message: inviteCode.code, title: 'PillMate 초대 코드' });
@@ -36,7 +40,9 @@ function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
     );
   }
 
-  const expiryText = formatExpiry(inviteCode.expiresAt);
+  const expiryText = remainingSeconds > 0
+    ? `유효 ${remainingSeconds}초 · 가족에게 코드 또는 QR을 전송하세요.`
+    : '만료됨';
 
   return (
     <View style={styles.card}>
@@ -65,14 +71,6 @@ function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
       <Text style={styles.expiry}>{expiryText}</Text>
     </View>
   );
-}
-
-function formatExpiry(iso: string): string {
-  const remaining = new Date(iso).getTime() - Date.now();
-  if (remaining <= 0) return '만료됨';
-  const mins = Math.floor(remaining / 60_000);
-  if (mins < 60) return `유효 ${mins}분 · 가족에게 코드 또는 QR을 전송하세요.`;
-  return `유효 ${Math.floor(mins / 60)}시간 · 가족에게 코드 또는 QR을 전송하세요.`;
 }
 
 export default React.memo(InviteCodeCard);

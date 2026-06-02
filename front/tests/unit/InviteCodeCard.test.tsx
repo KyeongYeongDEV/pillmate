@@ -47,4 +47,28 @@ describe('InviteCodeCard', () => {
     render(<InviteCodeCard inviteCode={null} />);
     expect(screen.queryByLabelText('초대 코드 QR')).toBeNull();
   });
+
+  describe('카운트다운 (1분 TTL)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-06-02T00:00:00Z'));
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('유효 inviteCode — "유효 60초" 문구 렌더', () => {
+      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 60_000).toISOString() };
+      render(<InviteCodeCard inviteCode={code} />);
+      expect(screen.getByText(/유효 60초/)).toBeTruthy();
+    });
+
+    it('만료 도달 → onExpire 콜백 1회 호출', () => {
+      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 60_000).toISOString() };
+      const onExpire = jest.fn();
+      render(<InviteCodeCard inviteCode={code} onExpire={onExpire} />);
+      jest.advanceTimersByTime(60_000);
+      expect(onExpire).toHaveBeenCalledTimes(1);
+    });
+  });
 });
