@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useDispatch } from 'react-redux';
 import AvatarStack from '@/components/common/AvatarStack';
 import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { useGetGroupDetailQuery, useIssueInviteCodeMutation } from '@/store/slices/caregroupApi';
+import { useGetGroupDetailQuery, useIssueInviteCodeMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
+import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
@@ -25,8 +27,12 @@ const ROLE_TINTS: Record<string, string> = {
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
+  const dispatch = useDispatch();
   const { data: detail, isLoading, isError } = useGetGroupDetailQuery(groupId);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
+  const expiresAt = detail?.inviteCode?.expiresAt ?? null;
+  const { remainingSeconds, isExpired } = useCountdown(expiresAt);
+  const inviteActive = !!detail?.inviteCode && !isExpired;
 
   const handleIssueInvite = async () => {
     try {
@@ -35,6 +41,10 @@ export default function GroupDetailScreen() {
       Alert.alert('초대 코드 발급 실패', e?.data?.error?.message ?? e?.message ?? '잠시 후 다시 시도해 주세요');
     }
   };
+
+  const handleInviteExpire = useCallback(() => {
+    dispatch(caregroupApiSlice.util.invalidateTags([{ type: 'GroupDetail', id: groupId }]));
+  }, [dispatch, groupId]);
 
   if (isLoading) {
     return (
@@ -73,15 +83,21 @@ export default function GroupDetailScreen() {
           </View>
           <View style={styles.inviteRow}>
             <Pressable
-              style={[styles.inviteBtn, isIssuing && styles.inviteBtnDisabled]}
+              style={[
+                styles.inviteBtn,
+                inviteActive && styles.inviteBtnIssued,
+                isIssuing && styles.inviteBtnDisabled,
+              ]}
               onPress={handleIssueInvite}
-              disabled={isIssuing}
-              accessibilityLabel="초대하기"
+              disabled={isIssuing || inviteActive}
+              accessibilityLabel={inviteActive ? `발급됨 ${remainingSeconds}초 남음` : '초대하기'}
               accessibilityRole="button"
-              accessibilityState={{ disabled: isIssuing, busy: isIssuing }}
+              accessibilityState={{ disabled: isIssuing || inviteActive, busy: isIssuing }}
             >
               {isIssuing ? (
                 <ActivityIndicator size="small" color={colors.staticWhite} />
+              ) : inviteActive ? (
+                <Text style={styles.inviteBtnIssuedText}>발급됨 · {remainingSeconds}초</Text>
               ) : (
                 <>
                   <Feather name="plus" size={18} color={colors.staticWhite} />
@@ -100,7 +116,10 @@ export default function GroupDetailScreen() {
           </View>
 
           {/* 초대 코드 (헤더 카드 안 — 초대하기 버튼 바로 밑) */}
-          <InviteCodeCard inviteCode={detail.inviteCode} />
+          <InviteCodeCard
+            inviteCode={inviteActive ? detail.inviteCode : null}
+            onExpire={handleInviteExpire}
+          />
         </View>
 
         {/* 구성원 */}
@@ -204,6 +223,8 @@ const styles = StyleSheet.create({
   },
   inviteBtnText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
   inviteBtnDisabled: { opacity: 0.6 },
+  inviteBtnIssued: { backgroundColor: colors.fillNormal },
+  inviteBtnIssuedText: { fontSize: 14, fontWeight: '600', color: colors.labelAlternative },
   scanIconBtn: {
     width: 42, height: 42, borderRadius: radius.r10,
     alignItems: 'center', justifyContent: 'center',
