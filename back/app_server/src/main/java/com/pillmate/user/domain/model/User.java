@@ -33,6 +33,13 @@ public class User {
     @Column(name = "profile_url", length = 500)
     private String profileUrl;
 
+    @Column(name = "expo_push_token", length = 256)
+    private String expoPushToken;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "push_provider", nullable = false, length = 20)
+    private PushProvider pushProvider = PushProvider.EXPO;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -43,6 +50,7 @@ public class User {
         User user = new User();
         user.provider = UserProvider.DUMMY;
         user.name = name;
+        user.pushProvider = PushProvider.EXPO;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
         return user;
@@ -54,8 +62,18 @@ public class User {
         user.provider = provider;
         user.name = name;
         user.email = email;
+        user.pushProvider = PushProvider.EXPO;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
         return user;
+    }
+
+    public void registerPushToken(String token, PushProvider provider) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("token must not be blank");
+        }
+        this.expoPushToken = token;
+        this.pushProvider = provider;
+        this.updatedAt = Instant.now();
     }
 }
