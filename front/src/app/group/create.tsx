@@ -6,34 +6,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { colors, space, radius, typography } from '@/styles/tokens';
-import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
-import type { ApiEnvelope } from '@/lib/api/client';
-import { API_BASE_URL } from '@/lib/api/client';
-import { getToken, getCurrentUserId } from '@/lib/auth/storage';
+import { useCreateGroupMutation } from '@/store/slices/caregroupApi';
 import { safeBack } from '@/lib/router/safeBack';
 
 const MAX_NAME_LEN = 30;
 
 export default function CreateGroupScreen() {
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createGroup, { isLoading: loading }] = useCreateGroupMutation();
 
   const canSubmit = name.trim().length > 0 && !loading;
 
   const handleCreate = useCallback(async () => {
     if (!canSubmit) return;
-    setLoading(true);
     setError(null);
     try {
-      await createGroup(name.trim());
+      await createGroup({ name: name.trim() }).unwrap();
       safeBack('/(tabs)/group');
     } catch (e: any) {
-      setError(e?.message ?? '그룹 생성에 실패했어요');
-    } finally {
-      setLoading(false);
+      setError(e?.data?.error?.message ?? e?.message ?? '그룹 생성에 실패했어요');
     }
-  }, [name, canSubmit]);
+  }, [name, canSubmit, createGroup]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -75,25 +69,6 @@ export default function CreateGroupScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
-
-async function createGroup(name: string): Promise<void> {
-  const token = await getToken();
-  const userId = await getCurrentUserId();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (userId != null) headers['X-User-Id'] = String(userId);
-
-  const res = await fetch(`${API_BASE_URL}/groups`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ name }),
-  });
-
-  const envelope: ApiEnvelope<unknown> = await res.json();
-  if (!res.ok) {
-    throw new Error(envelope?.error?.message ?? '그룹 생성 실패');
-  }
 }
 
 const styles = StyleSheet.create({
