@@ -1,8 +1,17 @@
 package com.pillmate.notification.application.port;
 
-import com.pillmate.notification.domain.model.Notification;
+import java.util.Map;
 
 public interface NotificationSenderPort {
 
-    void send(Notification notification);
+    void send(NotificationCommand command);
+
+    record NotificationCommand(
+            Long notificationId,
+            Long recipientUserId,
+            String recipientPushToken,
+            String title,
+            String body,
+            Map<String, String> data
+    ) {}
 }

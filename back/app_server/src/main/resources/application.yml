@@ -73,3 +73,11 @@ ai-server:
   timeout:
     connect-ms: 5000
     read-ms: 30000
+
+pillmate:
+  notification:
+    provider: ${PILLMATE_NOTIFICATION_PROVIDER:log}
+    expo:
+      base-url: https://exp.host
+      connect-ms: 3000
+      read-ms: 5000

@@ -1,23 +1,28 @@
 package com.pillmate.notification.infrastructure.fcm;
 
 import com.pillmate.notification.application.port.NotificationSenderPort;
-import com.pillmate.notification.domain.model.Notification;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "pillmate.notification.provider", havingValue = "log", matchIfMissing = true)
 public class LogNotificationSenderAdapter implements NotificationSenderPort {
 
     @Override
-    public void send(Notification notification) {
-        log.info("[FCM-STUB] type={} recipient={} title='{}' body='{}'",
-                notification.getType(),
-                notification.getRecipientUserId(),
-                notification.getTitle(),
-                notification.getBody());
-        notification.markSent(Instant.now());
+    public void send(NotificationCommand command) {
+        log.info("[PUSH-LOG] notificationId={} recipient={} token={} title='{}' body='{}' data={}",
+                command.notificationId(),
+                command.recipientUserId(),
+                maskToken(command.recipientPushToken()),
+                command.title(),
+                command.body(),
+                command.data());
+    }
+
+    private String maskToken(String token) {
+        if (token == null || token.length() < 8) return "(none)";
+        return token.substring(0, 4) + "***" + token.substring(token.length() - 4);
     }
 }

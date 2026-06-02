@@ -7,16 +7,21 @@ import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import com.pillmate.notification.application.port.NotificationSenderPort;
+import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.domain.model.Notification;
-import com.pillmate.notification.domain.repository.NotificationRepository;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
+import com.pillmate.user.domain.model.User;
+import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SendGroupDoseNotificationService {
@@ -24,24 +29,53 @@ public class SendGroupDoseNotificationService {
     private final DoseLogRepository doseLogRepository;
     private final ScheduleRepository scheduleRepository;
     private final MembershipRepository membershipRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationPersistenceService notificationPersistenceService;
+    private final UserRepository userRepository;
     private final NotificationSenderPort notificationSenderPort;
 
-    @Transactional
     public void send(Long doseLogId, Long actorUserId) {
         DoseLog doseLog = findDoseLog(doseLogId);
         Schedule schedule = findSchedule(doseLog.getScheduleId());
         List<Long> recipientIds = findGroupMembers(actorUserId);
-
         if (recipientIds.isEmpty()) {
             return;
         }
 
         List<Notification> notifications = buildNotifications(
                 doseLog, actorUserId, schedule.getCareGroupId(), recipientIds);
+        if (notifications.isEmpty()) {
+            return;
+        }
 
-        List<Notification> saved = notificationRepository.saveAll(notifications);
-        saved.forEach(notificationSenderPort::send);
+        List<Notification> saved = notificationPersistenceService.saveAll(notifications);
+        saved.forEach(this::dispatchOne);
+    }
+
+    private void dispatchOne(Notification notification) {
+        String token = lookupToken(notification.getRecipientUserId());
+        try {
+            notificationSenderPort.send(toCommand(notification, token));
+            notificationPersistenceService.markSent(notification.getId(), Instant.now());
+        } catch (Exception e) {
+            log.warn("푸시 발송 실패 notificationId={} reason={}", notification.getId(), e.getMessage());
+        }
+    }
+
+    private String lookupToken(Long recipientUserId) {
+        return userRepository.findById(recipientUserId)
+                .map(User::getExpoPushToken)
+                .orElse(null);
+    }
+
+    private NotificationCommand toCommand(Notification n, String token) {
+        return new NotificationCommand(
+                n.getId(),
+                n.getRecipientUserId(),
+                token,
+                n.getTitle(),
+                n.getBody(),
+                Map.of("route", "/group/" + n.getCareGroupId())
+        );
     }
 
     private DoseLog findDoseLog(Long doseLogId) {
@@ -62,7 +96,6 @@ public class SendGroupDoseNotificationService {
                                                    Long careGroupId, List<Long> recipientIds) {
         boolean isMissed = doseLog.getStatus() == DoseStatus.SKIPPED
                 || doseLog.getStatus() == DoseStatus.MISSED;
-
         return recipientIds.stream()
                 .filter(id -> !id.equals(actorUserId))
                 .map(recipientId -> isMissed
