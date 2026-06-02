@@ -1,9 +1,8 @@
 package com.pillmate.caregroup.application;
 
-import com.pillmate.caregroup.domain.model.InviteCode;
+import com.pillmate.caregroup.application.port.InviteCodeCachePort;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
-import com.pillmate.caregroup.domain.repository.InviteCodeRepository;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
@@ -20,79 +19,60 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-@DisplayName("JoinGroupUseCase — 초대코드 검증/사용/멤버 추가")
+@DisplayName("JoinGroupUseCase — Redis lookup 우선 / Postgres path 제거")
 @ExtendWith(MockitoExtension.class)
 class JoinGroupUseCaseTest {
 
-    @Mock InviteCodeRepository inviteCodeRepository;
+    @Mock InviteCodeCachePort inviteCodeCachePort;
     @Mock MembershipRepository membershipRepository;
     @InjectMocks JoinGroupUseCase sut;
 
+    private static final String CODE = "ABC123";
+    private static final Long GROUP_ID = 1L;
+    private static final Long USER_ID = 20L;
+
     @Test
-    @DisplayName("정상 흐름: 코드 사용 + Membership 저장 + groupId 반환")
-    void join_whenSuccess_createsMembership() {
-        InviteCode code = InviteCode.generate(1L, 10L);
-        given(inviteCodeRepository.findByCode("ABC123")).willReturn(Optional.of(code));
-        given(membershipRepository.existsByCareGroupIdAndUserId(1L, 20L)).willReturn(false);
+    @DisplayName("정상 흐름: Redis hit → Membership 저장 + groupId 반환")
+    void join_whenRedisHit_createsMembership() {
+        given(inviteCodeCachePort.findGroupId(CODE)).willReturn(Optional.of(GROUP_ID));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(false);
 
-        Long groupId = sut.join("ABC123", 20L, MemberRole.PATIENT);
+        Long groupId = sut.join(CODE, USER_ID, MemberRole.PATIENT);
 
-        assertThat(groupId).isEqualTo(1L);
-        assertThat(code.getUsedAt()).isNotNull();
+        assertThat(groupId).isEqualTo(GROUP_ID);
         verify(membershipRepository).save(any(Membership.class));
     }
 
     @Test
-    @DisplayName("만료된 코드면 GROUP_INVITE_CODE_EXPIRED")
-    void join_whenCodeExpired_throws() {
-        InviteCode expired = InviteCode.ofExpired("ABC123", 1L, 10L);
-        given(inviteCodeRepository.findByCode("ABC123")).willReturn(Optional.of(expired));
+    @DisplayName("Redis miss 면 PILL_096 INVITE_CODE_EXPIRED_OR_INVALID")
+    void join_whenRedisMiss_throwsExpiredOrInvalid() {
+        given(inviteCodeCachePort.findGroupId(CODE)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sut.join("ABC123", 20L, MemberRole.PATIENT))
+        assertThatThrownBy(() -> sut.join(CODE, USER_ID, MemberRole.PATIENT))
                 .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_INVITE_CODE_EXPIRED);
-    }
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVITE_CODE_EXPIRED_OR_INVALID);
 
-    @Test
-    @DisplayName("이미 사용된 코드면 GROUP_INVITE_CODE_USED")
-    void join_whenCodeAlreadyUsed_throws() {
-        InviteCode used = InviteCode.generate(1L, 10L);
-        used.markUsed();
-        given(inviteCodeRepository.findByCode("ABC123")).willReturn(Optional.of(used));
-
-        assertThatThrownBy(() -> sut.join("ABC123", 20L, MemberRole.PATIENT))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_INVITE_CODE_USED);
+        verify(membershipRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("이미 멤버이면 GROUP_ALREADY_MEMBER")
     void join_whenAlreadyMember_throws() {
-        InviteCode code = InviteCode.generate(1L, 10L);
-        given(inviteCodeRepository.findByCode("ABC123")).willReturn(Optional.of(code));
-        given(membershipRepository.existsByCareGroupIdAndUserId(1L, 20L)).willReturn(true);
+        given(inviteCodeCachePort.findGroupId(CODE)).willReturn(Optional.of(GROUP_ID));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(true);
 
-        assertThatThrownBy(() -> sut.join("ABC123", 20L, MemberRole.PATIENT))
+        assertThatThrownBy(() -> sut.join(CODE, USER_ID, MemberRole.PATIENT))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ALREADY_MEMBER);
     }
 
     @Test
-    @DisplayName("코드 자체가 없으면 GROUP_INVITE_CODE_INVALID")
-    void join_whenCodeMissing_throws() {
-        given(inviteCodeRepository.findByCode("ZZZZZZ")).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> sut.join("ZZZZZZ", 20L, MemberRole.PATIENT))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_INVITE_CODE_INVALID);
-    }
-
-    @Test
-    @DisplayName("ADMIN 역할로 join 시도 시 INVALID_REQUEST (생성자만 ADMIN)")
+    @DisplayName("ADMIN 역할 join 시도 시 INVALID_REQUEST")
     void join_whenRoleAdmin_throws() {
-        assertThatThrownBy(() -> sut.join("ABC123", 20L, MemberRole.ADMIN))
+        assertThatThrownBy(() -> sut.join(CODE, USER_ID, MemberRole.ADMIN))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_REQUEST);
     }

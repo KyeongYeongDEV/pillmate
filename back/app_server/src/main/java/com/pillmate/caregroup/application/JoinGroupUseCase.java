@@ -1,9 +1,8 @@
 package com.pillmate.caregroup.application;
 
-import com.pillmate.caregroup.domain.model.InviteCode;
+import com.pillmate.caregroup.application.port.InviteCodeCachePort;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
-import com.pillmate.caregroup.domain.repository.InviteCodeRepository;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
@@ -15,20 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class JoinGroupUseCase {
 
-    private final InviteCodeRepository inviteCodeRepository;
+    private final InviteCodeCachePort inviteCodeCachePort;
     private final MembershipRepository membershipRepository;
 
     @Transactional
     public Long join(String code, Long userId, MemberRole role) {
         requireJoinableRole(role);
-        InviteCode inviteCode = findCodeOrThrowInvalid(code);
-        requireUsable(inviteCode);
-        requireNotAlreadyMember(inviteCode.getCareGroupId(), userId);
+        Long groupId = lookupGroupOrThrowExpired(code);
+        requireNotAlreadyMember(groupId, userId);
 
-        inviteCode.consume();
-        membershipRepository.save(
-                Membership.of(inviteCode.getCareGroupId(), userId, role, inviteCode.getCreatedBy()));
-        return inviteCode.getCareGroupId();
+        membershipRepository.save(Membership.of(groupId, userId, role, null));
+        return groupId;
     }
 
     private void requireJoinableRole(MemberRole role) {
@@ -37,18 +33,9 @@ public class JoinGroupUseCase {
         }
     }
 
-    private InviteCode findCodeOrThrowInvalid(String code) {
-        return inviteCodeRepository.findByCode(code)
-                .orElseThrow(() -> new PillmateException(ErrorCode.GROUP_INVITE_CODE_INVALID));
-    }
-
-    private void requireUsable(InviteCode inviteCode) {
-        if (inviteCode.isExpired()) {
-            throw new PillmateException(ErrorCode.GROUP_INVITE_CODE_EXPIRED);
-        }
-        if (inviteCode.getUsedAt() != null) {
-            throw new PillmateException(ErrorCode.GROUP_INVITE_CODE_USED);
-        }
+    private Long lookupGroupOrThrowExpired(String code) {
+        return inviteCodeCachePort.findGroupId(code)
+                .orElseThrow(() -> new PillmateException(ErrorCode.INVITE_CODE_EXPIRED_OR_INVALID));
     }
 
     private void requireNotAlreadyMember(Long careGroupId, Long userId) {
