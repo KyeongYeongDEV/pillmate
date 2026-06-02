@@ -3,6 +3,13 @@ import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type { MyGroupSummary, GroupDetailResponse, InviteCodeView } from '@/types/caregroup';
 
+export interface CreateGroupResponse {
+  groupId: number;
+  name: string;
+  role: string;
+  inviteCode?: string;
+}
+
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
@@ -31,6 +38,11 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<InviteCodeView>) => response?.data ?? null,
       invalidatesTags: (_result, _error, groupId) => [{ type: 'GroupDetail', id: groupId }],
     }),
+    createGroup: build.mutation<CreateGroupResponse | null, { name: string }>({
+      query: (body) => ({ url: '/groups', method: 'POST', body }),
+      transformResponse: (response: ApiEnvelope<CreateGroupResponse>) => response?.data ?? null,
+      invalidatesTags: ['Group'],
+    }),
   }),
 });
 
@@ -40,5 +52,6 @@ export const {
   usePinGroupMutation,
   useUnpinGroupMutation,
   useIssueInviteCodeMutation,
+  useCreateGroupMutation,
 } = caregroupApiSlice;
 
