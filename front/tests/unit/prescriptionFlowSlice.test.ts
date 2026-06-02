@@ -7,7 +7,7 @@ import prescriptionFlowReducer, {
   removeItem,
   reset,
 } from '../../src/store/slices/prescriptionFlowSlice';
-import type { OcrItem } from '../../src/types/prescription';
+import type { OcrItem, InteractionWarning } from '../../src/types/prescription';
 
 const initialState = {
   items: [],
@@ -15,6 +15,17 @@ const initialState = {
   ocrStatus: null,
   memo: '',
   imageKey: null,
+  warnings: [],
+};
+
+const mockWarning: InteractionWarning = {
+  drugCodeA: 'KD001',
+  drugCodeB: 'KD002',
+  nameA: '와파린정 2mg',
+  nameB: '아스피린정 100mg',
+  severity: 'CRITICAL',
+  description: '와파린의 항응고 효과가 증가하여 출혈 위험이 높아집니다.',
+  source: '식품의약품안전처',
 };
 
 const mockOcrItem: OcrItem = {
@@ -46,12 +57,37 @@ describe('prescriptionFlowSlice', () => {
         prescriptionId: 42,
         ocrStatus: 'DONE',
         items: [mockOcrItem],
+        warnings: [],
       }));
       expect(state.prescriptionId).toBe(42);
       expect(state.ocrStatus).toBe('DONE');
       expect(state.items).toHaveLength(1);
       expect(state.items[0].matchedName).toBe('암로디핀정 5mg');
       expect(state.items[0].source).toBe('OCR_AUTO');
+    });
+
+    it('warnings 필드 — 빈 배열 저장', () => {
+      const state = prescriptionFlowReducer(initialState, addFromOcr({
+        prescriptionId: 1, ocrStatus: 'DONE', items: [mockOcrItem], warnings: [],
+      }));
+      expect(state.warnings).toEqual([]);
+    });
+
+    it('warnings 필드 — CRITICAL 병용금기 1건 저장', () => {
+      const state = prescriptionFlowReducer(initialState, addFromOcr({
+        prescriptionId: 1, ocrStatus: 'DONE', items: [mockOcrItem], warnings: [mockWarning],
+      }));
+      expect(state.warnings).toHaveLength(1);
+      expect(state.warnings[0].severity).toBe('CRITICAL');
+      expect(state.warnings[0].nameA).toBe('와파린정 2mg');
+      expect(state.warnings[0].source).toBe('식품의약품안전처');
+    });
+
+    it('warnings 필드 — response 에 warnings 누락 시 빈 배열 fallback', () => {
+      const state = prescriptionFlowReducer(initialState, addFromOcr({
+        prescriptionId: 1, ocrStatus: 'DONE', items: [mockOcrItem],
+      } as any));
+      expect(state.warnings).toEqual([]);
     });
 
     it('marks unmatched item as MANUAL decision', () => {

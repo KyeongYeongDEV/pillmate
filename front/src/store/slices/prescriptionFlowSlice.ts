@@ -1,5 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { DrugListItem, DrugSlots, DrugSource, OcrItem, OcrStatus } from '@/types/prescription';
+import type {
+  DrugListItem, DrugSlots, DrugSource, InteractionWarning, OcrItem, OcrStatus,
+} from '@/types/prescription';
 
 interface PrescriptionFlowState {
   items: DrugListItem[];
@@ -7,6 +9,7 @@ interface PrescriptionFlowState {
   ocrStatus: OcrStatus | null;
   memo: string;
   imageKey: string | null;
+  warnings: InteractionWarning[];
 }
 
 const initialState: PrescriptionFlowState = {
@@ -15,6 +18,7 @@ const initialState: PrescriptionFlowState = {
   ocrStatus: null,
   memo: '',
   imageKey: null,
+  warnings: [],
 };
 
 function parseConfidence(raw: number | string | null): number | null {
@@ -54,10 +58,11 @@ const prescriptionFlowSlice = createSlice({
     setPrescriptionId(state, action: PayloadAction<number>) {
       state.prescriptionId = action.payload;
     },
-    addFromOcr(state, action: PayloadAction<{ prescriptionId: number; ocrStatus: OcrStatus; items: OcrItem[] }>) {
+    addFromOcr(state, action: PayloadAction<{ prescriptionId: number; ocrStatus: OcrStatus; items: OcrItem[]; warnings?: InteractionWarning[] }>) {
       state.prescriptionId = action.payload.prescriptionId;
       state.ocrStatus = action.payload.ocrStatus;
       state.items = action.payload.items.map(ocrItemToListItem);
+      state.warnings = action.payload.warnings ?? [];
     },
     addFromSearch(state, action: PayloadAction<{ kdCode: string; nameRaw: string; matchedName: string; imageUrl: string | null }>) {
       const drug = action.payload;

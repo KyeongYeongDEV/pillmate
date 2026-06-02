@@ -1,5 +1,17 @@
 export type OcrStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED' | 'MANUAL';
 
+export type InteractionSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface InteractionWarning {
+  drugCodeA: string;
+  drugCodeB: string;
+  nameA: string;
+  nameB: string;
+  severity: InteractionSeverity;
+  description: string;
+  source: string;
+}
+
 export interface RegisterPrescriptionItem {
   kdCode: string | null;
   nameRaw: string;
@@ -14,6 +26,7 @@ export interface RegisterPrescriptionResponse {
   prescriptionId: number;
   ocrStatus: OcrStatus;
   items: OcrItem[];
+  warnings?: InteractionWarning[];
 }
 
 export interface OcrItem {
