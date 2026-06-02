@@ -11,6 +11,7 @@ import { scheduleApiSlice } from './slices/scheduleApi';
 import { chatApiSlice } from './slices/chatApi';
 import { doseLogApiSlice } from './slices/doseLogApi';
 import { caregroupApiSlice } from './slices/caregroupApi';
+import { userApiSlice } from './slices/userApi';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     [chatApiSlice.reducerPath]: chatApiSlice.reducer,
     [doseLogApiSlice.reducerPath]: doseLogApiSlice.reducer,
     [caregroupApiSlice.reducerPath]: caregroupApiSlice.reducer,
+    [userApiSlice.reducerPath]: userApiSlice.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
@@ -35,6 +37,7 @@ export const store = configureStore({
       doseLogApiSlice.middleware,
       notifyGroupTimerMiddleware,
       caregroupApiSlice.middleware,
+      userApiSlice.middleware,
     ),
 });
 
