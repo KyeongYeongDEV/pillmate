@@ -15,6 +15,7 @@ import type { RootState } from '@/store';
 import type { DrugSlots } from '@/types/prescription';
 import DrugCard from '@/components/prescription/DrugCard';
 import OcrStatusBanner from '@/components/prescription/OcrStatusBanner';
+import DDIWarningCard from '@/components/prescription/DDIWarningCard';
 import { safeBack } from '@/lib/router/safeBack';
 
 // selector 메모이제이션 — 불필요 리렌더 방지
@@ -25,7 +26,8 @@ const selectFlow = createSelector(
 
 export default function ResultScreen() {
   const dispatch = useAppDispatch();
-  const { items, ocrStatus, prescriptionId, memo } = useAppSelector(selectFlow);
+  const { items, ocrStatus, prescriptionId, memo, warnings } = useAppSelector(selectFlow);
+  const criticalCount = useMemo(() => warnings.filter(w => w.severity === 'CRITICAL').length, [warnings]);
 
   const handleSlotsChange = useCallback(
     (id: string, slots: DrugSlots) => dispatch(updateSlots({ id, slots })),
@@ -109,6 +111,29 @@ export default function ResultScreen() {
             )}
           </View>
         </View>
+
+        {/* 병용금기 경고 — 의료 안전 P0 */}
+        {warnings.length > 0 && (
+          <View
+            style={[
+              styles.warningSection,
+              criticalCount > 0 && styles.warningSectionCritical,
+            ]}
+            accessibilityLabel={`병용금기 경고 ${warnings.length}건${criticalCount > 0 ? `, 위험 ${criticalCount}건 포함` : ''}`}
+          >
+            <Text style={styles.warningTitle}>⚠️ 병용금기 경고 · {warnings.length}건</Text>
+            {criticalCount > 0 && (
+              <Text style={styles.warningGuide}>
+                위험 등급 {criticalCount}건 발견. 약사 또는 의사와 상담해 주세요.
+              </Text>
+            )}
+            <View style={styles.warningList}>
+              {warnings.map((w, i) => (
+                <DDIWarningCard key={`${w.drugCodeA}-${w.drugCodeB}-${i}`} warning={w} />
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* 약 카드 리스트 */}
         <View style={styles.listHeader}>
@@ -210,6 +235,21 @@ const styles = StyleSheet.create({
   aiBadgeTxt: { ...typography.caption1, color: colors.accentViolet, fontWeight: '600' },
   summaryCount: { ...typography.headline2, color: colors.labelNormal },
   summaryConf: { ...typography.caption1, color: colors.labelAlternative },
+  warningSection: {
+    backgroundColor: colors.bgNormal,
+    borderRadius: radius.r16,
+    padding: space.s14,
+    marginBottom: space.s16,
+    borderWidth: 1, borderColor: colors.line,
+    gap: space.s10,
+  },
+  warningSectionCritical: {
+    borderColor: colors.red50,
+    borderWidth: 2,
+  },
+  warningTitle: { fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
+  warningGuide: { fontSize: 13, color: colors.red40, fontWeight: '600', lineHeight: 18 },
+  warningList: { gap: space.s10 },
   listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s8 },
   listTitle: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
   listHint: { ...typography.caption1, color: colors.labelAssistive },
