@@ -38,6 +38,8 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND("PILL_080", "알림을 찾을 수 없습니다."),
     NOT_NOTIFICATION_OWNER("PILL_081", "해당 알림에 접근 권한이 없습니다."),
     INVALID_NOTIFICATION_DOSE_LOG("PILL_082", "알림 발송 대상 복약 기록을 찾을 수 없습니다."),
+    INVITE_CODE_EXPIRED_OR_INVALID("PILL_096", "유효하지 않거나 만료된 초대 코드입니다."),
+    INVITE_CACHE_UNAVAILABLE("PILL_097", "초대 코드 검증 서비스에 일시적으로 연결할 수 없습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;

@@ -2,6 +2,7 @@ package com.pillmate.common.exception;
 
 import com.pillmate.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -25,6 +26,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.INVALID_REQUEST));
     }
 
+    @ExceptionHandler(RedisConnectionFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRedisDown(RedisConnectionFailureException e) {
+        log.error("Redis connection failure: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(ErrorCode.INVITE_CACHE_UNAVAILABLE));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unhandled exception {}: {}", e.getClass().getName(), e.getMessage(), e);
@@ -38,7 +46,7 @@ public class GlobalExceptionHandler {
                  GROUP_INVITE_CODE_INVALID, REPORT_NOT_FOUND, ITEM_SEQ_NOT_FOUND, ALIAS_NOT_FOUND,
                  NOTIFICATION_NOT_FOUND, INVALID_NOTIFICATION_DOSE_LOG -> HttpStatus.NOT_FOUND;
             case GROUP_ACCESS_DENIED, NOT_NOTIFICATION_OWNER, PATIENT_ACCESS_DENIED -> HttpStatus.FORBIDDEN;
-            case GROUP_INVITE_CODE_EXPIRED -> HttpStatus.GONE;
+            case GROUP_INVITE_CODE_EXPIRED, INVITE_CODE_EXPIRED_OR_INVALID -> HttpStatus.GONE;
             case GROUP_INVITE_CODE_USED, GROUP_ALREADY_MEMBER, SCHEDULE_CONFLICT -> HttpStatus.CONFLICT;
             case DRUG_SEARCH_EMPTY_QUERY, INVALID_REQUEST,
                  PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY,
@@ -48,6 +56,7 @@ public class GlobalExceptionHandler {
             case OCR_EMPTY -> HttpStatus.UNPROCESSABLE_ENTITY;
             case REPORT_REFRESH_RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
             case REPORT_GENERATION_FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
+            case INVITE_CACHE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
