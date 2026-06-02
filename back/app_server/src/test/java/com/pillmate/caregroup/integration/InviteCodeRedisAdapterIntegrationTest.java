@@ -85,7 +85,7 @@ class InviteCodeRedisAdapterIntegrationTest {
     }
 
     @Test
-    @DisplayName("발급(POST) → Redis SETEX 24h → 가입(POST) 성공")
+    @DisplayName("발급(POST) → Redis SETEX 1분 → 가입(POST) 성공")
     void issue_then_join_endToEnd() {
         User admin = userRepository.save(User.dummy("admin-invite"));
         User patient = userRepository.save(User.dummy("patient-invite"));
@@ -95,7 +95,7 @@ class InviteCodeRedisAdapterIntegrationTest {
         InviteCodeResponse issued = issueInviteCodeUseCase.issue(group.getId(), admin.getId());
 
         Long ttlSec = stringRedisTemplate.getExpire("invite_code:" + issued.code());
-        assertThat(ttlSec).isBetween(86000L, 86400L);
+        assertThat(ttlSec).isBetween(1L, 60L);
 
         Long joinedGroupId = joinGroupUseCase.join(issued.code(), patient.getId(), MemberRole.PATIENT);
 
