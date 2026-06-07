@@ -9,6 +9,7 @@ import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.domain.model.InteractionSeverity;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
+import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import com.pillmate.common.security.UserContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("RegisterPrescription DDI 통합 — 병용금기 경고 첨부")
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +40,7 @@ class RegisterPrescriptionWithDdiTest {
     @Mock DrugLookupPort drugLookupPort;
     @Mock ObjectMapper objectMapper;
     @Mock CheckInteractionsUseCase checkInteractionsUseCase;
+    @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks RegisterPrescriptionService sut;
 
     @BeforeEach
@@ -84,6 +88,7 @@ class RegisterPrescriptionWithDdiTest {
         assertThat(response.ocrStatus()).isEqualTo(OcrStatus.MANUAL);
         assertThat(response.warnings()).hasSize(1);
         assertThat(response.warnings().get(0).severity()).isEqualTo(InteractionSeverity.CRITICAL);
+        verify(eventPublisher).publishEvent(any(DdiCriticalDetected.class));
     }
 
     private RegisterPrescriptionCommand command() {

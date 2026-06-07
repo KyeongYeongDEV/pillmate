@@ -11,6 +11,8 @@ import com.pillmate.prescription.application.dto.RegisteredDrugItem;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
+import com.pillmate.prescription.domain.event.DdiCriticalDetected;
+import com.pillmate.prescription.domain.event.PrescriptionRegistered;
 import com.pillmate.prescription.domain.model.InteractionSeverity;
 import com.pillmate.prescription.domain.model.CandidateDecisionType;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
@@ -19,6 +21,7 @@ import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +39,7 @@ public class RegisterPrescriptionService {
     private final DrugLookupPort drugLookupPort;
     private final ObjectMapper objectMapper;
     private final CheckInteractionsUseCase checkInteractionsUseCase;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
@@ -59,6 +63,12 @@ public class RegisterPrescriptionService {
         log.info("PrescriptionRegistered prescriptionId={} ocrStatus={} itemCount={} unmatched={} unresolved={} ddiWarnings={}",
                 saved.getId(), saved.getOcrStatus(), registered.size(),
                 countUnmatched(registered), unresolvedCount, warnings.size());
+
+        if (hasCriticalWarning(warnings)) {
+            List<String> criticalMessages = extractCriticalMessages(warnings);
+            eventPublisher.publishEvent(new DdiCriticalDetected(command.patientId(), saved.getId(), criticalMessages));
+        }
+        eventPublisher.publishEvent(new PrescriptionRegistered(command.patientId(), saved.getId()));
 
         return new RegisterPrescriptionResponse(saved.getId(), saved.getOcrStatus(), registered, unresolvedCount, warnings);
     }
@@ -164,6 +174,13 @@ public class RegisterPrescriptionService {
 
     private boolean hasCriticalWarning(List<InteractionWarning> warnings) {
         return warnings.stream().anyMatch(w -> w.severity() == InteractionSeverity.CRITICAL);
+    }
+
+    private List<String> extractCriticalMessages(List<InteractionWarning> warnings) {
+        return warnings.stream()
+                .filter(w -> w.severity() == InteractionSeverity.CRITICAL)
+                .map(InteractionWarning::description)
+                .toList();
     }
 
     private long countUnmatched(List<RegisteredDrugItem> items) {

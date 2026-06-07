@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,8 +38,9 @@ class RegisterPrescriptionUseCaseTest {
 
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
-@Mock ObjectMapper objectMapper;
+    @Mock ObjectMapper objectMapper;
     @Mock CheckInteractionsUseCase checkInteractionsUseCase;
+    @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks RegisterPrescriptionService sut;
 
     @BeforeEach
