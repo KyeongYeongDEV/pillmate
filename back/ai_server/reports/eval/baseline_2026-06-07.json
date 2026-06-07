@@ -1,0 +1,38 @@
+{
+  "total": 100,
+  "hit_rate_at_1": 0.7,
+  "hit_rate_at_5": 0.7,
+  "hit_rate_at_10": 0.7,
+  "mrr": 0.7,
+  "context_recall": 0.7,
+  "faithfulness_estimate": 0.6784,
+  "stage_distribution": {
+    "ilike": 51,
+    "token": 19,
+    "ingredient": 20,
+    "vector": 10
+  },
+  "by_difficulty": {
+    "easy": {
+      "total": 30,
+      "hit_rate_at_1": 1.0,
+      "mrr": 1.0,
+      "context_recall": 1.0
+    },
+    "medium": {
+      "total": 44,
+      "hit_rate_at_1": 0.8863636363636364,
+      "mrr": 0.8863636363636364,
+      "context_recall": 0.8863636363636364
+    },
+    "hard": {
+      "total": 26,
+      "hit_rate_at_1": 0.038461538461538464,
+      "mrr": 0.038461538461538464,
+      "context_recall": 0.038461538461538464
+    }
+  },
+  "evaluated_at": "2026-06-07T05:19:58.271039+00:00",
+  "gt_path": "/Users/user/Downloads/pillmate/back/ai_server/tests/eval/gt/prescriptions.jsonl",
+  "mode": "offline"
+}
