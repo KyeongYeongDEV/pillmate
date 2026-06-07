@@ -10,12 +10,14 @@ import com.pillmate.report.domain.model.DailyBreakdown;
 import com.pillmate.report.domain.model.HealthReport;
 import com.pillmate.report.domain.model.PeriodType;
 import com.pillmate.report.domain.model.ReportInsight;
+import com.pillmate.report.domain.event.WeeklyReportGenerated;
 import com.pillmate.report.domain.repository.HealthReportRepository;
 import com.pillmate.report.domain.service.DetectedPattern;
 import com.pillmate.report.domain.service.PatternDetector;
 import com.pillmate.report.domain.service.ScoreCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class GenerateWeeklyReportUseCase {
     private final LlmInsightPort llmInsightPort;
     private final ScoreCalculator scoreCalculator;
     private final PatternDetector patternDetector;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public HealthReport generate(Long patientId, LocalDate weekStart) {
@@ -57,7 +60,9 @@ public class GenerateWeeklyReportUseCase {
                 breakdown);
 
         addInsights(report, stats, ctx, score, adherence, weekStart, weekEnd);
-        return reportRepository.save(report);
+        HealthReport saved = reportRepository.save(report);
+        eventPublisher.publishEvent(new WeeklyReportGenerated(patientId, saved.getId(), weekStart));
+        return saved;
     }
 
     private BigDecimal adherenceRate(PeriodStats stats) {
