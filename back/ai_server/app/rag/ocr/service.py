@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Protocol
 
@@ -19,6 +20,7 @@ from app.rag.ocr.matcher import MatchResult, MatchStage
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
 
 logger = logging.getLogger(__name__)
+_stage_logger = logging.getLogger(__name__ + ".stage")
 
 
 class ImageFetcher(Protocol):
@@ -65,6 +67,7 @@ class OcrPrescriptionService:
         results = await self._match_all(raw_items)
         items = [self._to_decision_item(result, raw) for result, raw in zip(results, raw_items)]
         stages = [result.stage for result in results]
+        self._log_stage_decisions(raw_items, results)
         return PrescriptionOcrResponse(items=items), stages
 
     def _to_decision_item(self, result: MatchResult, raw: RawOcrItem) -> OcrItemWithDecision:
@@ -118,6 +121,35 @@ class OcrPrescriptionService:
             self._format_matched(items, stages),
             cache_hit,
         )
+
+    def _log_stage_decisions(
+        self,
+        raw_items: list[RawOcrItem],
+        results: list[MatchResult],
+    ) -> None:
+        for raw, result in zip(raw_items, results):
+            decision = result.decision
+            kd_code = None
+            decision_type = "NONE"
+            decision_reason = "no_match"
+            if decision is not None:
+                decision_type = decision.type.value
+                decision_reason = decision.reason
+                if decision.primary is not None:
+                    kd_code = decision.primary.item_seq
+            _stage_logger.info(
+                json.dumps(
+                    {
+                        "event": "ocr_stage_decision",
+                        "stage": result.stage,
+                        "final_score": result.final_score,
+                        "matched_kd_code": kd_code,
+                        "decision_type": decision_type,
+                        "decision_reason": decision_reason,
+                    },
+                    ensure_ascii=False,
+                )
+            )
 
     @staticmethod
     def _format_matched(
