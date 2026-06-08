@@ -48,6 +48,13 @@ public class Notification {
     @Column
     private Long doseLogId;
 
+    @Column
+    private Long referenceId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private NotificationReferenceType referenceType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationStatus status;
@@ -78,29 +85,33 @@ public class Notification {
                                             String warningDetail) {
         String body = "병용 주의 약물이 발견되었습니다. " + warningDetail
                 + " 반드시 약사 또는 의사와 상담하세요.";
-        return createWithoutDoseLog(recipientUserId, actorUserId, careGroupId,
-                prescriptionId, NotificationType.DDI_CRITICAL, "⚠️ 약물 상호작용 주의", body);
+        return createWithReference(recipientUserId, actorUserId, careGroupId,
+                prescriptionId, NotificationReferenceType.PRESCRIPTION,
+                NotificationType.DDI_CRITICAL, "⚠️ 약물 상호작용 주의", body);
     }
 
     public static Notification prescriptionNew(Long recipientUserId, Long actorUserId,
                                                 Long careGroupId, Long prescriptionId) {
-        return createWithoutDoseLog(recipientUserId, actorUserId, careGroupId,
-                prescriptionId, NotificationType.PRESCRIPTION_NEW,
-                "새 처방전 등록", "그룹 멤버의 새 처방전이 등록되었어요");
+        return createWithReference(recipientUserId, actorUserId, careGroupId,
+                prescriptionId, NotificationReferenceType.PRESCRIPTION,
+                NotificationType.PRESCRIPTION_NEW, "새 처방전 등록", "그룹 멤버의 새 처방전이 등록되었어요");
     }
 
     public static Notification weeklyReport(Long recipientUserId, Long actorUserId,
                                              Long careGroupId, Long reportId) {
-        return createWithoutDoseLog(recipientUserId, actorUserId, careGroupId,
-                reportId, NotificationType.WEEKLY_REPORT,
-                "주간 리포트 도착", "이번 주 복약 리포트를 확인해 보세요");
+        return createWithReference(recipientUserId, actorUserId, careGroupId,
+                reportId, NotificationReferenceType.REPORT,
+                NotificationType.WEEKLY_REPORT, "주간 리포트 도착", "이번 주 복약 리포트를 확인해 보세요");
     }
 
-    private static Notification createWithoutDoseLog(Long recipientUserId, Long actorUserId,
-                                                      Long careGroupId, Long referenceId,
-                                                      NotificationType type,
-                                                      String title, String body) {
-        return create(recipientUserId, actorUserId, careGroupId, null, type, title, body);
+    private static Notification createWithReference(Long recipientUserId, Long actorUserId,
+                                                     Long careGroupId,
+                                                     Long refId, NotificationReferenceType refType,
+                                                     NotificationType type, String title, String body) {
+        Notification n = create(recipientUserId, actorUserId, careGroupId, null, type, title, body);
+        n.referenceId = refId;
+        n.referenceType = refType;
+        return n;
     }
 
     private static Notification create(Long recipientUserId, Long actorUserId,
