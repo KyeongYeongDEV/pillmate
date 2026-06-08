@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     faithfulness_threshold: float = Field(default=0.95)
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
 
+    # OCR 4-Tier fallback feature flags
+    ocr_correction_enabled: bool = Field(default=True, alias="OCR_CORRECTION_ENABLED")
+    ocr_grounding_enabled: bool = Field(default=False, alias="OCR_GROUNDING_ENABLED")
+
 
 def get_settings() -> Settings:
     return Settings()

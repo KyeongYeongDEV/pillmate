@@ -16,7 +16,9 @@ from app.rag.ocr.cache import (
     OcrResultCache,
     image_hash,
 )
+from app.rag.ocr.correction import OcrCorrectionAdapter
 from app.rag.ocr.matcher import MatchResult, MatchStage
+from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
 
 logger = logging.getLogger(__name__)
@@ -42,11 +44,13 @@ class OcrPrescriptionService:
         vision: VisionAdapter,
         matcher: DrugMatcherPort,
         cache: OcrResultCache | None = None,
+        correction: OcrCorrectionAdapter | None = None,
     ):
         self._fetcher = fetcher
         self._vision = vision
         self._matcher = matcher
         self._cache = cache or NullOcrResultCache()
+        self._correction = correction
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
         image_bytes = await self._fetcher.fetch(str(request.image_url))
@@ -101,11 +105,38 @@ class OcrPrescriptionService:
         )
 
     async def _match_all(self, raw_items: list[RawOcrItem]) -> list[MatchResult]:
-        parsed_items = [parse_drug_item(raw.name_raw) for raw in raw_items]
-        return [
-            await self._matcher.match(parsed, raw)
-            for parsed, raw in zip(parsed_items, raw_items)
-        ]
+        results = []
+        for raw in raw_items:
+            result = await self._match_with_fallback(raw)
+            results.append(result)
+        return results
+
+    async def _match_with_fallback(self, raw: RawOcrItem) -> MatchResult:
+        # Tier 0: preprocessed name (manufacturer strip + normalize)
+        normalized = normalize_for_cascade(raw.name_raw)
+        name_to_try = normalized if normalized != raw.name_raw else raw.name_raw
+        parsed = parse_drug_item(name_to_try)
+        result = await self._matcher.match(parsed, raw)
+        if result.item is not None:
+            return result
+
+        # Tier 2: Vision candidates from LLM prompt
+        for candidate_name in (raw.candidates or []):
+            parsed_c = parse_drug_item(candidate_name)
+            r = await self._matcher.match(parsed_c, raw)
+            if r.item is not None:
+                return r
+
+        # Tier 3: OCR correction LLM
+        if self._correction is not None:
+            corrections = await self._correction.correct(raw.name_raw)
+            for correction_name in corrections:
+                parsed_c = parse_drug_item(correction_name)
+                r = await self._matcher.match(parsed_c, raw)
+                if r.item is not None:
+                    return r
+
+        return result
 
     def _log_done(
         self,
