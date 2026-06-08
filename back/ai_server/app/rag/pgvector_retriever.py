@@ -16,7 +16,7 @@ SELECT d.kd_code AS kd_code,
        d.name AS name,
        d.efficacy AS efficacy,
        d.dosage AS dosage,
-       d.main_ingr AS main_ingr,
+       d.ingredient AS main_ingr,
        1 - (e.embedding <=> $1::vector) AS score
 FROM drug_embeddings e
 JOIN drugs d ON d.id = e.drug_id
