@@ -5,6 +5,7 @@ import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.domain.model.Notification;
+import com.pillmate.notification.domain.model.NotificationReferenceType;
 import com.pillmate.notification.domain.model.NotificationType;
 import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.event.PrescriptionRegistered;
@@ -76,6 +77,8 @@ class NotificationDispatcherTest {
         assertThat(notifications).hasSize(1);
         assertThat(notifications.get(0).getType()).isEqualTo(NotificationType.DDI_CRITICAL);
         assertThat(notifications.get(0).getRecipientUserId()).isEqualTo(ACTOR_ID);
+        assertThat(notifications.get(0).getReferenceId()).isEqualTo(PRESCRIPTION_ID);
+        assertThat(notifications.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
         verify(notificationSenderPort).send(any());
     }
 
@@ -102,6 +105,8 @@ class NotificationDispatcherTest {
         assertThat(filtered).hasSize(1);
         assertThat(filtered.get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(filtered.get(0).getType()).isEqualTo(NotificationType.PRESCRIPTION_NEW);
+        assertThat(filtered.get(0).getReferenceId()).isEqualTo(PRESCRIPTION_ID);
+        assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
         verify(notificationSenderPort).send(any());
     }
 
@@ -142,6 +147,8 @@ class NotificationDispatcherTest {
         assertThat(filtered).hasSize(1);
         assertThat(filtered.get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(filtered.get(0).getType()).isEqualTo(NotificationType.WEEKLY_REPORT);
+        assertThat(filtered.get(0).getReferenceId()).isEqualTo(REPORT_ID);
+        assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
         verify(notificationSenderPort).send(any());
     }
 
