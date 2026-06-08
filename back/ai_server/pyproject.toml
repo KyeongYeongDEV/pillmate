@@ -38,4 +38,5 @@ testpaths = ["tests"]
 markers = [
     "integration: 실제 DB/외부 API 호출 (CTO 가 별도 실행)",
     "eval: GT 기반 평가 테스트 — 느림, CI 별도 (pytest -m eval)",
+    "eval_full: GT 100건 전체 평가 (DB 연결 필수, pytest -m eval_full)",
 ]
