@@ -1,6 +1,7 @@
 package com.pillmate.caregroup.infrastructure.persistence;
 
 import com.pillmate.caregroup.domain.model.Membership;
+import com.pillmate.caregroup.domain.model.MembershipPair;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,4 +37,12 @@ interface MembershipJpaRepository extends JpaRepository<Membership, Long> {
               AND m1.userId = :viewer AND m2.userId <> :viewer
             """)
     List<Long> findGroupMemberUserIds(@Param("viewer") Long viewer);
+
+    @Query("""
+            SELECT new com.pillmate.caregroup.domain.model.MembershipPair(m2.careGroupId, m2.userId)
+            FROM Membership m1, Membership m2
+            WHERE m1.careGroupId = m2.careGroupId
+              AND m1.userId = :actorUserId AND m2.userId <> :actorUserId
+            """)
+    List<MembershipPair> findGroupMemberPairs(@Param("actorUserId") Long actorUserId);
 }
