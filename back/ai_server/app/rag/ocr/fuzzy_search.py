@@ -56,13 +56,18 @@ class JamoFuzzyRanker:
     """2단계: Python Levenshtein 자모 편집거리 재측정 + 임계치 필터."""
 
     def rerank(
-        self, query_jamo: str, candidates: list[FuzzyCandidate]
+        self,
+        query_jamo: str,
+        candidates: list[FuzzyCandidate],
+        prefix_match: bool = False,
     ) -> list[FuzzyCandidate]:
         scored: list[FuzzyCandidate] = []
+        query_len = len(query_jamo)
         for c in candidates:
-            dist = Levenshtein.distance(query_jamo, c.name_jamo)
+            db_jamo = c.name_jamo[:query_len] if prefix_match else c.name_jamo
+            dist = Levenshtein.distance(query_jamo, db_jamo)
             c.jamo_distance = dist
-            c.jamo_score = max(0.0, 1.0 - dist / max(len(query_jamo), 1))
+            c.jamo_score = max(0.0, 1.0 - dist / max(query_len, 1))
             if dist <= JAMO_DISTANCE_THRESHOLD:
                 scored.append(c)
         return sorted(scored, key=lambda x: -x.jamo_score)
