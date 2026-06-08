@@ -28,7 +28,7 @@ import pytest
 
 from app.rag.ocr.drug_search import AsyncpgIlikeSearch, AsyncpgIngredientSearch
 from app.rag.ocr.fuzzy_search import JamoFuzzyRanker, TrigramFuzzySearch
-from app.rag.ocr.normalizer import first_token
+from app.rag.ocr.normalizer import first_token, normalize_for_cascade
 from tests.eval.metrics import EvalResult, summarize
 
 GT_JSONL = Path(__file__).parent / "gt" / "prescriptions.jsonl"
@@ -149,19 +149,24 @@ def _safe_english_token(name_raw: str) -> str | None:
 
 
 async def _cascade_search(pool: asyncpg.Pool, name_raw: str) -> tuple[str | None, str]:
-    """ILIKE → Token → Ingredient → Prefix Relaxation → Fuzzy."""
+    """Tier 0 preprocessing → ILIKE → Token → Ingredient → Prefix Relaxation → Fuzzy (prefix_match)."""
     ilike = AsyncpgIlikeSearch(pool)
     ingr = AsyncpgIngredientSearch(pool)
 
-    cand = await ilike.search(name_raw)
-    if cand:
-        return cand.name, "ilike"
+    # Tier 0: manufacturer strip + normalize
+    normalized = normalize_for_cascade(name_raw)
+    names_to_try = [name_raw] if normalized == name_raw else [normalized, name_raw]
 
-    token = first_token(name_raw)
-    if token and token != name_raw:
-        cand = await ilike.search(token)
+    for name in names_to_try:
+        cand = await ilike.search(name)
         if cand:
-            return cand.name, "token"
+            return cand.name, "ilike"
+
+        token = first_token(name)
+        if token and token != name:
+            cand = await ilike.search(token)
+            if cand:
+                return cand.name, "token"
 
     english = _safe_english_token(name_raw)
     if english:
@@ -173,7 +178,8 @@ async def _cascade_search(pool: asyncpg.Pool, name_raw: str) -> tuple[str | None
     if cand:
         return cand.name, "ingredient_ko"
 
-    prefix = token if token else name_raw
+    search_name = names_to_try[0]
+    prefix = first_token(search_name) or search_name
     for length in (4, 3):
         if len(prefix) >= length:
             cand = await ilike.search(prefix[:length])
@@ -181,13 +187,17 @@ async def _cascade_search(pool: asyncpg.Pool, name_raw: str) -> tuple[str | None
                 return cand.name, "prefix_relaxed"
 
     trgm = TrigramFuzzySearch(pool)
-    fuzzy_cands = await trgm.search(name_raw)
-    if fuzzy_cands:
-        query_jamo = jamotools.split_syllables(name_raw)
-        ranker = JamoFuzzyRanker()
-        ranked = ranker.rerank(query_jamo, fuzzy_cands)
-        if ranked:
-            return ranked[0].name, "fuzzy"
+    ranker = JamoFuzzyRanker()
+
+    # Tier 1: fuzzy with prefix_match for dose-inflated names
+    for name in names_to_try:
+        fuzzy_cands = await trgm.search(name)
+        if fuzzy_cands:
+            query_token = first_token(name) or name
+            query_jamo = jamotools.split_syllables(query_token)
+            ranked = ranker.rerank(query_jamo, fuzzy_cands, prefix_match=True)
+            if ranked:
+                return ranked[0].name, "fuzzy"
 
     return None, "none"
 
