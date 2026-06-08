@@ -14,6 +14,8 @@
 | B-1 | #122 DB-CONNECT | 2026-06-08 | vector/ingredient stage 실제 DB 연결 | **hard 0.038 → 0.962 (+92.4pp)** |
 | B-2 | #123 RERANKER | 2026-06-08 | BGE-Reranker-v2-m3 도입 (Stage 5) | **medium 0.886 → 0.955 (+6.9pp)** |
 | B-3 | #124 EVAL-FULL | 2026-06-09 | 전체 통합 측정 + 실 약봉투 8장 E2E | **전체 Hit@1 0.970 (97/100)** |
+| B-4 FE | T-FE-OCR-MANUAL-REVIEW | 2026-06-09 | OCR confirm 화면 + 안전망 UX | 사용자 안전망 구축 |
+| B-4 BE | T-AI-RAG-LLM-FALLBACK | 2026-06-09 | 4-Tier fallback cascade | **miss_1+2 해결 확정 (분석적)** |
 
 ---
 
@@ -239,8 +241,103 @@ Faithfulness 추정: 0.678 (Phase B LLM-judge 필요)
 
 ---
 
+## 6. Phase B-4 BE — 4-Tier Fallback Cascade (#T-AI-RAG-LLM-FALLBACK)
+
+**날짜**: 2026-06-09  
+**Why**: 실 약봉투 8장 31/35 = 88.57% → 96%+ 목표. 4건 miss 분석: 2건은 OCR 오인식 + fuzzy 부족, 2건은 DB 미수록.
+
+### 시도
+
+1. **Tier 0 — 제조사명 strip + 정규화** (`normalizer.py`):
+   - `MANUFACTURER_PREFIXES` frozenset 50+ 제조사명 (OCR typo 포함)
+   - `strip_manufacturer_prefix(name)`: longest-first 매칭
+   - `normalize_for_cascade(name)`: strip → normalize → fallback
+   - "중근당아목시실린캡슐500밀" → "아목시실린캡슐" ✓
+   - `_UNIT_REGEX` 확장: "500밀" → 제거 (기존 "밀리그램"만 → "밀/밀리/mg/mcg" 추가)
+
+2. **Tier 1 — Jamo prefix_match** (`fuzzy_search.py`):
+   - `JamoFuzzyRanker.rerank(prefix_match=True)`: `db_jamo[:len(query_jamo)]` 비교
+   - "쎌박타민정" jamo vs "썰박타민정500밀리그램" jamo prefix → dist=1 (기존: 14) ✓
+   - `prefix_match=False` 기본값 유지 (하위 호환)
+
+3. **Tier 2 — Vision prompt 강화** (`ocr_system.txt`, `domain/ocr.py`):
+   - `RawOcrItem.candidates: list[str] = []` 필드 추가
+   - OCR 프롬프트: confidence < 0.7 → candidates top-3 요청 (추가 호출 0건)
+   - `GeminiVisionAdapter._detect_mime_type()`: PNG/JPEG MIME type 자동 분기 (기존 hardcode image/jpeg 수정)
+
+4. **Tier 3 — OcrCorrectionAdapter** (`correction.py`):
+   - cascade 전체 실패 시 Gemini Flash 별도 호출
+   - `CORRECTION_PROMPT_TEMPLATE`: 식약처 출처 명시 (medical-safety)
+   - 실패/파싱 오류 시 `[]` 반환 (cascade 계속 진행)
+
+5. **OcrPrescriptionService cascade 통합** (`service.py`):
+   - `correction: OcrCorrectionAdapter | None` 옵셔널 주입
+   - `_match_with_fallback()`: Tier 0 → Tier 2 candidates → Tier 3 순차 실행
+
+6. **Feature flags** (`config.py`):
+   - `OCR_CORRECTION_ENABLED=True` (Tier 3 활성화 기본)
+   - `OCR_GROUNDING_ENABLED=False` (Tier 4 기본 비활성)
+
+### TDD 현황
+
+```
+Tier 0 RED (11건) → GREEN (11건) ✓
+Tier 1 RED (4건)  → GREEN (4건)  ✓
+Tier 2 RED (6건)  → GREEN (6건)  ✓
+Tier 3 RED (6건)  → GREEN (6건)  ✓
+총 27건 단위 테스트 PASS
+```
+
+### 결과 (post_fallback_2026-06-09.md)
+
+```
+| 지표 | Before (B-3) | After (B-4) | 비고 |
+|------|-------------|-------------|------|
+| GT 100건 Hit@1 | 0.970 (97/100) | 0.970 (97/100) | 회귀 없음 ✓ |
+| Tier 0 cascade 효과 | — | miss_2 해결 확정 | "중근당..." 분석적 검증 |
+| Tier 1 cascade 효과 | — | miss_1 해결 확정 | dist 14→1 분석적 검증 |
+| Real E2E 재실행 | 31/35 = 88.57% | 1/1 (API 할당량 소진) | 내일 재실행 필요 |
+```
+
+**예상 개선**: miss_1(Tier 1) + miss_2(Tier 0) 해결 → 33/35 = 94.3% 최소, Vision candidates 적중 시 34/35 = 97.1% ≥ 96%
+
+### API 할당량 이슈
+
+Gemini Flash free tier RPD = 20 (일일). Phase B-3 eval + Phase B-4 eval 당일 2회 실행으로 초과.  
+→ **내일(2026-06-10 00:00 UTC) 리셋 후 real E2E 재실행 예정**
+
+### 교훈
+
+- **Jamo 거리 측정의 함정**: "쎌박타민정500밀리" 의 full jamo distance = 14 (dose suffix 때문) → first_token() 으로 쿼리 추출 후 DB prefix 비교로 해결
+- **제조사명 OCR 오인식**: "종근당" → "중근당" (ㅈㅗ→ㅈㅜ ㅅ→) OCR 흔한 오류 → dict에 typo variant 포함
+- **단위 regex 확장**: "500밀" 은 "밀리그램" 을 "밀" 로 잘라 쓴 케이스 → regex에 "밀", "밀리" 추가
+- **의료 안전 필수**: LLM correction 프롬프트에 "식약처" 출처 명시 (`CORRECTION_PROMPT_TEMPLATE`)
+
+### 커밋 목록
+
+| # | hash | 설명 |
+|---|------|------|
+| 1 | e38e199 | Test(RED): Tier 0+1 15건 |
+| 2 | e653282 | Feat: Tier 0+1 normalizer + fuzzy prefix_match |
+| 3 | 57b0c50 | Test(RED): Tier 2 6건 |
+| 4 | 5075aa4 | Feat: Tier 2 RawOcrItem.candidates + _detect_mime_type |
+| 5 | e516ad8 | Test(RED): Tier 3 6건 |
+| 6 | cc3cf02 | Feat: Tier 3 OcrCorrectionAdapter |
+| 7 | 663ecf6 | Refactor: OcrService 4-Tier cascade 통합 |
+| 8 | 01304d4 | Refactor: _cascade_search Tier 0+1 통합 |
+
+### 다음 가설
+
+> 1. **Real E2E 재실행** (내일): 96%+ 목표 수치 확인
+> 2. **T-AI-RAG-EMBED-BULK**: drug_embeddings 4,736건 → 47,021건 확장 (recall ↑)
+> 3. **Tier 4 Search Grounding**: miss_3/4 같은 DB 미수록 케이스 ($3/일 비용 검토)
+> 4. **T-BE-POST-/DRUGS/ALIAS**: alias endpoint 구현 (현재 404)
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
 | 2026-06-09 | 초안 작성 (#115/#122/#123/#124 정리, 사용자 영구 룰 등재) |
 | 2026-06-09 | Phase B-4 FE 안전망 (#T-FE-OCR-MANUAL-REVIEW) 추가 |
+| 2026-06-09 | Phase B-4 BE 4-Tier Fallback (#T-AI-RAG-LLM-FALLBACK) 추가 |
