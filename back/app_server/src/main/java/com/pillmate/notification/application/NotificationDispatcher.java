@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
@@ -16,6 +17,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,33 +47,28 @@ public class NotificationDispatcher {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(PrescriptionRegistered event) {
-        List<Long> groupMemberIds = membershipRepository.findGroupMemberUserIds(event.actorUserId());
-        Long selfGroupId = resolveAnyGroupId(event.actorUserId());
+        List<MembershipPair> pairs = membershipRepository.findGroupMemberPairs(event.actorUserId());
 
-        List<Notification> notifications = groupMemberIds.stream()
-                .filter(id -> !id.equals(event.actorUserId()))
-                .map(recipientId -> Notification.prescriptionNew(
-                        recipientId, event.actorUserId(), selfGroupId, event.prescriptionId()))
+        List<Notification> notifications = pairs.stream()
+                .map(pair -> Notification.prescriptionNew(
+                        pair.memberId(), event.actorUserId(), pair.groupId(), event.prescriptionId()))
                 .toList();
 
         if (notifications.isEmpty()) {
             return;
         }
 
-        String route = "/prescription/result/" + event.prescriptionId();
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
-        saved.forEach(n -> dispatchOne(n, route));
+        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId() + "/prescription/" + event.prescriptionId()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(WeeklyReportGenerated event) {
-        List<Long> groupMemberIds = membershipRepository.findGroupMemberUserIds(event.actorUserId());
-        Long selfGroupId = resolveAnyGroupId(event.actorUserId());
+        List<MembershipPair> pairs = membershipRepository.findGroupMemberPairs(event.actorUserId());
 
-        List<Notification> notifications = groupMemberIds.stream()
-                .filter(id -> !id.equals(event.actorUserId()))
-                .map(recipientId -> Notification.weeklyReport(
-                        recipientId, event.actorUserId(), selfGroupId, event.reportId()))
+        List<Notification> notifications = pairs.stream()
+                .map(pair -> Notification.weeklyReport(
+                        pair.memberId(), event.actorUserId(), pair.groupId(), event.reportId()))
                 .toList();
 
         if (notifications.isEmpty()) {
@@ -79,7 +76,7 @@ public class NotificationDispatcher {
         }
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
-        saved.forEach(n -> dispatchOne(n, "/report/weekly"));
+        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId() + "/report/weekly"));
     }
 
     private void dispatchOne(Notification notification, String route) {
@@ -107,13 +104,16 @@ public class NotificationDispatcher {
     }
 
     private NotificationCommand toCommand(Notification n, String token, String route) {
+        Map<String, String> data = new HashMap<>();
+        data.put("route", route);
+        data.put("groupId", String.valueOf(n.getCareGroupId()));
         return new NotificationCommand(
                 n.getId(),
                 n.getRecipientUserId(),
                 token,
                 n.getTitle(),
                 n.getBody(),
-                Map.of("route", route)
+                data
         );
     }
 }
