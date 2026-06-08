@@ -30,11 +30,26 @@ LIMIT 1
 
 
 _INGREDIENT_SQL = """
-SELECT kd_code, name
-FROM drugs
-WHERE status = 'ACTIVE'
-  AND ingredient ILIKE '%' || $1 || '%'
-ORDER BY length(name)
+SELECT d.kd_code, d.name
+FROM drugs d
+WHERE d.status = 'ACTIVE'
+  AND (
+    d.ingredient ILIKE '%' || $1 || '%'
+    OR EXISTS (
+      SELECT 1
+      FROM drug_alias a
+      JOIN drug_master dm ON dm.item_seq = a.item_seq
+      WHERE dm.legacy_drug_id = d.id
+        AND (a.alias ILIKE '%' || $1 || '%' OR $1 ILIKE '%' || a.alias || '%')
+    )
+  )
+ORDER BY
+  CASE
+    WHEN d.ingredient ILIKE $1 THEN 0
+    WHEN d.ingredient ILIKE $1 || '%' THEN 1
+    ELSE 2
+  END,
+  length(d.name)
 LIMIT 1
 """
 
