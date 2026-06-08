@@ -108,6 +108,17 @@ const prescriptionFlowSlice = createSlice({
       const item = state.items.find(i => i.id === action.payload.id);
       if (item) item.doseAmount = action.payload.amount;
     },
+    replaceItem(state, action: PayloadAction<{ id: string; kdCode: string; matchedName: string; imageUrl: string | null }>) {
+      const item = state.items.find(i => i.id === action.payload.id);
+      if (item) {
+        item.kdCode = action.payload.kdCode;
+        item.matchedName = action.payload.matchedName;
+        item.imageUrl = action.payload.imageUrl;
+        item.confidence = 1.0;
+        item.decision = 'CONFIRM';
+        item.source = 'MANUAL_SEARCH';
+      }
+    },
     removeItem(state, action: PayloadAction<string>) {
       state.items = state.items.filter(i => i.id !== action.payload);
     },
@@ -121,7 +132,7 @@ const prescriptionFlowSlice = createSlice({
 export const {
   setImageKey, setOcrStatus, setPrescriptionId,
   addFromOcr, addFromSearch, addManual,
-  updateSlots, updateDoseAmount, removeItem,
+  updateSlots, updateDoseAmount, replaceItem, removeItem,
   setMemo, reset,
 } = prescriptionFlowSlice.actions;
 
