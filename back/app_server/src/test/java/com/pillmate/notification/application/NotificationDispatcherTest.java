@@ -2,6 +2,7 @@ package com.pillmate.notification.application;
 
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MemberRole;
+import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.domain.model.Notification;
@@ -52,7 +53,7 @@ class NotificationDispatcherTest {
     @BeforeEach
     void setUp() {
         Membership membership = Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null);
-        given(membershipRepository.findByUserId(ACTOR_ID)).willReturn(List.of(membership));
+        lenient().when(membershipRepository.findByUserId(ACTOR_ID)).thenReturn(List.of(membership));
 
         User actor = User.dummy("actor");
         actor.registerPushToken("ExponentPushToken[actor]", PushProvider.EXPO);
@@ -87,8 +88,8 @@ class NotificationDispatcherTest {
     void on_prescriptionRegistered_savesAndSendsToGroupMembers() {
         // given
         PrescriptionRegistered event = new PrescriptionRegistered(ACTOR_ID, PRESCRIPTION_ID);
-        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID))
-                .willReturn(List.of(ACTOR_ID, MEMBER_ID));
+        given(membershipRepository.findGroupMemberPairs(ACTOR_ID))
+                .willReturn(List.of(new MembershipPair(GROUP_ID, MEMBER_ID)));
         Notification saved = buildNotification(MEMBER_ID, NotificationType.PRESCRIPTION_NEW);
         given(notificationPersistenceService.saveAll(anyList())).willReturn(List.of(saved));
         User member = User.dummy("member");
@@ -105,17 +106,18 @@ class NotificationDispatcherTest {
         assertThat(filtered).hasSize(1);
         assertThat(filtered.get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(filtered.get(0).getType()).isEqualTo(NotificationType.PRESCRIPTION_NEW);
+        assertThat(filtered.get(0).getCareGroupId()).isEqualTo(GROUP_ID);
         assertThat(filtered.get(0).getReferenceId()).isEqualTo(PRESCRIPTION_ID);
         assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
         verify(notificationSenderPort).send(any());
     }
 
     @Test
-    @DisplayName("PrescriptionRegistered — 본인만 그룹에 있으면 notification 저장 X")
-    void on_prescriptionRegistered_whenOnlySelfInGroup_skips() {
+    @DisplayName("PrescriptionRegistered — 그룹 멤버 없으면 notification 저장 X")
+    void on_prescriptionRegistered_whenNoPairs_skips() {
         // given
         PrescriptionRegistered event = new PrescriptionRegistered(ACTOR_ID, PRESCRIPTION_ID);
-        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(ACTOR_ID));
+        given(membershipRepository.findGroupMemberPairs(ACTOR_ID)).willReturn(List.of());
 
         // when
         sut.on(event);
@@ -125,12 +127,48 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    @DisplayName("PrescriptionRegistered — 다중 그룹: 그룹별 분리 발행 (2 그룹 → 2 notification)")
+    void on_prescriptionRegistered_multiGroup_createsPerGroupNotifications() {
+        // given
+        Long GROUP_B = 6L;
+        Long MEMBER_B = 30L;
+        PrescriptionRegistered event = new PrescriptionRegistered(ACTOR_ID, PRESCRIPTION_ID);
+        given(membershipRepository.findGroupMemberPairs(ACTOR_ID)).willReturn(List.of(
+                new MembershipPair(GROUP_ID, MEMBER_ID),
+                new MembershipPair(GROUP_B, MEMBER_B)
+        ));
+        Notification savedA = buildNotification(MEMBER_ID, NotificationType.PRESCRIPTION_NEW);
+        Notification savedB = Notification.prescriptionNew(MEMBER_B, ACTOR_ID, GROUP_B, PRESCRIPTION_ID);
+        given(notificationPersistenceService.saveAll(anyList())).willReturn(List.of(savedA, savedB));
+        User memberA = User.dummy("memberA");
+        memberA.registerPushToken("ExponentPushToken[memberA]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(memberA));
+        User memberB = User.dummy("memberB");
+        memberB.registerPushToken("ExponentPushToken[memberB]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_B)).willReturn(Optional.of(memberB));
+
+        // when
+        sut.on(event);
+
+        // then
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        List<Notification> created = captor.getValue();
+        assertThat(created).hasSize(2);
+        assertThat(created.stream().map(Notification::getCareGroupId).toList())
+                .containsExactlyInAnyOrder(GROUP_ID, GROUP_B);
+        assertThat(created.stream().map(Notification::getRecipientUserId).toList())
+                .containsExactlyInAnyOrder(MEMBER_ID, MEMBER_B);
+        verify(notificationSenderPort, org.mockito.Mockito.times(2)).send(any());
+    }
+
+    @Test
     @DisplayName("WeeklyReportGenerated — 그룹 멤버(본인 제외) notification 저장 + send 호출")
     void on_weeklyReportGenerated_savesAndSendsToGroupMembers() {
         // given
         WeeklyReportGenerated event = new WeeklyReportGenerated(ACTOR_ID, REPORT_ID, LocalDate.of(2026, 6, 1));
-        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID))
-                .willReturn(List.of(ACTOR_ID, MEMBER_ID));
+        given(membershipRepository.findGroupMemberPairs(ACTOR_ID))
+                .willReturn(List.of(new MembershipPair(GROUP_ID, MEMBER_ID)));
         Notification saved = buildNotification(MEMBER_ID, NotificationType.WEEKLY_REPORT);
         given(notificationPersistenceService.saveAll(anyList())).willReturn(List.of(saved));
         User member = User.dummy("member");
@@ -147,6 +185,7 @@ class NotificationDispatcherTest {
         assertThat(filtered).hasSize(1);
         assertThat(filtered.get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(filtered.get(0).getType()).isEqualTo(NotificationType.WEEKLY_REPORT);
+        assertThat(filtered.get(0).getCareGroupId()).isEqualTo(GROUP_ID);
         assertThat(filtered.get(0).getReferenceId()).isEqualTo(REPORT_ID);
         assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
         verify(notificationSenderPort).send(any());

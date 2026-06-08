@@ -156,4 +156,35 @@ class NotificationDispatchIntegrationTest {
         assertThat(saved.get(0).getReferenceId()).isEqualTo(reportId);
         assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
     }
+
+    @Test
+    @DisplayName("PrescriptionRegistered — actor가 2그룹 소속: 각 그룹 멤버에게 별도 알림 (groupId 정확)")
+    void on_prescriptionRegistered_multiGroup_separatesNotificationPerGroup() {
+        // given — actor가 속한 2번째 그룹과 다른 멤버 추가
+        User memberB = userRepository.save(User.dummy("memberB"));
+        memberB.registerPushToken("ExponentPushToken[memberB]", PushProvider.EXPO);
+        Long memberBId = memberB.getId();
+
+        CareGroup groupB = careGroupRepository.save(CareGroup.create("그룹B", actorUserId));
+        Long groupBId = groupB.getId();
+        membershipRepository.save(Membership.of(groupBId, actorUserId, MemberRole.PATIENT, null));
+        membershipRepository.save(Membership.of(groupBId, memberBId, MemberRole.GUARDIAN, actorUserId));
+
+        Long prescriptionId = 800L;
+        PrescriptionRegistered event = new PrescriptionRegistered(actorUserId, prescriptionId);
+
+        // when
+        notificationDispatcher.on(event);
+
+        // then — 그룹A 멤버 1건 + 그룹B 멤버 1건 = 2건
+        List<Notification> saved = notificationRepository.findAll().stream()
+                .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
+                .toList();
+        assertThat(saved).hasSize(2);
+        assertThat(saved.stream().map(Notification::getCareGroupId).toList())
+                .containsExactlyInAnyOrder(careGroupId, groupBId);
+        assertThat(saved.stream().map(Notification::getRecipientUserId).toList())
+                .containsExactlyInAnyOrder(memberUserId, memberBId);
+        assertThat(saved).allMatch(n -> n.getReferenceId().equals(prescriptionId));
+    }
 }
