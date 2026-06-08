@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     retrieval_top_k: int = Field(default=5)
     faithfulness_threshold: float = Field(default=0.95)
+    reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
 
 
 def get_settings() -> Settings:

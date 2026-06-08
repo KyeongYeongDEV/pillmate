@@ -5,6 +5,18 @@ import Levenshtein
 from app.rag.ocr.parser import ParsedItem
 from app.rag.ocr.rrf import Candidate
 
+try:
+    from FlagEmbedding import FlagReranker as _FlagReranker
+    _FLAG_AVAILABLE = True
+except ImportError:
+    _FlagReranker = None  # type: ignore[assignment,misc]
+    _FLAG_AVAILABLE = False
+
+BGE_MODEL_ID = "BAAI/bge-reranker-v2-m3"
+BGE_TOP_K = 10
+BGE_WEIGHT = 0.7
+DOMAIN_WEIGHT = 0.3
+
 DOSE_MATCH_BONUS: float = 0.5
 DOSE_MISMATCH_PENALTY: float = -0.5
 FORM_MATCH_BONUS: float = 0.2
@@ -52,3 +64,45 @@ class DomainReranker:
             return 0.0
         distance = Levenshtein.distance(parsed.name_jamo, c.name_jamo)
         return -distance * JAMO_PENALTY_PER_CHAR
+
+
+class BgeRerankerAdapter:
+    """BAAI/bge-reranker-v2-m3 cross-encoder 재정렬 어댑터.
+
+    DomainReranker 이후 Stage 5 으로 호출된다.
+    모델은 lazy load — 첫 rerank() 호출 시 다운로드.
+    """
+
+    def __init__(self) -> None:
+        self._model = None
+
+    def _load(self):
+        if self._model is None:
+            if not _FLAG_AVAILABLE:
+                raise ImportError(
+                    "FlagEmbedding not installed. Run: pip install FlagEmbedding>=1.2"
+                )
+            self._model = _FlagReranker(
+                BGE_MODEL_ID,
+                use_fp16=True,
+                normalize=True,
+            )
+        return self._model
+
+    def rerank(self, query: str, candidates: list[Candidate]) -> list[Candidate]:
+        """BGE cross-encoder 로 상위 BGE_TOP_K 후보를 재정렬한다.
+
+        final_score = domain_score * DOMAIN_WEIGHT + bge_score * BGE_WEIGHT
+        """
+        if not candidates:
+            return candidates
+        top = candidates[:BGE_TOP_K]
+        rest = candidates[BGE_TOP_K:]
+        model = self._load()
+        pairs = [[query, c.name] for c in top]
+        bge_scores = model.compute_score(pairs, normalize=True)
+        for c, bge_score in zip(top, bge_scores):
+            c.final_score = (
+                c.final_score * DOMAIN_WEIGHT + float(bge_score) * BGE_WEIGHT
+            )
+        return sorted(top, key=lambda x: -x.final_score) + rest
