@@ -1,6 +1,7 @@
 package com.pillmate.notification.domain;
 
 import com.pillmate.notification.domain.model.Notification;
+import com.pillmate.notification.domain.model.NotificationReferenceType;
 import com.pillmate.notification.domain.model.NotificationStatus;
 import com.pillmate.notification.domain.model.NotificationType;
 import com.pillmate.common.exception.PillmateException;
@@ -78,5 +79,44 @@ class NotificationTest {
 
         assertThat(n.getTitle()).isNotEmpty();
         assertThat(n.getBody()).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("ddiCritical 팩토리 — referenceId=prescriptionId, referenceType=PRESCRIPTION")
+    void create_ddiCritical_hasReferenceFields() {
+        Long prescriptionId = 100L;
+        Notification n = Notification.ddiCritical(RECIPIENT, ACTOR, GROUP_ID, prescriptionId, "위험");
+
+        assertThat(n.getReferenceId()).isEqualTo(prescriptionId);
+        assertThat(n.getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+    }
+
+    @Test
+    @DisplayName("prescriptionNew 팩토리 — referenceId=prescriptionId, referenceType=PRESCRIPTION")
+    void create_prescriptionNew_hasReferenceFields() {
+        Long prescriptionId = 200L;
+        Notification n = Notification.prescriptionNew(RECIPIENT, ACTOR, GROUP_ID, prescriptionId);
+
+        assertThat(n.getReferenceId()).isEqualTo(prescriptionId);
+        assertThat(n.getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+    }
+
+    @Test
+    @DisplayName("weeklyReport 팩토리 — referenceId=reportId, referenceType=REPORT")
+    void create_weeklyReport_hasReferenceFields() {
+        Long reportId = 300L;
+        Notification n = Notification.weeklyReport(RECIPIENT, ACTOR, GROUP_ID, reportId);
+
+        assertThat(n.getReferenceId()).isEqualTo(reportId);
+        assertThat(n.getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
+    }
+
+    @Test
+    @DisplayName("doseTaken 팩토리 — referenceId/referenceType null (dose 이벤트는 reference 없음)")
+    void create_doseTaken_noReferenceFields() {
+        Notification n = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG);
+
+        assertThat(n.getReferenceId()).isNull();
+        assertThat(n.getReferenceType()).isNull();
     }
 }

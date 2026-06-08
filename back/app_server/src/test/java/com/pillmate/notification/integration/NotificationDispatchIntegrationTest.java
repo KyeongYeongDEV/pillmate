@@ -7,6 +7,7 @@ import com.pillmate.caregroup.domain.repository.CareGroupRepository;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.notification.application.NotificationDispatcher;
 import com.pillmate.notification.domain.model.Notification;
+import com.pillmate.notification.domain.model.NotificationReferenceType;
 import com.pillmate.notification.domain.model.NotificationType;
 import com.pillmate.notification.domain.repository.NotificationRepository;
 import com.pillmate.prescription.domain.event.DdiCriticalDetected;
@@ -111,6 +112,8 @@ class NotificationDispatchIntegrationTest {
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(actorUserId);
         assertThat(saved.get(0).getBody()).contains("약사 또는 의사와 상담");
+        assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
+        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
     }
 
     @Test
@@ -130,6 +133,8 @@ class NotificationDispatchIntegrationTest {
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
         assertThat(saved.get(0).getActorUserId()).isEqualTo(actorUserId);
+        assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
+        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
     }
 
     @Test
@@ -148,5 +153,7 @@ class NotificationDispatchIntegrationTest {
                 .toList();
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
+        assertThat(saved.get(0).getReferenceId()).isEqualTo(reportId);
+        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
     }
 }
