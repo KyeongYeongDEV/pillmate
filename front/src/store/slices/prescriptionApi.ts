@@ -8,6 +8,7 @@ import type {
   UploadUrlInput,
   UploadUrlResponse,
 } from '@/types/prescription';
+import type { AliasLog } from '@/hooks/usePrescriptionReview';
 
 export const prescriptionApiSlice = createApi({
   reducerPath: 'prescriptionApi',
@@ -37,6 +38,14 @@ export const prescriptionApiSlice = createApi({
         'Prescription',
       ],
     }),
+    // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)
+    logAlias: build.mutation<void, AliasLog>({
+      query: (body) => ({
+        url: '/drugs/alias',
+        method: 'POST',
+        body: { nameRaw: body.nameRaw, toKdCode: body.toKdCode },
+      }),
+    }),
   }),
 });
 
@@ -45,4 +54,5 @@ export const {
   useOcrMutation,
   useGetCandidatesQuery,
   useResolveCandidateMutation,
+  useLogAliasMutation,
 } = prescriptionApiSlice;

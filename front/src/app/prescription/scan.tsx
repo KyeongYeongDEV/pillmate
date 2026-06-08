@@ -34,7 +34,7 @@ export default function ScanScreen() {
         });
         dispatch(addFromOcr(ocrResp));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace(`/prescription/result/${ocrResp.prescriptionId}` as any);
+        router.replace('/prescription/confirm' as any);
       } catch {
         Alert.alert('인식 실패', 'AI 분석에 실패했습니다. 다시 시도하거나 직접 입력해주세요.');
         setLoading(false);
