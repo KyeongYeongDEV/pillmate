@@ -6,6 +6,7 @@ import jamotools
 import pytest
 
 from app.rag.ocr.parser import ParsedItem
+from app.rag.ocr.reranker import BgeRerankerAdapter
 from app.rag.ocr.rrf import Candidate, MatchDecisionType
 from app.rag.ocr.rrf_matcher import RrfMatcher
 
@@ -127,3 +128,57 @@ async def test_full_flow_returns_manual_when_no_candidates():
     )
     result = await matcher.match(_parsed_with_dose())
     assert result.decision.type == MatchDecisionType.MANUAL
+
+
+@pytest.mark.asyncio
+async def test_bge_reranker_invoked_when_configured():
+    """bge_reranker 가 설정되면 RRF 후 BGE 재정렬이 호출된다."""
+    reranked_flag = [False]
+    reranked_query: list[str] = []
+
+    class SpyBgeReranker:
+        def rerank(self, query: str, candidates: list[Candidate]) -> list[Candidate]:
+            reranked_flag[0] = True
+            reranked_query.append(query)
+            return candidates
+
+    matcher = RrfMatcher(
+        exact_single=_StubExactSingle(None),
+        retrievers={
+            "exact": _StubMultiRetriever([_cand("SEQ001")]),
+            "trgm": _StubMultiRetriever([]),
+            "jamo": _StubMultiRetriever([]),
+            "vector": _StubMultiRetriever([]),
+        },
+        bge_reranker=SpyBgeReranker(),  # type: ignore[arg-type]
+    )
+    parsed = _parsed_no_dose("암로디핀정")
+    await matcher.match(parsed)
+
+    assert reranked_flag[0], "BGE reranker 가 호출돼야 한다"
+    assert reranked_query[0] == parsed.raw, "BGE query 는 parsed.raw 여야 한다"
+
+
+@pytest.mark.asyncio
+async def test_bge_reranker_not_invoked_when_none():
+    """bge_reranker=None 이면 BGE 재정렬을 건너뛴다."""
+    call_count = [0]
+
+    class SpyBgeReranker:
+        def rerank(self, query: str, candidates: list[Candidate]) -> list[Candidate]:
+            call_count[0] += 1
+            return candidates
+
+    matcher = RrfMatcher(
+        exact_single=_StubExactSingle(None),
+        retrievers={
+            "exact": _StubMultiRetriever([_cand("SEQ001")]),
+            "trgm": _StubMultiRetriever([]),
+            "jamo": _StubMultiRetriever([]),
+            "vector": _StubMultiRetriever([]),
+        },
+        bge_reranker=None,
+    )
+    await matcher.match(_parsed_no_dose())
+
+    assert call_count[0] == 0, "bge_reranker=None 이면 호출 없어야 한다"

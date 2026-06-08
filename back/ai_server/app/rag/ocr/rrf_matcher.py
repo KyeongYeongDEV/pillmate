@@ -6,7 +6,7 @@ from typing import Protocol
 from app.rag.ocr.decider import MatchDecider
 from app.rag.ocr.matcher import MatchResult
 from app.rag.ocr.parser import ParsedItem
-from app.rag.ocr.reranker import DomainReranker
+from app.rag.ocr.reranker import BgeRerankerAdapter, DomainReranker
 from app.rag.ocr.rrf import (
     RRF_K,
     Candidate,
@@ -32,11 +32,13 @@ class RrfMatcher:
         exact_single: ExactSinglePort,
         retrievers: dict[str, MultiRetrieverPort],
         reranker: DomainReranker | None = None,
+        bge_reranker: BgeRerankerAdapter | None = None,
         decider: MatchDecider | None = None,
     ) -> None:
         self._exact_single = exact_single
         self._retrievers = retrievers
         self._reranker = reranker or DomainReranker()
+        self._bge_reranker = bge_reranker
         self._decider = decider or MatchDecider()
 
     async def match(self, parsed: ParsedItem) -> MatchResult:
@@ -63,6 +65,8 @@ class RrfMatcher:
             return self._manual(reason="no_match")
 
         ranked = self._reranker.rerank(parsed, fused[:_RERANK_TOP_N])
+        if self._bge_reranker is not None:
+            ranked = self._bge_reranker.rerank(parsed.raw, ranked)
         decision = self._decider.decide(parsed, ranked)
         return MatchResult(
             item=None,
