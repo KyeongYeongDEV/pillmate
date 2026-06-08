@@ -18,6 +18,14 @@ VISION_TIMEOUT_SEC = 30.0
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "ocr_system.txt"
 
 
+def _detect_mime_type(image_bytes: bytes) -> str:
+    if image_bytes[:4] == b"\x89PNG":
+        return "image/png"
+    if image_bytes[:2] == b"\xff\xd8":
+        return "image/jpeg"
+    return "image/jpeg"
+
+
 class AsyncChatModel(Protocol):
     async def ainvoke(self, messages: list[HumanMessage]) -> object: ...
 
@@ -48,11 +56,12 @@ class GeminiVisionAdapter:
         return self._parse(content)
 
     async def _invoke(self, image_bytes: bytes) -> str:
+        mime = _detect_mime_type(image_bytes)
         encoded = base64.b64encode(image_bytes).decode("ascii")
         message = HumanMessage(
             content=[
                 {"type": "text", "text": self._prompt},
-                {"type": "image_url", "image_url": f"data:image/jpeg;base64,{encoded}"},
+                {"type": "image_url", "image_url": f"data:{mime};base64,{encoded}"},
             ]
         )
         result = await self._llm.ainvoke([message])

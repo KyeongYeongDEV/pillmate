@@ -24,6 +24,7 @@ class RawOcrItem(BaseModel):
     frequency: int = DEFAULT_FREQUENCY
     duration_days: int | None = None
     confidence: Decimal = Field(ge=OCR_CONFIDENCE_FLOOR, le=OCR_CONFIDENCE_CEIL)
+    candidates: list[str] = Field(default_factory=list)
 
 
 class OcrItem(BaseModel):

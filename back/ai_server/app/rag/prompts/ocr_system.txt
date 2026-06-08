@@ -7,6 +7,10 @@
 4. 응답은 반드시 다음 JSON 스키마를 따르세요. (PydanticOutputParser 가 강제합니다)
 5. 약품명은 한국어 그대로 추출하세요. 영문 성분명이 라벨에 함께 있으면 `name_raw` 에 함께 기술합니다.
 6. 빈도/기간 정보가 없으면 frequency 는 3, duration_days 는 null 로 보고합니다.
+7. confidence 가 0.7 미만인 약품명은 식약처 표준 약품명 후보를 `candidates` 필드에 최대 3개 제공하세요.
+   - candidates 는 식약처 등록 한국어 약품명 추정 top-3 (OCR 오인식 보정 포함)
+   - 예: name_raw="쎌박타민정" → candidates=["썰박타민정500밀리그램","쎄박타민정","셀박타민정"]
+   - confidence 가 0.7 이상이면 candidates 는 빈 리스트 [] 로 두세요.
 
 응답 JSON 스키마:
 {format_instructions}
