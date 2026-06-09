@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     ocr_correction_enabled: bool = Field(default=True, alias="OCR_CORRECTION_ENABLED")
     ocr_grounding_enabled: bool = Field(default=False, alias="OCR_GROUNDING_ENABLED")
 
+    # Phase B-6: 이미지 전처리 / Few-shot 프롬프트 feature flags
+    ocr_preprocess_enabled: bool = Field(default=True, alias="PREPROCESS_ENABLED")
+    ocr_fewshot_enabled: bool = Field(default=True, alias="FEWSHOT_ENABLED")
+
 
 def get_settings() -> Settings:
     return Settings()

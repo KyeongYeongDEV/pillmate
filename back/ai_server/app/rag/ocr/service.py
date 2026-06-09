@@ -20,6 +20,7 @@ from app.rag.ocr.correction import OcrCorrectionAdapter
 from app.rag.ocr.matcher import MatchResult, MatchStage
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
+from app.rag.ocr.preprocess import ImagePreprocessor
 
 logger = logging.getLogger(__name__)
 _stage_logger = logging.getLogger(__name__ + ".stage")
@@ -45,12 +46,14 @@ class OcrPrescriptionService:
         matcher: DrugMatcherPort,
         cache: OcrResultCache | None = None,
         correction: OcrCorrectionAdapter | None = None,
+        preprocessor: ImagePreprocessor | None = None,
     ):
         self._fetcher = fetcher
         self._vision = vision
         self._matcher = matcher
         self._cache = cache or NullOcrResultCache()
         self._correction = correction
+        self._preprocessor = preprocessor
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
         image_bytes = await self._fetcher.fetch(str(request.image_url))
@@ -59,10 +62,19 @@ class OcrPrescriptionService:
         if cached is not None:
             self._log_done(request, cached.items, stages=None, cache_hit=True)
             return cached
+        if self._preprocessor is not None:
+            image_bytes = self._apply_preprocess(image_bytes)
         response, stages = await self._build_response(image_bytes)
         await self._cache.set(hash_hex, response)
         self._log_done(request, response.items, stages=stages, cache_hit=False)
         return response
+
+    def _apply_preprocess(self, image_bytes: bytes) -> bytes:
+        try:
+            return self._preprocessor.preprocess(image_bytes)
+        except Exception as exc:
+            logger.warning("preprocess failed — using original: %s", exc.__class__.__name__)
+            return image_bytes
 
     async def _build_response(
         self, image_bytes: bytes
