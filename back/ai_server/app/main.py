@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         dimensions=settings.embedding_dim,
     )
     retriever = PgVectorRetriever(pool=pool, embedder=embedder)
-    llm = GeminiInvoker(api_key=settings.gemini_api_key, model=settings.gemini_model)
+    llm = GeminiInvoker(api_keys=settings.gemini_keys, model=settings.gemini_model)
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
 
     ocr_service = _build_ocr_service(pool=pool, retriever=retriever, settings=settings)
@@ -57,24 +57,31 @@ async def lifespan(app: FastAPI):
 
 
 def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
+    from app.rag.ocr.correction import OcrCorrectionAdapter
+    from app.rag.ocr.pill_identify import PillIdentifyAdapter
+    from app.rag.ocr.preprocess import ImagePreprocessor
     from app.rag.ocr.vision import GeminiVisionAdapter
 
-    vision_llm = ChatGoogleGenerativeAI(
-        model=settings.gemini_model,
-        google_api_key=settings.gemini_api_key,
-        temperature=0.0,
-    )
     matcher = DrugMatcher(
         ilike=AsyncpgIlikeSearch(pool=pool),
         vector=PgVectorDrugSearch(retriever=retriever),
         ingredient=AsyncpgIngredientSearch(pool=pool),
     )
+    vision = GeminiVisionAdapter(
+        api_keys=settings.gemini_keys,
+        model=settings.gemini_model,
+        fewshot_enabled=settings.ocr_fewshot_enabled,
+    )
+    correction = OcrCorrectionAdapter(api_keys=settings.gemini_keys, model=settings.gemini_model)
+    preprocessor = ImagePreprocessor() if settings.ocr_preprocess_enabled else None
+    pill_identifier = PillIdentifyAdapter(pool=pool) if settings.pill_identify_enabled else None
     return OcrPrescriptionService(
         fetcher=HttpxImageFetcher(),
-        vision=GeminiVisionAdapter(llm=vision_llm),
+        vision=vision,
         matcher=matcher,
+        correction=correction,
+        preprocessor=preprocessor,
+        pill_identifier=pill_identifier,
     )
 
 
