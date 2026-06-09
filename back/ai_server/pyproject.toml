@@ -16,6 +16,8 @@ dependencies = [
     "jamotools>=0.1.10",
     "python-Levenshtein>=0.25.1",
     "FlagEmbedding>=1.2",
+    "opencv-python>=4.9",
+    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]
