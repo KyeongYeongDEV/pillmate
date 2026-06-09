@@ -18,6 +18,7 @@
 | B-4 BE | T-AI-RAG-LLM-FALLBACK | 2026-06-09 | 4-Tier fallback cascade | **miss_1+2 해결 확정 (분석적)** |
 | B-5 | T-AI-RAG-EMBED-BULK | 2026-06-09 | drug_embeddings 9.6%→100% | **$0.003, 47,021건, 0 failed** |
 | B-6 FE | T-FE-CAMERA-GUIDE | 2026-06-09 | 촬영 가이드 overlay + 실시간 hint + 자동 셔터 | input quality ↑ 예측 +10~20pp |
+| B-6 BE | T-AI-OCR-RAW-QUALITY | 2026-06-09 | OpenCV 전처리 + Few-shot 10건 + feature flags | GT 0.970 회귀 없음 ✓, 실 재측정 예정 |
 
 ---
 
@@ -457,6 +458,89 @@ GT 100건: 97/100 = 0.970 (회귀 없음) ✓
 
 ---
 
+## 8. Phase B-6 BE — OCR Raw 정확도 향상 (#T-AI-OCR-RAW-QUALITY)
+
+**날짜**: 2026-06-09  
+**Why**: B-4 cascade fallback은 Gemini Vision이 잘못 인식한 이후 정정. 그러나 **OCR 자체(Gemini Vision 최초 인식)가 더 정확하면** cascade 부담 ↓ + 전체 정확도 ↑. 두 방향 동시 공략: ① input 품질 ↑ (OpenCV 전처리), ② prompt 품질 ↑ (Few-shot).
+
+### 시도
+
+**1. ImagePreprocessor** (`app/rag/ocr/preprocess.py`):
+
+| 단계 | 구현 | 타깃 케이스 |
+|------|------|-----------|
+| `rotate_by_exif()` | PIL `ImageOps.exif_transpose` | 스마트폰 세로/가로 혼용 |
+| `deskew()` | OpenCV Hough 라인 skew 감지 + rotate | 기울어진 처방전 (±5°) |
+| `enhance_contrast()` | CLAHE (LAB L채널 적용) | 어두운/저대비 처방전 |
+| `denoise()` | bilateral filter (경계 보존) | 복사 처방전 노이즈 |
+| `resize_if_large()` | max 1920×1080 (비율 유지) | 4K 이미지 API 비용+속도 |
+| `preprocess()` | 5단계 파이프라인 | 전체 최적화 |
+
+**2. Few-shot 프롬프트 강화** (`app/rag/ocr/prompts/`):
+- `examples.jsonl`: 10가지 케이스 (easy 3 / medium 4 / hard 3)
+  - OCR 오인식 예시 (쎌→썰, 숫자 혼동, 잘린 약품명, 손글씨)
+  - confidence/candidates 결정 기준 예시
+- `system_prompt.txt`: 기존 규칙 7개 + Few-shot 10개 예시 통합 프롬프트
+- `FEWSHOT_ENABLED` flag: vision.py에서 경로 분기
+
+**3. Feature flags** (`config.py`):
+- `PREPROCESS_ENABLED` (default True): OcrService preprocess 분기
+- `FEWSHOT_ENABLED` (default True): vision.py 프롬프트 경로 분기
+
+**4. TDD** (15건 RED→GREEN):
+```
+TestRotateByExif (3)         ✓
+TestDeskew (3)               ✓
+TestEnhanceContrast (3)      ✓
+TestDenoise (2)              ✓
+TestResizeIfLarge (3)        ✓
+TestPreprocessPipeline (1)   ✓
+합계: 15/15 PASS
+```
+
+### 결과
+
+| 지표 | Before | After |
+|------|--------|-------|
+| 단위 테스트 | — | **15/15 PASS** |
+| 전체 단위 테스트 | 140건 | **155건 PASS** (회귀 없음) |
+| GT 100건 Hit@1 | 0.970 | **0.970** (회귀 없음 ✓) |
+| opencv-python | 미설치 | **4.13.0** (pyproject.toml 추가) |
+| Pillow | 미설치 | **12.2.0** (pyproject.toml 추가) |
+| Few-shot 예시 | 0건 | **10건** (easy/medium/hard) |
+| preprocess latency | 0ms | +200~500ms (cv2 처리) |
+| 4K 이미지 비용 절감 | 기준 | resize → 토큰 ~1/10 |
+
+**실 이미지 재측정**: Gemini API 일일 할당량 관계로 2026-06-10 00:00 UTC 리셋 후 예정
+
+### 기술적 인사이트
+
+- **EXIF 회전 vs deskew 순서**: EXIF 먼저 처리 후 deskew. EXIF 미보정 상태에서 Hough 라인 감지 시 90° 오인식 위험
+- **CLAHE LAB 적용**: BGR 전체 채널 CLAHE → 색상 왜곡. L채널만 → 밝기 균등화 + 색상 유지
+- **bilateral vs Gaussian blur**: bilateral는 경계(약품명 글자 테두리) 보존 우수. Gaussian은 경계 blur → OCR 악영향
+- **Few-shot 예시 선택 기준**: 10가지 중 OCR 오인식 패턴 3건 포함 (쎌→썰, 숫자불명, 잘린) → cascade Tier 2/3와 complementary
+- **skew_threshold = 1.0°**: 보수적 임계치. 미세 기울기 강제 보정 시 이미 잘 인식되던 텍스트 역효과 가능
+- **preprocess 실패 시 원본 반환**: `_apply_preprocess()` try-except → 전처리 실패가 OCR 전체를 막지 않음
+
+### 커밋 목록
+
+| # | hash | 설명 |
+|---|------|------|
+| 1 | 359b86b | Test(RED): ImagePreprocessor 15건 |
+| 2 | 340f2ef | Feat: OpenCV preprocess.py 구현 (GREEN) |
+| 3 | 20cedba | Refactor: OcrService preprocess 분기 + flags |
+| 4 | 7bd311d | Feat: Few-shot prompt 10건 + vision.py 통합 |
+
+### 다음 가설
+
+> 1. **실 8장 재측정** (내일 API 리셋 후): preprocess + few-shot 효과 정량화
+> 2. **skew_threshold 튜닝**: 실 처방전 skew 분포 측정 (평균 각도 → 임계치 최적화)
+> 3. **T-AI-RAG-HNSW**: ivfflat → HNSW (정확도 +3~7%, 메모리 trade-off 검토)
+> 4. **deskew 개선**: Hough → Probabilistic Hough (단문 텍스트 라인에 더 robust)
+> 5. **T-BE-POST-/DRUGS/ALIAS**: alias endpoint (현재 404)
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
@@ -465,3 +549,4 @@ GT 100건: 97/100 = 0.970 (회귀 없음) ✓
 | 2026-06-09 | Phase B-4 BE 4-Tier Fallback (#T-AI-RAG-LLM-FALLBACK) 추가 |
 | 2026-06-09 | Phase B-5 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK) 추가 |
 | 2026-06-09 | Phase B-6 FE 카메라 가이드 (#T-FE-CAMERA-GUIDE) 추가 |
+| 2026-06-09 | Phase B-6 BE OCR Raw 정확도 (#T-AI-OCR-RAW-QUALITY) 추가 |
