@@ -24,7 +24,7 @@ export default function PrescriptionRegisterHub() {
 
   const handleCamera = useCallback(() => {
     dispatch(reset());
-    router.push('/prescription/scan' as any);
+    router.push('/prescription/camera' as any);
   }, [dispatch]);
 
   const handleGallery = useCallback(async () => {

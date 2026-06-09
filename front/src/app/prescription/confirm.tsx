@@ -7,6 +7,8 @@ import { router } from 'expo-router';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { usePrescriptionReview } from '@/hooks/usePrescriptionReview';
 import { useLogAliasMutation } from '@/store/slices/prescriptionApi';
+import { useAppDispatch } from '@/store/hooks';
+import { reset as resetFlow } from '@/store/slices/prescriptionFlowSlice';
 import DrugMatchCard from '@/components/prescription/DrugMatchCard';
 import DrugSearchModal from '@/components/prescription/DrugSearchModal';
 import DDIWarningCard from '@/components/prescription/DDIWarningCard';
@@ -22,10 +24,16 @@ export default function PrescriptionConfirmScreen() {
   } = usePrescriptionReview();
 
   const [logAlias] = useLogAliasMutation();
+  const dispatch = useAppDispatch();
 
   const handleCancel = useCallback(() => {
     router.back();
   }, []);
+
+  const handleRetake = useCallback(() => {
+    dispatch(resetFlow());
+    router.replace('/prescription/camera' as any);
+  }, [dispatch]);
 
   const handleConfirm = useCallback(async () => {
     if (items.length === 0) {
@@ -144,6 +152,14 @@ export default function PrescriptionConfirmScreen() {
       {/* 하단 버튼 */}
       <View style={styles.footer}>
         <Pressable
+          onPress={handleRetake}
+          style={styles.retakeBtn}
+          accessibilityLabel="다시 찍기"
+          accessibilityRole="button"
+        >
+          <Text style={styles.retakeTxt}>📷 다시 찍기</Text>
+        </Pressable>
+        <Pressable
           onPress={handleCancel}
           style={styles.cancelBtn}
           accessibilityLabel="취소"
@@ -158,7 +174,7 @@ export default function PrescriptionConfirmScreen() {
           accessibilityRole="button"
         >
           <Text style={styles.confirmTxt}>
-            {hasLowConfidenceItems ? '⚠️ 확인 후 등록' : '확인 후 등록'}
+            {hasLowConfidenceItems ? '⚠️ 확인' : '확인 후 등록'}
           </Text>
         </Pressable>
       </View>
@@ -234,6 +250,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal,
     borderTopWidth: 1, borderTopColor: colors.line,
   },
+  retakeBtn: {
+    flex: 1, paddingVertical: space.s14,
+    borderRadius: radius.r12,
+    backgroundColor: colors.bgAlt,
+    borderWidth: 1, borderColor: colors.line,
+    alignItems: 'center',
+  },
+  retakeTxt: { fontSize: 12, color: colors.labelNormal, fontWeight: '600', textAlign: 'center' },
   cancelBtn: {
     flex: 1, paddingVertical: space.s14,
     borderRadius: radius.r12,
