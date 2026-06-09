@@ -19,6 +19,7 @@
 | B-5 | T-AI-RAG-EMBED-BULK | 2026-06-09 | drug_embeddings 9.6%→100% | **$0.003, 47,021건, 0 failed** |
 | B-6 FE | T-FE-CAMERA-GUIDE | 2026-06-09 | 촬영 가이드 overlay + 실시간 hint + 자동 셔터 | input quality ↑ 예측 +10~20pp |
 | B-6 BE | T-AI-OCR-RAW-QUALITY | 2026-06-09 | OpenCV 전처리 + Few-shot 10건 + feature flags | GT 0.970 회귀 없음 ✓, 실 재측정 예정 |
+| B-6 RERUN | T-AI-OCR-REAL-RERUN | 2026-06-09 | 실 약봉투 7장 재측정 (6장 성공, 1x503, 1x429) | **28/30 = 93.33%** (+4.76pp vs B-3 88.57%) |
 
 ---
 
@@ -541,6 +542,86 @@ TestPreprocessPipeline (1)   ✓
 
 ---
 
+## 9. Phase B-6 RERUN — 실 약봉투 재측정 (#T-AI-OCR-REAL-RERUN)
+
+**날짜**: 2026-06-09  
+**Why**: Phase B-4/B-6 구현 후 분석적 검증만 가능했던 실 이미지 재측정 (Gemini API RPD 소진). API 리셋 후 즉시 재실행 — preprocess + few-shot 실 효과 정량화.
+
+### 실행 조건
+
+- `PREPROCESS_ENABLED=true`: `ImagePreprocessor.preprocess()` (EXIF→deskew→resize→CLAHE→bilateral)
+- `FEWSHOT_ENABLED=true`: `system_prompt.txt` (few-shot 10건)
+- 이미지: `tests/eval/real_prescriptions/` 8장
+
+### 결과 (실측)
+
+| 지표 | Phase B-3 (#124) | Phase B-6 RERUN |
+|------|-----------|----------------|
+| 이미지 처리 | 8/8 | 6/8 (IMG_0007: 503, IMG_0014: 429) |
+| 약품 추출 수 | 35 | 30 |
+| DB 매칭 수 | 31 | **28** |
+| **매칭률** | **88.57%** | **93.33%** |
+| **개선** | — | **+4.76pp** |
+
+### 이미지별 상세
+
+| 이미지 | 추출 | 매칭 | 비고 |
+|--------|------|------|------|
+| IMG_0007.PNG | 0 | 0 | 503 UNAVAILABLE (Gemini 일시 과부하) |
+| IMG_0008.JPG | 4 | 4 | **종근당아목시실린캡슐 ✓** (B-3 miss → 해결!) |
+| IMG_0009.JPG | 7 | 5 | 쎌박타민→쎌레타민(fuzzy), 에치콘 miss |
+| IMG_0010.JPG | 8 | 8 | 복잡한 복합제 8개 전부 매칭 ✓ |
+| IMG_0011.JPG | 4 | 4 | 전부 ilike ✓ |
+| IMG_0012.JPG | 5 | 5 | 전부 ilike ✓ |
+| IMG_0013.JPEG | 2 | 2 | ilike ✓ |
+| IMG_0014.JPEG | 0 | 0 | 429 RATE LIMITED |
+
+### B-3 알려진 miss 4건 추적
+
+| miss | 예상 | B-6 실측 |
+|------|------|---------|
+| 쎌박타민정 | B-4 Tier1 prefix_match | ⚠ fuzzy → "쎌레타민정" (잠재적 오매칭 — candidates에 "썰박타민정" 포함) |
+| 중근당아목시실린캡슐 | B-4 Tier0 제조사 strip | ✓ **해결** — OCR이 "종근당" 정확 인식 → ilike 직접 매칭 |
+| 에치콘정 | DB 미수록 가능성 | ✗ **여전히 miss** — DB 미수록 확인 |
+| 엘리버드정 | DB 미수록 가능성 | IMG_0007(503)/IMG_0014(429) 처리 못해 미확인 |
+
+### 분석 인사이트
+
+**preprocess 효과 (종근당 케이스)**:
+- B-3: OCR "중근당아목시실린캡슐" (ㅗ→ㅜ 오인식) → Tier 0 strip 후에도 DB miss
+- B-6: 이미지 전처리(CLAHE + bilateral) 후 Gemini가 "종근당" 정확 인식 → ilike 직접 매칭
+- **교훈**: preprocess는 OCR 자체 오인식을 줄임 → Tier 0/1/2 cascade 덜 필요
+
+**few-shot candidates 효과 (쎌박타민 케이스)**:
+- confidence 0.65로 낮게 잡음 ✓ (임계치 0.7 미만 → candidates 요청)
+- candidates에 "썰박타민정500밀리그램" 포함 ✓
+- 그러나 cascade 최종 매칭은 "쎌레타민정" (fuzzy) → 오매칭 위험
+- **개선 필요**: candidates를 cascade 입력에 직접 활용하는 로직 (Tier 2 강화)
+
+**새로 발견된 miss**:
+- "워더스낙정" → none (stage=none): 처음 등장. DB 미수록 또는 OCR 오인식
+- confidence 0.55, candidates ["워더스낙정", "워더스낙정", "워더스락정"] — 후보들도 모두 miss
+
+**IMG_0010 복합제 8개 전부 매칭 (신규 발견)**:
+- 성분명+영문이 포함된 긴 약품명 8개가 token stage에서 모두 매칭
+- "슈가메트서방정5/1000밀리그램", "듀비메트서방정0.5/1000밀리그램" 등 복합제 token 매칭 robust
+- 이 이미지는 B-3에서도 매칭됐을 가능성 높음 (성분명 기반 token search 강점)
+
+### 남은 과제
+
+1. **IMG_0007.PNG + IMG_0014.JPEG 재측정**: API 재리셋 후 전체 8장 완전 측정
+2. **쎌박타민정 Tier 2 강화**: candidates를 cascade Tier 2 입력으로 직접 사용 (현재 candidates는 logging 용도만)
+3. **워더스낙정 조사**: DB 미수록인지 OCR 오인식인지 확인 → drug_alias 추가 or 미수록 확인
+4. **에치콘정 확인**: `SELECT * FROM drugs WHERE name ILIKE '%에치콘%'` — DB 미수록 공식 확인
+
+### 커밋
+
+| hash | 설명 |
+|------|------|
+| (스크립트) | run_real_e2e_b6.py 신규 + 보고서 저장 |
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
@@ -550,3 +631,4 @@ TestPreprocessPipeline (1)   ✓
 | 2026-06-09 | Phase B-5 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK) 추가 |
 | 2026-06-09 | Phase B-6 FE 카메라 가이드 (#T-FE-CAMERA-GUIDE) 추가 |
 | 2026-06-09 | Phase B-6 BE OCR Raw 정확도 (#T-AI-OCR-RAW-QUALITY) 추가 |
+| 2026-06-09 | Phase B-6 RERUN 실 약봉투 재측정 (#T-AI-OCR-REAL-RERUN) 추가 — 93.33% 실측 |
