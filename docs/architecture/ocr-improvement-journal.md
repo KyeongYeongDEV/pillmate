@@ -17,6 +17,7 @@
 | B-4 FE | T-FE-OCR-MANUAL-REVIEW | 2026-06-09 | OCR confirm 화면 + 안전망 UX | 사용자 안전망 구축 |
 | B-4 BE | T-AI-RAG-LLM-FALLBACK | 2026-06-09 | 4-Tier fallback cascade | **miss_1+2 해결 확정 (분석적)** |
 | B-5 | T-AI-RAG-EMBED-BULK | 2026-06-09 | drug_embeddings 9.6%→100% | **$0.003, 47,021건, 0 failed** |
+| B-6 FE | T-FE-CAMERA-GUIDE | 2026-06-09 | 촬영 가이드 overlay + 실시간 hint + 자동 셔터 | input quality ↑ 예측 +10~20pp |
 
 ---
 
@@ -403,6 +404,59 @@ GT 100건: 97/100 = 0.970 (회귀 없음) ✓
 
 ---
 
+## 7. Phase B-6 FE — 촬영 가이드 (T-FE-CAMERA-GUIDE)
+
+**날짜**: 2026-06-09
+**Why**: B-3 (#124) 실 약봉투 8장 E2E에서 일부 실패가 촬영 각도/조명/거리 변수로 분석됨. RAG 모델 개선으로는 해결 불가한 input 품질 문제. 사용자가 찍기 전에 가이드를 받으면 OCR raw 정확도 +10~20pp 예측.
+
+### 시도 — 4 commits
+
+1. **useCameraGuide hook** (TDD RED→GREEN):
+   - `stability: 'loading' → 'ok'` (2.5초 타이머)
+   - `warnShake()` → `'warn' → 'ok'` (2초 자동 회복)
+   - `brightness`, `tilt`: static `'ok'` (Phase 2에서 expo-sensors 연동 예정)
+   - expo-sensors 미설치 확인 → 타이머 기반 MVP 결정
+
+2. **CameraGuideOverlay 컴포넌트**:
+   - 4-corner bracket frame (흰색/초록 색상 분기 — `allOk` 기반)
+   - 힌트 pill 3개 (📷흔들림 / 💡조명 / 📐각도)
+   - `allOk` 시 pulse animation + 자동 셔터 카운트다운 표시
+   - 7개 단위 테스트 PASS
+
+3. **prescription/camera.tsx 신규 화면**:
+   - scan.tsx와 동일 OCR 흐름 (upload URL → S3 → /ocr)
+   - CameraGuideOverlay 오버레이 통합
+   - opt-in 자동 셔터 토글 (Switch) — 3초 카운트다운 후 자동 capture
+   - 처방전 등록 실패 시 `reset()` 호출 → 다시 안정화 타이머 시작
+
+4. **라우트 + 흐름 통합**:
+   - `_layout.tsx` `camera` route 등록
+   - `index.tsx` 카메라 버튼 → `/prescription/camera` (기존 `/prescription/scan`)
+   - `confirm.tsx` footer 3버튼 — "📷 다시 찍기" 추가 → `resetFlow()` + camera 이동
+
+### 결과
+
+| 항목 | 결과 |
+|------|------|
+| 단위 테스트 | 333/333 PASS |
+| tsc | EXIT 0 |
+| 자동 셔터 | opt-in (default OFF) |
+| expo-sensors | 미설치 — Phase 2 가속도계 연동 예정 |
+
+### 교훈
+
+- **expo-sensors 설치 전 확인 필수**: 새 native 패키지는 `pod install` → RN rebuild 비용. 타이머 MVP로 UX 가치 먼저 검증하는 접근이 옳았음.
+- **한 hook = 한 파일 = 한 책임**: `useCameraGuide` → `CameraGuideOverlay` → `camera.tsx` 레이어 분리 덕분에 각 계층 단독 테스트 가능.
+- **opt-in auto-shutter**: 자동 촬영을 강제하지 않는 것이 의료 안전 관점에서도 맞음. 사용자가 처방전이 올바르게 프레임 안에 들어왔는지 최종 판단.
+
+### 다음 가설
+
+> 1. **expo-sensors 연동 (Phase 2)**: `Accelerometer.addListener` → 실시간 흔들림 감지 → `warnShake()` 트리거
+> 2. **조명 감지**: 캡처 직전 이미지 평균 밝기 계산 → 어두우면 `hints.brightness = 'warn'`
+> 3. **자동 셔터 edge detection**: 처방전 사각형 detect 알고리즘 → 확실한 프레임 인식 시 allOk 보조 신호
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
@@ -410,3 +464,4 @@ GT 100건: 97/100 = 0.970 (회귀 없음) ✓
 | 2026-06-09 | Phase B-4 FE 안전망 (#T-FE-OCR-MANUAL-REVIEW) 추가 |
 | 2026-06-09 | Phase B-4 BE 4-Tier Fallback (#T-AI-RAG-LLM-FALLBACK) 추가 |
 | 2026-06-09 | Phase B-5 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK) 추가 |
+| 2026-06-09 | Phase B-6 FE 카메라 가이드 (#T-FE-CAMERA-GUIDE) 추가 |
