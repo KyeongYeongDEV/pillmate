@@ -12,6 +12,13 @@
    - candidates 는 식약처 등록 한국어 약품명 추정 top-3 (OCR 오인식 보정 포함)
    - 예: name_raw="쎌박타민정" → candidates=["썰박타민정500밀리그램","쎄박타민정","셀박타민정"]
    - confidence 가 0.7 이상이면 candidates 는 빈 리스트 [] 로 두세요.
+8. 약봉투에 약 사진이 보이는 경우 appearance 필드에 외관 정보를 추가 추출하세요 (낱알식별 fallback용).
+   - shape: 원형/타원형/캡슐형/장방형/사각형/삼각형 중 해당하는 값 (불명확하면 null)
+   - color: 하양/노랑/분홍/주황/파랑/초록/빨강/보라/갈색/회색 등 (불명확하면 null)
+   - mark_front: 약 앞면 각인 문자/숫자 (예: "T", "100", 없으면 null)
+   - mark_back: 약 뒷면 각인 (없으면 null)
+   - line: 분할선 여부 (true/false, 불명확하면 null)
+   - 약 사진이 없거나 불명확하면 appearance 는 null 로 두세요.
 
 {format_instructions}
 
