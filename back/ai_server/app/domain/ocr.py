@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
+from app.domain.pill_appearance import PillAppearance
 
 MFDS_SOURCE = "식품의약품안전처"
 DEFAULT_FREQUENCY = 3
@@ -25,6 +26,7 @@ class RawOcrItem(BaseModel):
     duration_days: int | None = None
     confidence: Decimal = Field(ge=OCR_CONFIDENCE_FLOOR, le=OCR_CONFIDENCE_CEIL)
     candidates: list[str] = Field(default_factory=list)
+    appearance: PillAppearance | None = None
 
 
 class OcrItem(BaseModel):

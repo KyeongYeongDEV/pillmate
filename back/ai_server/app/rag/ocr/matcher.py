@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 VECTOR_MIN_SCORE = Decimal("0.6")
 
-MatchStage = Literal["ilike", "token", "fuzzy", "ingredient", "vector", "exact_fast", "rrf", "none"]
+MatchStage = Literal["ilike", "token", "fuzzy", "ingredient", "vector", "exact_fast", "rrf", "pill_identify", "none"]
 
 
 @dataclass(frozen=True)
