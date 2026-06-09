@@ -16,11 +16,22 @@ logger = logging.getLogger(__name__)
 
 VISION_TIMEOUT_SEC = 30.0
 
-# 기본 프롬프트 (Phase B-4 이전)
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "ocr_system.txt"
-
-# Few-shot 강화 프롬프트 (Phase B-6, FEWSHOT_ENABLED=true 시 사용)
 FEWSHOT_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "system_prompt.txt"
+
+try:
+    from google.genai.errors import ClientError as _GenAIClientError
+    from google.genai.errors import ServerError as _GenAIServerError
+
+    _RATE_LIMIT_ERRORS = (_GenAIClientError, _GenAIServerError)
+except ImportError:
+    _RATE_LIMIT_ERRORS = ()
+
+
+def _mask_key(key: str) -> str:
+    if len(key) <= 4:
+        return "AIza***"
+    return f"AIza***{key[-4:]}"
 
 
 def _detect_mime_type(image_bytes: bytes) -> str:
@@ -38,12 +49,28 @@ class AsyncChatModel(Protocol):
 class GeminiVisionAdapter:
     def __init__(
         self,
-        llm: AsyncChatModel,
+        llm: AsyncChatModel | None = None,
+        api_keys: list[str] | None = None,
+        model: str = "gemini-2.5-flash",
         prompt: str | None = None,
         timeout_sec: float = VISION_TIMEOUT_SEC,
         fewshot_enabled: bool = False,
+        _llms: list[AsyncChatModel] | None = None,
     ):
-        self._llm = llm
+        if _llms is not None:
+            self._llms = _llms
+        elif api_keys:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            self._llms = [
+                ChatGoogleGenerativeAI(model=model, google_api_key=k)
+                for k in api_keys
+            ]
+        elif llm is not None:
+            self._llms = [llm]
+        else:
+            raise ValueError("llm, api_keys, or _llms must be provided")
+
         self._parser = PydanticOutputParser(pydantic_object=RawOcrItemList)
         raw_prompt = prompt or self._resolve_prompt(fewshot_enabled)
         self._prompt = raw_prompt.replace(
@@ -58,17 +85,32 @@ class GeminiVisionAdapter:
         return PROMPT_PATH.read_text(encoding="utf-8")
 
     async def extract(self, image_bytes: bytes) -> list[RawOcrItem]:
-        try:
-            content = await asyncio.wait_for(self._invoke(image_bytes), timeout=self._timeout)
-        except asyncio.TimeoutError:
-            logger.warning("gemini vision timed out")
-            raise
-        except Exception as exc:
-            logger.warning("gemini vision invocation failed: %s", exc.__class__.__name__)
-            raise VisionInvocationError(str(exc)) from exc
-        return self._parse(content)
+        last_exc: Exception | None = None
+        for i, llm in enumerate(self._llms):
+            logger.debug("ocr_vision key_in_use=%s key_index=%d", _mask_key(_key_hint(llm)), i)
+            try:
+                content = await asyncio.wait_for(
+                    self._invoke(image_bytes, llm), timeout=self._timeout
+                )
+                return self._parse(content)
+            except asyncio.TimeoutError:
+                logger.warning("gemini vision timed out key_index=%d", i)
+                raise
+            except _RATE_LIMIT_ERRORS as exc:
+                last_exc = exc
+                if i < len(self._llms) - 1:
+                    logger.warning(
+                        "key_rotation: key[%d] 429/503 → fallback retry key[%d]", i, i + 1
+                    )
+                    continue
+                logger.critical("ocr_vision all_keys_exhausted after %d keys", len(self._llms))
+                raise VisionInvocationError(str(exc)) from exc
+            except Exception as exc:
+                logger.warning("gemini vision invocation failed: %s", exc.__class__.__name__)
+                raise VisionInvocationError(str(exc)) from exc
+        raise VisionInvocationError("no llm clients available")
 
-    async def _invoke(self, image_bytes: bytes) -> str:
+    async def _invoke(self, image_bytes: bytes, llm: AsyncChatModel) -> str:
         mime = _detect_mime_type(image_bytes)
         encoded = base64.b64encode(image_bytes).decode("ascii")
         message = HumanMessage(
@@ -77,7 +119,7 @@ class GeminiVisionAdapter:
                 {"type": "image_url", "image_url": f"data:{mime};base64,{encoded}"},
             ]
         )
-        result = await self._llm.ainvoke([message])
+        result = await llm.ainvoke([message])
         return getattr(result, "content", str(result))
 
     def _parse(self, content: str) -> list[RawOcrItem]:
@@ -87,3 +129,11 @@ class GeminiVisionAdapter:
             logger.warning("ocr response parse failed: %s", exc.__class__.__name__)
             raise OcrParseError(str(exc)) from exc
         return parsed.items
+
+
+def _key_hint(llm: object) -> str:
+    for attr in ("google_api_key", "_google_api_key", "api_key"):
+        val = getattr(llm, attr, None)
+        if val:
+            return str(val)
+    return "?"

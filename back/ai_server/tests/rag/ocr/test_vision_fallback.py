@@ -1,5 +1,5 @@
 """
-GeminiVisionAdapter 다중 key fallback TDD RED
+GeminiVisionAdapter 다중 key fallback TDD
 
 T-AI-OCR-MULTI-KEY-FALLBACK: GEMINI_API_KEY1 429 → KEY2 retry
 """
@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+from google.genai import errors as google_errors
 
 
 def _tiny_jpeg() -> bytes:
@@ -18,18 +20,31 @@ def _tiny_jpeg() -> bytes:
     return bytes(buf)
 
 
+def _rate_limited_429() -> google_errors.ClientError:
+    return google_errors.ClientError(
+        429,
+        {"error": {"code": 429, "message": "RPD exceeded", "status": "RESOURCE_EXHAUSTED"}},
+    )
+
+
+def _unavailable_503() -> google_errors.ServerError:
+    return google_errors.ServerError(
+        503,
+        {"error": {"code": 503, "message": "Overloaded", "status": "UNAVAILABLE"}},
+    )
+
+
 _VALID_OCR_RESPONSE = '{"items": [{"name_raw": "타이레놀정", "confidence": 0.95}]}'
 
 
 class TestGeminiVisionKeyRotation:
     @pytest.mark.asyncio
     async def test_primary_429_falls_back_to_secondary(self):
-        """primary key 429 ResourceExhausted → secondary key 로 retry 성공."""
-        import google.api_core.exceptions
+        """primary key 429 ClientError → secondary key 로 retry 성공."""
         from app.rag.ocr.vision import GeminiVisionAdapter
 
         primary = AsyncMock()
-        primary.ainvoke.side_effect = google.api_core.exceptions.ResourceExhausted("RPD exceeded")
+        primary.ainvoke.side_effect = _rate_limited_429()
 
         secondary = AsyncMock()
         secondary.ainvoke.return_value = MagicMock(content=_VALID_OCR_RESPONSE)
@@ -43,15 +58,14 @@ class TestGeminiVisionKeyRotation:
     @pytest.mark.asyncio
     async def test_all_keys_429_raises_vision_invocation_error(self):
         """primary + secondary 모두 429 → VisionInvocationError."""
-        import google.api_core.exceptions
         from app.exceptions import VisionInvocationError
         from app.rag.ocr.vision import GeminiVisionAdapter
 
         primary = AsyncMock()
-        primary.ainvoke.side_effect = google.api_core.exceptions.ResourceExhausted("RPD exceeded")
+        primary.ainvoke.side_effect = _rate_limited_429()
 
         secondary = AsyncMock()
-        secondary.ainvoke.side_effect = google.api_core.exceptions.ResourceExhausted("RPD exceeded")
+        secondary.ainvoke.side_effect = _rate_limited_429()
 
         adapter = GeminiVisionAdapter(_llms=[primary, secondary])
 
@@ -61,12 +75,11 @@ class TestGeminiVisionKeyRotation:
     @pytest.mark.asyncio
     async def test_single_key_mode_429_raises_without_fallback(self):
         """single key 모드 429 → VisionInvocationError (fallback 없음)."""
-        import google.api_core.exceptions
         from app.exceptions import VisionInvocationError
         from app.rag.ocr.vision import GeminiVisionAdapter
 
         single = AsyncMock()
-        single.ainvoke.side_effect = google.api_core.exceptions.ResourceExhausted("RPD exceeded")
+        single.ainvoke.side_effect = _rate_limited_429()
 
         adapter = GeminiVisionAdapter(_llms=[single])
 
@@ -74,13 +87,12 @@ class TestGeminiVisionKeyRotation:
             await adapter.extract(_tiny_jpeg())
 
     @pytest.mark.asyncio
-    async def test_503_service_unavailable_triggers_rotation(self):
-        """503 ServiceUnavailable 도 fallback key 트리거."""
-        import google.api_core.exceptions
+    async def test_503_server_error_triggers_rotation(self):
+        """503 ServerError 도 fallback key 트리거."""
         from app.rag.ocr.vision import GeminiVisionAdapter
 
         primary = AsyncMock()
-        primary.ainvoke.side_effect = google.api_core.exceptions.ServiceUnavailable("Overloaded")
+        primary.ainvoke.side_effect = _unavailable_503()
 
         secondary = AsyncMock()
         secondary.ainvoke.return_value = MagicMock(content='{"items": []}')
@@ -116,7 +128,7 @@ class TestGeminiVisionKeyRotation:
         assert "***" in masked
 
     def test_mask_key_short_string(self):
-        """4자 이하 key 마스킹 처리."""
+        """4자 이하 key → '***' 포함."""
         from app.rag.ocr.vision import _mask_key
 
         assert "***" in _mask_key("abc")
