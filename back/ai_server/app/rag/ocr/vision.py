@@ -15,7 +15,12 @@ from app.exceptions import OcrParseError, VisionInvocationError
 logger = logging.getLogger(__name__)
 
 VISION_TIMEOUT_SEC = 30.0
+
+# 기본 프롬프트 (Phase B-4 이전)
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "ocr_system.txt"
+
+# Few-shot 강화 프롬프트 (Phase B-6, FEWSHOT_ENABLED=true 시 사용)
+FEWSHOT_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "system_prompt.txt"
 
 
 def _detect_mime_type(image_bytes: bytes) -> str:
@@ -36,13 +41,21 @@ class GeminiVisionAdapter:
         llm: AsyncChatModel,
         prompt: str | None = None,
         timeout_sec: float = VISION_TIMEOUT_SEC,
+        fewshot_enabled: bool = False,
     ):
         self._llm = llm
         self._parser = PydanticOutputParser(pydantic_object=RawOcrItemList)
-        self._prompt = (prompt or PROMPT_PATH.read_text(encoding="utf-8")).replace(
+        raw_prompt = prompt or self._resolve_prompt(fewshot_enabled)
+        self._prompt = raw_prompt.replace(
             "{format_instructions}", self._parser.get_format_instructions()
         )
         self._timeout = timeout_sec
+
+    @staticmethod
+    def _resolve_prompt(fewshot_enabled: bool) -> str:
+        if fewshot_enabled and FEWSHOT_PROMPT_PATH.exists():
+            return FEWSHOT_PROMPT_PATH.read_text(encoding="utf-8")
+        return PROMPT_PATH.read_text(encoding="utf-8")
 
     async def extract(self, image_bytes: bytes) -> list[RawOcrItem]:
         try:
