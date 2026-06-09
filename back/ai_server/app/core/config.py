@@ -9,8 +9,16 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    gemini_api_key1: str = Field(default="", alias="GEMINI_API_KEY1")
+    gemini_api_key2: str = Field(default="", alias="GEMINI_API_KEY2")
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-2.5-flash")
+
+    @property
+    def gemini_keys(self) -> list[str]:
+        """Priority: KEY1 → KEY2 → GEMINI_API_KEY (legacy backward compat)."""
+        primary = self.gemini_api_key1 or self.gemini_api_key
+        return [k for k in [primary, self.gemini_api_key2] if k]
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     openai_api_key_alt: str = Field(default="", alias="OpenAI_API_KEY")
     embedding_model: str = Field(default="text-embedding-3-small")
