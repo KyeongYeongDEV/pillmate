@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     ocr_preprocess_enabled: bool = Field(default=True, alias="PREPROCESS_ENABLED")
     ocr_fewshot_enabled: bool = Field(default=True, alias="FEWSHOT_ENABLED")
 
+    # Phase B-7: 낱알식별 fallback (Tier 5)
+    pill_identify_enabled: bool = Field(default=True, alias="PILL_IDENTIFY_ENABLED")
+
 
 def get_settings() -> Settings:
     return Settings()
