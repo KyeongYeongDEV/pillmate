@@ -17,7 +17,8 @@ from app.rag.ocr.cache import (
     image_hash,
 )
 from app.rag.ocr.correction import OcrCorrectionAdapter
-from app.rag.ocr.matcher import MatchResult, MatchStage
+from app.rag.ocr.matcher import MatchCandidate, MatchResult, MatchStage
+from app.rag.ocr.pill_identify import PillIdentifyAdapter
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
 from app.rag.ocr.preprocess import ImagePreprocessor
@@ -47,6 +48,7 @@ class OcrPrescriptionService:
         cache: OcrResultCache | None = None,
         correction: OcrCorrectionAdapter | None = None,
         preprocessor: ImagePreprocessor | None = None,
+        pill_identifier: PillIdentifyAdapter | None = None,
     ):
         self._fetcher = fetcher
         self._vision = vision
@@ -54,6 +56,7 @@ class OcrPrescriptionService:
         self._cache = cache or NullOcrResultCache()
         self._correction = correction
         self._preprocessor = preprocessor
+        self._pill_identifier = pill_identifier
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
         image_bytes = await self._fetcher.fetch(str(request.image_url))
@@ -148,7 +151,29 @@ class OcrPrescriptionService:
                 if r.item is not None:
                     return r
 
+        # Tier 5: 낱알식별 fallback (shape/color/mark → DB)
+        if self._pill_identifier is not None and raw.appearance is not None:
+            pill_candidates = await self._pill_identifier.identify(raw.appearance)
+            if pill_candidates:
+                best = pill_candidates[0]
+                return self._pill_candidate_to_result(best, raw)
+
         return result
+
+    def _pill_candidate_to_result(
+        self, candidate: MatchCandidate, raw: RawOcrItem
+    ) -> MatchResult:
+        item = OcrItem(
+            kd_code=candidate.kd_code,
+            name_raw=raw.name_raw,
+            matched_name=candidate.name,
+            dose_amount=raw.dose_amount,
+            dose_unit=raw.dose_unit,
+            frequency=raw.frequency,
+            duration_days=raw.duration_days,
+            confidence=raw.confidence,
+        )
+        return MatchResult(item=item, stage="pill_identify", final_score=float(candidate.score))
 
     def _log_done(
         self,
