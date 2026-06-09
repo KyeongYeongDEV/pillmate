@@ -20,6 +20,9 @@
 | B-6 FE | T-FE-CAMERA-GUIDE | 2026-06-09 | 촬영 가이드 overlay + 실시간 hint + 자동 셔터 | input quality ↑ 예측 +10~20pp |
 | B-6 BE | T-AI-OCR-RAW-QUALITY | 2026-06-09 | OpenCV 전처리 + Few-shot 10건 + feature flags | GT 0.970 회귀 없음 ✓, 실 재측정 예정 |
 | B-6 RERUN | T-AI-OCR-REAL-RERUN | 2026-06-09 | 실 약봉투 7장 재측정 (6장 성공, 1x503, 1x429) | **28/30 = 93.33%** (+4.76pp vs B-3 88.57%) |
+| B-7a | T-AI-OCR-MULTI-KEY-FALLBACK | 2026-06-10 | Gemini 다중 키 로테이션 (RPD 20→40) | 429→fallback 자동, 202 tests PASS |
+| B-7b | T-AI-OCR-PILL-IDENTIFY-FALLBACK | 2026-06-10 | 낱알식별 Tier 5 (DB 9,679건 shape/color/mark) | Tier 5 cascade 통합, 실측 예정 |
+| P0 | ai-server 스타트업 크래시 | 2026-06-10 | Dockerfile cv2 누락 + GeminiInvoker api_keys | health 200 ✓ |
 
 ---
 
@@ -622,10 +625,156 @@ TestPreprocessPipeline (1)   ✓
 
 ---
 
+---
+
+## 10. Phase B-7a — Gemini 다중 API 키 로테이션 (#T-AI-OCR-MULTI-KEY-FALLBACK)
+
+**날짜**: 2026-06-10  
+**Why**: Phase B-6 RERUN에서 `IMG_0014.JPEG` 429, `IMG_0007.PNG` 503으로 2/8 이미지 미처리. Gemini Flash free tier RPD=20 병목이 실 사용 불가 수준. 두 번째 계정 KEY2 추가 → RPD 40.
+
+### 시도
+
+- **환경변수 체계 재설계**: `GEMINI_API_KEY1` (primary) + `GEMINI_API_KEY2` (secondary) + `GEMINI_API_KEY` (legacy 하위 호환)
+- `Settings.gemini_keys` property: `[KEY1 or legacy, KEY2]` 필터링 (빈 값 제외)
+- **`GeminiVisionAdapter`**: `_llms: list` + `_RATE_LIMIT_ERRORS` 튜플 → 429/503 포착 후 다음 키로 자동 시도
+- **`OcrCorrectionAdapter`**: 동일 패턴
+- **`GeminiInvoker`** (P0 hotfix에서 통합): `api_keys: list[str]` 인터페이스 통일
+- `docker-compose.yml` ai-server env: `GEMINI_API_KEY1`, `GEMINI_API_KEY2` 추가
+- **`google.genai.errors`**: `ClientError` (429) + `ServerError` (503) — `google-api-core` 미설치 환경 대응
+
+### TDD 결과
+
+```
+TestGeminiKeysProperty (8건)     ✓
+TestVisionFallback (7건)         ✓
+TestCorrectionFallback (4건)     ✓
+합계: 19건 PASS / 누적 189건
+```
+
+### 결과
+
+| 지표 | Before | After |
+|------|--------|-------|
+| API 용량 | RPD 20 | **RPD 40** (KEY 2개) |
+| 429 처리 | 즉시 VisionInvocationError | KEY2 자동 fallback |
+| IMG_0014 (429) | 미처리 | 처리 가능 |
+| GT 100건 | 0.970 | **0.970** (회귀 없음) |
+
+### 교훈
+
+- **`google.api_core` != `google.genai.errors`**: `google-api-core` 패키지 미설치 환경에서 `ResourceExhausted` 임포트 실패. `google-genai` 패키지의 `errors.ClientError` / `errors.ServerError` 사용이 올바른 방법.
+- **pydantic-settings v2 init 우선순위**: `init kwargs > env > dotenv`. 테스트에서 모든 키 필드를 명시적으로 전달해야 `.env` 실제 키가 오염되지 않음.
+- **_mask_key 패턴**: 로그 `AIza***{key[-4:]}` — 키 노출 방지 + 어떤 키인지 식별 가능.
+
+---
+
+## 11. Phase B-7b — 낱알식별 Tier 5 (#T-AI-OCR-PILL-IDENTIFY-FALLBACK)
+
+**날짜**: 2026-06-10  
+**Why**: B-6 RERUN 93.33% (28/30). 남은 miss 중 "에치콘정", "워더스낙정"은 텍스트 완전 손상 또는 DB 미수록. 텍스트 기반 cascade 4단계로는 해결 불가 → DB V6 마이그레이션에 이미 있는 낱알식별 컬럼 활용.
+
+### DB 낱알식별 데이터 현황
+
+```sql
+SELECT COUNT(*) FROM drugs WHERE shape_class IS NOT NULL;  -- 9,679건 (20.6%)
+SELECT DISTINCT shape_class FROM drugs WHERE shape_class IS NOT NULL;
+-- 원형, 장방형, 타원형, 기타, 팔각형, 사각형, 삼각형, 오각형, 육각형, 마름모형, 반원형
+```
+
+color_class 형식: 단색("하양"), 복합색("하양,하양", "파랑, 투명,파랑, 투명")
+
+### 시도
+
+1. **`PillAppearance` 도메인 모델**: `shape/color/mark_front/mark_back/line` 필드 (Pydantic BaseModel)
+2. **`RawOcrItem.appearance: PillAppearance | None`**: Vision 프롬프트 rule #8로 외관 추출 — 추가 LLM 호출 0건 (PydanticOutputParser 스키마에 자동 포함)
+3. **`PillIdentifyAdapter`** (`asyncpg` 직접 쿼리):
+   - NULL-safe SQL: `$2 IS NULL OR color_class ILIKE $2` → optional 필터
+   - color 매칭: `%색상%` wildcard (DB 복합 형식 대응)
+   - 정렬: mark 일치 우선 → color 일치 → shape만 일치
+   - `PILL_IDENTIFY_ENABLED` feature flag
+4. **OcrPrescriptionService Tier 5 통합**: `Tier 0 → Tier 2 → Tier 3 → Tier 5 → MANUAL`
+5. **`MatchStage`**: `"pill_identify"` Literal 추가
+
+### TDD 결과
+
+```
+TestPillAppearance (3건)         ✓
+TestRawOcrItemAppearance (2건)   ✓
+TestPillIdentifyAdapter (8건)    ✓
+합계: 13건 PASS / 누적 202건
+```
+
+### 분석 (실측 미수행 — API 할당량 재리셋 후 예정)
+
+**예상 활성화 조건**:
+- Tier 0/2/3 전부 실패 + Vision이 shape 정보 추출 성공 (9,679/47,021 약품)
+- OCR 텍스트 완전 손상 케이스 (예: 약품명이 찍힌 봉투 앞면 가림)
+
+**현실적 한계**:
+- DB coverage 20.6%: 나머지 79.4% 약품은 외관 데이터 없음 → 매칭 불가
+- shape 단독 매칭 시 동일 shape 약품 수백 건 → false positive 위험
+- mark_code 정확 입력 시 선택성 높음
+
+### 교훈
+
+- **NULL-safe SQL 파라미터**: asyncpg `$2 IS NULL OR col ILIKE $2` — Python `None`이 PostgreSQL `NULL`로 바인딩, `NULL IS NULL = TRUE` → 조건 pass. optional 필터 구현의 깔끔한 방법.
+- **color_class 복합 형식**: "하양,하양", "파랑, 투명,파랑, 투명" — DB 정규화 없이 `ILIKE '%하양%'` wildcard로 단색 Vision 추출 값과 매칭.
+- **Vision 외관 추출 무료**: `PydanticOutputParser` 스키마에 `PillAppearance` 포함 → 기존 Vision 호출 1번에 외관 정보도 같이 추출. 추가 비용 0.
+
+### 커밋
+
+| # | 설명 |
+|---|------|
+| 1 | Test(RED): PillAppearance + RawOcrItem.appearance 5건 |
+| 2 | Feat: PillAppearance 도메인 + RawOcrItem.appearance 필드 |
+| 3 | Test(RED): PillIdentifyAdapter 8건 |
+| 4 | Feat: PillIdentifyAdapter SQL + Tier 5 cascade 통합 |
+| 5 | Feat: Vision prompt rule #8 + MatchStage pill_identify |
+| 6 | Test: 통합 스냅샷 (202건 PASS) |
+
+### 다음 가설
+
+> 1. **실 E2E 재측정**: API 할당량 회복 후 8장 전체 (Tier 5 실효과 정량화)
+> 2. **shape_class 커버리지 확장**: 9,679/47,021 → 식약처 낱알식별 추가 데이터 적재
+> 3. **Vision appearance 오추출 분석**: false positive 비율 측정 후 threshold 도입 검토
+> 4. **T-BE-POST-/DRUGS/ALIAS**: alias endpoint 구현 (현재 404)
+
+---
+
+## P0. ai-server 스타트업 크래시 + Dockerfile cv2 누락 (2026-06-10)
+
+**날짜**: 2026-06-10  
+**Why**: T-AI-OCR-MULTI-KEY-FALLBACK 환경변수 변경 후 컨테이너 무한 재시작. 두 가지 Root Cause 동시 발견.
+
+### Root Cause 1: GeminiInvoker api_key → api_keys
+
+사용자가 `.env`에서 `GEMINI_API_KEY` 제거 + `KEY1/KEY2` 추가 → `settings.gemini_api_key = ""` → `main.py:44` `GeminiInvoker(api_key="")` → ChatGoogleGenerativeAI `ValidationError: API key required`.
+
+**Fix**: `GeminiInvoker.__init__` signature `api_key: str` → `api_keys: list[str]`. `_clients: list` 생성, `ainvoke()`에서 key rotation 내장.
+
+### Root Cause 2: Dockerfile cv2 미포함
+
+`service.py`가 `preprocess.py`를 top-level import → `cv2` 없어 모듈 로드 실패. `PREPROCESS_ENABLED=false`여도 import는 항상 실행.
+
+**Fix**:
+- `Dockerfile` 패키지 추가: `opencv-python-headless>=4.9`, `numpy>=1.26`, `Pillow>=10.0`, `google-genai>=1.0`, `langchain-google-genai>=4.0`
+- `service.py`: `from app.rag.ocr.preprocess import ImagePreprocessor` → `TYPE_CHECKING` 조건부 (runtime 미실행)
+
+**커밋**: `00c53d1 Fix(ai-startup)` + `Fix(Dockerfile): cv2/numpy/Pillow 추가`
+
+### 교훈
+
+- **Dockerfile은 pyproject.toml과 별개로 관리**: pyproject.toml에 패키지 추가 시 Dockerfile도 동기화 필요. 특히 native 라이브러리(opencv)는 headless 변형 사용 (`opencv-python-headless` — GUI 의존성 제거, Docker 이미지 경량).
+- **TYPE_CHECKING 패턴**: optional 의존성이 있는 모듈은 type annotation에만 사용 → `if TYPE_CHECKING: import`. `from __future__ import annotations`와 함께 사용하면 런타임 import 없이 타입 힌트 유지.
+- **컨테이너 재빌드 필수**: 코드 수정 후 `docker compose build ai-server` 없이 `--force-recreate`만으로는 새 패키지 반영 안 됨.
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
 | 2026-06-09 | 초안 작성 (#115/#122/#123/#124 정리, 사용자 영구 룰 등재) |
+| 2026-06-10 | Phase B-7a (다중 키) + B-7b (낱알식별 Tier 5) + P0 크래시 hotfix 추가 |
 | 2026-06-09 | Phase B-4 FE 안전망 (#T-FE-OCR-MANUAL-REVIEW) 추가 |
 | 2026-06-09 | Phase B-4 BE 4-Tier Fallback (#T-AI-RAG-LLM-FALLBACK) 추가 |
 | 2026-06-09 | Phase B-5 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK) 추가 |

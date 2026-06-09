@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from app.domain.ocr import (
     OcrItem,
@@ -21,7 +21,9 @@ from app.rag.ocr.matcher import MatchCandidate, MatchResult, MatchStage
 from app.rag.ocr.pill_identify import PillIdentifyAdapter
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
-from app.rag.ocr.preprocess import ImagePreprocessor
+
+if TYPE_CHECKING:
+    from app.rag.ocr.preprocess import ImagePreprocessor
 
 logger = logging.getLogger(__name__)
 _stage_logger = logging.getLogger(__name__ + ".stage")

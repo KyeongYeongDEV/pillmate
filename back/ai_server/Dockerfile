@@ -12,15 +12,19 @@ RUN pip install \
     "pydantic>=2.0" \
     "pydantic-settings>=2.0" \
     "langchain>=0.2" \
-    "langchain-google-genai>=2.0" \
+    "langchain-google-genai>=4.0" \
     "langchain-postgres>=0.0.12" \
+    "google-genai>=1.0" \
     "asyncpg>=0.29" \
     "httpx>=0.27" \
     "openai>=1.30" \
     "psycopg[binary]>=3.1" \
     "sqlalchemy>=2.0" \
     "jamotools>=0.1.10" \
-    "python-Levenshtein>=0.25.1"
+    "python-Levenshtein>=0.25.1" \
+    "opencv-python-headless>=4.9" \
+    "numpy>=1.26" \
+    "Pillow>=10.0"
 
 COPY app ./app
 
