@@ -90,6 +90,7 @@ class ImageResult:
     preprocess_applied: bool = False
     fewshot_applied: bool = False
     rate_limited: bool = False
+    elapsed_seconds: float | None = None  # Gemini Vision 호출 시작~응답 완료
 
 
 async def _run_single_image(
@@ -127,10 +128,12 @@ async def _run_single_image(
         ]
     )
 
+    _t0 = time.perf_counter()
     try:
         resp = await llm.ainvoke([message])
         raw_text = getattr(resp, "content", str(resp))
     except Exception as exc:
+        result.elapsed_seconds = round(time.perf_counter() - _t0, 3)
         err_str = str(exc)
         if "429" in err_str or "quota" in err_str.lower() or "RESOURCE_EXHAUSTED" in err_str:
             result.error = "429_RATE_LIMITED"
@@ -138,6 +141,7 @@ async def _run_single_image(
         else:
             result.error = f"vision_error: {exc.__class__.__name__}: {exc}"
         return result
+    result.elapsed_seconds = round(time.perf_counter() - _t0, 3)
 
     try:
         parsed = parser.parse(raw_text)
@@ -208,6 +212,29 @@ async def run_all() -> list[ImageResult]:
     return results
 
 
+def _latency_stats(results: list[ImageResult]) -> dict:
+    """성공적으로 응답받은 이미지의 elapsed_seconds 통계."""
+    samples = sorted(
+        r.elapsed_seconds
+        for r in results
+        if r.elapsed_seconds is not None and not r.rate_limited
+    )
+    if not samples:
+        return {}
+    n = len(samples)
+    avg = sum(samples) / n
+    p50 = samples[n // 2]
+    p95 = samples[min(int(n * 0.95), n - 1)]
+    return {
+        "count": n,
+        "avg": round(avg, 3),
+        "min": round(samples[0], 3),
+        "max": round(samples[-1], 3),
+        "p50": round(p50, 3),
+        "p95": round(p95, 3),
+    }
+
+
 def _build_report(results: list[ImageResult]) -> str:
     total_drugs = sum(len(r.drugs) for r in results if not r.error)
     total_matched = sum(
@@ -245,10 +272,28 @@ def _build_report(results: list[ImageResult]) -> str:
         match_rate = total_matched / total_drugs if total_drugs > 0 else 0
         lines.append(f"| **부분 매칭률** | **88.57%** | **{match_rate:.2%}** ({processed_count}장 기준) |")
 
+    # ── latency 통계 ──────────────────────────────
+    stats = _latency_stats(results)
+    lines += ["", "---", "", "## Gemini Vision 호출 Latency", ""]
+    if stats:
+        lines += [
+            f"| 지표 | 값 |",
+            f"|------|-----|",
+            f"| 측정 건수 | {stats['count']}장 |",
+            f"| 평균 | {stats['avg']:.3f}s |",
+            f"| min | {stats['min']:.3f}s |",
+            f"| max | {stats['max']:.3f}s |",
+            f"| p50 | {stats['p50']:.3f}s |",
+            f"| p95 | {stats['p95']:.3f}s |",
+        ]
+    else:
+        lines.append("_latency 데이터 없음 (모든 이미지 API 오류)_")
+
     lines += ["", "---", "", "## 이미지별 상세 결과", ""]
 
     for r in results:
-        lines.append(f"### {r.image_name}")
+        elapsed_str = f"{r.elapsed_seconds:.3f}s" if r.elapsed_seconds is not None else "—"
+        lines.append(f"### {r.image_name}  _(elapsed: {elapsed_str})_")
         if r.error:
             lines.append(f"- **오류**: `{r.error}`")
             lines.append("")
@@ -325,11 +370,13 @@ async def main() -> None:
     report_md = _build_report(results)
     md_path.write_text(report_md, encoding="utf-8")
 
+    latency_stats = _latency_stats(results)
     report_json = [
         {
             "image": r.image_name,
             "error": r.error,
             "rate_limited": r.rate_limited,
+            "elapsed_seconds": r.elapsed_seconds,
             "drug_count": len(r.drugs),
             "matched_count": sum(1 for d in r.drugs if d.db_match),
             "drugs": [
@@ -346,7 +393,8 @@ async def main() -> None:
         }
         for r in results
     ]
-    json_path.write_text(json.dumps(report_json, ensure_ascii=False, indent=2), encoding="utf-8")
+    output = {"latency_stats": latency_stats, "images": report_json}
+    json_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 콘솔 요약
     print("\n" + "=" * 60)
