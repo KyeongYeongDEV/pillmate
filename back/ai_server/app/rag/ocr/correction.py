@@ -9,6 +9,14 @@ from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
+try:
+    from google.genai.errors import ClientError as _GenAIClientError
+    from google.genai.errors import ServerError as _GenAIServerError
+
+    _RATE_LIMIT_ERRORS = (_GenAIClientError, _GenAIServerError)
+except ImportError:
+    _RATE_LIMIT_ERRORS = ()
+
 CORRECTION_PROMPT_TEMPLATE = (
     "당신은 한국 식약처(식품의약품안전처) 등록 약품명 전문가입니다.\n"
     "OCR이 잘못 인식한 약품명 '{name_raw}' 의 올바른 식약처 표준 약품명 후보를\n"
@@ -26,18 +34,47 @@ class AsyncChatModel(Protocol):
 class OcrCorrectionAdapter:
     """cascade 전체 실패 시 Gemini Flash 로 OCR 오인식 보정 top-3 추정."""
 
-    def __init__(self, llm: AsyncChatModel) -> None:
-        self._llm = llm
+    def __init__(
+        self,
+        llm: AsyncChatModel | None = None,
+        api_keys: list[str] | None = None,
+        model: str = "gemini-2.5-flash",
+        _llms: list[AsyncChatModel] | None = None,
+    ) -> None:
+        if _llms is not None:
+            self._llms = _llms
+        elif api_keys:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            self._llms = [
+                ChatGoogleGenerativeAI(model=model, google_api_key=k)
+                for k in api_keys
+            ]
+        elif llm is not None:
+            self._llms = [llm]
+        else:
+            raise ValueError("llm, api_keys, or _llms must be provided")
 
     async def correct(self, name_raw: str) -> list[str]:
         prompt = CORRECTION_PROMPT_TEMPLATE.format(name_raw=name_raw)
-        try:
-            result = await self._llm.ainvoke([HumanMessage(content=prompt)])
-            content = getattr(result, "content", str(result))
-            return self._parse_candidates(content)
-        except Exception:
-            logger.warning("ocr correction failed for '%s'", name_raw)
-            return []
+        for i, llm in enumerate(self._llms):
+            try:
+                result = await llm.ainvoke([HumanMessage(content=prompt)])
+                content = getattr(result, "content", str(result))
+                return self._parse_candidates(content)
+            except _RATE_LIMIT_ERRORS:
+                if i < len(self._llms) - 1:
+                    logger.warning(
+                        "correction key_rotation: key[%d] 429/503 → fallback retry key[%d]",
+                        i, i + 1,
+                    )
+                    continue
+                logger.warning("ocr correction all keys exhausted for '%s'", name_raw)
+                return []
+            except Exception:
+                logger.warning("ocr correction failed for '%s'", name_raw)
+                return []
+        return []
 
     def _parse_candidates(self, content: str) -> list[str]:
         try:
