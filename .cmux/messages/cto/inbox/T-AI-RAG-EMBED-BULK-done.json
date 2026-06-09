@@ -1,0 +1,51 @@
+{
+  "type": "DONE_DEV_T-AI-RAG-EMBED-BULK",
+  "task": "T-AI-RAG-EMBED-BULK",
+  "timestamp": "2026-06-09T05:15:00Z",
+  "agent": "BE-Dev",
+
+  "summary": "drug_embeddings 4,736(9.6%) → 47,021(100%) 완료. TDD 20건 PASS. 실 비용 $0.003 (예상 $0.09 대비 1/36). GT 100건 0.970 회귀 없음.",
+
+  "metrics": {
+    "before_count": 4736,
+    "after_count": 47021,
+    "coverage_pct": 100.0,
+    "inserted_count": 42285,
+    "failed_count": 0,
+    "actual_cost_usd": 0.003,
+    "estimated_cost_usd": 0.09,
+    "duration_minutes": 5,
+    "speed_per_second": 141,
+    "ivfflat_lists_before": 100,
+    "ivfflat_lists_after": 200,
+    "unit_tests_pass": 20,
+    "gt_100_hit_at_1": 0.970,
+    "gt_regression": false
+  },
+
+  "key_findings": {
+    "cost_surprise": "avg 3.6 tokens/약품 (예상 50 tokens). 한국어 약품명 짧음",
+    "vector_limit": "brand name only → phonetic 유사도 capture 어려움. ingredient/efficacy 데이터 필요",
+    "썰박타민_embedded": "drug_id=14502 이제 embedded (Phase B-4 Tier 1 jamo fuzzy 와 상호 보완)",
+    "ivfflat_rebuild": "lists=200 재빌드 (sqrt(47021)≈217)"
+  },
+
+  "commits": [
+    "78adcb8 — Test(RED): bulk_embed_drugs 20건",
+    "5920cca — Feat: bulk_embed_drugs.py + dry-run + checkpoint + retry"
+  ],
+
+  "next_actions": [
+    "Real E2E 재실행 (Gemini API 00:00 UTC 리셋)",
+    "T-AI-RAG-HNSW (ivfflat → HNSW)",
+    "성분명 데이터 보강 후 재임베딩"
+  ],
+
+  "rules_compliance": {
+    "db_safety": "ON CONFLICT DO NOTHING (INSERT only)",
+    "tdd": "RED→GREEN 20건",
+    "cost_aware": "text-embedding-3-small $0.003 실제 비용",
+    "medical_safety": "환자 정보 임베딩 없음 (drug 정보만)",
+    "push": "X (CTO 자동)"
+  }
+}

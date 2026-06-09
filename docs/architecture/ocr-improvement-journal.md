@@ -16,6 +16,7 @@
 | B-3 | #124 EVAL-FULL | 2026-06-09 | 전체 통합 측정 + 실 약봉투 8장 E2E | **전체 Hit@1 0.970 (97/100)** |
 | B-4 FE | T-FE-OCR-MANUAL-REVIEW | 2026-06-09 | OCR confirm 화면 + 안전망 UX | 사용자 안전망 구축 |
 | B-4 BE | T-AI-RAG-LLM-FALLBACK | 2026-06-09 | 4-Tier fallback cascade | **miss_1+2 해결 확정 (분석적)** |
+| B-5 | T-AI-RAG-EMBED-BULK | 2026-06-09 | drug_embeddings 9.6%→100% | **$0.003, 47,021건, 0 failed** |
 
 ---
 
@@ -335,9 +336,77 @@ Gemini Flash free tier RPD = 20 (일일). Phase B-3 eval + Phase B-4 eval 당일
 
 ---
 
+## 7. Phase B-5 — 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK)
+
+**날짜**: 2026-06-09  
+**Why**: drug_embeddings 4,736건(9.6%)만 존재 → vector stage recall 제한. 나머지 42,285건은 임베딩 없어 vector 검색에서 miss 가능.
+
+### 시도
+
+- `bulk_embed_drugs.py` 신규 (`back/ai_server/scripts/`)
+  - SELECT 조건: `efficacy/dosage IS NOT NULL` 제거 → **ALL ACTIVE drugs**
+  - `ON CONFLICT DO NOTHING` (db-safety: INSERT only)
+  - checkpoint `back/.drug_embed_checkpoint.json` (중단/재시작 안전)
+  - failure log `back/.drug_embed_failures.jsonl`
+  - `--dry-run --limit 100` 모드: DB INSERT 없이 비용 측정
+  - batch 100건, retry 5x exponential backoff
+- TDD: 20건 RED → GREEN
+  - `_build_text`, `_batch_chunks`, `_load/_save_checkpoint`, `_is_rate_limit`, `_embed_with_retry`, `estimate_cost`
+- dry-run 100건 → 비용 측정 후 full run
+- ivfflat lists=100 → 200 재빌드 (sqrt(47021) ≈ 217)
+
+### 결과
+
+```
+drug_embeddings: 4,736 (9.6%) → 47,021 (100%) ✓
+실제 비용: $0.0025 (예상 $0.09 대비 1/36 — 약품명 텍스트 짧음)
+소요 시간: ~5분 (100건/초)
+실패: 0건
+ivfflat lists: 100 → 200 (47K 최적)
+GT 100건: 97/100 = 0.970 (회귀 없음) ✓
+```
+
+### 발견된 한계
+
+**vector stage는 순수 약품명 기반으로는 phonetic 유사도 캡처 어려움**:
+```
+'에치콘정' → ('캐치콘정', 0.612) — 연관성 낮음
+'쎌박타민정' → ('브이타민정', 0.521) — miss
+```
+→ 한국어 brand name 만으로는 text-embedding의 semantic 효과 제한.  
+→ Tier 1 jamo fuzzy 가 이 케이스에서 더 효과적.
+
+**커버리지는 확장됐으나 GT miss 3건은 불변**:
+- gt_016 "리오노필정": DB 미수록 (어떤 단계도 해결 불가)
+- gt_039 "아스피링정": precision collision (prefix 공유 약품 경쟁)
+- gt_092 "에소메프라조를": 심각한 OCR 타이핑 오류
+
+### 교훈
+
+- **비용 추정 오류**: 47K × 평균 50 토큰 가정 → 실제 avg 3.6 토큰/약품 (품목명 4~8자). text-embedding 토큰화 방식과 한국어 짧은 품목명 특성
+- **vector 효과는 성분/효능 데이터 의존**: ingredient/efficacy가 대부분 NULL인 상태에서 vector recall 효과 제한. 향후 식약처 성분 데이터 보강 시 vector stage 가치 상승
+- **ivfflat probe**: lists가 너무 작으면 recall 저하. sqrt(n) 공식 중요
+- **ON CONFLICT DO NOTHING**: db-safety 준수. 재실행 시 기존 4,736건 overwrite 안 됨
+
+### 커밋
+
+| hash | 설명 |
+|------|------|
+| 78adcb8 | Test(RED): bulk_embed_drugs 20건 |
+| 5920cca | Feat: bulk_embed_drugs.py + dry-run + checkpoint |
+
+### 다음 가설
+
+> 1. **Real E2E 재실행** (Gemini API 00:00 UTC 리셋): 실 8장 96%+ 수치 확인
+> 2. **T-AI-RAG-HNSW**: ivfflat → HNSW 전환 (정확도 +3~7%)
+> 3. **성분명 데이터 보강**: 식약처 성분 데이터 bulk 적재 후 재임베딩
+
+---
+
 ### 변경 이력
 | 날짜 | 변경 |
 |---|---|
 | 2026-06-09 | 초안 작성 (#115/#122/#123/#124 정리, 사용자 영구 룰 등재) |
 | 2026-06-09 | Phase B-4 FE 안전망 (#T-FE-OCR-MANUAL-REVIEW) 추가 |
 | 2026-06-09 | Phase B-4 BE 4-Tier Fallback (#T-AI-RAG-LLM-FALLBACK) 추가 |
+| 2026-06-09 | Phase B-5 전체 임베딩 확장 (#T-AI-RAG-EMBED-BULK) 추가 |
