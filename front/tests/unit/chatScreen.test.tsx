@@ -30,7 +30,7 @@ describe('ChatScreen — CHAT_ENABLED=false (잠금)', () => {
 
   it('웰컴 메시지에 "곧 오픈" 문구 포함', () => {
     const { getByText } = render(<ChatScreen />);
-    expect(getByText(/곧 오픈/)).toBeTruthy();
+    expect(getByText(/약 상담 기능은 곧 오픈/)).toBeTruthy();
   });
 
   it('입력창 placeholder: "준비 중인 기능이에요"', () => {
@@ -47,7 +47,7 @@ describe('ChatScreen — CHAT_ENABLED=false (잠금)', () => {
   it('전송 버튼 disabled=true', () => {
     const { getByLabelText } = render(<ChatScreen />);
     const sendBtn = getByLabelText('전송');
-    expect(sendBtn.props.disabled).toBe(true);
+    expect(sendBtn.props.accessibilityState?.disabled).toBe(true);
   });
 
   it('🔒 아이콘 표시', () => {

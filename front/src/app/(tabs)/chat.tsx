@@ -11,7 +11,16 @@ import { useSendMessageMutation } from '@/store/slices/chatApi';
 import { colors, space, radius } from '@/styles/tokens';
 import type { ChatMessage } from '@/types/chat';
 
+// 비용 정책: AI 채팅은 출시 시점 비활성 (2026-06-11 사용자 명시). true 로 바꾸면 즉시 활성.
+export const CHAT_ENABLED = false;
+
 const QUICK_PROMPTS = ['감기약 같이 먹어도 돼?', '부작용은?', '음식 주의사항'];
+
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'ai-welcome',
+  role: 'ai',
+  content: '안녕하세요, PillMate AI예요 🤖\n약 상담 기능은 곧 오픈할 예정이에요.\n조금만 기다려주세요!',
+};
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -38,12 +47,15 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 ];
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    CHAT_ENABLED ? INITIAL_MESSAGES : [WELCOME_MESSAGE],
+  );
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const [sendMessage, { isLoading }] = useSendMessageMutation();
 
   const handleSend = useCallback(async (text: string) => {
+    if (!CHAT_ENABLED) return;
     const trimmed = text.trim();
     if (!trimmed) return;
     setInput('');
@@ -71,7 +83,9 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>복약 상담</Text>
-          <Text style={styles.headerSub}>● Gemini · RAG 검증</Text>
+          <Text style={[styles.headerSub, !CHAT_ENABLED && styles.headerSubLocked]}>
+            {CHAT_ENABLED ? '● Gemini · RAG 검증' : '곧 오픈 예정'}
+          </Text>
         </View>
         <Pressable accessibilityLabel="더 보기" accessibilityRole="button">
           <Feather name="more-horizontal" size={22} color={colors.labelNormal} />
@@ -85,8 +99,7 @@ export default function ChatScreen() {
               ? <AiBubble key={msg.id} message={msg} />
               : <UserBubble key={msg.id} message={msg} />,
           )}
-          {/* show quick-prompt chips only when conversation just started */}
-          {messages.length === 1 && (
+          {CHAT_ENABLED && messages.length === 1 && (
             <View style={styles.quickChips}>
               {QUICK_PROMPTS.map(q => (
                 <Pressable key={q} style={styles.chip} onPress={() => handleSend(q)}>
@@ -98,24 +111,30 @@ export default function ChatScreen() {
         </ScrollView>
 
         <View style={styles.inputBar}>
-          <Pressable style={styles.attachBtn} accessibilityLabel="파일 첨부" accessibilityRole="button">
-            <Feather name="plus" size={22} color={colors.labelAlternative} />
-          </Pressable>
+          {CHAT_ENABLED ? (
+            <Pressable style={styles.attachBtn} accessibilityLabel="파일 첨부" accessibilityRole="button">
+              <Feather name="plus" size={22} color={colors.labelAlternative} />
+            </Pressable>
+          ) : (
+            <Text style={styles.lockIcon}>🔒</Text>
+          )}
           <TextInput
-            style={styles.input}
+            style={[styles.input, !CHAT_ENABLED && styles.inputLocked]}
             value={input}
-            onChangeText={setInput}
-            placeholder="약에 대해 물어보세요…"
+            onChangeText={CHAT_ENABLED ? setInput : undefined}
+            editable={CHAT_ENABLED}
+            placeholder={CHAT_ENABLED ? '약에 대해 물어보세요…' : '준비 중인 기능이에요'}
             placeholderTextColor={colors.labelAssistive}
             returnKeyType="send"
-            onSubmitEditing={() => handleSend(input)}
+            onSubmitEditing={CHAT_ENABLED ? () => handleSend(input) : undefined}
             accessibilityLabel="메시지 입력"
           />
           <Pressable
-            style={[styles.sendBtn, isLoading && styles.sendBtnDisabled]}
-            onPress={() => handleSend(input)}
-            disabled={isLoading}
-            accessibilityLabel="전송" accessibilityRole="button"
+            style={[styles.sendBtn, (!CHAT_ENABLED || isLoading) && styles.sendBtnDisabled]}
+            onPress={CHAT_ENABLED ? () => handleSend(input) : undefined}
+            disabled={!CHAT_ENABLED || isLoading}
+            accessibilityLabel="전송"
+            accessibilityRole="button"
           >
             <Feather name="send" size={20} color="#fff" />
           </Pressable>
@@ -134,6 +153,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: '600', color: colors.labelNormal },
   headerSub: { fontSize: 11, color: colors.statusPositive, fontWeight: '600', marginTop: 1 },
+  headerSubLocked: { color: colors.labelAlternative },
   kav: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { padding: space.s16, gap: space.s14, paddingBottom: space.s8 },
@@ -153,14 +173,16 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
   },
+  lockIcon: { fontSize: 20, width: 38, textAlign: 'center' },
   input: {
     flex: 1, height: 42, borderRadius: radius.full,
     backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.line,
     paddingHorizontal: space.s16, fontSize: 14, color: colors.labelNormal,
   },
+  inputLocked: { backgroundColor: colors.fillNormal, borderColor: colors.line, color: colors.labelAssistive },
   sendBtn: {
     width: 42, height: 42, borderRadius: 21,
     backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
   },
-  sendBtnDisabled: { opacity: 0.6 },
+  sendBtnDisabled: { opacity: 0.4 },
 });
