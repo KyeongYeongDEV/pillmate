@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -32,10 +33,16 @@ public class SendGroupDoseNotificationService {
     private final NotificationPersistenceService notificationPersistenceService;
     private final UserRepository userRepository;
     private final NotificationSenderPort notificationSenderPort;
+    private final Clock clock;
 
     public void send(Long doseLogId, Long actorUserId) {
         DoseLog doseLog = findDoseLog(doseLogId);
+        if (doseLog.isGroupNotified()) {
+            return;
+        }
         Schedule schedule = findSchedule(doseLog.getScheduleId());
+        markGroupNotified(doseLog);
+
         List<Long> recipientIds = findGroupMembers(actorUserId);
         if (recipientIds.isEmpty()) {
             return;
@@ -49,6 +56,11 @@ public class SendGroupDoseNotificationService {
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
         saved.forEach(this::dispatchOne);
+    }
+
+    private void markGroupNotified(DoseLog doseLog) {
+        doseLog.markGroupNotified(Instant.now(clock));
+        doseLogRepository.save(doseLog);
     }
 
     private void dispatchOne(Notification notification) {

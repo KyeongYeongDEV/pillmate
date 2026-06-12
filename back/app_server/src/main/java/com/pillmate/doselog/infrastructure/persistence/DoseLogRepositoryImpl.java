@@ -1,6 +1,7 @@
 package com.pillmate.doselog.infrastructure.persistence;
 
 import com.pillmate.doselog.domain.model.DoseLog;
+import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -26,5 +27,10 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     @Override
     public Optional<DoseLog> findByScheduleIdAndScheduledAt(Long scheduleId, Instant scheduledAt) {
         return jpa.findByScheduleIdAndScheduledAt(scheduleId, scheduledAt);
+    }
+
+    @Override
+    public List<DoseLog> findTakenNotGroupNotifiedBefore(Instant cutoff) {
+        return jpa.findByStatusAndCheckedAtLessThanEqualAndGroupNotifiedAtIsNull(DoseStatus.TAKEN, cutoff);
     }
 }

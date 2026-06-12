@@ -19,10 +19,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,12 +41,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class SendGroupDoseNotificationServiceTest {
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-06-12T10:00:00Z");
+
     @Mock DoseLogRepository doseLogRepository;
     @Mock ScheduleRepository scheduleRepository;
     @Mock MembershipRepository membershipRepository;
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock UserRepository userRepository;
     @Mock NotificationSenderPort notificationSenderPort;
+    @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
 
     private static final Long ACTOR_ID    = 1L;
@@ -119,6 +125,57 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
+        verify(notificationSenderPort, never()).send(any());
+    }
+
+    @Test
+    @DisplayName("이미 group_notified_at 기록된 DoseLog — 중복 발송 가드 (저장/발송 모두 skip)")
+    void notify_whenAlreadyGroupNotified_skips() {
+        DoseLog doseLog = takenDoseLog();
+        doseLog.markGroupNotified(FIXED_NOW.minusSeconds(30));
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).send(any());
+        verify(doseLogRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("발송 시 group_notified_at 기록 + save — 폴러 재선택 방지 (멱등)")
+    void notify_marksGroupNotifiedAndSaves() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[abc]", PushProvider.EXPO);
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(MEMBER_ID));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<DoseLog> captor = ArgumentCaptor.forClass(DoseLog.class);
+        verify(doseLogRepository).save(captor.capture());
+        assertThat(captor.getValue().isGroupNotified()).isTrue();
+        assertThat(captor.getValue().getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    @DisplayName("그룹 멤버 없어도 group_notified_at 기록 — 폴러 무한 재선택 방지")
+    void notify_whenNoGroupMembers_stillMarksGroupNotified() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of());
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        verify(doseLogRepository).save(any(DoseLog.class));
         verify(notificationSenderPort, never()).send(any());
     }
 
