@@ -20,6 +20,26 @@ export function toMonthString(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+export function prevDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const shifted = new Date(y, m - 1, d - 1);
+  return toDateString(shifted.getFullYear(), shifted.getMonth() + 1, shifted.getDate());
+}
+
+export function deriveStreak(
+  adherenceByDate: Record<string, AdherenceLevel>,
+  today: string,
+  todayComplete: boolean,
+): number {
+  let streak = todayComplete ? 1 : 0;
+  let cursor = prevDate(today);
+  while (adherenceByDate[cursor] === 'full') {
+    streak += 1;
+    cursor = prevDate(cursor);
+  }
+  return streak;
+}
+
 export function prevMonth(year: number, month: number): { year: number; month: number } {
   return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
 }

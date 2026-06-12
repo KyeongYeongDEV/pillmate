@@ -7,6 +7,8 @@ import {
   formatDayLabel,
   formatMonthDay,
   formatFullDate,
+  prevDate,
+  deriveStreak,
   deriveAdherence,
 } from '../../src/utils/calendarUtils';
 import type { MedSlot } from '../../src/types/schedule';
@@ -131,6 +133,55 @@ describe('formatMonthDay', () => {
 
   it('일요일 처리', () => {
     expect(formatMonthDay('2026-06-14')).toBe('6월 14일 일');
+  });
+});
+
+describe('prevDate', () => {
+  it('하루 전 날짜', () => {
+    expect(prevDate('2026-06-12')).toBe('2026-06-11');
+  });
+
+  it('월 경계 — 6/1 전날은 5/31', () => {
+    expect(prevDate('2026-06-01')).toBe('2026-05-31');
+  });
+
+  it('연 경계 — 1/1 전날은 작년 12/31', () => {
+    expect(prevDate('2026-01-01')).toBe('2025-12-31');
+  });
+});
+
+describe('deriveStreak', () => {
+  const TODAY = '2026-06-12';
+
+  it('어제 미달성 → 0', () => {
+    expect(deriveStreak({ '2026-06-11': 'partial' }, TODAY, false)).toBe(0);
+  });
+
+  it('어제만 FULL → 1', () => {
+    expect(deriveStreak({ '2026-06-11': 'full', '2026-06-10': 'miss' }, TODAY, false)).toBe(1);
+  });
+
+  it('3일 연속 FULL → 3', () => {
+    const map: Record<string, 'full'> = {
+      '2026-06-11': 'full', '2026-06-10': 'full', '2026-06-09': 'full',
+    };
+    expect(deriveStreak(map, TODAY, false)).toBe(3);
+  });
+
+  it('월 경계 넘는 연속 — 6/1 + 5/31 + 5/30', () => {
+    const map: Record<string, 'full'> = {
+      '2026-06-01': 'full', '2026-05-31': 'full', '2026-05-30': 'full',
+    };
+    expect(deriveStreak(map, '2026-06-02', false)).toBe(3);
+  });
+
+  it('오늘 완료 포함 — 어제·그제 FULL + 오늘 완료 → 3', () => {
+    const map: Record<string, 'full'> = { '2026-06-11': 'full', '2026-06-10': 'full' };
+    expect(deriveStreak(map, TODAY, true)).toBe(3);
+  });
+
+  it('오늘만 완료 (어제 기록 없음) → 1', () => {
+    expect(deriveStreak({}, TODAY, true)).toBe(1);
   });
 });
 
