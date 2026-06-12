@@ -13,6 +13,7 @@ import {
   toKstDateString,
   getKstToday,
   isEditableDate,
+  isStreakUnbrokenThrough,
 } from '../../src/utils/calendarUtils';
 import type { MedSlot } from '../../src/types/schedule';
 
@@ -197,6 +198,35 @@ describe('deriveStreak', () => {
       '2026-06-11': 'full', '2026-06-09': 'partial', '2026-06-08': 'full',
     };
     expect(deriveStreak(map, TODAY, false)).toBe(1);
+  });
+});
+
+describe('isStreakUnbrokenThrough', () => {
+  const TODAY = '2026-06-12';
+  const MONTH_START = '2026-06-01';
+
+  it('어제부터 월초까지 전부 FULL → true (전월 조회 필요)', () => {
+    const map: Record<string, 'full'> = {};
+    for (let d = 1; d <= 11; d++) map[`2026-06-${String(d).padStart(2, '0')}`] = 'full';
+    expect(isStreakUnbrokenThrough(map, TODAY, MONTH_START)).toBe(true);
+  });
+
+  it('중간에 PARTIAL → false (전월 조회 불필요)', () => {
+    const map: Record<string, 'full' | 'partial'> = {
+      '2026-06-11': 'full', '2026-06-10': 'partial',
+    };
+    expect(isStreakUnbrokenThrough(map, TODAY, MONTH_START)).toBe(false);
+  });
+
+  it('월초 빈 날(약 없는 날) 끼어도 끊김 아님 → true — #145 ② 핵심', () => {
+    const map: Record<string, 'full'> = {
+      '2026-06-11': 'full', '2026-06-10': 'full', '2026-06-03': 'full',
+    };
+    expect(isStreakUnbrokenThrough(map, TODAY, MONTH_START)).toBe(true);
+  });
+
+  it('오늘이 1일 — 어제가 전월이라 항상 true', () => {
+    expect(isStreakUnbrokenThrough({}, '2026-06-01', MONTH_START)).toBe(true);
   });
 });
 

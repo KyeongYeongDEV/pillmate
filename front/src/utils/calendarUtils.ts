@@ -56,6 +56,20 @@ export function deriveStreak(
   return streak;
 }
 
+export function isStreakUnbrokenThrough(
+  adherenceByDate: Record<string, AdherenceLevel>,
+  today: string,
+  floorDate: string,
+): boolean {
+  let cursor = prevDate(today);
+  while (cursor >= floorDate) {
+    const level = adherenceByDate[cursor];
+    if (level && level !== 'full') return false;
+    cursor = prevDate(cursor);
+  }
+  return true;
+}
+
 function findEarliestDate(adherenceByDate: Record<string, AdherenceLevel>): string | null {
   const dates = Object.keys(adherenceByDate);
   return dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : null;
