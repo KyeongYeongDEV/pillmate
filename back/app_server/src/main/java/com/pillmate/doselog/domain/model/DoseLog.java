@@ -44,6 +44,7 @@ public class DoseLog {
     private Long checkedBy;
     private Instant checkedAt;
     private String skipReason;
+    private Instant groupNotifiedAt;
 
     public static DoseLog of(Long scheduleId, Long patientId, Instant scheduledAt) {
         DoseLog log = new DoseLog();
@@ -79,6 +80,25 @@ public class DoseLog {
 
     public void skip(Long checkedBy, String reason) {
         skip(checkedBy, reason, Clock.systemUTC());
+    }
+
+    public void cancel() {
+        if (status != DoseStatus.TAKEN) {
+            return;
+        }
+        this.status = DoseStatus.PENDING;
+        this.checkedBy = null;
+        this.checkedAt = null;
+        this.skipReason = null;
+        this.groupNotifiedAt = null;
+    }
+
+    public void markGroupNotified(Instant now) {
+        this.groupNotifiedAt = now;
+    }
+
+    public boolean isGroupNotified() {
+        return groupNotifiedAt != null;
     }
 
     public boolean isDelayed(Clock clock) {

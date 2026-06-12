@@ -68,4 +68,65 @@ class DoseLogTest {
 
         assertThat(log.isDelayed(FIXED)).isFalse();
     }
+
+    @Test
+    @DisplayName("TAKEN 에서 cancel() — PENDING 복귀 + checkedBy/checkedAt/skipReason 초기화")
+    void cancel_whenTaken_revertsToPendingAndClearsCheckFields() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+
+        log.cancel();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.PENDING);
+        assertThat(log.getCheckedBy()).isNull();
+        assertThat(log.getCheckedAt()).isNull();
+        assertThat(log.getSkipReason()).isNull();
+    }
+
+    @Test
+    @DisplayName("cancel() 은 groupNotifiedAt 도 초기화 — 재복용 시 그룹 알림 다시 발송 가능")
+    void cancel_whenTaken_clearsGroupNotifiedAt() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+        log.markGroupNotified(FIXED_NOW);
+
+        log.cancel();
+
+        assertThat(log.isGroupNotified()).isFalse();
+        assertThat(log.getGroupNotifiedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("PENDING 에서 cancel() — 멱등 no-op (도메인 판단: FE 중복 요청 안전)")
+    void cancel_whenPending_isNoOp() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+
+        log.cancel();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("SKIPPED 에서 cancel() — no-op (CANCEL 은 TAKEN 정정 전용, SKIP 의미 유지)")
+    void cancel_whenSkipped_isNoOp() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.skip(99L, "외출 중", FIXED);
+
+        log.cancel();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.SKIPPED);
+        assertThat(log.getSkipReason()).isEqualTo("외출 중");
+    }
+
+    @Test
+    @DisplayName("markGroupNotified() — 발송 시각 기록 + isGroupNotified true")
+    void markGroupNotified_recordsTimestamp() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+
+        log.markGroupNotified(FIXED_NOW);
+
+        assertThat(log.isGroupNotified()).isTrue();
+        assertThat(log.getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
+    }
 }
