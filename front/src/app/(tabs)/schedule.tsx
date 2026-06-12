@@ -1,13 +1,15 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
+import MonthPicker from '@/components/schedule/MonthPicker';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import { colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
+import { prevMonth, nextMonth, formatDayLabel } from '@/utils/calendarUtils';
 import type { RootState } from '@/store';
 import type { MedSlot, MedState } from '@/types/schedule';
 
@@ -19,8 +21,20 @@ const LEGEND: [string, string][] = [
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
+function parseTodayParts(): { year: number; month: number } {
+  const [y, m] = TODAY.split('-').map(Number);
+  return { year: y, month: m };
+}
+
 export default function ScheduleScreen() {
-  const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
+  const { year: todayYear, month: todayMonth } = parseTodayParts();
+
+  const [displayYear, setDisplayYear] = useState(todayYear);
+  const [displayMonth, setDisplayMonth] = useState(todayMonth);
+  const [selectedDate, setSelectedDate] = useState(TODAY);
+  const [pickerVisible, setPickerVisible] = useState(false);
+
+  const { data: scheduleDay } = useGetDayScheduleQuery(selectedDate);
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const pressSlot = useSlotPress();
 
@@ -40,7 +54,33 @@ export default function ScheduleScreen() {
     [pressSlot],
   );
 
+  const handlePrevMonth = useCallback(() => {
+    const { year, month } = prevMonth(displayYear, displayMonth);
+    setDisplayYear(year);
+    setDisplayMonth(month);
+  }, [displayYear, displayMonth]);
+
+  const handleNextMonth = useCallback(() => {
+    const { year, month } = nextMonth(displayYear, displayMonth);
+    setDisplayYear(year);
+    setDisplayMonth(month);
+  }, [displayYear, displayMonth]);
+
+  const handlePickerConfirm = useCallback((year: number, month: number) => {
+    setDisplayYear(year);
+    setDisplayMonth(month);
+    setPickerVisible(false);
+  }, []);
+
+  const handleSelectDate = useCallback((date: string) => {
+    setSelectedDate(date);
+    const [y, m] = date.split('-').map(Number);
+    setDisplayYear(y);
+    setDisplayMonth(m);
+  }, []);
+
   const doneCount = displaySlots.filter(s => s.state === 'done').length;
+  const dayLabel = formatDayLabel(selectedDate, TODAY);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -57,18 +97,40 @@ export default function ScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.monthRow}>
-          <Text style={styles.monthTitle}>2025년 11월</Text>
+          <Pressable
+            onPress={() => setPickerVisible(true)}
+            accessibilityLabel="연월 선택"
+            accessibilityRole="button"
+          >
+            <Text style={styles.monthTitle}>{displayYear}년 {displayMonth}월</Text>
+          </Pressable>
           <View style={styles.chevrons}>
-            <Pressable style={styles.chevronBtn} accessibilityLabel="이전 달" accessibilityRole="button">
+            <Pressable
+              style={styles.chevronBtn}
+              onPress={handlePrevMonth}
+              accessibilityLabel="이전 달"
+              accessibilityRole="button"
+            >
               <Feather name="chevron-left" size={18} color={colors.labelNormal} />
             </Pressable>
-            <Pressable style={styles.chevronBtn} accessibilityLabel="다음 달" accessibilityRole="button">
+            <Pressable
+              style={styles.chevronBtn}
+              onPress={handleNextMonth}
+              accessibilityLabel="다음 달"
+              accessibilityRole="button"
+            >
               <Feather name="chevron-right" size={18} color={colors.labelNormal} />
             </Pressable>
           </View>
         </View>
 
-        <CalendarGrid />
+        <CalendarGrid
+          year={displayYear}
+          month={displayMonth}
+          selectedDate={selectedDate}
+          today={TODAY}
+          onSelectDate={handleSelectDate}
+        />
 
         <View style={styles.legend}>
           {LEGEND.map(([label, color]) => (
@@ -82,7 +144,7 @@ export default function ScheduleScreen() {
         <View style={styles.separator} />
         <View style={styles.todayArea}>
           <View style={styles.todayHeader}>
-            <Text style={styles.todayLabel}>오늘 · 11월 24일 월</Text>
+            <Text style={styles.todayLabel}>{dayLabel}</Text>
             <Text style={styles.todayCount}>복약 {doneCount} / {displaySlots.length} 완료</Text>
           </View>
           <View style={styles.medCard}>
@@ -97,6 +159,14 @@ export default function ScheduleScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <MonthPicker
+        visible={pickerVisible}
+        year={displayYear}
+        month={displayMonth}
+        onConfirm={handlePickerConfirm}
+        onClose={() => setPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
