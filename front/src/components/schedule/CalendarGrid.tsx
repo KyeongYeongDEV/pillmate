@@ -1,75 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, space } from '@/styles/tokens';
+import { buildCalendarRows } from '@/utils/calendarUtils';
 
-type AdherenceStatus = 'full' | 'partial' | 'miss' | 'today';
-
-const ADHERENCE: Record<number, AdherenceStatus> = {
-  1: 'full', 2: 'full', 3: 'full', 4: 'partial', 5: 'full', 6: 'full', 7: 'full',
-  8: 'full', 9: 'partial', 10: 'full', 11: 'full', 12: 'full', 13: 'miss',
-  14: 'partial', 15: 'full', 16: 'full', 17: 'full', 18: 'full', 19: 'partial',
-  20: 'full', 21: 'full', 22: 'full', 23: 'miss', 24: 'today',
-};
+type AdherenceStatus = 'full' | 'partial' | 'miss';
 
 const DOT_COLOR: Record<AdherenceStatus, string> = {
   full: colors.statusPositive,
   partial: colors.statusCautionary,
   miss: colors.statusNegative,
-  today: colors.primaryBase,
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-const TODAY = 24;
 
-// November 2025: Nov 1 = Saturday (column 6 in Sun=0 grid)
-const CELLS: (number | null)[] = Array.from({ length: 35 }, (_, i) => {
-  const d = i - 5;
-  return d >= 1 && d <= 30 ? d : null;
-});
-
-const ROWS: (number | null)[][] = [];
-for (let i = 0; i < CELLS.length; i += 7) {
-  ROWS.push(CELLS.slice(i, i + 7));
+export interface CalendarGridProps {
+  year: number;
+  month: number;
+  selectedDate: string;
+  today: string;
+  onSelectDate: (date: string) => void;
+  adherenceByDate?: Record<string, AdherenceStatus>;
 }
 
-interface DayCellProps { d: number | null; col: number }
+interface DayCellProps {
+  dateStr: string | null;
+  col: number;
+  isSelected: boolean;
+  isToday: boolean;
+  adherence?: AdherenceStatus;
+  onPress: (date: string) => void;
+}
 
-function DayCell({ d, col }: DayCellProps) {
-  if (d == null) return <View style={styles.cell} />;
-  const status = ADHERENCE[d];
-  const isToday = d === TODAY;
+function DayCell({ dateStr, col, isSelected, isToday, adherence, onPress }: DayCellProps) {
+  if (dateStr === null) return <View style={styles.cell} />;
+
+  const day = parseInt(dateStr.slice(8), 10);
+  const isSun = col === 0;
+  const isSat = col === 6;
+
+  const circleBg =
+    isToday ? styles.todayBg :
+    isSelected ? styles.selectedBg : undefined;
+
+  const numColor =
+    isToday || isSelected ? styles.invertNumText :
+    isSun ? styles.sunText :
+    isSat ? styles.satText : undefined;
+
+  const dayMonthStr = `${parseInt(dateStr.slice(5, 7), 10)}월 ${day}일`;
+
   return (
-    <View style={[styles.cell, styles.dayCell]}>
-      <View style={[styles.numCircle, isToday && styles.todayBg]}>
-        <Text style={[
-          styles.numText,
-          isToday && styles.todayNumText,
-          !isToday && col === 0 && styles.sunText,
-          !isToday && col === 6 && styles.satText,
-        ]}>{d}</Text>
+    <Pressable
+      style={[styles.cell, styles.dayCell]}
+      onPress={() => onPress(dateStr)}
+      accessibilityLabel={dayMonthStr}
+      accessibilityState={{ selected: isSelected }}
+      accessibilityRole="button"
+    >
+      <View style={[styles.numCircle, circleBg]}>
+        <Text style={[styles.numText, numColor]}>{day}</Text>
       </View>
-      {status && !isToday
-        ? <View style={[styles.dot, { backgroundColor: DOT_COLOR[status] }]} />
+      {adherence && !isToday
+        ? <View style={[styles.dot, { backgroundColor: DOT_COLOR[adherence] }]} />
         : <View style={styles.dotPlaceholder} />}
-    </View>
+    </Pressable>
   );
 }
 
 const MemoCell = React.memo(DayCell);
 
-export default function CalendarGrid() {
+export default function CalendarGrid({
+  year, month, selectedDate, today, onSelectDate, adherenceByDate,
+}: CalendarGridProps) {
+  const rows = useMemo(() => buildCalendarRows(year, month), [year, month]);
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         {WEEKDAYS.map((d, i) => (
           <View key={d} style={styles.cell}>
-            <Text style={[styles.wdLabel, i === 0 && styles.sunText, i === 6 && styles.satText]}>{d}</Text>
+            <Text style={[styles.wdLabel, i === 0 && styles.sunText, i === 6 && styles.satText]}>
+              {d}
+            </Text>
           </View>
         ))}
       </View>
-      {ROWS.map((row, ri) => (
+      {rows.map((row, ri) => (
         <View key={ri} style={styles.row}>
-          {row.map((d, ci) => <MemoCell key={ci} d={d} col={ci} />)}
+          {row.map((dateStr, ci) => (
+            <MemoCell
+              key={ci}
+              dateStr={dateStr}
+              col={ci}
+              isSelected={dateStr === selectedDate}
+              isToday={dateStr === today}
+              adherence={dateStr ? adherenceByDate?.[dateStr] : undefined}
+              onPress={onSelectDate}
+            />
+          ))}
         </View>
       ))}
     </View>
@@ -84,7 +112,8 @@ const styles = StyleSheet.create({
   numCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   numText: { fontSize: 14, fontWeight: '500', color: colors.labelNormal },
   todayBg: { backgroundColor: colors.labelNormal },
-  todayNumText: { color: '#fff', fontWeight: '700' },
+  selectedBg: { backgroundColor: colors.primaryBase },
+  invertNumText: { color: '#fff', fontWeight: '700' },
   sunText: { color: colors.statusNegative },
   satText: { color: colors.primaryBase },
   wdLabel: { fontSize: 11, fontWeight: '600', paddingVertical: 6, color: colors.labelAlternative },

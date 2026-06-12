@@ -70,21 +70,34 @@ describe('MedTimeRow', () => {
   });
 });
 
+const GRID_BASE = {
+  year: 2026, month: 6,
+  selectedDate: '2026-06-12', today: '2026-06-12',
+  onSelectDate: jest.fn(),
+};
+
 describe('CalendarGrid', () => {
   it('요일 헤더 7개 렌더', () => {
-    render(<CalendarGrid />);
+    render(<CalendarGrid {...GRID_BASE} />);
     expect(screen.getByText('일')).toBeTruthy();
     expect(screen.getByText('월')).toBeTruthy();
     expect(screen.getByText('토')).toBeTruthy();
   });
 
-  it('오늘(24일) 렌더', () => {
-    render(<CalendarGrid />);
-    expect(screen.getByText('24')).toBeTruthy();
+  it('오늘 날짜(12) 렌더', () => {
+    render(<CalendarGrid {...GRID_BASE} />);
+    expect(screen.getByText('12')).toBeTruthy();
   });
 
-  it('11월 1일 렌더', () => {
-    render(<CalendarGrid />);
+  it('6월 1일 렌더', () => {
+    render(<CalendarGrid {...GRID_BASE} />);
     expect(screen.getByText('1')).toBeTruthy();
+  });
+
+  it('날짜 탭 시 onSelectDate 호출', () => {
+    const onSelectDate = jest.fn();
+    render(<CalendarGrid {...GRID_BASE} onSelectDate={onSelectDate} />);
+    fireEvent.press(screen.getByLabelText('6월 12일'));
+    expect(onSelectDate).toHaveBeenCalledWith('2026-06-12');
   });
 });
