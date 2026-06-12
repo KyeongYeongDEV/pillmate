@@ -80,9 +80,14 @@ describe('buildDoseHeadline', () => {
     expect(buildDoseHeadline(slots, at(10))).toBe('다음은 12시 30분 점심약이에요');
   });
 
-  it('놓침 → 기록 없음 카피 (복용 권유 금지)', () => {
+  it('놓침 → 기록 없음 카피 2줄 (복용 권유 금지)', () => {
     const slots = [slot('08:00', '아침', 'done'), slot('12:30', '점심', 'wait'), slot('19:00', '저녁', 'wait')];
-    expect(buildDoseHeadline(slots, at(14))).toBe('점심약 기록이 없어요 · 드셨다면 체크해 주세요');
+    expect(buildDoseHeadline(slots, at(14))).toBe('점심약 기록이 없어요\n드셨다면 체크해 주세요');
+  });
+
+  it('놓침 label 동적 — 저녁 슬롯', () => {
+    const slots = [slot('19:00', '저녁', 'wait')];
+    expect(buildDoseHeadline(slots, at(21))).toBe('저녁약 기록이 없어요\n드셨다면 체크해 주세요');
   });
 
   it('모두 완료 → 복약 끝', () => {

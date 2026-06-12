@@ -19,7 +19,7 @@ export function buildDoseHeadline(slots: HeadlineSlot[], now: Date, streak = 0):
   if (undone.length === 0) return appendStreak(HEADLINE_ALL_DONE, streak);
   const nowMinutes = toMinutesOfDay(now);
   const missed = undone.find(s => toMinutes(s.time) < nowMinutes);
-  if (missed) return `${missed.label}약 기록이 없어요 · 드셨다면 체크해 주세요`;
+  if (missed) return `${missed.label}약 기록이 없어요\n드셨다면 체크해 주세요`;
   const next = undone[0];
   if (nowMinutes < toMinutes(slots[0].time)) {
     return `${formatSlotTime(next.time)} ${next.label}약으로 시작해요`;
