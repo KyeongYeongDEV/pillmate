@@ -15,6 +15,8 @@ import lombok.NoArgsConstructor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "dose_logs")
@@ -23,6 +25,7 @@ import java.time.Instant;
 public class DoseLog {
 
     private static final Duration DELAYED_THRESHOLD = Duration.ofMinutes(30);
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -99,6 +102,12 @@ public class DoseLog {
 
     public boolean isGroupNotified() {
         return groupNotifiedAt != null;
+    }
+
+    public boolean isEditableOn(Clock clock) {
+        LocalDate scheduledDate = scheduledAt.atZone(KST).toLocalDate();
+        LocalDate today = Instant.now(clock).atZone(KST).toLocalDate();
+        return scheduledDate.equals(today);
     }
 
     public boolean isDelayed(Clock clock) {

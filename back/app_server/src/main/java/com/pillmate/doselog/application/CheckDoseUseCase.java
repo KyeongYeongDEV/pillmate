@@ -18,6 +18,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+
 @Service
 @RequiredArgsConstructor
 public class CheckDoseUseCase {
@@ -27,12 +29,14 @@ public class CheckDoseUseCase {
     private final UserRepository userRepository;
     private final ActivityFeedAppender activityFeedAppender;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public DoseLogResponse check(CheckDoseRequest req, Long checkedBy) {
         DoseLog doseLog = doseLogRepository.findById(req.doseLogId())
                 .orElseThrow(() -> new PillmateException(ErrorCode.INVALID_REQUEST));
         verifyOwnership(doseLog.getPatientId());
+        verifyEditableToday(doseLog);
 
         if ("TAKE".equalsIgnoreCase(req.action())) {
             doseLog.take(checkedBy);
@@ -54,6 +58,12 @@ public class CheckDoseUseCase {
         if (groupAlreadyNotified) {
             eventPublisher.publishEvent(
                     new DoseCheckCanceled(doseLog.getId(), actorUserId, doseLog.getScheduleId()));
+        }
+    }
+
+    private void verifyEditableToday(DoseLog doseLog) {
+        if (!doseLog.isEditableOn(clock)) {
+            throw new PillmateException(ErrorCode.DOSE_LOG_DATE_LOCKED);
         }
     }
 

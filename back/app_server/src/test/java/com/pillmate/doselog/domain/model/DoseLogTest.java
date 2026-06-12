@@ -129,4 +129,65 @@ class DoseLogTest {
         assertThat(log.isGroupNotified()).isTrue();
         assertThat(log.getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
     }
+
+    @Test
+    @DisplayName("isEditableOn — scheduledAt KST 날짜 == 오늘 KST 날짜면 true")
+    void isEditableOn_whenScheduledToday_returnsTrue() {
+        // given — now: KST 2026-06-12 19:00, scheduled: KST 2026-06-12 08:00
+        Clock now = kstClock("2026-06-12T10:00:00Z");
+        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
+
+        // when / then
+        assertThat(log.isEditableOn(now)).isTrue();
+    }
+
+    @Test
+    @DisplayName("isEditableOn — 어제(KST) 예정분은 false")
+    void isEditableOn_whenScheduledYesterday_returnsFalse() {
+        // given — now: KST 2026-06-12 10:00, scheduled: KST 2026-06-11 08:00
+        Clock now = kstClock("2026-06-12T01:00:00Z");
+        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-10T23:00:00Z"));
+
+        // when / then
+        assertThat(log.isEditableOn(now)).isFalse();
+    }
+
+    @Test
+    @DisplayName("isEditableOn — 내일(KST) 예정분은 false")
+    void isEditableOn_whenScheduledTomorrow_returnsFalse() {
+        // given — now: KST 2026-06-12 10:00, scheduled: KST 2026-06-13 08:00
+        Clock now = kstClock("2026-06-12T01:00:00Z");
+        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-12T23:00:00Z"));
+
+        // when / then
+        assertThat(log.isEditableOn(now)).isFalse();
+    }
+
+    @Test
+    @DisplayName("isEditableOn — 오늘 KST 23:59 에도 당일분은 true")
+    void isEditableOn_atEndOfKstDay_returnsTrue() {
+        // given — now: KST 2026-06-12 23:59, scheduled: KST 2026-06-12 08:00
+        Clock now = kstClock("2026-06-12T14:59:00Z");
+        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
+
+        // when / then
+        assertThat(log.isEditableOn(now)).isTrue();
+    }
+
+    @Test
+    @DisplayName("isEditableOn — KST 자정 경계(UTC 15:00): 자정 직후엔 전날분 false, 당일분 true")
+    void isEditableOn_atKstMidnightBoundary() {
+        // given — now: UTC 2026-06-11 15:00 == KST 2026-06-12 00:00
+        Clock now = kstClock("2026-06-11T15:00:00Z");
+        DoseLog yesterdayLog = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T14:59:59Z"));
+        DoseLog todayLog = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
+
+        // when / then — KST 2026-06-11 23:59:59 분은 잠김, KST 2026-06-12 08:00 분은 허용
+        assertThat(yesterdayLog.isEditableOn(now)).isFalse();
+        assertThat(todayLog.isEditableOn(now)).isTrue();
+    }
+
+    private Clock kstClock(String utcInstant) {
+        return Clock.fixed(Instant.parse(utcInstant), ZoneId.of("Asia/Seoul"));
+    }
 }
