@@ -55,8 +55,6 @@ export default function ScheduleScreen() {
     return todayLevel ? { ...base, [TODAY]: todayLevel } : base;
   }, [monthAdherence, scheduleDay, displaySlots, selectedDate]);
 
-  const handleAdd = useCallback(() => { /* Phase 2: navigate to prescription upload */ }, []);
-
   const handleSlotPress = useMemo(
     () => (slot: MedSlot) => pressSlot(slot.doseLogId, slot.state),
     [pressSlot],
@@ -94,9 +92,6 @@ export default function ScheduleScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>복약 스케줄</Text>
-        <Pressable onPress={handleAdd} accessibilityLabel="처방전 추가" accessibilityRole="button">
-          <Feather name="plus" size={24} color={colors.labelNormal} />
-        </Pressable>
       </View>
 
       <ScrollView
@@ -183,7 +178,6 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgNormal },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     borderBottomWidth: 1, borderBottomColor: colors.line,
   },

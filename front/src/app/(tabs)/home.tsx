@@ -4,15 +4,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { createSelector } from 'reselect';
+import { Feather } from '@expo/vector-icons';
 import { colors, typography, space, radius, shadows } from '@/styles/tokens';
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { clearUnread } from '@/store/slices/homeSlice';
+import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
 import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
-import NotificationBell from '@/components/home/NotificationBell';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
 import ActivityFeedItem from '@/components/home/ActivityFeedItem';
@@ -24,18 +22,10 @@ import type { MedState } from '@/types/schedule';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
-const selectHome = createSelector(
-  (state: RootState) => state.home,
-  (home) => home,
-);
-
-
 export default function HomeScreen() {
-  const dispatch = useAppDispatch();
-  const { unreadCount } = useAppSelector(selectHome);
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const [showInsight, setShowInsight] = useState(true);
-  const handleBellPress = useMemo(() => () => dispatch(clearUnread()), [dispatch]);
+  const handleSettingsPress = useMemo(() => () => router.push('/(tabs)/my' as any), []);
   const pressSlot = useSlotPress();
 
   const { data: groups = [] } = useGetMyGroupsQuery();
@@ -68,10 +58,13 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
-          <Text style={styles.pinnedGroupLabel}>
-            {groups.find(g => g.pinned)?.name ?? 'PillMate'}
-          </Text>
-          <NotificationBell count={unreadCount} onPress={handleBellPress} />
+          <Pressable
+            onPress={handleSettingsPress}
+            accessibilityLabel="설정"
+            accessibilityRole="button"
+          >
+            <Feather name="settings" size={22} color={colors.labelNormal} />
+          </Pressable>
         </View>
 
         <Text style={styles.greeting}>안녕하세요, 민지님</Text>
@@ -196,10 +189,9 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginBottom: space.s12,
   },
-  pinnedGroupLabel: { fontSize: 14, fontWeight: '700', color: colors.labelNormal },
   greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6 },
   subtitle: { ...typography.label1n, color: colors.labelAlternative, marginTop: 2 },
   progressTrack: {
