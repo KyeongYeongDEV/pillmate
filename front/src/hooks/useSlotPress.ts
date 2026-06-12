@@ -5,8 +5,8 @@ import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
 import { selectIsLocked } from '@/store/slices/doseStateSlice';
 import type { RootState } from '@/store';
 
-const LOCK_ALERT_TITLE = '취소 불가';
-const LOCK_ALERT_MSG = '복약 완료는 60초 후 취소할 수 없습니다.';
+const CANCEL_CONFIRM_TITLE = '복약 취소';
+const CANCEL_CONFIRM_MSG = '취소하시겠습니까?';
 
 export function useSlotPress() {
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
@@ -15,12 +15,21 @@ export function useSlotPress() {
   return useCallback((doseLogId: number | undefined, currentState: string) => {
     if (!doseLogId) return;
 
-    if (currentState === 'done' && selectIsLocked(doseStateMap, doseLogId, Date.now())) {
-      Alert.alert(LOCK_ALERT_TITLE, LOCK_ALERT_MSG);
+    if (currentState !== 'done') {
+      checkDose({ doseLogId, action: 'TAKE' });
       return;
     }
 
-    const action = currentState === 'done' ? 'SKIP' : 'TAKE';
-    checkDose({ doseLogId, action });
+    const fireCancel = () => checkDose({ doseLogId, action: 'CANCEL' });
+
+    if (selectIsLocked(doseStateMap, doseLogId, Date.now())) {
+      Alert.alert(CANCEL_CONFIRM_TITLE, CANCEL_CONFIRM_MSG, [
+        { text: '아니요', style: 'cancel' },
+        { text: '예', onPress: fireCancel },
+      ]);
+      return;
+    }
+
+    fireCancel();
   }, [doseStateMap, checkDose]);
 }

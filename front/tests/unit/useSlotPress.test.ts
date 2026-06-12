@@ -1,6 +1,5 @@
-// RED: useSlotPress hook 단위 테스트 (이전엔 테스트 0개)
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, type AlertButton } from 'react-native';
 
 jest.mock('@/store/hooks', () => ({
   useAppSelector: jest.fn(),
@@ -24,6 +23,11 @@ const DOSE_LOG_ID = 5;
 
 function makeMap(lockedAt?: number) {
   return lockedAt != null ? { [DOSE_LOG_ID]: { state: 'done' as const, lockedAt } } : {};
+}
+
+function findAlertButton(label: string): AlertButton | undefined {
+  const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+  return buttons.find(b => b.text === label);
 }
 
 describe('useSlotPress', () => {
@@ -58,40 +62,65 @@ describe('useSlotPress', () => {
     expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'TAKE' });
   });
 
-  it('state=done + 잠금 해제 상태 → SKIP action으로 mutation 호출', () => {
-    // lockedAt = 지금으로부터 1초 전 → 아직 grace period 이내
+  it('state=done + 60초 이내 → CANCEL action 즉시 발사 (자유 토글, SKIP 아님)', () => {
     const lockedAt = Date.now() - 1_000;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(DOSE_LOG_ID, 'done'); });
-    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'SKIP' });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
-  it('state=done + 잠금 완료 (60초 초과) → Alert 표시, mutation 미호출', () => {
-    // lockedAt = 60초 이상 전 → 잠금 완료
+  it('state=done + 60초 초과 → confirm Alert 표시, 즉시 발사 없음', () => {
     const lockedAt = Date.now() - LOCK_DURATION_MS - 1_000;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(DOSE_LOG_ID, 'done'); });
-    expect(alertSpy).toHaveBeenCalledWith('취소 불가', '복약 완료는 60초 후 취소할 수 없습니다.');
+    expect(alertSpy).toHaveBeenCalledWith(
+      '복약 취소',
+      '취소하시겠습니까?',
+      expect.any(Array),
+    );
     expect(checkDose).not.toHaveBeenCalled();
   });
 
-  it('state=done + doseLogId가 map에 없음 → SKIP 호출 (락 없음)', () => {
+  it('confirm에서 "예" 탭 → CANCEL action 발사', () => {
+    const lockedAt = Date.now() - LOCK_DURATION_MS - 1_000;
+    mockSelector.mockReturnValue(makeMap(lockedAt));
+    const { result } = renderHook(() => useSlotPress());
+    act(() => { result.current(DOSE_LOG_ID, 'done'); });
+
+    const yesBtn = findAlertButton('예');
+    expect(yesBtn).toBeDefined();
+    act(() => { yesBtn!.onPress?.(); });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
+  });
+
+  it('confirm에서 "아니요" 탭 → no-op (mutation 미호출)', () => {
+    const lockedAt = Date.now() - LOCK_DURATION_MS - 1_000;
+    mockSelector.mockReturnValue(makeMap(lockedAt));
+    const { result } = renderHook(() => useSlotPress());
+    act(() => { result.current(DOSE_LOG_ID, 'done'); });
+
+    const noBtn = findAlertButton('아니요');
+    expect(noBtn).toBeDefined();
+    act(() => { noBtn!.onPress?.(); });
+    expect(checkDose).not.toHaveBeenCalled();
+  });
+
+  it('state=done + doseLogId가 map에 없음 → CANCEL 즉시 발사 (락 없음)', () => {
     mockSelector.mockReturnValue({});
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(DOSE_LOG_ID, 'done'); });
-    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'SKIP' });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
   });
 
-  it('state=done + lockedAt 정확히 60초 전 → 경계값 잠금 완료', () => {
-    // LOCK_DURATION_MS = 60_000ms: now - lockedAt >= 60000 → locked
+  it('state=done + lockedAt 정확히 60초 전 → 경계값 confirm 분기', () => {
     const lockedAt = Date.now() - LOCK_DURATION_MS;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(DOSE_LOG_ID, 'done'); });
-    expect(alertSpy).toHaveBeenCalledWith('취소 불가', '복약 완료는 60초 후 취소할 수 없습니다.');
+    expect(alertSpy).toHaveBeenCalledWith('복약 취소', '취소하시겠습니까?', expect.any(Array));
     expect(checkDose).not.toHaveBeenCalled();
   });
 });
