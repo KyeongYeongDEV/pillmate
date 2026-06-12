@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -6,10 +6,10 @@ import CalendarGrid from '@/components/schedule/CalendarGrid';
 import MonthPicker from '@/components/schedule/MonthPicker';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import { colors, typography, space, radius } from '@/styles/tokens';
-import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
+import { useGetDayScheduleQuery, useGetMonthAdherenceQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
-import { prevMonth, nextMonth, formatDayLabel, deriveAdherence, type AdherenceLevel } from '@/utils/calendarUtils';
+import { prevMonth, nextMonth, toMonthString, formatDayLabel, deriveAdherence } from '@/utils/calendarUtils';
 import type { RootState } from '@/store';
 import type { MedSlot, MedState } from '@/types/schedule';
 
@@ -33,9 +33,9 @@ export default function ScheduleScreen() {
   const [displayMonth, setDisplayMonth] = useState(todayMonth);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [adherenceByDate, setAdherenceByDate] = useState<Record<string, AdherenceLevel>>({});
 
   const { data: scheduleDay } = useGetDayScheduleQuery(selectedDate);
+  const { data: monthAdherence } = useGetMonthAdherenceQuery(toMonthString(displayYear, displayMonth));
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const pressSlot = useSlotPress();
 
@@ -48,15 +48,12 @@ export default function ScheduleScreen() {
     [rawSlots, doseStateMap],
   );
 
-  useEffect(() => {
-    if (!scheduleDay) return;
-    const level = deriveAdherence(displaySlots);
-    setAdherenceByDate(prev => {
-      if (level === null) return prev;
-      if (prev[selectedDate] === level) return prev;
-      return { ...prev, [selectedDate]: level };
-    });
-  }, [scheduleDay, displaySlots, selectedDate]);
+  const adherenceByDate = useMemo(() => {
+    const base = monthAdherence ?? {};
+    if (selectedDate !== TODAY || !scheduleDay) return base;
+    const todayLevel = deriveAdherence(displaySlots);
+    return todayLevel ? { ...base, [TODAY]: todayLevel } : base;
+  }, [monthAdherence, scheduleDay, displaySlots, selectedDate]);
 
   const handleAdd = useCallback(() => { /* Phase 2: navigate to prescription upload */ }, []);
 
