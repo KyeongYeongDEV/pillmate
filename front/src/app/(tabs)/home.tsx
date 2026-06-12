@@ -17,7 +17,8 @@ import ActivityFeedItem from '@/components/home/ActivityFeedItem';
 import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
 import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
-import { medSlotToTimeSlot } from '@/lib/scheduleUtils';
+import { medSlotToTimeSlot, buildDoseHeadline } from '@/lib/scheduleUtils';
+import { formatFullDate, formatMonthDay } from '@/utils/calendarUtils';
 import type { MedState } from '@/types/schedule';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -53,6 +54,9 @@ export default function HomeScreen() {
     [pressSlot],
   );
 
+  const doneCount = slots.filter(s => s.state === 'done').length;
+  const progressPercent = slots.length > 0 ? Math.round((doneCount / slots.length) * 100) : 0;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* ── Header ── */}
@@ -67,11 +71,11 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.greeting}>안녕하세요, 민지님</Text>
-        <Text style={styles.subtitle}>오늘 할머니 복약 4/6 완료</Text>
+        <Text style={styles.dateLabel}>{formatFullDate(TODAY)}</Text>
+        <Text style={styles.greeting}>{buildDoseHeadline(slots.length, doneCount)}</Text>
 
         <View style={styles.progressTrack}>
-          <View style={styles.progressFill} />
+          <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
         </View>
       </View>
 
@@ -85,7 +89,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
-            <Text style={styles.sectionDate}>11월 24일 월</Text>
+            <Text style={styles.sectionDate}>{formatMonthDay(TODAY)}</Text>
           </View>
           <TimeSlotCards slots={slots} onSlotPress={handleSlotPress} />
         </View>
@@ -192,13 +196,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginBottom: space.s12,
   },
-  greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6 },
-  subtitle: { ...typography.label1n, color: colors.labelAlternative, marginTop: 2 },
+  dateLabel: { ...typography.label1n, color: colors.labelAlternative },
+  greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6, marginTop: 2 },
   progressTrack: {
     height: 8, borderRadius: radius.full, backgroundColor: colors.fillStrong,
     marginTop: space.s16, overflow: 'hidden',
   },
-  progressFill: { width: '67%', height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryBase },
+  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryBase },
   scroll: { flex: 1 },
   scrollContent: { padding: space.s16, gap: space.s20, paddingBottom: space.s40 },
   section: { gap: space.s10 },
