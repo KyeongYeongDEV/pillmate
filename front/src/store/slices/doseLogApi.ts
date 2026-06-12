@@ -2,6 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
 import { markDone, markWait, markDoneNoLock } from './doseStateSlice';
+import { scheduleApiSlice } from './scheduleApi';
 
 export const doseLogApiSlice = createApi({
   reducerPath: 'doseLogApi',
@@ -19,6 +20,7 @@ export const doseLogApiSlice = createApi({
         dispatch(action === 'TAKE' ? markDone({ doseLogId }) : markWait({ doseLogId }));
         try {
           await queryFulfilled;
+          dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
         } catch {
           // Revert on network failure; markDoneNoLock avoids restarting the 60s timer
           dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId }));

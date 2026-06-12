@@ -3,6 +3,7 @@ import {
   prevMonth,
   nextMonth,
   toDateString,
+  toMonthString,
   formatDayLabel,
   deriveAdherence,
 } from '../../src/utils/calendarUtils';
@@ -14,6 +15,15 @@ describe('toDateString', () => {
   });
   it('월/일 두 자리 패딩', () => {
     expect(toDateString(2026, 1, 5)).toBe('2026-01-05');
+  });
+});
+
+describe('toMonthString', () => {
+  it('2026-06 포맷', () => {
+    expect(toMonthString(2026, 6)).toBe('2026-06');
+  });
+  it('두 자리 월은 그대로', () => {
+    expect(toMonthString(2026, 12)).toBe('2026-12');
   });
 });
 

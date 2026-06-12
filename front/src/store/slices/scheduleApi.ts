@@ -2,6 +2,29 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type { ScheduleDay } from '@/types/schedule';
+import type { AdherenceLevel } from '@/utils/calendarUtils';
+
+export interface MonthAdherenceDay {
+  date: string;
+  totalCount: number;
+  takenCount: number;
+  adherence: 'FULL' | 'PARTIAL' | 'MISS';
+}
+
+export interface MonthScheduleResponse {
+  month: string;
+  days: MonthAdherenceDay[];
+}
+
+export function toAdherenceMap(
+  response: MonthScheduleResponse | null | undefined,
+): Record<string, AdherenceLevel> {
+  const map: Record<string, AdherenceLevel> = {};
+  for (const day of response?.days ?? []) {
+    map[day.date] = day.adherence.toLowerCase() as AdherenceLevel;
+  }
+  return map;
+}
 
 export const MOCK_SCHEDULE: ScheduleDay = {
   date: '2025-11-24',
@@ -18,7 +41,7 @@ export const MOCK_SCHEDULE: ScheduleDay = {
 export const scheduleApiSlice = createApi({
   reducerPath: 'scheduleApi',
   baseQuery: createPillmateBaseQuery(),
-  tagTypes: ['Schedule'],
+  tagTypes: ['Schedule', 'MonthSchedule'],
   keepUnusedDataFor: 30,
   endpoints: (build) => ({
     getDaySchedule: build.query<ScheduleDay, string>({
@@ -26,7 +49,14 @@ export const scheduleApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<ScheduleDay>) => response?.data ?? MOCK_SCHEDULE,
       providesTags: ['Schedule'],
     }),
+
+    getMonthAdherence: build.query<Record<string, AdherenceLevel>, string>({
+      query: (month) => `/schedules/month?month=${month}`,
+      transformResponse: (response: ApiEnvelope<MonthScheduleResponse>) =>
+        toAdherenceMap(response?.data),
+      providesTags: ['MonthSchedule'],
+    }),
   }),
 });
 
-export const { useGetDayScheduleQuery } = scheduleApiSlice;
+export const { useGetDayScheduleQuery, useGetMonthAdherenceQuery } = scheduleApiSlice;

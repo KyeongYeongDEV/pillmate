@@ -1,4 +1,30 @@
-import { MOCK_SCHEDULE } from '@/store/slices/scheduleApi';
+import { MOCK_SCHEDULE, toAdherenceMap } from '@/store/slices/scheduleApi';
+
+describe('toAdherenceMap — /schedules/month 응답 변환', () => {
+  it('FULL/PARTIAL/MISS → 소문자 AdherenceLevel 맵', () => {
+    const map = toAdherenceMap({
+      month: '2026-06',
+      days: [
+        { date: '2026-06-10', totalCount: 4, takenCount: 4, adherence: 'FULL' },
+        { date: '2026-06-11', totalCount: 4, takenCount: 1, adherence: 'PARTIAL' },
+        { date: '2026-06-09', totalCount: 4, takenCount: 0, adherence: 'MISS' },
+      ],
+    });
+    expect(map).toEqual({
+      '2026-06-10': 'full',
+      '2026-06-11': 'partial',
+      '2026-06-09': 'miss',
+    });
+  });
+
+  it('days 빈 배열 → 빈 맵', () => {
+    expect(toAdherenceMap({ month: '2026-06', days: [] })).toEqual({});
+  });
+
+  it('응답 없음(undefined) → 빈 맵', () => {
+    expect(toAdherenceMap(undefined)).toEqual({});
+  });
+});
 
 describe('MOCK_SCHEDULE — 단일 진실 소스', () => {
   it('slots 4개', () => {
