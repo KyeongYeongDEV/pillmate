@@ -80,6 +80,14 @@ public class Notification {
                 NotificationType.DOSE_MISSED, "복약 알림", "그룹 멤버가 복약을 건너뛰었어요");
     }
 
+    public static Notification doseCanceled(Long recipientUserId, Long actorUserId,
+                                            Long careGroupId, Long doseLogId,
+                                            String actorName, String timeOfDayLabel) {
+        String body = actorName + "님이 " + timeOfDayLabel + " 약 복용을 취소했습니다";
+        return create(recipientUserId, actorUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_CANCELED, "복약 알림", body);
+    }
+
     public static Notification ddiCritical(Long recipientUserId, Long actorUserId,
                                             Long careGroupId, Long prescriptionId,
                                             String warningDetail) {

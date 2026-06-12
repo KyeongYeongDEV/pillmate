@@ -2,12 +2,16 @@ package com.pillmate.notification.application;
 
 import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.doselog.domain.event.DoseCheckCanceled;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.event.PrescriptionRegistered;
 import com.pillmate.report.domain.event.WeeklyReportGenerated;
+import com.pillmate.schedule.domain.model.Schedule;
+import com.pillmate.schedule.domain.model.TimeOfDay;
+import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +32,7 @@ public class NotificationDispatcher {
 
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final ScheduleRepository scheduleRepository;
     private final NotificationPersistenceService notificationPersistenceService;
     private final NotificationSenderPort notificationSenderPort;
 
@@ -77,6 +82,49 @@ public class NotificationDispatcher {
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
         saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId() + "/report/weekly"));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(DoseCheckCanceled event) {
+        Schedule schedule = scheduleRepository.findById(event.scheduleId()).orElse(null);
+        if (schedule == null) {
+            log.warn("DoseCheckCanceled schedule 미조회 scheduleId={}", event.scheduleId());
+            return;
+        }
+
+        List<Notification> notifications = buildCanceledNotifications(event, schedule);
+        if (notifications.isEmpty()) {
+            return;
+        }
+
+        List<Notification> saved = notificationPersistenceService.saveAll(notifications);
+        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId()));
+    }
+
+    private List<Notification> buildCanceledNotifications(DoseCheckCanceled event, Schedule schedule) {
+        String actorName = resolveUserName(event.actorUserId());
+        String timeLabel = toKoreanTimeLabel(schedule.getTimeOfDay());
+        return membershipRepository.findGroupMemberUserIds(event.actorUserId()).stream()
+                .filter(id -> !id.equals(event.actorUserId()))
+                .map(recipientId -> Notification.doseCanceled(
+                        recipientId, event.actorUserId(), schedule.getCareGroupId(),
+                        event.doseLogId(), actorName, timeLabel))
+                .toList();
+    }
+
+    private String resolveUserName(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getName)
+                .orElse("멤버");
+    }
+
+    private String toKoreanTimeLabel(TimeOfDay timeOfDay) {
+        return switch (timeOfDay) {
+            case MORNING -> "아침";
+            case NOON -> "점심";
+            case EVENING -> "저녁";
+            case BEDTIME -> "취침 전";
+        };
     }
 
     private void dispatchOne(Notification notification, String route) {

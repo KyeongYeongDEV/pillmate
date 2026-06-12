@@ -6,6 +6,7 @@ import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.doselog.application.dto.CheckDoseRequest;
 import com.pillmate.doselog.application.dto.DoseLogResponse;
+import com.pillmate.doselog.domain.event.DoseCheckCanceled;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
@@ -16,9 +17,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -27,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @DisplayName("CheckDoseUseCase — TAKE/SKIP/권한/멱등 단위")
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +41,7 @@ class CheckDoseUseCaseTest {
     @Mock ScheduleRepository scheduleRepository;
     @Mock UserRepository userRepository;
     @Mock ActivityFeedAppender activityFeedAppender;
+    @Mock ApplicationEventPublisher eventPublisher;
     @InjectMocks CheckDoseUseCase sut;
 
     private static final Long PATIENT_ID = 1L;
@@ -98,6 +104,60 @@ class CheckDoseUseCaseTest {
 
         // then
         assertThat(response.status()).isEqualTo(DoseStatus.TAKEN);
+    }
+
+    @Test
+    @DisplayName("CANCEL 액션 — TAKEN 에서 PENDING 복귀")
+    void check_whenCancel_revertsToPending() {
+        // given
+        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, Instant.now());
+        doseLog.take(PATIENT_ID);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        DoseLogResponse response = sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
+
+        // then
+        assertThat(response.status()).isEqualTo(DoseStatus.PENDING);
+        assertThat(response.checkedBy()).isNull();
+        assertThat(response.checkedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("CANCEL — 그룹 알림 이미 발송됨(groupNotifiedAt 기록) → DoseCheckCanceled 이벤트 발행")
+    void check_whenCancelAfterGroupNotified_publishesCanceledEvent() {
+        // given
+        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, Instant.now());
+        doseLog.take(PATIENT_ID);
+        doseLog.markGroupNotified(Instant.now());
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
+
+        // then
+        ArgumentCaptor<DoseCheckCanceled> captor = ArgumentCaptor.forClass(DoseCheckCanceled.class);
+        then(eventPublisher).should().publishEvent(captor.capture());
+        assertThat(captor.getValue().actorUserId()).isEqualTo(PATIENT_ID);
+        assertThat(captor.getValue().scheduleId()).isEqualTo(SCHEDULE_ID);
+    }
+
+    @Test
+    @DisplayName("CANCEL — 60초 내(그룹 알림 미발송) → 이벤트 미발행, 조용히 복귀")
+    void check_whenCancelBeforeGroupNotified_noEvent() {
+        // given
+        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, Instant.now());
+        doseLog.take(PATIENT_ID);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
+
+        // then
+        then(eventPublisher).should(never()).publishEvent(any(DoseCheckCanceled.class));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.doselog.application.dto.CheckDoseRequest;
 import com.pillmate.doselog.application.dto.DoseLogResponse;
+import com.pillmate.doselog.domain.event.DoseCheckCanceled;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import com.pillmate.activity.application.ActivityFeedAppender;
@@ -13,6 +14,7 @@ import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ public class CheckDoseUseCase {
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
     private final ActivityFeedAppender activityFeedAppender;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public DoseLogResponse check(CheckDoseRequest req, Long checkedBy) {
@@ -36,11 +39,22 @@ public class CheckDoseUseCase {
             appendTakenActivity(doseLog);
         } else if ("SKIP".equalsIgnoreCase(req.action())) {
             doseLog.skip(checkedBy, req.skipReason());
+        } else if ("CANCEL".equalsIgnoreCase(req.action())) {
+            cancelWithGroupNotice(doseLog, checkedBy);
         } else {
             throw new PillmateException(ErrorCode.INVALID_REQUEST);
         }
 
         return DoseLogResponse.from(doseLogRepository.save(doseLog));
+    }
+
+    private void cancelWithGroupNotice(DoseLog doseLog, Long actorUserId) {
+        boolean groupAlreadyNotified = doseLog.isGroupNotified();
+        doseLog.cancel();
+        if (groupAlreadyNotified) {
+            eventPublisher.publishEvent(
+                    new DoseCheckCanceled(doseLog.getId(), actorUserId, doseLog.getScheduleId()));
+        }
     }
 
     private void verifyOwnership(Long patientId) {

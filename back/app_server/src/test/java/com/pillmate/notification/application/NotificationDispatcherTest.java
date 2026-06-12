@@ -4,6 +4,7 @@ import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.doselog.domain.event.DoseCheckCanceled;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.notification.domain.model.NotificationReferenceType;
@@ -11,6 +12,9 @@ import com.pillmate.notification.domain.model.NotificationType;
 import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.event.PrescriptionRegistered;
 import com.pillmate.report.domain.event.WeeklyReportGenerated;
+import com.pillmate.schedule.domain.model.Schedule;
+import com.pillmate.schedule.domain.model.TimeOfDay;
+import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.user.domain.model.PushProvider;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
@@ -40,6 +44,7 @@ class NotificationDispatcherTest {
 
     @Mock MembershipRepository membershipRepository;
     @Mock UserRepository userRepository;
+    @Mock ScheduleRepository scheduleRepository;
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock NotificationSenderPort notificationSenderPort;
     @InjectMocks NotificationDispatcher sut;
@@ -189,6 +194,56 @@ class NotificationDispatcherTest {
         assertThat(filtered.get(0).getReferenceId()).isEqualTo(REPORT_ID);
         assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
         verify(notificationSenderPort).send(any());
+    }
+
+    @Test
+    @DisplayName("DoseCheckCanceled — 'OO님이 아침 약 복용을 취소했습니다' DOSE_CANCELED 그룹 발송")
+    void on_doseCheckCanceled_sendsCanceledNotificationToGroup() {
+        // given
+        Long DOSE_LOG_ID = 7L;
+        Long SCHEDULE_ID = 11L;
+        DoseCheckCanceled event = new DoseCheckCanceled(DOSE_LOG_ID, ACTOR_ID, SCHEDULE_ID);
+        Schedule schedule = Schedule.of(GROUP_ID, ACTOR_ID, 1L, TimeOfDay.MORNING,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31), ACTOR_ID);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(ACTOR_ID, MEMBER_ID));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        // when
+        sut.on(event);
+
+        // then
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        List<Notification> created = captor.getValue();
+        assertThat(created).hasSize(1);
+        Notification n = created.get(0);
+        assertThat(n.getType()).isEqualTo(NotificationType.DOSE_CANCELED);
+        assertThat(n.getRecipientUserId()).isEqualTo(MEMBER_ID);
+        assertThat(n.getCareGroupId()).isEqualTo(GROUP_ID);
+        assertThat(n.getDoseLogId()).isEqualTo(DOSE_LOG_ID);
+        assertThat(n.getBody()).contains("아침").contains("취소했습니다");
+        verify(notificationSenderPort).send(any());
+    }
+
+    @Test
+    @DisplayName("DoseCheckCanceled — 그룹 멤버 본인뿐이면 발송 X")
+    void on_doseCheckCanceled_whenNoOtherMembers_skips() {
+        // given
+        DoseCheckCanceled event = new DoseCheckCanceled(7L, ACTOR_ID, 11L);
+        Schedule schedule = Schedule.of(GROUP_ID, ACTOR_ID, 1L, TimeOfDay.MORNING,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31), ACTOR_ID);
+        given(scheduleRepository.findById(11L)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(ACTOR_ID));
+
+        // when
+        sut.on(event);
+
+        // then
+        verify(notificationPersistenceService, org.mockito.Mockito.never()).saveAll(anyList());
     }
 
     private Notification buildNotification(Long recipientId, NotificationType type) {
