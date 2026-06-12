@@ -90,19 +90,9 @@ describe('buildDoseHeadline', () => {
     expect(buildDoseHeadline(slots, at(21))).toBe('저녁약 기록이 없어요\n드셨다면 체크해 주세요');
   });
 
-  it('모두 완료 → 복약 끝', () => {
+  it('모두 완료 → 복약 끝 (스트릭은 줄3 전담 — 병합 없음)', () => {
     const slots = [slot('08:00', '아침', 'done'), slot('19:00', '저녁', 'done')];
     expect(buildDoseHeadline(slots, at(20))).toBe('오늘 복약 끝!');
-  });
-
-  it('모두 완료 + 스트릭 2 이상 → 연속 달성 병합', () => {
-    const slots = [slot('08:00', '아침', 'done')];
-    expect(buildDoseHeadline(slots, at(20), 7)).toBe('오늘 복약 끝! 7일 연속 달성 🔥');
-  });
-
-  it('모두 완료 + 스트릭 1 → 병합 없음', () => {
-    const slots = [slot('08:00', '아침', 'done')];
-    expect(buildDoseHeadline(slots, at(20), 1)).toBe('오늘 복약 끝!');
   });
 });
 

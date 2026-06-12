@@ -13,10 +13,10 @@ export interface HeadlineSlot {
 
 export type SlotDotStatus = 'done' | 'next' | 'wait' | 'missed';
 
-export function buildDoseHeadline(slots: HeadlineSlot[], now: Date, streak = 0): string {
+export function buildDoseHeadline(slots: HeadlineSlot[], now: Date): string {
   if (slots.length === 0) return HEADLINE_NO_DOSE;
   const undone = slots.filter(s => s.state !== 'done');
-  if (undone.length === 0) return appendStreak(HEADLINE_ALL_DONE, streak);
+  if (undone.length === 0) return HEADLINE_ALL_DONE;
   const nowMinutes = toMinutesOfDay(now);
   const missed = undone.find(s => toMinutes(s.time) < nowMinutes);
   if (missed) return `${missed.label}약 기록이 없어요\n드셨다면 체크해 주세요`;
@@ -37,10 +37,6 @@ export function deriveSlotStatuses(slots: HeadlineSlot[], now: Date): SlotDotSta
     nextAssigned = true;
     return 'next';
   });
-}
-
-function appendStreak(headline: string, streak: number): string {
-  return streak >= STREAK_DISPLAY_MIN ? `${headline} ${streak}일 연속 달성 🔥` : headline;
 }
 
 function toMinutes(time: string): number {

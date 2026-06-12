@@ -64,7 +64,7 @@ export default function HomeScreen() {
   const streak = useDoseStreak(TODAY, todayComplete);
   const slotStatuses = deriveSlotStatuses(slots, now);
   const dots = slots.map((s, i) => ({ label: s.label, status: slotStatuses[i] }));
-  const showStreak = !todayComplete && streak >= STREAK_DISPLAY_MIN;
+  const showStreak = streak >= STREAK_DISPLAY_MIN;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -81,7 +81,7 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.dateLabel}>{formatFullDate(TODAY)}</Text>
-        <Text style={styles.greeting}>{buildDoseHeadline(slots, now, streak)}</Text>
+        <Text style={styles.greeting}>{buildDoseHeadline(slots, now)}</Text>
 
         <DoseStatusRow
           dots={dots}
