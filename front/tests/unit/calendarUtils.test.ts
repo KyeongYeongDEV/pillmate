@@ -183,6 +183,18 @@ describe('deriveStreak', () => {
   it('오늘만 완료 (어제 기록 없음) → 1', () => {
     expect(deriveStreak({}, TODAY, true)).toBe(1);
   });
+
+  it('약 없는 날(기록 없음) 끼어도 연속 유지 — 건너뜀', () => {
+    const map: Record<string, 'full'> = { '2026-06-11': 'full', '2026-06-09': 'full' };
+    expect(deriveStreak(map, TODAY, false)).toBe(2);
+  });
+
+  it('빈 날 건너뛰다 PARTIAL 만나면 중단', () => {
+    const map: Record<string, 'full' | 'partial'> = {
+      '2026-06-11': 'full', '2026-06-09': 'partial', '2026-06-08': 'full',
+    };
+    expect(deriveStreak(map, TODAY, false)).toBe(1);
+  });
 });
 
 describe('formatFullDate', () => {

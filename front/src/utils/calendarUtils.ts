@@ -31,13 +31,21 @@ export function deriveStreak(
   today: string,
   todayComplete: boolean,
 ): number {
+  const earliestRecorded = findEarliestDate(adherenceByDate);
   let streak = todayComplete ? 1 : 0;
   let cursor = prevDate(today);
-  while (adherenceByDate[cursor] === 'full') {
-    streak += 1;
+  while (earliestRecorded && cursor >= earliestRecorded) {
+    const level = adherenceByDate[cursor];
+    if (level && level !== 'full') break;
+    if (level === 'full') streak += 1;
     cursor = prevDate(cursor);
   }
   return streak;
+}
+
+function findEarliestDate(adherenceByDate: Record<string, AdherenceLevel>): string | null {
+  const dates = Object.keys(adherenceByDate);
+  return dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : null;
 }
 
 export function prevMonth(year: number, month: number): { year: number; month: number } {
