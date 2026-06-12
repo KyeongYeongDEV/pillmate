@@ -25,27 +25,7 @@ export const doseLogApiSlice = createApi({
         }
       },
     }),
-
-    // T-BE-NOTIFY-GROUP pending: swallow 404/501 and warn
-    notifyGroup: build.mutation<void, number>({
-      query: (doseLogId) => ({
-        url: `/dose-logs/${doseLogId}/notify-group`,
-        method: 'POST',
-      }),
-      async onQueryStarted(doseLogId, { queryFulfilled }) {
-        try {
-          await queryFulfilled;
-        } catch (err: any) {
-          const status = err?.error?.status;
-          if (status === 404 || status === 501) {
-            console.warn(`[notifyGroup] BE endpoint not yet implemented (${status}) for doseLogId=${doseLogId}`);
-          } else {
-            console.warn(`[notifyGroup] unexpected error for doseLogId=${doseLogId}`, err);
-          }
-        }
-      },
-    }),
   }),
 });
 
-export const { useCheckDoseMutation, useNotifyGroupMutation } = doseLogApiSlice;
+export const { useCheckDoseMutation } = doseLogApiSlice;

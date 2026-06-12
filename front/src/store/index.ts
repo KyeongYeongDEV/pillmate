@@ -3,7 +3,6 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import prescriptionFlow from './slices/prescriptionFlowSlice';
 import home from './slices/homeSlice';
 import doseState from './slices/doseStateSlice';
-import { notifyGroupTimerMiddleware } from './middleware/notifyGroupTimer';
 import { prescriptionApiSlice } from './slices/prescriptionApi';
 import { drugApiSlice } from './slices/drugApi';
 import { activityApi } from './slices/activityApi';
@@ -35,7 +34,6 @@ export const store = configureStore({
       scheduleApiSlice.middleware,
       chatApiSlice.middleware,
       doseLogApiSlice.middleware,
-      notifyGroupTimerMiddleware,
       caregroupApiSlice.middleware,
       userApiSlice.middleware,
     ),
