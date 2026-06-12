@@ -5,6 +5,8 @@ import {
   toDateString,
   toMonthString,
   formatDayLabel,
+  formatMonthDay,
+  formatFullDate,
   deriveAdherence,
 } from '../../src/utils/calendarUtils';
 import type { MedSlot } from '../../src/types/schedule';
@@ -119,5 +121,25 @@ describe('formatDayLabel', () => {
 
   it('월 경계: 2026-01-01', () => {
     expect(formatDayLabel('2026-01-01', '2026-06-12')).toBe('1월 1일 목');
+  });
+});
+
+describe('formatMonthDay', () => {
+  it('"M월 D일 요일" 형식', () => {
+    expect(formatMonthDay('2026-06-12')).toBe('6월 12일 금');
+  });
+
+  it('일요일 처리', () => {
+    expect(formatMonthDay('2026-06-14')).toBe('6월 14일 일');
+  });
+});
+
+describe('formatFullDate', () => {
+  it('"M월 D일 X요일" 형식', () => {
+    expect(formatFullDate('2026-06-12')).toBe('6월 12일 금요일');
+  });
+
+  it('일요일 → 일요일', () => {
+    expect(formatFullDate('2026-06-14')).toBe('6월 14일 일요일');
   });
 });

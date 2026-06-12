@@ -45,9 +45,17 @@ export function buildCalendarRows(year: number, month: number): (string | null)[
   return rows;
 }
 
-export function formatDayLabel(dateStr: string, todayStr: string): string {
+export function formatMonthDay(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dow = new Date(y, m - 1, d).getDay();
-  const suffix = `${m}월 ${d}일 ${WEEKDAYS_KO[dow]}`;
+  return `${m}월 ${d}일 ${WEEKDAYS_KO[dow]}`;
+}
+
+export function formatFullDate(dateStr: string): string {
+  return `${formatMonthDay(dateStr)}요일`;
+}
+
+export function formatDayLabel(dateStr: string, todayStr: string): string {
+  const suffix = formatMonthDay(dateStr);
   return dateStr === todayStr ? `오늘 · ${suffix}` : suffix;
 }

@@ -1,4 +1,4 @@
-import { medSlotToTimeSlot } from '@/lib/scheduleUtils';
+import { medSlotToTimeSlot, buildDoseHeadline } from '@/lib/scheduleUtils';
 import { MOCK_SCHEDULE } from '@/store/slices/scheduleApi';
 
 describe('medSlotToTimeSlot', () => {
@@ -51,5 +51,19 @@ describe('medSlotToTimeSlot', () => {
       expect(r.drugCount).toBeGreaterThan(0);
       expect(Array.isArray(r.pillColors)).toBe(true);
     });
+  });
+});
+
+describe('buildDoseHeadline', () => {
+  it('슬롯 0개 → 드실 약이 없어요', () => {
+    expect(buildDoseHeadline(0, 0)).toBe('오늘은 드실 약이 없어요');
+  });
+
+  it('일부 복용 → N번 중 M번 드셨어요', () => {
+    expect(buildDoseHeadline(4, 2)).toBe('오늘 약 4번 중 2번 드셨어요');
+  });
+
+  it('전부 복용 → 모두 드셨어요', () => {
+    expect(buildDoseHeadline(4, 4)).toBe('오늘 약을 모두 드셨어요 👏');
   });
 });
