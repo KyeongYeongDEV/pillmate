@@ -3,7 +3,7 @@ import type { TimeSlot } from '@/components/home/TimeSlotCards';
 
 const HEADLINE_NO_DOSE = '오늘은 드실 약이 없어요';
 const HEADLINE_ALL_DONE = '오늘 복약 끝!';
-const STREAK_MERGE_MIN = 2;
+export const STREAK_DISPLAY_MIN = 2;
 
 export interface HeadlineSlot {
   time: string;
@@ -40,7 +40,7 @@ export function deriveSlotStatuses(slots: HeadlineSlot[], now: Date): SlotDotSta
 }
 
 function appendStreak(headline: string, streak: number): string {
-  return streak >= STREAK_MERGE_MIN ? `${headline} ${streak}일 연속 달성 🔥` : headline;
+  return streak >= STREAK_DISPLAY_MIN ? `${headline} ${streak}일 연속 달성 🔥` : headline;
 }
 
 function toMinutes(time: string): number {

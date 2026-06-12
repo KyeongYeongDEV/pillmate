@@ -17,8 +17,12 @@ import ActivityFeedItem from '@/components/home/ActivityFeedItem';
 import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
 import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
-import { medSlotToTimeSlot, buildDoseHeadline } from '@/lib/scheduleUtils';
+import {
+  medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, STREAK_DISPLAY_MIN,
+} from '@/lib/scheduleUtils';
 import { formatFullDate, formatMonthDay } from '@/utils/calendarUtils';
+import { useDoseStreak } from '@/hooks/useDoseStreak';
+import DoseStatusRow from '@/components/home/DoseStatusRow';
 import type { MedState } from '@/types/schedule';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -54,8 +58,13 @@ export default function HomeScreen() {
     [pressSlot],
   );
 
+  const now = new Date();
   const doneCount = slots.filter(s => s.state === 'done').length;
-  const progressPercent = slots.length > 0 ? Math.round((doneCount / slots.length) * 100) : 0;
+  const todayComplete = slots.length > 0 && doneCount === slots.length;
+  const streak = useDoseStreak(TODAY, todayComplete);
+  const slotStatuses = deriveSlotStatuses(slots, now);
+  const dots = slots.map((s, i) => ({ label: s.label, status: slotStatuses[i] }));
+  const showStreak = !todayComplete && streak >= STREAK_DISPLAY_MIN;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -72,11 +81,15 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.dateLabel}>{formatFullDate(TODAY)}</Text>
-        <Text style={styles.greeting}>{buildDoseHeadline(slots.length, doneCount)}</Text>
+        <Text style={styles.greeting}>{buildDoseHeadline(slots, now, streak)}</Text>
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-        </View>
+        <DoseStatusRow
+          dots={dots}
+          doneCount={doneCount}
+          totalCount={slots.length}
+          streak={streak}
+          showStreak={showStreak}
+        />
       </View>
 
       {/* ── Body ── */}
@@ -198,11 +211,6 @@ const styles = StyleSheet.create({
   },
   dateLabel: { ...typography.label1n, color: colors.labelAlternative },
   greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6, marginTop: 2 },
-  progressTrack: {
-    height: 8, borderRadius: radius.full, backgroundColor: colors.fillStrong,
-    marginTop: space.s16, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryBase },
   scroll: { flex: 1 },
   scrollContent: { padding: space.s16, gap: space.s20, paddingBottom: space.s40 },
   section: { gap: space.s10 },
