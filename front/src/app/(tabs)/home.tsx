@@ -20,14 +20,13 @@ import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import {
   medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, STREAK_DISPLAY_MIN,
 } from '@/lib/scheduleUtils';
-import { formatFullDate, formatMonthDay } from '@/utils/calendarUtils';
+import { formatFullDate, formatMonthDay, getKstToday } from '@/utils/calendarUtils';
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
 import type { MedState } from '@/types/schedule';
 
-const TODAY = new Date().toISOString().slice(0, 10);
-
 export default function HomeScreen() {
+  const today = getKstToday();
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const [showInsight, setShowInsight] = useState(true);
   const handleSettingsPress = useMemo(() => () => router.push('/(tabs)/my' as any), []);
@@ -42,7 +41,7 @@ export default function HomeScreen() {
       { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
     );
 
-  const { data: scheduleDay } = useGetDayScheduleQuery(TODAY);
+  const { data: scheduleDay } = useGetDayScheduleQuery(today);
   const rawSlots = scheduleDay?.slots ?? [];
 
   const slots = useMemo(
@@ -61,7 +60,7 @@ export default function HomeScreen() {
   const now = new Date();
   const doneCount = slots.filter(s => s.state === 'done').length;
   const todayComplete = slots.length > 0 && doneCount === slots.length;
-  const streak = useDoseStreak(TODAY, todayComplete);
+  const streak = useDoseStreak(today, todayComplete);
   const slotStatuses = deriveSlotStatuses(slots, now);
   const dots = slots.map((s, i) => ({ label: s.label, status: slotStatuses[i] }));
   const showStreak = streak >= STREAK_DISPLAY_MIN;
@@ -80,7 +79,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.dateLabel}>{formatFullDate(TODAY)}</Text>
+        <Text style={styles.dateLabel}>{formatFullDate(today)}</Text>
         <Text style={styles.greeting}>{buildDoseHeadline(slots, now)}</Text>
 
         <DoseStatusRow
@@ -102,7 +101,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
-            <Text style={styles.sectionDate}>{formatMonthDay(TODAY)}</Text>
+            <Text style={styles.sectionDate}>{formatMonthDay(today)}</Text>
           </View>
           <TimeSlotCards slots={slots} onSlotPress={handleSlotPress} />
         </View>

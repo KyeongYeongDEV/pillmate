@@ -9,11 +9,12 @@ interface Props {
   slot: MedSlot;
   isFirst?: boolean;
   onPress?: (slot: MedSlot) => void;
+  readOnly?: boolean;
 }
 
-function MedTimeRow({ slot, isFirst, onPress }: Props) {
+function MedTimeRow({ slot, isFirst, onPress, readOnly }: Props) {
   const done = slot.state === 'done';
-  const now  = slot.state === 'now';
+  const now  = !readOnly && slot.state === 'now';
   const handlePress = useCallback(() => onPress?.(slot), [onPress, slot]);
 
   const rowContent = (
@@ -29,11 +30,14 @@ function MedTimeRow({ slot, isFirst, onPress }: Props) {
         ))}
         <Text style={styles.source}>출처: {MFDS_SOURCE}</Text>
       </View>
-      <View style={[
-        styles.circle,
-        done && styles.circleDone,
-        now && styles.circleNow,
-      ]}>
+      <View
+        testID="dose-circle"
+        style={[
+          styles.circle,
+          done && (readOnly ? styles.circleDoneReadOnly : styles.circleDone),
+          now && styles.circleNow,
+        ]}
+      >
         {done && <Icon name="check" size={18} color="#fff" />}
       </View>
     </View>
@@ -76,5 +80,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   circleDone: { backgroundColor: colors.statusPositive, borderWidth: 0 },
+  circleDoneReadOnly: { backgroundColor: colors.labelAssistive, borderWidth: 0 },
   circleNow:  { backgroundColor: colors.primaryBase,    borderWidth: 0 },
 });

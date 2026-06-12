@@ -1,7 +1,9 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
+import { colors } from '@/styles/tokens';
 import type { MedSlot } from '@/types/schedule';
 
 jest.mock('@expo/vector-icons', () => ({
@@ -67,6 +69,35 @@ describe('MedTimeRow', () => {
     rerender(<MedTimeRow slot={waitSlot} isFirst />);
     // 취소선 없음 — wait 상태로 표시
     expect(screen.getByText('08:00')).toBeTruthy();
+  });
+});
+
+describe('MedTimeRow readOnly (#147 과거/미래 날짜)', () => {
+  it('readOnly + done — 체크 서클 회색 (statusPositive 아님)', () => {
+    render(<MedTimeRow slot={DONE_SLOT} isFirst readOnly />);
+    const flat = StyleSheet.flatten(screen.getByTestId('dose-circle').props.style);
+    expect(flat.backgroundColor).toBe(colors.labelAssistive);
+  });
+
+  it('readOnly 아니면 done 서클은 statusPositive 유지', () => {
+    render(<MedTimeRow slot={DONE_SLOT} isFirst />);
+    const flat = StyleSheet.flatten(screen.getByTestId('dose-circle').props.style);
+    expect(flat.backgroundColor).toBe(colors.statusPositive);
+  });
+
+  it('readOnly + now — 파랑 강조 없음 (과거/미래엔 now 의미 없음)', () => {
+    render(<MedTimeRow slot={NOW_SLOT} isFirst readOnly />);
+    const flat = StyleSheet.flatten(screen.getByTestId('dose-circle').props.style);
+    expect(flat.backgroundColor).not.toBe(colors.primaryBase);
+  });
+
+  it('readOnly여도 탭 시 onPress 호출 — Alert 안내는 스크린 책임', async () => {
+    const onPress = jest.fn();
+    render(<MedTimeRow slot={WAIT_SLOT} isFirst readOnly onPress={onPress} />);
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button'));
+    });
+    expect(onPress).toHaveBeenCalledWith(WAIT_SLOT);
   });
 });
 

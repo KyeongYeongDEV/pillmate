@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
@@ -9,7 +9,10 @@ import { colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery, useGetMonthAdherenceQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
-import { prevMonth, nextMonth, toMonthString, formatDayLabel, deriveAdherence } from '@/utils/calendarUtils';
+import {
+  prevMonth, nextMonth, toMonthString, formatDayLabel, deriveAdherence,
+  getKstToday, isEditableDate,
+} from '@/utils/calendarUtils';
 import type { RootState } from '@/store';
 import type { MedSlot, MedState } from '@/types/schedule';
 
@@ -19,19 +22,19 @@ const LEGEND: [string, string][] = [
   ['미복용', colors.statusNegative],
 ];
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const PAST_DATE_LOCKED_MSG = '지난 날짜의 복약 기록은 수정할 수 없어요';
+const FUTURE_DATE_LOCKED_MSG = '아직 체크할 수 없어요';
 
-function parseTodayParts(): { year: number; month: number } {
-  const [y, m] = TODAY.split('-').map(Number);
-  return { year: y, month: m };
+function alertDateLocked(selectedDate: string, today: string) {
+  Alert.alert(selectedDate < today ? PAST_DATE_LOCKED_MSG : FUTURE_DATE_LOCKED_MSG);
 }
 
 export default function ScheduleScreen() {
-  const { year: todayYear, month: todayMonth } = parseTodayParts();
+  const today = getKstToday();
 
-  const [displayYear, setDisplayYear] = useState(todayYear);
-  const [displayMonth, setDisplayMonth] = useState(todayMonth);
-  const [selectedDate, setSelectedDate] = useState(TODAY);
+  const [displayYear, setDisplayYear] = useState(() => Number(getKstToday().slice(0, 4)));
+  const [displayMonth, setDisplayMonth] = useState(() => Number(getKstToday().slice(5, 7)));
+  const [selectedDate, setSelectedDate] = useState(() => getKstToday());
   const [pickerVisible, setPickerVisible] = useState(false);
 
   const { data: scheduleDay } = useGetDayScheduleQuery(selectedDate);
@@ -50,14 +53,20 @@ export default function ScheduleScreen() {
 
   const adherenceByDate = useMemo(() => {
     const base = monthAdherence ?? {};
-    if (selectedDate !== TODAY || !scheduleDay) return base;
+    if (selectedDate !== today || !scheduleDay) return base;
     const todayLevel = deriveAdherence(displaySlots);
-    return todayLevel ? { ...base, [TODAY]: todayLevel } : base;
-  }, [monthAdherence, scheduleDay, displaySlots, selectedDate]);
+    return todayLevel ? { ...base, [today]: todayLevel } : base;
+  }, [monthAdherence, scheduleDay, displaySlots, selectedDate, today]);
 
   const handleSlotPress = useMemo(
-    () => (slot: MedSlot) => pressSlot(slot.doseLogId, slot.state),
-    [pressSlot],
+    () => (slot: MedSlot) => {
+      if (!isEditableDate(selectedDate, new Date())) {
+        alertDateLocked(selectedDate, getKstToday());
+        return;
+      }
+      pressSlot(slot.doseLogId, slot.state);
+    },
+    [pressSlot, selectedDate],
   );
 
   const handlePrevMonth = useCallback(() => {
@@ -85,8 +94,9 @@ export default function ScheduleScreen() {
     setDisplayMonth(m);
   }, []);
 
+  const editable = isEditableDate(selectedDate, new Date());
   const doneCount = displaySlots.filter(s => s.state === 'done').length;
-  const dayLabel = formatDayLabel(selectedDate, TODAY);
+  const dayLabel = formatDayLabel(selectedDate, today);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -131,7 +141,7 @@ export default function ScheduleScreen() {
           year={displayYear}
           month={displayMonth}
           selectedDate={selectedDate}
-          today={TODAY}
+          today={today}
           onSelectDate={handleSelectDate}
           adherenceByDate={adherenceByDate}
         />
@@ -158,6 +168,7 @@ export default function ScheduleScreen() {
                 slot={slot}
                 isFirst={i === 0}
                 onPress={handleSlotPress}
+                readOnly={!editable}
               />
             ))}
           </View>
