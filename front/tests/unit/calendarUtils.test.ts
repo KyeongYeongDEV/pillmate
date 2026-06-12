@@ -10,6 +10,9 @@ import {
   prevDate,
   deriveStreak,
   deriveAdherence,
+  toKstDateString,
+  getKstToday,
+  isEditableDate,
 } from '../../src/utils/calendarUtils';
 import type { MedSlot } from '../../src/types/schedule';
 
@@ -194,6 +197,52 @@ describe('deriveStreak', () => {
       '2026-06-11': 'full', '2026-06-09': 'partial', '2026-06-08': 'full',
     };
     expect(deriveStreak(map, TODAY, false)).toBe(1);
+  });
+});
+
+describe('toKstDateString', () => {
+  it('UTC 15:00 = KST 다음날 자정 → 다음날 날짜', () => {
+    expect(toKstDateString(new Date(Date.UTC(2026, 5, 11, 15, 0)))).toBe('2026-06-12');
+  });
+
+  it('UTC 14:59 = KST 같은 날 23:59 → 같은 날짜', () => {
+    expect(toKstDateString(new Date(Date.UTC(2026, 5, 11, 14, 59)))).toBe('2026-06-11');
+  });
+
+  it('월 경계 — UTC 5/31 15:00 → KST 6/1', () => {
+    expect(toKstDateString(new Date(Date.UTC(2026, 4, 31, 15, 0)))).toBe('2026-06-01');
+  });
+});
+
+describe('getKstToday', () => {
+  it('호출 시점 KST 날짜 — YYYY-MM-DD 형식', () => {
+    expect(getKstToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('toKstDateString(now) 와 동일 기준', () => {
+    expect(getKstToday()).toBe(toKstDateString(new Date()));
+  });
+});
+
+describe('isEditableDate', () => {
+  const NOON_KST = new Date(Date.UTC(2026, 5, 12, 3, 0));
+
+  it('오늘 → true', () => {
+    expect(isEditableDate('2026-06-12', NOON_KST)).toBe(true);
+  });
+
+  it('어제 → false', () => {
+    expect(isEditableDate('2026-06-11', NOON_KST)).toBe(false);
+  });
+
+  it('내일 → false', () => {
+    expect(isEditableDate('2026-06-13', NOON_KST)).toBe(false);
+  });
+
+  it('KST 자정 경계 — UTC 15시부터 다음날이 편집 가능', () => {
+    const kstMidnight = new Date(Date.UTC(2026, 5, 11, 15, 0));
+    expect(isEditableDate('2026-06-12', kstMidnight)).toBe(true);
+    expect(isEditableDate('2026-06-11', kstMidnight)).toBe(false);
   });
 });
 

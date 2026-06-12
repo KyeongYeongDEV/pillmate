@@ -1,6 +1,7 @@
 import type { MedSlot } from '@/types/schedule';
 
 const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export type AdherenceLevel = 'full' | 'partial' | 'miss';
 
@@ -18,6 +19,18 @@ export function toDateString(year: number, month: number, day: number): string {
 
 export function toMonthString(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+export function toKstDateString(at: Date): string {
+  return new Date(at.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+export function getKstToday(): string {
+  return toKstDateString(new Date());
+}
+
+export function isEditableDate(selectedDate: string, now: Date): boolean {
+  return selectedDate === toKstDateString(now);
 }
 
 export function prevDate(dateStr: string): string {
