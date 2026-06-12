@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, space } from '@/styles/tokens';
-import { buildCalendarRows } from '@/utils/calendarUtils';
+import { buildCalendarRows, type AdherenceLevel } from '@/utils/calendarUtils';
 
-type AdherenceStatus = 'full' | 'partial' | 'miss';
-
-const DOT_COLOR: Record<AdherenceStatus, string> = {
+const DOT_COLOR: Record<AdherenceLevel, string> = {
   full: colors.statusPositive,
   partial: colors.statusCautionary,
   miss: colors.statusNegative,
@@ -19,7 +17,7 @@ export interface CalendarGridProps {
   selectedDate: string;
   today: string;
   onSelectDate: (date: string) => void;
-  adherenceByDate?: Record<string, AdherenceStatus>;
+  adherenceByDate?: Record<string, AdherenceLevel>;
 }
 
 interface DayCellProps {
@@ -27,7 +25,7 @@ interface DayCellProps {
   col: number;
   isSelected: boolean;
   isToday: boolean;
-  adherence?: AdherenceStatus;
+  adherence?: AdherenceLevel;
   onPress: (date: string) => void;
 }
 
@@ -60,7 +58,7 @@ function DayCell({ dateStr, col, isSelected, isToday, adherence, onPress }: DayC
       <View style={[styles.numCircle, circleBg]}>
         <Text style={[styles.numText, numColor]}>{day}</Text>
       </View>
-      {adherence && !isToday
+      {adherence
         ? <View style={[styles.dot, { backgroundColor: DOT_COLOR[adherence] }]} />
         : <View style={styles.dotPlaceholder} />}
     </Pressable>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
-import { prevMonth, nextMonth, formatDayLabel } from '@/utils/calendarUtils';
+import { prevMonth, nextMonth, formatDayLabel, deriveAdherence, type AdherenceLevel } from '@/utils/calendarUtils';
 import type { RootState } from '@/store';
 import type { MedSlot, MedState } from '@/types/schedule';
 
@@ -33,6 +33,7 @@ export default function ScheduleScreen() {
   const [displayMonth, setDisplayMonth] = useState(todayMonth);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [adherenceByDate, setAdherenceByDate] = useState<Record<string, AdherenceLevel>>({});
 
   const { data: scheduleDay } = useGetDayScheduleQuery(selectedDate);
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
@@ -46,6 +47,16 @@ export default function ScheduleScreen() {
     }),
     [rawSlots, doseStateMap],
   );
+
+  useEffect(() => {
+    if (!scheduleDay) return;
+    const level = deriveAdherence(displaySlots);
+    setAdherenceByDate(prev => {
+      if (level === null) return prev;
+      if (prev[selectedDate] === level) return prev;
+      return { ...prev, [selectedDate]: level };
+    });
+  }, [scheduleDay, displaySlots, selectedDate]);
 
   const handleAdd = useCallback(() => { /* Phase 2: navigate to prescription upload */ }, []);
 
@@ -130,6 +141,7 @@ export default function ScheduleScreen() {
           selectedDate={selectedDate}
           today={TODAY}
           onSelectDate={handleSelectDate}
+          adherenceByDate={adherenceByDate}
         />
 
         <View style={styles.legend}>
