@@ -105,9 +105,10 @@ class NotificationDispatchIntegrationTest {
         // when
         notificationDispatcher.on(event);
 
-        // then
+        // then — referenceId 필터: saveAll 이 REQUIRES_NEW 라 타 테스트 커밋 잔여와 격리 (#142 P1-B)
         List<Notification> saved = notificationRepository.findAll().stream()
                 .filter(n -> n.getType() == NotificationType.DDI_CRITICAL)
+                .filter(n -> prescriptionId.equals(n.getReferenceId()))
                 .toList();
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(actorUserId);
@@ -129,6 +130,7 @@ class NotificationDispatchIntegrationTest {
         // then
         List<Notification> saved = notificationRepository.findAll().stream()
                 .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
+                .filter(n -> prescriptionId.equals(n.getReferenceId()))
                 .toList();
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
@@ -150,6 +152,7 @@ class NotificationDispatchIntegrationTest {
         // then
         List<Notification> saved = notificationRepository.findAll().stream()
                 .filter(n -> n.getType() == NotificationType.WEEKLY_REPORT)
+                .filter(n -> reportId.equals(n.getReferenceId()))
                 .toList();
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
@@ -179,6 +182,7 @@ class NotificationDispatchIntegrationTest {
         // then — 그룹A 멤버 1건 + 그룹B 멤버 1건 = 2건
         List<Notification> saved = notificationRepository.findAll().stream()
                 .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
+                .filter(n -> prescriptionId.equals(n.getReferenceId()))
                 .toList();
         assertThat(saved).hasSize(2);
         assertThat(saved.stream().map(Notification::getCareGroupId).toList())

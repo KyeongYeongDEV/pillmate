@@ -14,5 +14,5 @@ interface DoseLogJpaRepository extends JpaRepository<DoseLog, Long> {
 
     Optional<DoseLog> findByScheduleIdAndScheduledAt(Long scheduleId, Instant scheduledAt);
 
-    List<DoseLog> findByStatusAndCheckedAtLessThanEqualAndGroupNotifiedAtIsNull(DoseStatus status, Instant cutoff);
+    List<DoseLog> findByStatusAndCheckedAtBetweenAndGroupNotifiedAtIsNull(DoseStatus status, Instant from, Instant to);
 }

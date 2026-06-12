@@ -30,7 +30,8 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     }
 
     @Override
-    public List<DoseLog> findTakenNotGroupNotifiedBefore(Instant cutoff) {
-        return jpa.findByStatusAndCheckedAtLessThanEqualAndGroupNotifiedAtIsNull(DoseStatus.TAKEN, cutoff);
+    public List<DoseLog> findTakenNotGroupNotifiedBetween(Instant fromInclusive, Instant toInclusive) {
+        return jpa.findByStatusAndCheckedAtBetweenAndGroupNotifiedAtIsNull(
+                DoseStatus.TAKEN, fromInclusive, toInclusive);
     }
 }

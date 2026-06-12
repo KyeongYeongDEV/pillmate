@@ -11,5 +11,5 @@ public interface DoseLogRepository {
     Optional<DoseLog> findById(Long id);
     List<DoseLog> findByPatientIdAndScheduledAtBetween(Long patientId, Instant from, Instant to);
     Optional<DoseLog> findByScheduleIdAndScheduledAt(Long scheduleId, Instant scheduledAt);
-    List<DoseLog> findTakenNotGroupNotifiedBefore(Instant cutoff);
+    List<DoseLog> findTakenNotGroupNotifiedBetween(Instant fromInclusive, Instant toInclusive);
 }

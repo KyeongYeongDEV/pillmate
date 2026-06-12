@@ -37,19 +37,23 @@ class NotifyDueGroupDosesServiceTest {
     private static final Long PATIENT_ID = 1L;
 
     @Test
-    @DisplayName("cutoff = now - 60초 로 미발송 TAKEN 조회")
-    void notifyDue_queriesWithSixtySecondCutoff() {
+    @DisplayName("선택 윈도우 — windowStart = now-10분 (과거 행 폭주 방지), cutoff = now-60초")
+    void notifyDue_queriesWithRecencyWindowAndCutoff() {
         // given
-        given(doseLogRepository.findTakenNotGroupNotifiedBefore(FIXED_NOW.minusSeconds(60)))
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
                 .willReturn(List.of());
 
         // when
         sut.notifyDue();
 
         // then
-        ArgumentCaptor<Instant> captor = ArgumentCaptor.forClass(Instant.class);
-        then(doseLogRepository).should().findTakenNotGroupNotifiedBefore(captor.capture());
-        assertThat(captor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:59:00Z"));
+        ArgumentCaptor<Instant> fromCaptor = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> toCaptor = ArgumentCaptor.forClass(Instant.class);
+        then(doseLogRepository).should()
+                .findTakenNotGroupNotifiedBetween(fromCaptor.capture(), toCaptor.capture());
+        assertThat(fromCaptor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:50:00Z"));
+        assertThat(toCaptor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:59:00Z"));
     }
 
     @Test
@@ -58,7 +62,8 @@ class NotifyDueGroupDosesServiceTest {
         // given
         DoseLog log1 = takenLog(11L, 100L);
         DoseLog log2 = takenLog(12L, 200L);
-        given(doseLogRepository.findTakenNotGroupNotifiedBefore(FIXED_NOW.minusSeconds(60)))
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
                 .willReturn(List.of(log1, log2));
 
         // when
@@ -73,7 +78,8 @@ class NotifyDueGroupDosesServiceTest {
     @Test
     @DisplayName("due 없으면 0 반환, send 미호출")
     void notifyDue_whenEmpty_returnsZero() {
-        given(doseLogRepository.findTakenNotGroupNotifiedBefore(FIXED_NOW.minusSeconds(60)))
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
                 .willReturn(List.of());
 
         int sent = sut.notifyDue();
@@ -88,7 +94,8 @@ class NotifyDueGroupDosesServiceTest {
         // given
         DoseLog log1 = takenLog(11L, 100L);
         DoseLog log2 = takenLog(12L, 200L);
-        given(doseLogRepository.findTakenNotGroupNotifiedBefore(FIXED_NOW.minusSeconds(60)))
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
                 .willReturn(List.of(log1, log2));
         willThrow(new RuntimeException("push down"))
                 .given(sendGroupDoseNotificationService).send(11L, 100L);

@@ -110,6 +110,7 @@ public class SendGroupDoseNotificationService {
                 || doseLog.getStatus() == DoseStatus.MISSED;
         return recipientIds.stream()
                 .filter(id -> !id.equals(actorUserId))
+                .filter(id -> !id.equals(doseLog.getPatientId()))
                 .map(recipientId -> isMissed
                         ? Notification.doseMissed(recipientId, actorUserId, careGroupId, doseLog.getId())
                         : Notification.doseTaken(recipientId, actorUserId, careGroupId, doseLog.getId()))

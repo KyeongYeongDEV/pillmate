@@ -179,6 +179,29 @@ class SendGroupDoseNotificationServiceTest {
         verify(notificationSenderPort, never()).send(any());
     }
 
+    @Test
+    @DisplayName("actor 가 null (legacy checked_by 미기록) 이어도 환자 본인은 수신자에서 제외 (P1-C)")
+    void notify_whenActorNull_stillExcludesPatientSelf() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[abc]", PushProvider.EXPO);
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(null)).willReturn(List.of(ACTOR_ID, MEMBER_ID));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        sut.send(DOSE_LOG_ID, null);
+
+        ArgumentCaptor<List<com.pillmate.notification.domain.model.Notification>> captor =
+                ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
+    }
+
     private DoseLog takenDoseLog() {
         DoseLog doseLog = DoseLog.of(SCHEDULE_ID, ACTOR_ID, Instant.now());
         doseLog.take(ACTOR_ID);
