@@ -1,4 +1,16 @@
+import type { MedSlot } from '@/types/schedule';
+
 const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
+export type AdherenceLevel = 'full' | 'partial' | 'miss';
+
+export function deriveAdherence(slots: MedSlot[]): AdherenceLevel | null {
+  if (slots.length === 0) return null;
+  const doneCount = slots.filter(s => s.state === 'done').length;
+  if (doneCount === slots.length) return 'full';
+  if (doneCount > 0) return 'partial';
+  return 'miss';
+}
 
 export function toDateString(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

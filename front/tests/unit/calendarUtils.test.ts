@@ -4,7 +4,9 @@ import {
   nextMonth,
   toDateString,
   formatDayLabel,
+  deriveAdherence,
 } from '../../src/utils/calendarUtils';
+import type { MedSlot } from '../../src/types/schedule';
 
 describe('toDateString', () => {
   it('2026-06-01 포맷', () => {
@@ -71,6 +73,27 @@ describe('buildCalendarRows', () => {
   it('각 행은 7셀', () => {
     const rows = buildCalendarRows(2026, 3);
     rows.forEach(row => expect(row.length).toBe(7));
+  });
+});
+
+describe('deriveAdherence', () => {
+  const slot = (id: string, state: MedSlot['state']): MedSlot =>
+    ({ id, time: '08:00', label: '아침', state, items: ['암로디핀 5mg'] });
+
+  it('전체 done → full', () => {
+    expect(deriveAdherence([slot('a', 'done'), slot('b', 'done')])).toBe('full');
+  });
+
+  it('일부 done → partial', () => {
+    expect(deriveAdherence([slot('a', 'done'), slot('b', 'wait')])).toBe('partial');
+  });
+
+  it('0 done → miss', () => {
+    expect(deriveAdherence([slot('a', 'wait'), slot('b', 'now')])).toBe('miss');
+  });
+
+  it('빈 슬롯 → null (스케줄 없는 날)', () => {
+    expect(deriveAdherence([])).toBeNull();
   });
 });
 
