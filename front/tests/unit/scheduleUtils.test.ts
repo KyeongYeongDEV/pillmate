@@ -1,4 +1,5 @@
-import { medSlotToTimeSlot, buildDoseHeadline } from '@/lib/scheduleUtils';
+import { medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses } from '@/lib/scheduleUtils';
+import type { HeadlineSlot } from '@/lib/scheduleUtils';
 import { MOCK_SCHEDULE } from '@/store/slices/scheduleApi';
 
 describe('medSlotToTimeSlot', () => {
@@ -54,16 +55,65 @@ describe('medSlotToTimeSlot', () => {
   });
 });
 
+const at = (h: number, m = 0) => new Date(2026, 5, 12, h, m);
+
+const slot = (time: string, label: string, state: string): HeadlineSlot =>
+  ({ time, label, state });
+
 describe('buildDoseHeadline', () => {
   it('슬롯 0개 → 드실 약이 없어요', () => {
-    expect(buildDoseHeadline(0, 0)).toBe('오늘은 드실 약이 없어요');
+    expect(buildDoseHeadline([], at(9))).toBe('오늘은 드실 약이 없어요');
   });
 
-  it('일부 복용 → N번 중 M번 드셨어요', () => {
-    expect(buildDoseHeadline(4, 2)).toBe('오늘 약 4번 중 2번 드셨어요');
+  it('첫 슬롯 시간 전 → 시작 카피', () => {
+    const slots = [slot('08:00', '아침', 'wait'), slot('19:00', '저녁', 'wait')];
+    expect(buildDoseHeadline(slots, at(7))).toBe('8시 아침약으로 시작해요');
   });
 
-  it('전부 복용 → 모두 드셨어요', () => {
-    expect(buildDoseHeadline(4, 4)).toBe('오늘 약을 모두 드셨어요 👏');
+  it('진행 중 → 다음 미복용 슬롯 안내', () => {
+    const slots = [slot('08:00', '아침', 'done'), slot('19:00', '저녁', 'wait')];
+    expect(buildDoseHeadline(slots, at(10))).toBe('다음은 19시 저녁약이에요');
+  });
+
+  it('분 있는 슬롯 → H시 M분', () => {
+    const slots = [slot('08:00', '아침', 'done'), slot('12:30', '점심', 'wait')];
+    expect(buildDoseHeadline(slots, at(10))).toBe('다음은 12시 30분 점심약이에요');
+  });
+
+  it('놓침 → 기록 없음 카피 (복용 권유 금지)', () => {
+    const slots = [slot('08:00', '아침', 'done'), slot('12:30', '점심', 'wait'), slot('19:00', '저녁', 'wait')];
+    expect(buildDoseHeadline(slots, at(14))).toBe('점심약 기록이 없어요 · 드셨다면 체크해 주세요');
+  });
+
+  it('모두 완료 → 복약 끝', () => {
+    const slots = [slot('08:00', '아침', 'done'), slot('19:00', '저녁', 'done')];
+    expect(buildDoseHeadline(slots, at(20))).toBe('오늘 복약 끝!');
+  });
+
+  it('모두 완료 + 스트릭 2 이상 → 연속 달성 병합', () => {
+    const slots = [slot('08:00', '아침', 'done')];
+    expect(buildDoseHeadline(slots, at(20), 7)).toBe('오늘 복약 끝! 7일 연속 달성 🔥');
+  });
+
+  it('모두 완료 + 스트릭 1 → 병합 없음', () => {
+    const slots = [slot('08:00', '아침', 'done')];
+    expect(buildDoseHeadline(slots, at(20), 1)).toBe('오늘 복약 끝!');
+  });
+});
+
+describe('deriveSlotStatuses', () => {
+  it('done / missed / next / wait 판정', () => {
+    const slots = [
+      slot('08:00', '아침', 'done'),
+      slot('12:30', '점심', 'wait'),
+      slot('19:00', '저녁', 'wait'),
+      slot('22:00', '취침 전', 'wait'),
+    ];
+    expect(deriveSlotStatuses(slots, at(14))).toEqual(['done', 'missed', 'next', 'wait']);
+  });
+
+  it('시작 전 → 첫 슬롯이 next', () => {
+    const slots = [slot('08:00', '아침', 'wait'), slot('19:00', '저녁', 'wait')];
+    expect(deriveSlotStatuses(slots, at(7))).toEqual(['next', 'wait']);
   });
 });
