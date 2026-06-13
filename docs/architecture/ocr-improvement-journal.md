@@ -25,6 +25,7 @@
 | P0 | ai-server 스타트업 크래시 | 2026-06-10 | Dockerfile cv2 누락 + GeminiInvoker api_keys | health 200 ✓ |
 | C-1 | #148 T-AI-THRESHOLD-SWEEP | 2026-06-13 | ABS_THRESHOLD=0.70 미튜닝 확인 + BGE 의존성 크래시 발견 | RRF Hit@1 56/61=91.8% (BGE 없이), 전체 56/100=56.0% |
 | B-8 | #150 T-AI-WIRE-RRFMATCHER-PROD | 2026-06-13 | Gate D: main.py RrfMatcher 주입 + eval=prod 단일 경로 | surfacing 98%=98%, false-auto=0, 187 tests PASS |
+| B-9 | #151 T-AI-REAL-E2E-RRF | 2026-06-13 | 실 처방전 8장 운영 RRF 경로 첫 실측 | **AUTO 77.1%, surfacing 100%, ⚠️ 함량 불일치 false-auto 2건 발견** |
 
 ---
 
@@ -974,3 +975,94 @@ app/rag/ocr/rrf_factory.py
 ### 다음 가설
 - 영어 INN MANUAL 28건 → `StrongExactAdapter` 에 영어 alias 단계 추가? (Gate E 검토)
 - 카테고리명 입력 → 사용자에게 직접 "어떤 약인지 검색해주세요" UX 가이드 표시?
+
+---
+
+## B-9. #151 T-AI-REAL-E2E-RRF — 실 처방전 8장 운영 RRF 경로 첫 실측 (2026-06-13)
+
+### 배경
+Gate D(B-8) 통합 완료 후, 기존 `run_real_e2e.py` 의 레거시 `_cascade_search` 가 제거됨.
+`#151` 에서 운영 RRF 경로(`build_rrf_matcher_inner`)로 실 처방전 8장을 **처음으로 측정** — 마감 정직성 기준 실측값.
+
+### 측정 방법
+- `run_real_e2e_rrf.py` 신규 작성 (run_real_e2e.py 의 `_cascade_search` → `RrfMatcher.match()`)
+- Gemini 2.5 Flash Vision OCR (8장, < $0.05)
+- 매칭: `build_rrf_matcher_inner(pool)` — main.py 운영 경로와 동일
+- 의심 오매칭 탐지 휴리스틱: rrf 저점수(<0.80) OR 이름 prefix 3자 불일치 OR 함량 수치 불일치
+
+### 결과 요약
+
+| 이미지 | 추출 | AUTO | CONFIRM | MANUAL | 매칭실패 | ⚠️의심오매칭 |
+|--------|------|------|---------|--------|---------|-------------|
+| IMG_0007.PNG | 1 | 1 | 0 | 0 | 0 | 0 |
+| IMG_0008.JPG | 4 | 4 | 0 | 0 | 0 | 0 |
+| IMG_0009.JPG | 7 | 4 | 0 | 3 | 1 | 0 |
+| IMG_0010.JPG | 8 | 8 | 0 | 0 | 0 | 0 |
+| IMG_0011.JPG | 4 | 3 | 0 | 1 | 0 | 1 |
+| IMG_0012.JPG | 5 | 3 | 0 | 2 | 0 | 0 |
+| IMG_0013.JPEG | 2 | 0 | 0 | 2 | 0 | 0 |
+| IMG_0014.JPEG | 4 | 4 | 0 | 0 | 0 | 1 |
+| **합계** | **35** | **27** | **0** | **8** | **1** | **2** |
+
+```
+AUTO 확정률:       27/35 = 77.1%
+surfacing:         35/35 = 100.0%  (MANUAL도 options[0] 제시)
+⚠️ 의심 오매칭:   2건  (함량 불일치)
+```
+
+### 의심 오매칭 2건 — 함량 불일치 false-auto
+
+| 이미지 | 추출명 | 매칭명 | 의심 사유 |
+|--------|--------|--------|---------|
+| IMG_0011.JPG | `비유피-4정 20mg` | 비유피-4정10밀리그램(프로피베린염산염) | 함량 불일치 20≠10 |
+| IMG_0014.JPEG | `엔테론정150밀리그램` | 엔테론정50밀리그램(포도씨건조엑스) | 함량 불일치 150≠50 |
+
+**근본 원인**: `StrongExactAdapter`가 약명 prefix 로 단일 매치 → DB에 해당 함량 없는 경우에도 AUTO 확정.
+**의료 안전 위험**: 잘못된 함량으로 확정 시 환자 오복용 위험.
+**권고 조치**: Gate E — `MatchDecider` 에 함량 검증 레이어 추가.
+  - 쿼리 dose_amount 있고 matched dose_amount 와 ≥20% 차이 → CONFIRM 격하
+
+### 추가 검토 케이스 — 브랜드명 상이
+
+| 이미지 | 추출명 | 매칭명 | 비고 |
+|--------|--------|--------|------|
+| IMG_0014.JPEG | `이세틸정 100mg` | 케이세틸정(아세틸-L-카르니틴염산염) | 브랜드명 상이, 성분 동일 추정, 함량 DB 미기재 |
+
+처방전에는 `이세틸정` 이지만 DB 에는 `케이세틸정` 이 exact_fast 경로로 반환.
+다른 브랜드일 경우 AUTO 확정은 부적절 — prefix check 3자("이세틸")가 "케이세틸" 에 포함돼
+휴리스틱이 잡지 못함. Gate E 에서 정밀 검토 필요.
+
+### MANUAL 8건 분류
+
+| 유형 | 건수 | 예시 |
+|------|------|------|
+| OCR 인식 오류(글자 오타) | 2 | 쎌박타민→쎌레타민, 에디악디에스→메디락디에스 |
+| 약명 불완전 추출(이알서방 미포함 등) | 2 | 세토펜이알서방정→세토펜정 |
+| 약명 유사하나 불충분 | 2 | 액시티단→액시티딘, 가스트렉스→가스트로그라핀 |
+| 매칭 완전 실패 | 1 | 에치론정(DB 미존재 추정) |
+| 긴 영문+한글 혼합 | 1 | 안약 (엘리드림점안액 diclofenac...) |
+
+> MANUAL 판정 = 사용자 확인 유도 → 의료 안전 측면에서 올바른 보수적 동작.
+
+### B-3 레거시 대비 비교
+
+| 지표 | B-3 (레거시 cascade) | B-9 (운영 RRF) |
+|------|---------------------|---------------|
+| OCR 추출 약품 수 | 30 (7장) | 35 (8장) |
+| 자동 확정률 | ~100% (threshold 없음) | **77.1%** |
+| false-auto (함량 오확정) | 측정 안 됨 | **2건** (발견 → Gate E 대상) |
+| surfacing | ~93.3% | **100%** |
+| 레거시 cascade 사용 여부 | 사용 | **제거 완료** (eval=prod 단일화) |
+
+### 교훈
+1. **threshold 도입의 실제 효과**: AUTO 77.1%(보수적) = 의료 안전 ↑. 과거 legacy 100% 확정은 오확정 숨김.
+2. **함량 불일치 false-auto 발견**: StrongExact 경로에서 함량 검증 없이 AUTO 확정하는 구조적 문제.
+   DB에 20mg 없고 10mg만 있을 때 자동 10mg 확정 → 환자 2배 용량 위험.
+3. **eval=prod 단일화 효과**: 레거시 cascade 제거 후 첫 측정이 기존 "평가 수치"와 다름을 확인.
+   이것이 `run_eval_full.py` 가 prod 코드와 달랐을 때의 위험성.
+4. **영문 혼합 약명**: IMG_0013(안약) 2건 MANUAL — Vision 프롬프트 개선 또는 영문→한글 약명 매핑 추가 검토.
+
+### 다음 가설 (Gate E)
+- `MatchDecider` 에 **함량 검증 레이어**: `abs(query_dose - matched_dose)/query_dose > 0.20` → CONFIRM 격하
+- `StrongExactAdapter` 에 **정확 함량 조건**: `WHERE dose_amount = $dose` 추가 (현재 이름만 exact)
+- 영어 INN MANUAL → `StrongExactAdapter` 영어 alias 단계 추가

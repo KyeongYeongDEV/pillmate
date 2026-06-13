@@ -1,0 +1,405 @@
+[
+  {
+    "image": "IMG_0007.PNG",
+    "error": null,
+    "drug_count": 1,
+    "auto_count": 1,
+    "confirm_count": 0,
+    "manual_count": 0,
+    "suspicious_auto_count": 1,
+    "drugs": [
+      {
+        "name_raw": "메트포르민",
+        "confidence": 0.9,
+        "matched_name": "영일염산메트포르민정850밀리그램",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      }
+    ]
+  },
+  {
+    "image": "IMG_0008.JPG",
+    "error": null,
+    "drug_count": 4,
+    "auto_count": 4,
+    "confirm_count": 0,
+    "manual_count": 0,
+    "suspicious_auto_count": 4,
+    "drugs": [
+      {
+        "name_raw": "타이레놀이알서방정",
+        "confidence": 0.9,
+        "matched_name": "타이레놀500mg",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "뮤테란캡슐200밀리그램",
+        "confidence": 0.9,
+        "matched_name": "뮤테란캡슐200밀리그램(아세틸시스테인)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "종근당아목시실린캡슐500밀",
+        "confidence": 0.9,
+        "matched_name": "종근당아목시실린캡슐500밀리그램",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "코푸시럽_(0.2g,3mg)",
+        "confidence": 0.9,
+        "matched_name": "코푸시럽",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      }
+    ]
+  },
+  {
+    "image": "IMG_0009.JPG",
+    "error": null,
+    "drug_count": 7,
+    "auto_count": 4,
+    "confirm_count": 0,
+    "manual_count": 3,
+    "suspicious_auto_count": 4,
+    "drugs": [
+      {
+        "name_raw": "레티라진정",
+        "confidence": 0.9,
+        "matched_name": "레티라진정(레보세티리진염산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "베포탄정",
+        "confidence": 0.9,
+        "matched_name": "베포탄정(베포타스틴살리실산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "쎌박타민정500밀리...",
+        "confidence": 0.6,
+        "matched_name": "쎌레타민정",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      },
+      {
+        "name_raw": "위더스페낙정",
+        "confidence": 0.9,
+        "matched_name": "위더스페낙정(아세클로페낙)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "안티피라세미정",
+        "confidence": 0.9,
+        "matched_name": "안티피라세미정",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "액시티단캡슐",
+        "confidence": 0.9,
+        "matched_name": "액시티딘캡슐(니자티딘)",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      },
+      {
+        "name_raw": "에치론정",
+        "confidence": 0.9,
+        "matched_name": null,
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      }
+    ]
+  },
+  {
+    "image": "IMG_0010.JPG",
+    "error": null,
+    "drug_count": 8,
+    "auto_count": 8,
+    "confirm_count": 0,
+    "manual_count": 0,
+    "suspicious_auto_count": 8,
+    "drugs": [
+      {
+        "name_raw": "알마겔정",
+        "confidence": 0.9,
+        "matched_name": "알마겔정(알마게이트)(수출명:유한가스트라겔정)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "슈가메트서방정5/100…",
+        "confidence": 0.9,
+        "matched_name": "슈가메트서방정5/1000밀리그램",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "듀비메트서방정0.5/10…",
+        "confidence": 0.9,
+        "matched_name": "듀비메트서방정0.5/1000밀리그램",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "경동아스피린장용정",
+        "confidence": 0.9,
+        "matched_name": "경동아스피린장용정",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "리피토정10mg",
+        "confidence": 0.9,
+        "matched_name": "리피토정10밀리그램(아토르바스타틴칼슘삼수화물)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "애니코프캡슐300mg",
+        "confidence": 0.9,
+        "matched_name": "애니코프캡슐300밀리그램(테오브로민)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "다이크로지정",
+        "confidence": 0.9,
+        "matched_name": "다이크로짇정(히드로클로로티아지드)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "소론도정",
+        "confidence": 0.9,
+        "matched_name": "소론도정(프레드니솔론)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      }
+    ]
+  },
+  {
+    "image": "IMG_0011.JPG",
+    "error": null,
+    "drug_count": 4,
+    "auto_count": 3,
+    "confirm_count": 0,
+    "manual_count": 1,
+    "suspicious_auto_count": 3,
+    "drugs": [
+      {
+        "name_raw": "카두라엑스엘서방정",
+        "confidence": 0.95,
+        "matched_name": "카두라엑스엘서방정4mg(독사조신메실산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "비유피-4정 20mg",
+        "confidence": 0.95,
+        "matched_name": "비유피-4정10밀리그램(프로피베린염산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "울트라셋이알세미",
+        "confidence": 0.9,
+        "matched_name": "울트라셋이알세미서방정",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "가스트렉스과립",
+        "confidence": 0.95,
+        "matched_name": "가스트로그라핀",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      }
+    ]
+  },
+  {
+    "image": "IMG_0012.JPG",
+    "error": null,
+    "drug_count": 5,
+    "auto_count": 3,
+    "confirm_count": 0,
+    "manual_count": 2,
+    "suspicious_auto_count": 3,
+    "drugs": [
+      {
+        "name_raw": "알비스정",
+        "confidence": 0.95,
+        "matched_name": "알비스정",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "모티리톤정",
+        "confidence": 0.95,
+        "matched_name": "모티리톤정",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "포리부틴정",
+        "confidence": 0.95,
+        "matched_name": "포리부틴정(트리메부틴말레산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "에디악디에스장용캡슐",
+        "confidence": 0.95,
+        "matched_name": "메디락디에스장용캡슐",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      },
+      {
+        "name_raw": "세토펜이알서방정",
+        "confidence": 0.95,
+        "matched_name": "세토펜정(아세트아미노펜)",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      }
+    ]
+  },
+  {
+    "image": "IMG_0013.JPEG",
+    "error": null,
+    "drug_count": 2,
+    "auto_count": 0,
+    "confirm_count": 0,
+    "manual_count": 2,
+    "suspicious_auto_count": 0,
+    "drugs": [
+      {
+        "name_raw": "엘리드림점안액(디클로페낙나트륨수화물)(1회용) diclofenac hydrochloride",
+        "confidence": 0.95,
+        "matched_name": "디페트정(디클로페낙나트륨)(수출명 : Korus Diclofenac Tab.)(수출용)",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      },
+      {
+        "name_raw": "브로이아이점안액(브롬페낙나트륨수화물)(0.4mg/0.4mL) bromfenac sodium sesquihydrate",
+        "confidence": 0.95,
+        "matched_name": "브로이신에스주(블레오마이신황산염)(수출용)(수출명:BLEONCOforInj.,Bleonco-S15I.U.forInj.,BLEOCINforinj.)",
+        "decision": "MANUAL",
+        "final_score": 0.0,
+        "stage": "rrf",
+        "suspicious_auto": false
+      }
+    ]
+  },
+  {
+    "image": "IMG_0014.JPEG",
+    "error": null,
+    "drug_count": 4,
+    "auto_count": 4,
+    "confirm_count": 0,
+    "manual_count": 0,
+    "suspicious_auto_count": 4,
+    "drugs": [
+      {
+        "name_raw": "이세틸정 100mg",
+        "confidence": 0.95,
+        "matched_name": "케이세틸정(아세틸-L-카르니틴염산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "오페나딘서방정50밀리그램",
+        "confidence": 0.95,
+        "matched_name": "오페나딘서방정50밀리그램(오르페나드린시트르산염)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "동광니자티딘캡슐150mg",
+        "confidence": 0.95,
+        "matched_name": "동광니자티딘캡슐150mg",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      },
+      {
+        "name_raw": "엔테론정150밀리그램",
+        "confidence": 0.95,
+        "matched_name": "엔테론정50밀리그램(포도씨건조엑스)",
+        "decision": "AUTO",
+        "final_score": 0.0,
+        "stage": "exact_fast",
+        "suspicious_auto": true
+      }
+    ]
+  }
+]
