@@ -122,6 +122,35 @@ def _dose_in_name(parsed: ParsedItem, drug_name: str) -> bool:
     return any(v.lower() in name_lower for v in dose_variants)
 
 
+_FORM_SUFFIX_RE = re.compile(r"(?:정|캡슐|시럽|연고|주사|과립|액|겔|크림|패치|점안)$")
+
+
+def _has_form_suffix(query: str) -> bool:
+    """쿼리가 제형 접미사로 끝나면 True — 브랜드명 수준 쿼리 판단."""
+    return bool(_FORM_SUFFIX_RE.search(query))
+
+
+def _prefix_compatible(query: str, drug_name: str) -> bool:
+    """쿼리와 drug_name 이 접두 포함 관계인지 확인.
+
+    허용:
+      - drug_name 주성분명이 query 로 시작 (query 가 이름의 접두사)
+      - query 가 drug_name 주성분명으로 시작 (이름이 쿼리보다 짧음)
+      - 제조사 접두사(2~4자) 제거 후 drug_name 이 query 로 시작
+
+    거부 (의료 안전):
+      - query 가 drug_name 의 가운데/끝에서만 나타남
+        예) '이세틸정' ⊂ '케이세틸정' (offset=1 → 2 미만 → 거부)
+    """
+    main = drug_name.split("(")[0].strip()
+    if main.startswith(query) or query.startswith(main):
+        return True
+    for offset in range(2, 5):
+        if len(main) > offset and main[offset:].startswith(query):
+            return True
+    return False
+
+
 def _row_to_candidate(row: Any) -> Candidate:
     name_jamo = row["name_jamo"] or jamotools.split_syllables(row["name"])
     return Candidate(
@@ -430,15 +459,26 @@ class StrongExactAdapter:
         query: str, rows: list[Any], parsed: ParsedItem,
         require_main_hit: bool = False,
     ) -> Candidate | None:
-        """의료 안전 disambiguation.
+        """의료 안전 disambiguation — 이름·용량 이중 검증.
 
         require_main_hit=True: 괄호 앞 main_name 에 없으면 None → RRF 위임.
-        우선순위: main_name 포함 → dose 일치 → 최단 이름.
+        _prefix_compatible 강화: 브랜드명 쿼리(형태 접미사)가 후보명 가운데/끝에서만
+          나타나면 None → RRF 위임 (이세틸정→케이세틸정 방지).
+        dose 불일치: dose_hits 없으면 None → RRF 위임 (의료 안전).
+        우선순위: prefix_compatible main_name → dose 일치 → 최단 이름.
         """
         candidates = [_row_to_candidate(r) for r in rows]
-        main_hits = [c for c in candidates if _in_main_name(query, c.name)]
 
-        if require_main_hit and not main_hits:
+        prefix_hits = [c for c in candidates if _prefix_compatible(query, c.name)]
+        main_hits = prefix_hits if prefix_hits else [
+            c for c in candidates if _in_main_name(query, c.name)
+        ]
+
+        if require_main_hit and not prefix_hits:
+            return None
+
+        # 브랜드명 쿼리(형태 접미사 보유)가 후보명과 접두 포함 관계 없으면 단축 금지
+        if _has_form_suffix(query) and not prefix_hits:
             return None
 
         pool = main_hits if main_hits else candidates
@@ -447,5 +487,8 @@ class StrongExactAdapter:
             dose_hits = [c for c in pool if _dose_in_name(parsed, c.name)]
             if dose_hits:
                 pool = dose_hits
+            else:
+                # 용량 명시했는데 매칭 없음 → 단축 금지, RRF 위임 (의료 안전)
+                return None
 
         return pool[0] if pool else None

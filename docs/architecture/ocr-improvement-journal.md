@@ -26,6 +26,7 @@
 | C-1 | #148 T-AI-THRESHOLD-SWEEP | 2026-06-13 | ABS_THRESHOLD=0.70 미튜닝 확인 + BGE 의존성 크래시 발견 | RRF Hit@1 56/61=91.8% (BGE 없이), 전체 56/100=56.0% |
 | B-8 | #150 T-AI-WIRE-RRFMATCHER-PROD | 2026-06-13 | Gate D: main.py RrfMatcher 주입 + eval=prod 단일 경로 | surfacing 98%=98%, false-auto=0, 187 tests PASS |
 | B-9 | #151 T-AI-REAL-E2E-RRF | 2026-06-13 | 실 처방전 8장 운영 RRF 경로 첫 실측 | **AUTO 77.1%, surfacing 100%, ⚠️ 함량 불일치 false-auto 2건 발견** |
+| B-10 | #152 T-AI-DOSE-VERIFY-SHORTCIRCUIT | 2026-06-14 | StrongExact 함량 검증 + 이름 prefix 강화 + 점수 버그 수정 | **false-auto 0건, 정답 AUTO 회복, GT100 98% 유지** |
 
 ---
 
@@ -1066,3 +1067,89 @@ surfacing:         35/35 = 100.0%  (MANUAL도 options[0] 제시)
 - `MatchDecider` 에 **함량 검증 레이어**: `abs(query_dose - matched_dose)/query_dose > 0.20` → CONFIRM 격하
 - `StrongExactAdapter` 에 **정확 함량 조건**: `WHERE dose_amount = $dose` 추가 (현재 이름만 exact)
 - 영어 INN MANUAL → `StrongExactAdapter` 영어 alias 단계 추가
+
+---
+
+## 11. Phase B-10 — StrongExact 함량 검증 게이트 (#152 T-AI-DOSE-VERIFY-SHORTCIRCUIT)
+
+**날짜**: 2026-06-14
+**Why**: B-9 에서 함량 불일치 false-auto 2건 발견.
+  - `비유피-4정 20mg` → `비유피-4정10밀리그램` AUTO (2배 용량 오확정)
+  - `엔테론정150밀리그램` → `엔테론정50밀리그램` AUTO (3배 용량 오확정)
+  - `이세틸정 100mg` → `케이세틸정(아세틸-L-카르니틴염산염)` AUTO (브랜드명 상이)
+  의료 안전상 함량 오확정은 절대 허용 불가 → 구조적 수정.
+
+### 근본 원인 분석
+
+**문제 1 — normalize_for_cascade 함량 손실**:
+  - `normalize_for_cascade("엔테론정150밀리그램")` → `"엔테론정"` (단위 제거)
+  - `parse_drug_item("엔테론정")` → `dose_amount=None`
+  - 결과: `StrongExactAdapter` 는 함량 없는 ParsedItem 으로 매칭 → 함량 검증 불가
+
+**문제 2 — StrongExactAdapter._pick_best 함량 미검증**:
+  - `dose_hits=[]` 일 때 기존 코드: `return pool[0]` → **함량 틀린 후보 반환**
+  - 의료 안전 요구: `dose_hits=[]` → `return None` (RRF 위임)
+
+**문제 3 — 브랜드명 suffix 매칭 허용**:
+  - `"이세틸정"` → ILIKE `%이세틸정%` → `"케이세틸정"` 히트 (suffix 포함)
+  - `_in_main_name("이세틸정", "케이세틸정")` = True (substring check)
+  - 다른 브랜드 약품을 exact_fast 단축으로 AUTO 확정하는 구조
+
+**문제 4 — exact_fast final_score 캡처 버그**:
+  - `MatchResult.final_score = 1.0` 이지만 `Candidate.final_score = 0.0` (기본값)
+  - 리포트가 `decision.primary.final_score` (=0.0) 를 표시 → 정직성 문제
+
+### 해결책 (4개 파일 수정 + 2개 신규)
+
+**1. `rrf_wire.py` — 함량 보충**:
+  ```python
+  if parsed.dose_amount is None and raw.dose_amount is not None:
+      parsed = replace(parsed, dose_amount=raw.dose_amount, dose_unit=raw.dose_unit or "mg")
+  ```
+  `normalize_for_cascade` 로 손실된 dose_amount 를 `raw.dose_amount` 로 보충.
+
+**2. `rrf_adapters.py` — _pick_best 이중 검증**:
+  - `_prefix_compatible()` 신규 추가: 브랜드명 쿼리(형태 접미사)가 후보명 가운데/끝에서만 나타나면 거부.
+    허용: 제조사 prefix 2~4자 후 query 시작 (종근당아목시실린캡슐). 거부: 이세틸정 ⊂ 케이세틸정 (offset=1 < 2).
+  - 함량 불일치: `dose_hits=[]` → `return None` (RRF 위임)
+
+**3. `rrf_matcher.py` — 점수 캡처 버그 수정**:
+  ```python
+  fast.final_score = 1.0  # Candidate 직접 설정
+  ```
+  `MatchResult.final_score` 와 `decision.primary.final_score` 일치.
+
+**4. `decider.py` — dose_mismatch CONFIRM**:
+  - RRF 경로 fallback: 점수 ≥ 0.70 이어도 함량 불일치면 CONFIRM.
+  - `_dose_mismatch()`: 후보명 용량 ≠ query 용량 (10% 이상 차이) → True.
+  - 후보에 용량 미기재 시에도 True (검증 불가 = 보수적 CONFIRM).
+
+**5. `tests/eval/run_real_e2e_rrf.py` — 함량 보충 + 점수 수정**:
+  - `parse_drug_item(item.name_raw)` 로 dose 보충 (OCR field + name_raw 파싱 2중).
+  - `score = result.final_score` 사용 (exact_fast=1.0 정직성).
+
+### Gate E 결과 (전부 PASS)
+
+| 검증 항목 | 기준 | 결과 |
+|-----------|------|------|
+| false-auto 3건 재판정 | 오답 AUTO=0 | ✅ 0건 (올바른 용량으로 AUTO or MANUAL) |
+| GT100 surfacing | ≥ 98% | ✅ 98/100 = 98.0% |
+| GT100 miss | ≤ 2건 | ✅ 2건 (동일 — 기존 MISS) |
+| 실 처방전 35건 재매칭 | dose-mismatch AUTO=0 | ✅ 0건 |
+| exact_fast 점수 | 1.000 | ✅ 1.000 |
+| ai_server 단위 테스트 | 155+ | ✅ 212 PASS |
+
+### 교훈
+1. **함량 손실 포인트 명확화**: `normalize_for_cascade` 는 DB 검색용 이름 정규화 — 함량을 의도적으로 제거.
+   함량 검증은 OCR 원본(`raw.dose_amount` 또는 `parse_drug_item(name_raw)`)에서 가져와야.
+2. **false-auto 해결의 역설**: 기대는 CONFIRM 이었지만, DB에 올바른 함량 변종이 존재해 정확한 AUTO 확정.
+   "false-auto 방지" = "오답 AUTO 방지" (정답 AUTO는 최선의 결과).
+3. **suffix 매칭 위험**: 한글 약품명에서 suffix 포함은 다른 브랜드를 잘못 확정.
+   `_prefix_compatible` 로 제조사 prefix(2~4자) 허용하면서 이를 방지.
+4. **점수 캡처 버그**: `MatchResult.final_score` vs `Candidate.final_score` 분리 설계 주의.
+   exact_fast 경로는 Candidate 에도 직접 설정 필요.
+
+### 다음 가설 (Gate F)
+- `이세틸정` → DB에 존재하지 않음 (MANUAL). 만약 처방전이 맞다면 DB 갱신 필요.
+- MANUAL 케이스를 위한 "처방전 DB 미등재 약품 신고 플로우" 검토.
+- 8장 중 MANUAL 8건 (23%) 분석 — 추가 retriever 추가 vs 사용자 UI 개선.

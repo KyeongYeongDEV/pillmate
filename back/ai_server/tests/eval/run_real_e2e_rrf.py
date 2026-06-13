@@ -18,7 +18,7 @@ import base64
 import json
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import asyncpg
@@ -175,14 +175,20 @@ class RealE2ERrfRunner:
 
     async def _match_item(self, item: RawOcrItem) -> DrugMatchRow:
         parsed = parse_drug_item(normalize_for_cascade(item.name_raw))
+        # normalize_for_cascade 가 단위 제거 시 dose_amount 손실 → 보충
+        if parsed.dose_amount is None:
+            dose_src = item.dose_amount or parse_drug_item(item.name_raw).dose_amount
+            if dose_src is not None:
+                parsed = replace(
+                    parsed,
+                    dose_amount=dose_src,
+                    dose_unit=item.dose_unit or "mg",
+                )
         result = await self._matcher.match(parsed)
         matched_name = _top_candidate_name(result)
         decision = _decision_type_str(result)
-        score = (
-            result.decision.primary.final_score
-            if result.decision and result.decision.primary
-            else 0.0
-        )
+        # result.final_score: exact_fast=1.0, rrf=top1.final_score (리포트 정직성)
+        score = result.final_score
         suspicious = _is_suspicious_auto(item.name_raw, matched_name, result)
         return DrugMatchRow(
             name_raw=item.name_raw,

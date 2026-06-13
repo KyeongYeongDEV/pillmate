@@ -61,6 +61,7 @@ class RrfMatcher:
         # 강화된 exact 단축 — dose_amount 유무 무관 (Gate A+)
         fast = await self._exact_single.search_single(parsed)
         if fast is not None:
+            fast.final_score = 1.0  # exact_fast 단축은 최고 신뢰도 (리포트 정직성)
             return MatchResult(
                 item=None,
                 stage="exact_fast",
