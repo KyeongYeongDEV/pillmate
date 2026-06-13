@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # Phase B-7: 낱알식별 fallback (Tier 5)
     pill_identify_enabled: bool = Field(default=True, alias="PILL_IDENTIFY_ENABLED")
 
+    # Phase C-1: 매처 구현 선택 (rrf | legacy)
+    drug_matcher_impl: str = Field(default="rrf", alias="DRUG_MATCHER_IMPL")
+
 
 def get_settings() -> Settings:
     return Settings()

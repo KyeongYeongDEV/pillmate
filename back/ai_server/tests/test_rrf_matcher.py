@@ -83,8 +83,8 @@ async def test_fast_path_exact_single():
 
 
 @pytest.mark.asyncio
-async def test_fast_path_no_dose_skipped():
-    """함량 없으면 fast path 건너뜀 → stage=rrf"""
+async def test_fast_path_no_dose_also_taken():
+    """Gate A++ — 함량 없어도 exact_single 이 후보 반환하면 exact_fast 경로 진입."""
     matcher = RrfMatcher(
         exact_single=_StubExactSingle(_cand("SEQ001")),
         retrievers={
@@ -95,7 +95,7 @@ async def test_fast_path_no_dose_skipped():
         },
     )
     result = await matcher.match(_parsed_no_dose())
-    assert result.stage == "rrf"
+    assert result.stage == "exact_fast"
 
 
 @pytest.mark.asyncio

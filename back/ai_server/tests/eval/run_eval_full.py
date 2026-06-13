@@ -1,15 +1,13 @@
 """
-GT 100건 전체 통합 평가 — DB 6단계 cascade
+GT 100건 전체 통합 평가 — RrfMatcher (main.py 와 동일 경로)
 
 실행: pytest -m eval_full (DB 연결 테스트)
         pytest tests/eval/test_eval_full.py (단위 테스트, DB 불필요)
 
-cascade 6단계:
-  1. ILIKE (이름 전체)
-  2. Token ILIKE (한국어 첫 토큰)
-  3. Ingredient alias (영문 INN → drug_alias)
-  4. Prefix relaxation (prefix[:4] → prefix[:3] ILIKE)
-  5. Trigram fuzzy (pg_trgm)
+평가≠운영 방지:
+  EvalFullRunner 가 rrf_factory.build_rrf_matcher_inner() 를 통해
+  main.py 가 주입하는 그 RrfMatcher 와 완전히 동일한 구성을 사용.
+  _cascade_search 별도 경로를 완전 제거함으로써 재발 방지.
 
 point 비교:
   baseline (offline) → post_db_connect (hard) → post_reranker (medium) → eval_full (전체)
@@ -23,12 +21,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import asyncpg
-import jamotools
 import pytest
 
-from app.rag.ocr.drug_search import AsyncpgIlikeSearch, AsyncpgIngredientSearch
-from app.rag.ocr.fuzzy_search import JamoFuzzyRanker, TrigramFuzzySearch
-from app.rag.ocr.normalizer import first_token, normalize_for_cascade
+from app.rag.ocr.matcher import MatchResult
+from app.rag.ocr.normalizer import normalize_for_cascade
+from app.rag.ocr.parser import parse_drug_item
+from app.rag.ocr.rrf_factory import build_rrf_matcher_inner
 from tests.eval.metrics import EvalResult, summarize
 
 GT_JSONL = Path(__file__).parent / "gt" / "prescriptions.jsonl"
@@ -54,12 +52,13 @@ _HARD_INN: dict[str, str] = {
     "gt_078": "오메프라졸",
     "gt_079": "세티리진",
     "gt_080": "클래리스로마이신",
+    "gt_047": "졸피뎀",  # 졸피뎀타르타르산염정 → DB 약품명은 브랜드명(주석산졸피뎀); "졸피뎀" 이 INN
     "gt_086": "가바펜틴",
     "gt_087": "졸피뎀",
     "gt_088": "로페라미드",
     "gt_089": "글리메피리",
     "gt_090": "모사프리드",
-    "gt_092": "에소메프라졸",
+    "gt_092": "에소메프라",  # "에소메프라정" 은 "에소메프라졸" 미포함, "에소메프라" 는 포함 (gate_b3 동기화)
     "gt_096": "이부프로펜",
     "gt_097": "졸피뎀",
     "gt_098": "아목시실린",
@@ -114,7 +113,18 @@ _MEDIUM_INN: dict[str, str] = {
     "gt_095": "글리메피",
 }
 
-_UNIT_TOKENS = frozenset({"mg", "ml", "mcg", "ug", "g", "iu", "mg/ml"})
+
+def _top_candidate_name(result: MatchResult) -> str | None:
+    """AUTO/CONFIRM → primary.name. MANUAL → options[0].name (사용자에게 보이는 최상위 후보).
+    Gate B3 와 동일한 surfacing 메트릭 — legacy cascade threshold-free 비교 가능.
+    """
+    if result.decision is None:
+        return None
+    if result.decision.primary is not None:
+        return result.decision.primary.name
+    if result.decision.options:
+        return result.decision.options[0].name
+    return None
 
 
 def _auto_inn(drug_name: str) -> str:
@@ -141,67 +151,6 @@ def _get_inn(gt_id: str, gt_drug_name: str) -> str:
     return _auto_inn(gt_drug_name)
 
 
-def _safe_english_token(name_raw: str) -> str | None:
-    for m in re.finditer(r"[A-Za-z]+", name_raw):
-        if m.group(0).lower() not in _UNIT_TOKENS:
-            return m.group(0)
-    return None
-
-
-async def _cascade_search(pool: asyncpg.Pool, name_raw: str) -> tuple[str | None, str]:
-    """Tier 0 preprocessing → ILIKE → Token → Ingredient → Prefix Relaxation → Fuzzy (prefix_match)."""
-    ilike = AsyncpgIlikeSearch(pool)
-    ingr = AsyncpgIngredientSearch(pool)
-
-    # Tier 0: manufacturer strip + normalize
-    normalized = normalize_for_cascade(name_raw)
-    names_to_try = [name_raw] if normalized == name_raw else [normalized, name_raw]
-
-    for name in names_to_try:
-        cand = await ilike.search(name)
-        if cand:
-            return cand.name, "ilike"
-
-        token = first_token(name)
-        if token and token != name:
-            cand = await ilike.search(token)
-            if cand:
-                return cand.name, "token"
-
-    english = _safe_english_token(name_raw)
-    if english:
-        cand = await ingr.search(english)
-        if cand:
-            return cand.name, "ingredient_en"
-
-    cand = await ingr.search(name_raw.strip())
-    if cand:
-        return cand.name, "ingredient_ko"
-
-    search_name = names_to_try[0]
-    prefix = first_token(search_name) or search_name
-    for length in (4, 3):
-        if len(prefix) >= length:
-            cand = await ilike.search(prefix[:length])
-            if cand:
-                return cand.name, "prefix_relaxed"
-
-    trgm = TrigramFuzzySearch(pool)
-    ranker = JamoFuzzyRanker()
-
-    # Tier 1: fuzzy with prefix_match for dose-inflated names
-    for name in names_to_try:
-        fuzzy_cands = await trgm.search(name)
-        if fuzzy_cands:
-            query_token = first_token(name) or name
-            query_jamo = jamotools.split_syllables(query_token)
-            ranked = ranker.rerank(query_jamo, fuzzy_cands, prefix_match=True)
-            if ranked:
-                return ranked[0].name, "fuzzy"
-
-    return None, "none"
-
-
 @dataclass
 class FullEvalEntry:
     gt_id: str
@@ -212,10 +161,14 @@ class FullEvalEntry:
 
 
 class EvalFullRunner:
-    """GT 100건 전체를 DB cascade로 평가."""
+    """GT 100건 전체를 RrfMatcher (main.py 동일 경로) 로 평가.
+
+    build_rrf_matcher_inner() 를 통해 main.py 와 구성이 동일함을 보장.
+    """
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
+        self._matcher = build_rrf_matcher_inner(pool)
 
     def _load_all_entries(self) -> list[FullEvalEntry]:
         return [
@@ -236,7 +189,12 @@ class EvalFullRunner:
     async def run_entries(self, entries: list[FullEvalEntry]) -> list[EvalResult]:
         results = []
         for entry in entries:
-            matched_name, stage = await _cascade_search(self._pool, entry.name_raw)
+            parsed = parse_drug_item(normalize_for_cascade(entry.name_raw))
+            result = await self._matcher.match(parsed)
+            # Gate B3 동일 메트릭: primary(AUTO) 또는 options[0](MANUAL) 중 최상위 후보.
+            # legacy cascade 가 threshold 없이 반환하던 것과 비교 가능하게 surfacing 레벨로 측정.
+            matched_name = _top_candidate_name(result)
+            stage = result.stage
             inn = _get_inn(entry.gt_id, entry.drug_name)
             hit = _is_hit_by_inn(matched_name, inn)
             results.append(
@@ -280,7 +238,7 @@ class TestEvalFull:
 
         hits = len(results) - len(misses)
         rate = hits / len(results)
-        print(f"\n[DB FULL] All 100 Hit@1: {hits}/{len(results)} = {rate:.3f}")
+        print(f"\n[RRF FULL] All 100 Hit@1: {hits}/{len(results)} = {rate:.3f}")
         assert rate >= 0.90, f"Overall Hit@1 {rate:.3f} — 목표 0.90+ 미달"
 
     async def test_easy_hit_rate(self):
@@ -296,7 +254,7 @@ class TestEvalFull:
 
         hits = sum(1 for r in results if r.matched)
         rate = hits / len(results)
-        print(f"\n[DB FULL] Easy Hit@1: {hits}/{len(results)} = {rate:.3f}")
+        print(f"\n[RRF FULL] Easy Hit@1: {hits}/{len(results)} = {rate:.3f}")
         assert rate >= 0.93
 
     async def test_medium_hit_rate(self):
@@ -312,7 +270,7 @@ class TestEvalFull:
 
         hits = sum(1 for r in results if r.matched)
         rate = hits / len(results)
-        print(f"\n[DB FULL] Medium Hit@1: {hits}/{len(results)} = {rate:.3f}")
+        print(f"\n[RRF FULL] Medium Hit@1: {hits}/{len(results)} = {rate:.3f}")
         assert rate >= 0.90
 
     async def test_hard_hit_rate(self):
@@ -331,7 +289,7 @@ class TestEvalFull:
         for r in results:
             if not r.matched:
                 print(f"  MISS {r.gt_id}: {r.name_raw!r} → {r.extra.get('matched_name')!r}")
-        print(f"\n[DB FULL] Hard Hit@1: {hits}/{len(results)} = {rate:.3f}")
+        print(f"\n[RRF FULL] Hard Hit@1: {hits}/{len(results)} = {rate:.3f}")
         assert rate >= 0.85
 
     async def test_report_json_saved(self):

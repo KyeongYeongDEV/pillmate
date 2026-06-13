@@ -21,6 +21,7 @@ from app.rag.ocr.matcher import MatchCandidate, MatchResult, MatchStage
 from app.rag.ocr.pill_identify import PillIdentifyAdapter
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
+from app.rag.ocr.rrf import MatchDecisionType
 
 if TYPE_CHECKING:
     from app.rag.ocr.preprocess import ImagePreprocessor
@@ -134,14 +135,14 @@ class OcrPrescriptionService:
         name_to_try = normalized if normalized != raw.name_raw else raw.name_raw
         parsed = parse_drug_item(name_to_try)
         result = await self._matcher.match(parsed, raw)
-        if result.item is not None:
+        if self._is_definitive(result):
             return result
 
         # Tier 2: Vision candidates from LLM prompt
         for candidate_name in (raw.candidates or []):
             parsed_c = parse_drug_item(candidate_name)
             r = await self._matcher.match(parsed_c, raw)
-            if r.item is not None:
+            if self._is_definitive(r):
                 return r
 
         # Tier 3: OCR correction LLM
@@ -150,7 +151,7 @@ class OcrPrescriptionService:
             for correction_name in corrections:
                 parsed_c = parse_drug_item(correction_name)
                 r = await self._matcher.match(parsed_c, raw)
-                if r.item is not None:
+                if self._is_definitive(r):
                     return r
 
         # Tier 5: 낱알식별 fallback (shape/color/mark → DB)
@@ -161,6 +162,16 @@ class OcrPrescriptionService:
                 return self._pill_candidate_to_result(best, raw)
 
         return result
+
+    @staticmethod
+    def _is_definitive(result: MatchResult) -> bool:
+        """DrugMatcher(item!=None) 또는 RrfMatcher(AUTO/CONFIRM decision) 에서 확정 매치."""
+        if result.item is not None:
+            return True
+        d = result.decision
+        if d is None:
+            return False
+        return d.type in (MatchDecisionType.AUTO, MatchDecisionType.CONFIRM)
 
     def _pill_candidate_to_result(
         self, candidate: MatchCandidate, raw: RawOcrItem

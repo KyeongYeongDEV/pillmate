@@ -62,11 +62,15 @@ def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
     from app.rag.ocr.preprocess import ImagePreprocessor
     from app.rag.ocr.vision import GeminiVisionAdapter
 
-    matcher = DrugMatcher(
-        ilike=AsyncpgIlikeSearch(pool=pool),
-        vector=PgVectorDrugSearch(retriever=retriever),
-        ingredient=AsyncpgIngredientSearch(pool=pool),
-    )
+    if settings.drug_matcher_impl == "rrf":
+        from app.rag.ocr.rrf_factory import build_rrf_matcher
+        matcher = build_rrf_matcher(pool=pool)
+    else:
+        matcher = DrugMatcher(
+            ilike=AsyncpgIlikeSearch(pool=pool),
+            vector=PgVectorDrugSearch(retriever=retriever),
+            ingredient=AsyncpgIngredientSearch(pool=pool),
+        )
     vision = GeminiVisionAdapter(
         api_keys=settings.gemini_keys,
         model=settings.gemini_model,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 from typing import Protocol
 
 from app.rag.ocr.decider import MatchDecider
@@ -16,6 +17,18 @@ from app.rag.ocr.rrf import (
 )
 
 _RERANK_TOP_N = 30
+_SIGMOID_GAIN = 2.0
+
+
+def _sigmoid(x: float, gain: float = _SIGMOID_GAIN) -> float:
+    """DomainReranker-only 경로에서 final_score 를 (0,1) 로 정규화."""
+    return 1.0 / (1.0 + math.exp(-gain * x))
+
+
+def _apply_sigmoid(candidates: list[Candidate]) -> None:
+    """BGE 미적용 시 DomainReranker 점수를 sigmoid(score * gain) 으로 변환."""
+    for c in candidates:
+        c.final_score = _sigmoid(c.final_score)
 
 
 class ExactSinglePort(Protocol):
@@ -45,20 +58,20 @@ class RrfMatcher:
         if not parsed.is_valid:
             return self._manual(reason="invalid_parse")
 
-        if parsed.dose_amount:
-            fast = await self._exact_single.search_single(parsed)
-            if fast is not None:
-                return MatchResult(
-                    item=None,
-                    stage="exact_fast",
-                    final_score=1.0,
-                    decision=MatchDecision(
-                        type=MatchDecisionType.AUTO,
-                        primary=fast,
-                        options=[fast],
-                        reason="exact_fast",
-                    ),
-                )
+        # 강화된 exact 단축 — dose_amount 유무 무관 (Gate A+)
+        fast = await self._exact_single.search_single(parsed)
+        if fast is not None:
+            return MatchResult(
+                item=None,
+                stage="exact_fast",
+                final_score=1.0,
+                decision=MatchDecision(
+                    type=MatchDecisionType.AUTO,
+                    primary=fast,
+                    options=[fast],
+                    reason="exact_fast",
+                ),
+            )
 
         fused = await self._run_rrf(parsed)
         if not fused:
@@ -67,6 +80,8 @@ class RrfMatcher:
         ranked = self._reranker.rerank(parsed, fused[:_RERANK_TOP_N])
         if self._bge_reranker is not None:
             ranked = self._bge_reranker.rerank(parsed.raw, ranked)
+        else:
+            _apply_sigmoid(ranked)
         decision = self._decider.decide(parsed, ranked)
         return MatchResult(
             item=None,

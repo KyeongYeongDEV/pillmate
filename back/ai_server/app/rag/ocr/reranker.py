@@ -71,10 +71,13 @@ class BgeRerankerAdapter:
 
     DomainReranker 이후 Stage 5 으로 호출된다.
     모델은 lazy load — 첫 rerank() 호출 시 다운로드.
+    transformers ≥ 4.47 에서 XLMRobertaTokenizer.prepare_for_model 제거 시
+    _degraded=True 로 설정 후 DomainReranker 결과를 그대로 반환한다.
     """
 
     def __init__(self) -> None:
         self._model = None
+        self._degraded: bool = False
 
     def _load(self):
         if self._model is None:
@@ -93,16 +96,27 @@ class BgeRerankerAdapter:
         """BGE cross-encoder 로 상위 BGE_TOP_K 후보를 재정렬한다.
 
         final_score = domain_score * DOMAIN_WEIGHT + bge_score * BGE_WEIGHT
+
+        AttributeError (transformers API 변경) 발생 시 _degraded=True 설정 후
+        입력 candidates 를 그대로 반환 (DomainReranker-only fallback).
         """
-        if not candidates:
+        if not candidates or self._degraded:
             return candidates
         top = candidates[:BGE_TOP_K]
         rest = candidates[BGE_TOP_K:]
-        model = self._load()
-        pairs = [[query, c.name] for c in top]
-        bge_scores = model.compute_score(pairs, normalize=True)
-        for c, bge_score in zip(top, bge_scores):
-            c.final_score = (
-                c.final_score * DOMAIN_WEIGHT + float(bge_score) * BGE_WEIGHT
+        try:
+            model = self._load()
+            pairs = [[query, c.name] for c in top]
+            bge_scores = model.compute_score(pairs, normalize=True)
+            for c, bge_score in zip(top, bge_scores):
+                c.final_score = (
+                    c.final_score * DOMAIN_WEIGHT + float(bge_score) * BGE_WEIGHT
+                )
+            return sorted(top, key=lambda x: -x.final_score) + rest
+        except (AttributeError, Exception) as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "BGE rerank 실패 → DomainReranker only fallback: %s", exc
             )
-        return sorted(top, key=lambda x: -x.final_score) + rest
+            self._degraded = True
+            return candidates
