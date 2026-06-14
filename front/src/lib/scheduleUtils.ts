@@ -11,7 +11,7 @@ export interface HeadlineSlot {
   state: string;
 }
 
-export type SlotDotStatus = 'done' | 'next' | 'wait' | 'missed';
+export type SlotDotStatus = 'done' | 'missed' | 'upcoming';
 
 export function buildDoseHeadline(slots: HeadlineSlot[], now: Date): string {
   if (slots.length === 0) return HEADLINE_NO_DOSE;
@@ -29,13 +29,9 @@ export function buildDoseHeadline(slots: HeadlineSlot[], now: Date): string {
 
 export function deriveSlotStatuses(slots: HeadlineSlot[], now: Date): SlotDotStatus[] {
   const nowMinutes = toMinutesOfDay(now);
-  let nextAssigned = false;
   return slots.map(s => {
     if (s.state === 'done') return 'done';
-    if (toMinutes(s.time) < nowMinutes) return 'missed';
-    if (nextAssigned) return 'wait';
-    nextAssigned = true;
-    return 'next';
+    return toMinutes(s.time) < nowMinutes ? 'missed' : 'upcoming';
   });
 }
 

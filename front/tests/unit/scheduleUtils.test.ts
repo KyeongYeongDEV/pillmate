@@ -97,18 +97,27 @@ describe('buildDoseHeadline', () => {
 });
 
 describe('deriveSlotStatuses', () => {
-  it('done / missed / next / wait 판정', () => {
+  it('done / missed / upcoming 판정 — 먹음·시간지남·아직', () => {
     const slots = [
       slot('08:00', '아침', 'done'),
       slot('12:30', '점심', 'wait'),
       slot('19:00', '저녁', 'wait'),
       slot('22:00', '취침 전', 'wait'),
     ];
-    expect(deriveSlotStatuses(slots, at(14))).toEqual(['done', 'missed', 'next', 'wait']);
+    expect(deriveSlotStatuses(slots, at(14))).toEqual(['done', 'missed', 'upcoming', 'upcoming']);
   });
 
-  it('시작 전 → 첫 슬롯이 next', () => {
+  it('시작 전 → 모든 미복용 슬롯이 upcoming', () => {
     const slots = [slot('08:00', '아침', 'wait'), slot('19:00', '저녁', 'wait')];
-    expect(deriveSlotStatuses(slots, at(7))).toEqual(['next', 'wait']);
+    expect(deriveSlotStatuses(slots, at(7))).toEqual(['upcoming', 'upcoming']);
+  });
+
+  it('도트 개수 = 슬롯 수 유지', () => {
+    const slots = [
+      slot('08:00', '아침', 'done'),
+      slot('12:30', '점심', 'done'),
+      slot('19:00', '저녁', 'wait'),
+    ];
+    expect(deriveSlotStatuses(slots, at(20))).toHaveLength(slots.length);
   });
 });
