@@ -7,17 +7,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useGetDrugDetailQuery } from '@/store/slices/drugApi';
 import DrugHero from '@/components/drug/DrugHero';
-import QuickStats from '@/components/drug/QuickStats';
-import DetailTabs from '@/components/drug/DetailTabs';
-import InteractionWarningCard from '@/components/drug/InteractionWarningCard';
-import SideEffectChips from '@/components/drug/SideEffectChips';
+import DrugInfoSection from '@/components/drug/DrugInfoSection';
 import SourceCard from '@/components/drug/SourceCard';
 import { colors, space, typography } from '@/styles/tokens';
 import { safeBack } from '@/lib/router/safeBack';
 
 export default function DrugDetailScreen() {
   const { kdCode } = useLocalSearchParams<{ kdCode: string }>();
-  const { data: drug, isLoading, isError } = useGetDrugDetailQuery(kdCode ?? '');
+  const { data: drug, isLoading, isError } = useGetDrugDetailQuery(kdCode ?? '', { skip: !kdCode });
 
   if (isLoading) {
     return (
@@ -40,7 +37,6 @@ export default function DrugDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable
           onPress={() => safeBack('/(tabs)/drugs')}
@@ -51,31 +47,23 @@ export default function DrugDetailScreen() {
           <Feather name="chevron-left" size={26} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>약 정보</Text>
-        {/* Share — Phase 2 */}
         <View style={styles.backBtn} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <DrugHero
           name={drug.name}
-          englishName={drug.englishName}
-          category={drug.category}
           company={drug.company}
+          ingredient={drug.ingredient}
+          form={drug.form}
+          imageUrl={drug.imageUrl}
         />
 
-        <QuickStats />
+        <DrugInfoSection title="효능·효과" text={drug.efficacy} />
+        <DrugInfoSection title="용법·용량" text={drug.dosage} />
+        <DrugInfoSection title="사용상의 주의사항" text={drug.sideEffect} />
 
-        <DetailTabs
-          efficacy={drug.efficacy}
-          dosage={drug.dosage}
-          warnings={drug.warnings}
-        />
-
-        <InteractionWarningCard interactions={drug.interactions} />
-
-        <SideEffectChips sideEffects={drug.sideEffects} />
-
-        <SourceCard source={drug.source} updatedAt={drug.updatedAt} />
+        <SourceCard source={drug.source} />
       </ScrollView>
     </SafeAreaView>
   );

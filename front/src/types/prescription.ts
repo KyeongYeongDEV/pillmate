@@ -53,7 +53,9 @@ export interface DrugSearchResult {
   id: number;
   kdCode: string;
   name: string;
-  company: string | null;
+  ingredient: string | null;
+  efficacy: string | null;
+  form: string | null;
   imageUrl: string | null;
 }
 
@@ -81,29 +83,18 @@ export interface OcrInput {
   imageKey: string;
 }
 
-export interface DrugInteraction {
-  kdCode: string;
-  name: string;
-  category: string;
-  description: string;
-}
-
 export interface DrugDetail {
   id: number;
   kdCode: string;
   name: string;
-  englishName: string | null;
-  category: string | null;
   ingredient: string | null;
+  efficacy: string | null;
+  dosage: string | null;
+  sideEffect: string | null;
+  form: string | null;
   company: string | null;
+  source: string | null;
   imageUrl: string | null;
-  efficacy: string[];
-  dosage: string[];
-  warnings: string[];
-  interactions: DrugInteraction[];
-  sideEffects: { name: string; rate: number }[];
-  source: string;
-  updatedAt: string;
 }
 
 export interface DrugSlots {

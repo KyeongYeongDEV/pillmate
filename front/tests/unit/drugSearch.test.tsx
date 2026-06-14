@@ -15,7 +15,9 @@ const DRUG: DrugSearchResult = {
   id: 1,
   kdCode: '670500700',
   name: '암로디핀정 5mg',
-  company: '한미약품',
+  ingredient: '암로디핀베실산염',
+  efficacy: '본태성 고혈압',
+  form: '정제',
   imageUrl: null,
 };
 
@@ -75,9 +77,9 @@ describe('SearchResultCard', () => {
     expect(screen.getByText('암로디핀정 5mg')).toBeTruthy();
   });
 
-  it('제약사 렌더', () => {
+  it('성분 렌더', () => {
     render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={jest.fn()} onDetail={jest.fn()} />);
-    expect(screen.getByText('한미약품')).toBeTruthy();
+    expect(screen.getByText('암로디핀베실산염')).toBeTruthy();
   });
 
   it('alreadyAdded=true → 추가됨 뱃지 표시', () => {

@@ -59,7 +59,7 @@ function DrugSearchAutocomplete({ onSelect }: Props) {
         )}
         <View style={styles.resultText}>
           <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
-          {item.company && <Text style={styles.resultCompany} numberOfLines={1}>{item.company}</Text>}
+          {item.ingredient && <Text style={styles.resultCompany} numberOfLines={1}>{item.ingredient}</Text>}
           <Text style={styles.resultSource}>출처: {MFDS_SOURCE}</Text>
         </View>
       </Pressable>

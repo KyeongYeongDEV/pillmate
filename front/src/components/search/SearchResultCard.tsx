@@ -33,7 +33,7 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd, onDetail }: Search
             </View>
           )}
         </View>
-        <Text style={styles.sub} numberOfLines={1}>{item.company ?? '—'}</Text>
+        <Text style={styles.sub} numberOfLines={1}>{item.ingredient ?? item.form ?? '—'}</Text>
       </View>
 
       {/* info icon — visual indicator that card row = detail (not interactive, outer Pressable handles it) */}
