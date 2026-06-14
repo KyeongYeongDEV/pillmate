@@ -4,6 +4,8 @@ import type { ApiEnvelope } from '@/lib/api/client';
 import type {
   Candidate,
   OcrInput,
+  PrescriptionDetailView,
+  PrescriptionSummary,
   RegisterPrescriptionResponse,
   UploadUrlInput,
   UploadUrlResponse,
@@ -15,6 +17,16 @@ export const prescriptionApiSlice = createApi({
   baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Prescription', 'Candidate'],
   endpoints: (build) => ({
+    getPrescriptions: build.query<PrescriptionSummary[], void>({
+      query: () => '/prescriptions',
+      transformResponse: (response: ApiEnvelope<PrescriptionSummary[]>) => response?.data ?? [],
+      providesTags: ['Prescription'],
+    }),
+    getPrescriptionDetail: build.query<PrescriptionDetailView | null, number>({
+      query: (id) => `/prescriptions/${id}`,
+      transformResponse: (response: ApiEnvelope<PrescriptionDetailView>) => response?.data ?? null,
+      providesTags: (_r, _e, id) => [{ type: 'Prescription', id }],
+    }),
     issueUploadUrl: build.mutation<UploadUrlResponse, UploadUrlInput>({
       query: (body) => ({ url: '/prescriptions/upload-url', method: 'POST', body }),
     }),
@@ -50,6 +62,8 @@ export const prescriptionApiSlice = createApi({
 });
 
 export const {
+  useGetPrescriptionsQuery,
+  useGetPrescriptionDetailQuery,
   useIssueUploadUrlMutation,
   useOcrMutation,
   useGetCandidatesQuery,

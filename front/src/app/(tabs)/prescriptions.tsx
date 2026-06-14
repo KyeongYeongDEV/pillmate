@@ -1,35 +1,82 @@
-import { View, Pressable, Text, StyleSheet } from "react-native";
+import { View, Pressable, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { colors, typography, space, radius } from "@/styles/tokens";
+import { useGetPrescriptionsQuery } from "@/store/slices/prescriptionApi";
+import PrescriptionListCard from "@/components/prescription/PrescriptionListCard";
+import type { PrescriptionSummary } from "@/types/prescription";
 
 export default function PrescriptionsScreen() {
+  const { data, isLoading, isError, refetch, isFetching } = useGetPrescriptionsQuery();
+  const openDetail = (id: number) => router.push(`/prescription/${id}` as any);
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.content}>
+      <View style={styles.header}>
         <Text style={styles.title}>처방전</Text>
-        <Text style={styles.sub}>등록된 처방전이 아직 없습니다.</Text>
-        <Pressable
-          style={styles.cta}
-          onPress={() => router.push('/prescription' as any)}
-          accessibilityLabel="처방전 등록하기"
-          accessibilityRole="button"
-        >
-          <Text style={styles.ctaTxt}>+ 처방전 등록하기</Text>
-        </Pressable>
       </View>
+      {renderBody()}
     </SafeAreaView>
+  );
+
+  function renderBody() {
+    if (isLoading) return <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />;
+    if (isError) return <ErrorState onRetry={refetch} />;
+    if (!data || data.length === 0) return <EmptyState />;
+    return (
+      <FlatList
+        data={data}
+        keyExtractor={keyOf}
+        renderItem={({ item }) => <PrescriptionListCard item={item} onPress={openDetail} />}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshing={isFetching}
+        onRefresh={refetch}
+      />
+    );
+  }
+}
+
+const keyOf = (p: PrescriptionSummary) => String(p.id);
+
+function EmptyState() {
+  return (
+    <View style={styles.content}>
+      <Text style={styles.sub}>등록된 처방전이 아직 없습니다.</Text>
+      <Pressable
+        style={styles.cta}
+        onPress={() => router.push('/prescription' as any)}
+        accessibilityLabel="처방전 등록하기"
+        accessibilityRole="button"
+      >
+        <Text style={styles.ctaTxt}>+ 처방전 등록하기</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View style={styles.content}>
+      <Text style={styles.sub}>처방전을 불러올 수 없습니다.</Text>
+      <Pressable style={styles.cta} onPress={onRetry} accessibilityLabel="다시 시도" accessibilityRole="button">
+        <Text style={styles.ctaTxt}>다시 시도</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgAlt },
-  content: { flex: 1, padding: space.s16, gap: space.s12 },
+  header: { paddingHorizontal: space.s16, paddingTop: space.s8, paddingBottom: space.s12 },
   title: { ...typography.heading1, color: colors.labelNormal },
+  content: { flex: 1, padding: space.s16, gap: space.s12 },
+  list: { padding: space.s16, gap: space.s12 },
+  loader: { flex: 1 },
   sub: { ...typography.body2r, color: colors.labelAlternative },
   cta: {
     backgroundColor: colors.primaryNormal, borderRadius: radius.r16,
     paddingVertical: space.s16, alignItems: 'center', marginTop: space.s8,
   },
-  ctaTxt: { ...typography.headline1, color: '#fff' },
+  ctaTxt: { ...typography.headline1, color: colors.staticWhite },
 });

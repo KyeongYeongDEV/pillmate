@@ -38,6 +38,33 @@ export interface OcrItem {
   imageUrl: string | null;
 }
 
+export interface PrescriptionSummary {
+  id: number;
+  prescribedAt: string;
+  ocrStatus: OcrStatus;
+  drugCount: number;
+  drugNames: string;
+  createdAt: string;
+}
+
+export interface PrescriptionDetailDrug {
+  nameRaw: string;
+  matchedDrugName: string | null;
+  doseAmount: number | null;
+  doseUnit: string | null;
+  frequency: number | null;
+  durationDays: number | null;
+  confidence: number | null;
+}
+
+export interface PrescriptionDetailView {
+  id: number;
+  prescribedAt: string;
+  ocrStatus: OcrStatus;
+  imageUrl: string | null;
+  drugs: PrescriptionDetailDrug[];
+}
+
 export interface Drug {
   id: number;
   kdCode: string;

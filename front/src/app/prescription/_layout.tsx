@@ -4,6 +4,7 @@ export default function PrescriptionLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
       <Stack.Screen name="scan" />
       <Stack.Screen name="camera" />
       <Stack.Screen name="confirm" />
