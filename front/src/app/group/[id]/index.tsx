@@ -11,7 +11,7 @@ import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import { colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { useGetGroupDetailQuery, useIssueInviteCodeMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
+import { useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
 import type { GroupMember } from '@/types/group';
@@ -30,6 +30,7 @@ export default function GroupDetailScreen() {
   const dispatch = useDispatch();
   const { data: detail, isLoading, isError } = useGetGroupDetailQuery(groupId);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
+  const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
   const expiresAt = detail?.inviteCode?.expiresAt ?? null;
   const { remainingSeconds, isExpired } = useCountdown(expiresAt);
   const inviteActive = !!detail?.inviteCode && !isExpired;
@@ -45,6 +46,26 @@ export default function GroupDetailScreen() {
   const handleInviteExpire = useCallback(() => {
     dispatch(caregroupApiSlice.util.invalidateTags([{ type: 'GroupDetail', id: groupId }]));
   }, [dispatch, groupId]);
+
+  const confirmLeave = useCallback(async () => {
+    try {
+      await leaveGroup(groupId).unwrap();
+      router.replace('/(tabs)/group');
+    } catch (e: any) {
+      Alert.alert('그룹 나가기 실패', e?.data?.error?.message ?? e?.message ?? '잠시 후 다시 시도해 주세요');
+    }
+  }, [leaveGroup, groupId]);
+
+  const handleLeave = useCallback(() => {
+    Alert.alert(
+      '그룹 나가기',
+      '이 그룹에서 나가시겠어요? 나가면 이 그룹의 복약 정보·알림을 더 이상 받을 수 없어요.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '나가기', style: 'destructive', onPress: confirmLeave },
+      ],
+    );
+  }, [confirmLeave]);
 
   if (isLoading) {
     return (
@@ -158,6 +179,24 @@ export default function GroupDetailScreen() {
             <Text style={styles.emptyText}>최근 활동이 없어요</Text>
           )}
         </View>
+
+        <Pressable
+          style={[styles.leaveBtn, isLeaving && styles.leaveBtnDisabled]}
+          onPress={handleLeave}
+          disabled={isLeaving}
+          accessibilityLabel="그룹 나가기"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isLeaving, busy: isLeaving }}
+        >
+          {isLeaving ? (
+            <ActivityIndicator size="small" color={colors.statusNegative} />
+          ) : (
+            <>
+              <Feather name="log-out" size={18} color={colors.statusNegative} />
+              <Text style={styles.leaveBtnText}>그룹 나가기</Text>
+            </>
+          )}
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -241,4 +280,11 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
   errorText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center' },
+  leaveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s6,
+    height: 48, borderRadius: radius.r12,
+    backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.statusNegative,
+  },
+  leaveBtnDisabled: { opacity: 0.6 },
+  leaveBtnText: { fontSize: 14, fontWeight: '600', color: colors.statusNegative },
 });

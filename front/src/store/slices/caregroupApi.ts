@@ -43,6 +43,10 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<CreateGroupResponse>) => response?.data ?? null,
       invalidatesTags: ['Group'],
     }),
+    leaveGroup: build.mutation<void, number>({
+      query: (groupId) => ({ url: `/groups/${groupId}/membership`, method: 'DELETE' }),
+      invalidatesTags: ['Group'],
+    }),
   }),
 });
 
@@ -53,5 +57,6 @@ export const {
   useUnpinGroupMutation,
   useIssueInviteCodeMutation,
   useCreateGroupMutation,
+  useLeaveGroupMutation,
 } = caregroupApiSlice;
 
