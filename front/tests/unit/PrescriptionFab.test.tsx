@@ -31,14 +31,8 @@ describe('PrescriptionFab', () => {
     expect(router.push).toHaveBeenCalledWith('/prescription');
   });
 
-  it('그룹 탭 → null 렌더 (단일 FAB 정책)', () => {
-    jest.resetModules();
-    jest.doMock('expo-router', () => ({
-      router: { push: jest.fn() },
-      useSegments: () => ['(tabs)', 'group'],
-    }));
-    const PrescriptionFabGroup = require('@/components/navigation/PrescriptionFab').default;
-    const { toJSON } = render(<PrescriptionFabGroup />);
-    expect(toJSON()).toBeNull();
+  it('탭에 무관하게 항상 렌더 (모든 탭 중앙 유지)', () => {
+    render(<PrescriptionFab />);
+    expect(screen.getByLabelText('처방전 등록')).toBeTruthy();
   });
 });
