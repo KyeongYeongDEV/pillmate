@@ -12,6 +12,13 @@ application-secret.yml
 application-local.yml
 application-prod.yml
 
+# Firebase / FCM 자격증명 (절대 커밋 금지)
+**/firebase-service-account*.json
+**/google-services.json
+**/GoogleService-Info.plist
+**/serviceAccountKey*.json
+**/*firebase*credential*.json
+
 # ==============================
 # Java / Spring Boot (Gradle)
 # ==============================
