@@ -4,6 +4,7 @@ import com.pillmate.caregroup.application.CreateCareGroupUseCase;
 import com.pillmate.caregroup.application.GetGroupDetailUseCase;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
+import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
@@ -15,7 +16,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,6 +40,7 @@ class CareGroupControllerTest {
     @MockitoBean PinGroupUseCase pinGroupUseCase;
     @MockitoBean UnpinGroupUseCase unpinGroupUseCase;
     @MockitoBean GetGroupDetailUseCase getGroupDetailUseCase;
+    @MockitoBean LeaveGroupUseCase leaveGroupUseCase;
 
     @Test
     @DisplayName("POST /groups/join/{code} → 200 + groupId")
@@ -56,5 +60,14 @@ class CareGroupControllerTest {
         mockMvc.perform(get("/groups/join/" + CODE).header("X-User-Id", USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.groupId").value(GROUP_ID));
+    }
+
+    @Test
+    @DisplayName("DELETE /groups/{groupId}/membership → 200 + 본인 탈퇴 위임")
+    void leave_returns200() throws Exception {
+        mockMvc.perform(delete("/groups/" + GROUP_ID + "/membership").header("X-User-Id", USER_ID))
+                .andExpect(status().isOk());
+
+        then(leaveGroupUseCase).should().leave(GROUP_ID, USER_ID);
     }
 }

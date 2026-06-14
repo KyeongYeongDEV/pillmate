@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Entity
@@ -36,6 +37,13 @@ public class Membership {
     @Column(name = "is_pinned", nullable = false)
     private boolean pinned;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private MembershipStatus status;
+
+    @Column(name = "left_at")
+    private Instant leftAt;
+
     public static Membership of(Long careGroupId, Long userId, MemberRole role, Long invitedBy) {
         Membership m = new Membership();
         m.careGroupId = careGroupId;
@@ -44,6 +52,8 @@ public class Membership {
         m.invitedBy = invitedBy;
         m.joinedAt = Instant.now();
         m.pinned = false;
+        m.status = MembershipStatus.ACTIVE;
+        m.leftAt = null;
         return m;
     }
 
@@ -55,11 +65,28 @@ public class Membership {
         return this.pinned;
     }
 
+    public boolean isActive() {
+        return this.status == MembershipStatus.ACTIVE;
+    }
+
+    public boolean hasLeft() {
+        return this.status == MembershipStatus.LEFT;
+    }
+
     public void pin() {
         this.pinned = true;
     }
 
     public void unpin() {
+        this.pinned = false;
+    }
+
+    public void leave(Clock clock) {
+        if (hasLeft()) {
+            return;
+        }
+        this.status = MembershipStatus.LEFT;
+        this.leftAt = Instant.now(clock);
         this.pinned = false;
     }
 }

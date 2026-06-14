@@ -4,6 +4,7 @@ import com.pillmate.caregroup.application.CreateCareGroupUseCase;
 import com.pillmate.caregroup.application.GetGroupDetailUseCase;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
+import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
@@ -40,6 +41,7 @@ public class CareGroupController {
     private final PinGroupUseCase pinGroupUseCase;
     private final UnpinGroupUseCase unpinGroupUseCase;
     private final GetGroupDetailUseCase getGroupDetailUseCase;
+    private final LeaveGroupUseCase leaveGroupUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -100,5 +102,12 @@ public class CareGroupController {
     public ResponseEntity<ApiResponse<GroupDetailResponse>> getDetail(@PathVariable Long groupId) {
         Long userId = UserContext.get();
         return ResponseEntity.ok(ApiResponse.success(getGroupDetailUseCase.detail(groupId, userId)));
+    }
+
+    @DeleteMapping("/{groupId}/membership")
+    public ResponseEntity<ApiResponse<Void>> leave(@PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        leaveGroupUseCase.leave(groupId, userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

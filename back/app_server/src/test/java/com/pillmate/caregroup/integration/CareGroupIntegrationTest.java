@@ -7,6 +7,7 @@ import com.pillmate.activity.domain.model.ActivitySeverity;
 import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
 import com.pillmate.caregroup.application.GetGroupDetailService;
+import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
@@ -72,6 +73,7 @@ class CareGroupIntegrationTest {
 
     @Autowired PinGroupUseCase pinGroupUseCase;
     @Autowired UnpinGroupUseCase unpinGroupUseCase;
+    @Autowired LeaveGroupUseCase leaveGroupUseCase;
     @Autowired GetGroupDetailService getGroupDetailService;
     @Autowired ActivityFeedQueryService activityFeedQueryService;
     @Autowired UserRepository userRepository;
@@ -164,5 +166,74 @@ class CareGroupIntegrationTest {
         List<ActivityFeedItem> onlyA = activityFeedQueryService.query(viewer.getId(), gA.getId(), 20);
         assertThat(onlyA).hasSize(1);
         assertThat(onlyA.get(0).summary()).isEqualTo("A 아침약");
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 — 본인 그룹 목록(findByUserId)에서 제외")
+    void leave_excludesFromMyGroups() {
+        User user = userRepository.save(User.dummy("leaver"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("g", user.getId()));
+        membershipRepository.save(Membership.of(g.getId(), user.getId(), MemberRole.ADMIN, null));
+
+        leaveGroupUseCase.leave(g.getId(), user.getId());
+
+        assertThat(membershipRepository.findByUserId(user.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 — 그룹 멤버 목록(findByCareGroupId)에서 유령 제외")
+    void leave_excludesFromGroupMembers() {
+        User owner = userRepository.save(User.dummy("owner-l"));
+        User leaver = userRepository.save(User.dummy("member-l"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("g", owner.getId()));
+        membershipRepository.save(Membership.of(g.getId(), owner.getId(), MemberRole.ADMIN, null));
+        membershipRepository.save(Membership.of(g.getId(), leaver.getId(), MemberRole.PATIENT, owner.getId()));
+
+        leaveGroupUseCase.leave(g.getId(), leaver.getId());
+
+        List<Membership> remaining = membershipRepository.findByCareGroupId(g.getId());
+        assertThat(remaining).hasSize(1);
+        assertThat(remaining.get(0).getUserId()).isEqualTo(owner.getId());
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 — existsByCareGroupIdAndUserId false + 그룹 알림 수신자(findGroupMemberUserIds)에서 제외")
+    void leave_excludesFromMemberChecksAndNotificationRecipients() {
+        User owner = userRepository.save(User.dummy("owner-n"));
+        User leaver = userRepository.save(User.dummy("leaver-n"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("g", owner.getId()));
+        membershipRepository.save(Membership.of(g.getId(), owner.getId(), MemberRole.ADMIN, null));
+        membershipRepository.save(Membership.of(g.getId(), leaver.getId(), MemberRole.PATIENT, owner.getId()));
+
+        leaveGroupUseCase.leave(g.getId(), leaver.getId());
+
+        assertThat(membershipRepository.existsByCareGroupIdAndUserId(g.getId(), leaver.getId())).isFalse();
+        assertThat(membershipRepository.findGroupMemberUserIds(owner.getId())).doesNotContain(leaver.getId());
+        assertThat(membershipRepository.existsSharedGroup(owner.getId(), leaver.getId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 그룹 상세 조회 — 비멤버가 되어 GROUP_ACCESS_DENIED")
+    void leave_thenDetail_throwsAccessDenied() {
+        User user = userRepository.save(User.dummy("leaver-d"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("g", user.getId()));
+        membershipRepository.save(Membership.of(g.getId(), user.getId(), MemberRole.ADMIN, null));
+
+        leaveGroupUseCase.leave(g.getId(), user.getId());
+
+        assertThatThrownBy(() -> getGroupDetailService.detail(g.getId(), user.getId()))
+                .isInstanceOf(PillmateException.class);
+    }
+
+    @Test
+    @DisplayName("비멤버 탈퇴 시도 — GROUP_ACCESS_DENIED")
+    void leave_nonMember_throws() {
+        User owner = userRepository.save(User.dummy("owner-x"));
+        User outsider = userRepository.save(User.dummy("outsider-x"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("g", owner.getId()));
+        membershipRepository.save(Membership.of(g.getId(), owner.getId(), MemberRole.ADMIN, null));
+
+        assertThatThrownBy(() -> leaveGroupUseCase.leave(g.getId(), outsider.getId()))
+                .isInstanceOf(PillmateException.class);
     }
 }
