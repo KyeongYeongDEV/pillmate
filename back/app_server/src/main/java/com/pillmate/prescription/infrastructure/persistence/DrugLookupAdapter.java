@@ -17,6 +17,10 @@ class DrugLookupAdapter implements DrugLookupPort {
             "SELECT id AS drug_id, kd_code, name, item_image FROM drugs " +
             "WHERE kd_code = :kdCode AND status = 'ACTIVE'";
 
+    private static final String LOOKUP_BY_ID_SQL =
+            "SELECT id AS drug_id, kd_code, name, item_image FROM drugs " +
+            "WHERE id = :drugId AND status = 'ACTIVE'";
+
     private final EntityManager entityManager;
 
     @Override
@@ -24,6 +28,18 @@ class DrugLookupAdapter implements DrugLookupPort {
         try {
             Tuple row = (Tuple) entityManager.createNativeQuery(LOOKUP_SQL, Tuple.class)
                     .setParameter("kdCode", kdCode)
+                    .getSingleResult();
+            return Optional.of(toDrugSummary(row));
+        } catch (NoResultException ex) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<DrugSummary> findById(Long drugId) {
+        try {
+            Tuple row = (Tuple) entityManager.createNativeQuery(LOOKUP_BY_ID_SQL, Tuple.class)
+                    .setParameter("drugId", drugId)
                     .getSingleResult();
             return Optional.of(toDrugSummary(row));
         } catch (NoResultException ex) {

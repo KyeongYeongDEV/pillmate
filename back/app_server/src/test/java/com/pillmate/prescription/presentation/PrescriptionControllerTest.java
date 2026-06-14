@@ -3,11 +3,15 @@ package com.pillmate.prescription.presentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
+import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
+import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
+import com.pillmate.prescription.application.dto.PrescriptionSummary;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
 import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
@@ -54,6 +58,8 @@ class PrescriptionControllerTest {
     @MockitoBean OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
     @MockitoBean GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     @MockitoBean ResolveCandidateUseCase resolveCandidateUseCase;
+    @MockitoBean GetPrescriptionsUseCase getPrescriptionsUseCase;
+    @MockitoBean GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
 
     @Test
     @DisplayName("POST /prescriptions/upload-url → 200 + uploadUrl/objectKey/expiresAt")
@@ -190,6 +196,49 @@ class PrescriptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ResolveCandidateRequest(12320L))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions → 200 + 본인 처방전 목록")
+    void getList_returns200() throws Exception {
+        given(getPrescriptionsUseCase.list()).willReturn(List.of(
+                new PrescriptionSummary(42L, LocalDate.of(2026, 6, 10), OcrStatus.DONE,
+                        2, "타이레놀, 아스피린", Instant.parse("2026-06-10T01:00:00Z"))));
+
+        mockMvc.perform(get("/prescriptions").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(42))
+                .andExpect(jsonPath("$.data[0].ocrStatus").value("DONE"))
+                .andExpect(jsonPath("$.data[0].drugCount").value(2))
+                .andExpect(jsonPath("$.data[0].drugNames").value("타이레놀, 아스피린"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/{id} → 200 + 상세 + presigned imageUrl + drugs")
+    void getDetail_returns200() throws Exception {
+        given(getPrescriptionDetailUseCase.detail(42L)).willReturn(
+                new PrescriptionDetailResponse(42L, LocalDate.of(2026, 6, 10), OcrStatus.DONE,
+                        "https://s3.test/presigned?sig=x",
+                        List.of(new PrescriptionDetailResponse.DrugDetail(
+                                "타이레놀", "타이레놀정500밀리그램",
+                                new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95")))));
+
+        mockMvc.perform(get("/prescriptions/42").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(42))
+                .andExpect(jsonPath("$.data.imageUrl").value("https://s3.test/presigned?sig=x"))
+                .andExpect(jsonPath("$.data.drugs[0].matchedDrugName").value("타이레놀정500밀리그램"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/{id} 타인 처방전 → 403 PATIENT_ACCESS_DENIED")
+    void getDetail_otherPatient_returns403() throws Exception {
+        given(getPrescriptionDetailUseCase.detail(42L))
+                .willThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED));
+
+        mockMvc.perform(get("/prescriptions/42").header("X-User-Id", "99"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
     }
 
     private RegisterPrescriptionRequest validRegisterRequest() {

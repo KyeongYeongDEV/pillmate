@@ -1,11 +1,15 @@
 package com.pillmate.prescription.presentation;
 
 import com.pillmate.common.response.ApiResponse;
+import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
+import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
+import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
+import com.pillmate.prescription.application.dto.PrescriptionSummary;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
@@ -36,6 +40,18 @@ public class PrescriptionController {
     private final OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
     private final GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     private final ResolveCandidateUseCase resolveCandidateUseCase;
+    private final GetPrescriptionsUseCase getPrescriptionsUseCase;
+    private final GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PrescriptionSummary>>> list() {
+        return ResponseEntity.ok(ApiResponse.success(getPrescriptionsUseCase.list()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<PrescriptionDetailResponse>> detail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(getPrescriptionDetailUseCase.detail(id)));
+    }
 
     @PostMapping("/upload-url")
     public ResponseEntity<ApiResponse<UploadUrlResponse>> issueUploadUrl() {
