@@ -9,6 +9,8 @@ import {
 } from './setup';
 import { extractRouteFromNotification } from './deepLink';
 
+const NOTIFICATION_INBOX_ROUTE = '/notifications';
+
 export default function NotificationsBootstrap() {
   const [registerDeviceToken] = useRegisterDeviceTokenMutation();
   const bootstrappedRef = useRef(false);
@@ -34,8 +36,8 @@ export default function NotificationsBootstrap() {
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const route = extractRouteFromNotification(response);
-      if (route) router.push(route as any);
+      const route = extractRouteFromNotification(response) ?? NOTIFICATION_INBOX_ROUTE;
+      router.push(route as any);
     });
     return () => sub.remove();
   }, []);

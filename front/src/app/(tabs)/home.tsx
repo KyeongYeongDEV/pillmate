@@ -23,6 +23,7 @@ import {
 import { formatFullDate, formatMonthDay, getKstToday } from '@/utils/calendarUtils';
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
+import NotificationBell from '@/components/home/NotificationBell';
 import type { MedState } from '@/types/schedule';
 
 export default function HomeScreen() {
@@ -70,6 +71,7 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
+          <NotificationBell />
           <Pressable
             onPress={handleSettingsPress}
             accessibilityLabel="설정"
@@ -206,6 +208,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: space.s16,
     marginBottom: space.s12,
   },
   dateLabel: { ...typography.label1n, color: colors.labelAlternative },
