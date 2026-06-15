@@ -5,7 +5,7 @@ import type { DrugSearchResult } from '@/types/prescription';
 
 export interface AliasLog {
   nameRaw: string;
-  toKdCode: string;
+  itemSeq: string;
 }
 
 export function usePrescriptionReview() {
@@ -31,7 +31,7 @@ export function usePrescriptionReview() {
       if (!replaceTargetId) return;
       const target = items.find(i => i.id === replaceTargetId);
       if (target && target.nameRaw !== drug.name) {
-        setAliasLogs(prev => [...prev, { nameRaw: target.nameRaw, toKdCode: drug.kdCode }]);
+        setAliasLogs(prev => [...prev, { nameRaw: target.nameRaw, itemSeq: drug.kdCode }]);
       }
       dispatch(replaceItem({
         id: replaceTargetId,

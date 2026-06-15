@@ -53,9 +53,9 @@ export const prescriptionApiSlice = createApi({
     // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)
     logAlias: build.mutation<void, AliasLog>({
       query: (body) => ({
-        url: '/drugs/alias',
+        url: '/drugs/aliases',
         method: 'POST',
-        body: { nameRaw: body.nameRaw, toKdCode: body.toKdCode },
+        body: { nameRaw: body.nameRaw, itemSeq: body.itemSeq },
       }),
     }),
   }),
