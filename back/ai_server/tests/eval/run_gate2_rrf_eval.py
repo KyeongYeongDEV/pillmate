@@ -15,7 +15,6 @@ Hit@1 측정. run_eval_full.py 의 0.97 baseline 과 나란히 비교.
   → MatchResult.decision.primary.item_seq == gt_kd_code → Hit/Miss
 
 실행: cd back/ai_server && .venv/bin/python tests/eval/run_gate2_rrf_eval.py
-      (VectorMultiAdapter 는 OpenAI_API_KEY 가 있을 때 자동 포함)
 
 read-only: DB SELECT 만, DELETE/UPDATE 없음.
 """
@@ -162,21 +161,6 @@ async def _build_matcher(pool) -> RrfMatcher:
         "prefix_relax": prefix_relax,
         "ingredient": ingredient,
     }
-
-    # VectorMultiAdapter — OpenAI key 있고 openai 패키지 설치된 경우만 포함
-    openai_key = os.environ.get("OpenAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    if openai_key:
-        try:
-            from app.rag.ocr.rrf_adapters import VectorMultiAdapter
-            from app.rag.pgvector_retriever import OpenAIEmbeddingAdapter, PgVectorRetriever
-            embedder = OpenAIEmbeddingAdapter(api_key=openai_key, model="text-embedding-3-small", dimensions=768)
-            vector_retriever = PgVectorRetriever(pool=pool, embedder=embedder)
-            retrievers["vector"] = VectorMultiAdapter(retriever=vector_retriever, top_k=10)
-            print(f"[INFO] VectorMultiAdapter 포함 (OpenAI key 확인됨)")
-        except (ImportError, ModuleNotFoundError) as e:
-            print(f"[WARN] VectorMultiAdapter 미포함 (openai 패키지 없음: {e}) — ILIKE+Trigram 2-retriever 모드")
-    else:
-        print(f"[WARN] VectorMultiAdapter 미포함 (OpenAI_API_KEY 없음) — ILIKE+Trigram 2-retriever 모드")
 
     bge = BgeRerankerAdapter()
     reranker = DomainReranker()
@@ -402,17 +386,10 @@ async def main():
 
     rep = _compute_report(rows)
 
-    openai_key = os.environ.get("OpenAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
     retrievers_used = [
         "ExactIlikeAdapter", "IlikeMultiAdapter", "TrigramMultiAdapter",
         "TokenIlikeMultiAdapter", "PrefixRelaxMultiAdapter", "IngredientMultiAdapter",
     ]
-    try:
-        import openai as _openai_test  # noqa: F401
-        if openai_key:
-            retrievers_used.append("VectorMultiAdapter")
-    except ImportError:
-        pass
 
     report_md = _format_report(rep, retrievers_used)
 

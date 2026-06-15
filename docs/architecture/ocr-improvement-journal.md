@@ -1153,3 +1153,8 @@ surfacing:         35/35 = 100.0%  (MANUAL도 options[0] 제시)
 - `이세틸정` → DB에 존재하지 않음 (MANUAL). 만약 처방전이 맞다면 DB 갱신 필요.
 - MANUAL 케이스를 위한 "처방전 DB 미등재 약품 신고 플로우" 검토.
 - 8장 중 MANUAL 8건 (23%) 분석 — 추가 retriever 추가 vs 사용자 UI 개선.
+
+## 12. Fix-4 — RAG 룰 정합 + dead code 정리 (#165, 2026-06-15)
+
+- `VectorMultiAdapter`(rrf_factory 미연결 dead code) + 단위테스트 2건 + eval 참조 제거 — 매칭 동작 무변경(98% surfacing 유지, 운영 경로 unaffected). `PgVectorDrugSearch`(legacy DrugMatcher flag 경로)는 유지.
+- `.claude/rules/python/langchain.md` Retriever 절을 실제 구현(OCR=RrfMatcher 6 retriever+RRF k=60+BGE rerank, Chat RAG=pgvector dense 단독)에 맞게 개정 — 'pgvector+BM25 EnsembleRetriever 0.6/0.4' 허위 룰 폐기, '향후 hybrid 도입 시 재검토' 명시. 룰↔코드 정직성 확보.

@@ -3,7 +3,6 @@ TDD RED — RrfMatcher 운영 어댑터 단위 테스트
 - ExactIlikeAdapter: 함량 포함 prefix 검색 (exact_fast path)
 - IlikeMultiAdapter: 복수 ILIKE 후보 반환 (MultiRetrieverPort)
 - TrigramMultiAdapter: trigram+jamo 후보 반환 (MultiRetrieverPort)
-- VectorMultiAdapter: vector 후보 반환 (MultiRetrieverPort)
 - _dose_in_name: 함량 문자열 매칭 유틸
 """
 from __future__ import annotations
@@ -21,7 +20,6 @@ from app.rag.ocr.rrf_adapters import (
     ExactIlikeAdapter,
     IlikeMultiAdapter,
     TrigramMultiAdapter,
-    VectorMultiAdapter,
     _dose_in_name,
 )
 
@@ -198,38 +196,5 @@ class TestTrigramMultiAdapter:
 
         from app.rag.ocr.fuzzy_search import JamoFuzzyRanker
         adapter = TrigramMultiAdapter(trgm_search=StubTrgm(), ranker=JamoFuzzyRanker())
-        results = await adapter.search(_parsed("없는약"))
-        assert results == []
-
-
-# ── VectorMultiAdapter ─────────────────────────────────────────────
-
-class TestVectorMultiAdapter:
-    async def test_returns_candidates_from_vector(self):
-        from app.rag.retriever import RetrievedDrug
-
-        class StubRetriever:
-            async def search(self, query: str, top_k: int) -> list[RetrievedDrug]:
-                return [
-                    RetrievedDrug(
-                        kd_code="KD222",
-                        name="세티리진정10밀리그램",
-                        efficacy=None,
-                        dosage=None,
-                        main_ingr=None,
-                    )
-                ]
-
-        adapter = VectorMultiAdapter(retriever=StubRetriever())  # type: ignore[arg-type]
-        results = await adapter.search(_parsed("세티리진"))
-        assert len(results) == 1
-        assert results[0].item_seq == "KD222"
-
-    async def test_returns_empty_when_retriever_empty(self):
-        class StubRetriever:
-            async def search(self, query: str, top_k: int) -> list:
-                return []
-
-        adapter = VectorMultiAdapter(retriever=StubRetriever())  # type: ignore[arg-type]
         results = await adapter.search(_parsed("없는약"))
         assert results == []

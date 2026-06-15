@@ -64,7 +64,6 @@ LIMIT $2
 """
 
 _ILIKE_MULTI_TOP = 10
-_VECTOR_TOP_K = 10
 _TOKEN_ILIKE_TOP = 10
 _PREFIX_ILIKE_TOP = 10
 _INGREDIENT_MULTI_TOP = 10
@@ -219,29 +218,6 @@ class TrigramMultiAdapter:
                 name_jamo=fc.name_jamo,
             )
             for fc in ranked
-        ]
-
-
-class VectorMultiAdapter:
-    """MultiRetrieverPort — pgvector 의미 유사도 검색."""
-
-    def __init__(self, retriever: Any, top_k: int = _VECTOR_TOP_K) -> None:
-        self._retriever = retriever
-        self._top_k = top_k
-
-    async def search(self, parsed: ParsedItem) -> list[Candidate]:
-        results = await self._retriever.search(parsed.name, top_k=self._top_k)
-        return [
-            Candidate(
-                item_seq=r.kd_code,
-                name=r.name,
-                dose_amount=None,
-                dose_unit=None,
-                form=None,
-                alias_source=None,
-                name_jamo=jamotools.split_syllables(r.name),
-            )
-            for r in results
         ]
 
 

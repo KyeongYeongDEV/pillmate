@@ -25,18 +25,28 @@ chain = (
 - 항상 `RunnableSequence` (`|` 연산자)
 - 단계별 명확히 분리
 
-## Retriever
+## Retriever (실제 구현 — 2026-06-15 정합)
 
-- pgvector + BM25 Hybrid
-- Reciprocal Rank Fusion (RRF, k=60)
-- Top-K는 dynamic (질의 명확도 기반)
+> 정직성 룰: 본 절은 현재 코드와 일치해야 한다. 과거 'pgvector+BM25 EnsembleRetriever(0.6/0.4)'
+> 룰은 실제 구현과 달라 폐기. 아래가 실제 운영 경로다.
 
-```python
-hybrid_retriever = EnsembleRetriever(
-    retrievers=[vector_retriever, bm25_retriever],
-    weights=[0.6, 0.4],
-)
-```
+### OCR 약품명 매칭 — `RrfMatcher` (운영 경로, `rrf_factory.build_rrf_matcher_inner`)
+
+- LangChain `EnsembleRetriever`/pgvector·BM25 아님. asyncpg 기반 자체 `MultiRetrieverPort` 6종:
+  - `ExactIlikeAdapter` (exact_fast 단축), `IlikeMultiAdapter`, `TrigramMultiAdapter`(pg_trgm+jamo),
+    `TokenIlikeMultiAdapter`, `PrefixRelaxMultiAdapter`, `IngredientMultiAdapter`
+- 융합: Reciprocal Rank Fusion (RRF, k=60) → `DomainReranker` → `BgeRerankerAdapter`(cross-encoder) → `MatchDecider`(ABS_THRESHOLD=0.70)
+- 임베딩/벡터 검색은 **OCR 매칭 경로에 미사용** (pgvector dense 는 아래 Chat RAG 전용)
+
+### Chat RAG — pgvector dense 단독 (현재 출시 범위 미포함)
+
+- `PgVectorRetriever` + 임베딩(dense) 단독 검색. BM25/Ensemble 하이브리드 아님.
+- 출시 스코프 외 — 활성화 시 본 절 갱신 필수.
+
+### 향후 hybrid 도입 시 재검토
+
+- pgvector + BM25 `EnsembleRetriever`(가중 RRF) 하이브리드는 **미도입**. 구체적 정확도 격차(운영 문제)
+  근거가 생길 때 도입하고 본 룰을 다시 개정한다 (no-overengineering).
 
 ## 프롬프트
 
