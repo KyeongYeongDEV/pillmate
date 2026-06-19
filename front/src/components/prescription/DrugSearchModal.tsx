@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import {
   Modal, View, Text, Pressable, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import DrugSearchAutocomplete from './DrugSearchAutocomplete';
 import type { DrugSearchResult } from '@/types/prescription';
 
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
   },
   handle: {
-    width: 40, height: 4, borderRadius: 2,
+    width: scale(40), height: scale(4), borderRadius: scale(2),
     backgroundColor: colors.lineSolidNorm,
     alignSelf: 'center',
     marginTop: space.s12,
@@ -88,11 +88,11 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.headline2, color: colors.labelNormal },
   closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: scale(32), height: scale(32), borderRadius: scale(16),
     backgroundColor: colors.fillNormal,
     alignItems: 'center', justifyContent: 'center',
   },
-  closeTxt: { fontSize: 14, color: colors.labelAlternative },
+  closeTxt: { fontSize: scale(14), color: colors.labelAlternative },
   hint: {
     ...typography.caption1, color: colors.labelAlternative,
     marginBottom: space.s12,

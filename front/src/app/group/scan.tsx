@@ -5,7 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
 import { extractInviteCode } from '@/lib/inviteCode';
@@ -54,7 +54,7 @@ export default function ScanGroupQrScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <Header />
         <View style={styles.permBody}>
-          <Feather name="camera-off" size={40} color={colors.labelAssistive} />
+          <Feather name="camera-off" size={scale(40)} color={colors.labelAssistive} />
           <Text style={styles.permTitle}>카메라 권한이 필요해요</Text>
           <Text style={styles.permDesc}>QR 스캔으로 그룹에 가입하려면{'\n'}카메라 접근을 허용해 주세요.</Text>
           <Pressable
@@ -114,10 +114,10 @@ function Header() {
   return (
     <View style={styles.header}>
       <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
-        <Feather name="x" size={22} color={colors.labelNormal} />
+        <Feather name="x" size={scale(22)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>QR로 그룹 가입</Text>
-      <View style={{ width: 22 }} />
+      <View style={{ width: scale(22) }} />
     </View>
   );
 }
@@ -152,11 +152,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: space.s24,
   },
   reticle: {
-    width: 240, height: 240, borderRadius: radius.r20,
+    width: scale(240), height: scale(240), borderRadius: radius.r20,
     borderWidth: 2, borderColor: colors.staticWhite,
   },
   hint: {
-    color: colors.staticWhite, fontSize: 14, fontWeight: '600',
+    color: colors.staticWhite, fontSize: scale(14), fontWeight: '600',
     paddingHorizontal: space.s14, paddingVertical: space.s8,
     backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: radius.full,
   },
@@ -165,28 +165,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s14, paddingVertical: space.s8,
     borderRadius: radius.r10, backgroundColor: colors.statusNegative,
   },
-  errorText: { color: colors.staticWhite, fontSize: 13, fontWeight: '600' },
+  errorText: { color: colors.staticWhite, fontSize: scale(13), fontWeight: '600' },
   manualBtn: {
     position: 'absolute', bottom: space.s24, alignSelf: 'center',
     paddingHorizontal: space.s20, paddingVertical: space.s12,
     borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.92)',
   },
-  manualBtnText: { fontSize: 14, fontWeight: '700', color: colors.labelNormal },
+  manualBtnText: { fontSize: scale(14), fontWeight: '700', color: colors.labelNormal },
   permBody: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     padding: space.s24, gap: space.s12,
   },
-  permTitle: { fontSize: 18, fontWeight: '700', color: colors.labelNormal },
-  permDesc: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', lineHeight: 20 },
+  permTitle: { fontSize: scale(18), fontWeight: '700', color: colors.labelNormal },
+  permDesc: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', lineHeight: scale(20) },
   permBtn: {
-    marginTop: space.s8, height: 48, paddingHorizontal: space.s24,
+    marginTop: space.s8, height: scale(48), paddingHorizontal: space.s24,
     borderRadius: radius.r12, backgroundColor: colors.primaryBase,
     alignItems: 'center', justifyContent: 'center',
   },
-  permBtnText: { fontSize: 15, fontWeight: '700', color: colors.staticWhite },
+  permBtnText: { fontSize: scale(15), fontWeight: '700', color: colors.staticWhite },
   permFallback: {
-    height: 48, paddingHorizontal: space.s24,
+    height: scale(48), paddingHorizontal: space.s24,
     alignItems: 'center', justifyContent: 'center',
   },
-  permFallbackText: { fontSize: 14, fontWeight: '600', color: colors.primaryBase },
+  permFallbackText: { fontSize: scale(14), fontWeight: '600', color: colors.primaryBase },
 });

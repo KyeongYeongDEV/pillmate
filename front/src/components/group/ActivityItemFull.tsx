@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
 
 const DOT_COLOR: Record<string, string> = {
@@ -37,7 +37,7 @@ function ActivityItemFull({ item, last }: ActivityItemFullProps) {
       <View style={[styles.cardWrap, !last && styles.cardWrapSpaced]}>
         <View style={styles.card}>
           <View style={styles.head}>
-            <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={28} />
+            <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={scale(28)} />
             <View style={styles.headTextCol}>
               <Text style={styles.actorName}>{item.actorName}</Text>
             </View>
@@ -47,7 +47,7 @@ function ActivityItemFull({ item, last }: ActivityItemFullProps) {
           <View style={styles.titleRow}>
             {isMiss && (
               <View style={styles.warnBadge}>
-                <Feather name="alert-triangle" size={11} color={colors.red40} />
+                <Feather name="alert-triangle" size={scale(11)} color={colors.red40} />
               </View>
             )}
             <Text style={styles.title}>{item.summary}</Text>
@@ -77,15 +77,15 @@ export default React.memo(ActivityItemFull);
 
 const styles = StyleSheet.create({
   wrapper: { flexDirection: 'row', gap: space.s14 },
-  rail: { width: 14, position: 'relative', flexShrink: 0 },
+  rail: { width: scale(14), position: 'relative', flexShrink: 0 },
   line: {
     position: 'absolute', left: '50%', top: 22, bottom: -2,
-    width: 2, backgroundColor: colors.line, marginLeft: -1,
+    width: scale(2), backgroundColor: colors.line, marginLeft: -1,
   },
   lineHalf: { bottom: '50%' },
   dot: {
-    position: 'absolute', left: '50%', top: 18, width: 10, height: 10,
-    borderRadius: 5, marginLeft: -5,
+    position: 'absolute', left: '50%', top: 18, width: scale(10), height: scale(10),
+    borderRadius: scale(5), marginLeft: -5,
     shadowColor: colors.bgAlt, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1, shadowRadius: 3,
   },
@@ -100,16 +100,16 @@ const styles = StyleSheet.create({
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   headTextCol: { flex: 1 },
-  actorName: { fontSize: 13, fontWeight: '700', color: colors.labelNormal },
-  time: { fontSize: 12, color: colors.labelAlternative, fontWeight: '500' },
+  actorName: { fontSize: scale(13), fontWeight: '700', color: colors.labelNormal },
+  time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s10 },
   warnBadge: {
-    width: 16, height: 16, borderRadius: 4,
+    width: scale(16), height: scale(16), borderRadius: scale(4),
     backgroundColor: colors.red95,
     alignItems: 'center', justifyContent: 'center',
   },
   title: {
-    flex: 1, fontSize: 15, fontWeight: '700',
-    color: colors.labelNormal, letterSpacing: -0.15, lineHeight: 21,
+    flex: 1, fontSize: scale(15), fontWeight: '700',
+    color: colors.labelNormal, letterSpacing: -0.15, lineHeight: scale(21),
   },
 });

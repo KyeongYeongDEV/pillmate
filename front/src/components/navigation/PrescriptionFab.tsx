@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, shadows } from '@/styles/tokens';
+import { scale, colors, shadows } from '@/styles/tokens';
 
 const BAR_H = 56;
 const FAB_D = 56;
@@ -33,7 +33,7 @@ function PrescriptionFab() {
       >
         {({ pressed }) => (
           <View style={[styles.fab, pressed && styles.fabPressed]}>
-            <Ionicons name="add" size={30} color="#fff" />
+            <Ionicons name="add" size={scale(30)} color="#fff" />
           </View>
         )}
       </Pressable>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, space } from '@/styles/tokens';
+import { scale, colors, space } from '@/styles/tokens';
 import { buildCalendarRows, type AdherenceLevel } from '@/utils/calendarUtils';
 
 const DOT_COLOR: Record<AdherenceLevel, string> = {
@@ -107,14 +107,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
   cell: { flex: 1, alignItems: 'center' },
   dayCell: { paddingVertical: 3 },
-  numCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  numText: { fontSize: 14, fontWeight: '500', color: colors.labelNormal },
+  numCircle: { width: scale(32), height: scale(32), borderRadius: scale(16), alignItems: 'center', justifyContent: 'center' },
+  numText: { fontSize: scale(14), fontWeight: '500', color: colors.labelNormal },
   todayBg: { backgroundColor: colors.labelNormal },
   selectedBg: { backgroundColor: colors.primaryBase },
   invertNumText: { color: '#fff', fontWeight: '700' },
   sunText: { color: colors.statusNegative },
   satText: { color: colors.primaryBase },
-  wdLabel: { fontSize: 11, fontWeight: '600', paddingVertical: 6, color: colors.labelAlternative },
-  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
-  dotPlaceholder: { width: 6, height: 6, marginTop: 2 },
+  wdLabel: { fontSize: scale(11), fontWeight: '600', paddingVertical: 6, color: colors.labelAlternative },
+  dot: { width: scale(6), height: scale(6), borderRadius: scale(3), marginTop: 2 },
+  dotPlaceholder: { width: scale(6), height: scale(6), marginTop: 2 },
 });

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Icon from '@/components/common/Icon';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 
 export type InsightSeverity = 'INFO' | 'WARN' | 'CRITICAL';
 
@@ -22,7 +22,7 @@ function InsightCard({ message, detail, onClose, onDetail }: InsightCardProps) {
     <View style={styles.card}>
       {/* Left: sparkle icon in violet box */}
       <View style={styles.iconBox}>
-        <Icon name="sparkles" size={20} color={colors.violet45} />
+        <Icon name="sparkles" size={scale(20)} color={colors.violet45} />
       </View>
 
       {/* Right: content */}
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
     padding: space.s18,
   },
   iconBox: {
-    width: 36,
-    height: 36,
+    width: scale(36),
+    height: scale(36),
     borderRadius: radius.r10,
     backgroundColor: colors.violet95,
     alignItems: 'center',
@@ -83,16 +83,16 @@ const styles = StyleSheet.create({
     gap: space.s6,
   },
   message: {
-    fontSize: 15,
+    fontSize: scale(15),
     fontWeight: '700',
     color: colors.labelNormal,
-    lineHeight: 22,
+    lineHeight: scale(22),
   },
   detail: {
-    fontSize: 13,
+    fontSize: scale(13),
     fontWeight: '500',
     color: colors.labelNeutral,
-    lineHeight: 20,
+    lineHeight: scale(20),
   },
   actions: {
     flexDirection: 'row',
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s12,
   },
   btnPrimaryText: {
-    fontSize: 13,
+    fontSize: scale(13),
     fontWeight: '600',
     color: '#fff',
   },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s12,
   },
   btnSecondaryText: {
-    fontSize: 13,
+    fontSize: scale(13),
     fontWeight: '600',
     color: colors.labelNeutral,
   },

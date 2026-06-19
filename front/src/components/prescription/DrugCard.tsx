@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { OCR_MIN_CONFIDENCE, MFDS_SOURCE } from '@/lib/constants';
 import type { DrugListItem, DrugSlots } from '@/types/prescription';
 import SlotToggle from './SlotToggle';
@@ -128,19 +128,19 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12 },
-  thumbnail: { width: 56, height: 56, borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumbnail: { width: scale(56), height: scale(56), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbnailPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  pillEmoji: { fontSize: 28 },
+  pillEmoji: { fontSize: scale(28) },
   nameBlock: { flex: 1 },
   name: { ...typography.body1n, color: colors.labelNormal },
   nameRaw: { ...typography.caption1, color: colors.labelAlternative, marginTop: 2 },
   source: { ...typography.caption1, color: colors.labelAssistive, marginTop: 4 },
   rightCol: { alignItems: 'flex-end', gap: space.s4 },
   warnBadge: {
-    width: 28, height: 28, borderRadius: radius.r8,
+    width: scale(28), height: scale(28), borderRadius: radius.r8,
     backgroundColor: '#FFF3E0', alignItems: 'center', justifyContent: 'center',
   },
-  warnIcon: { fontSize: 14 },
+  warnIcon: { fontSize: scale(14) },
   conf: { ...typography.caption1, color: colors.statusPositive, fontWeight: '700' },
   confLow: { color: colors.statusNegative },
   unmatchedBanner: {

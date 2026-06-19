@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 type Category = { name: string; icon: string; tint: string; fg: string };
 
@@ -49,7 +49,7 @@ export default function CategoryGrid({ onSelect }: CategoryGridProps) {
 const styles = StyleSheet.create({
   section: { paddingTop: space.s24, paddingHorizontal: space.s16 },
   label: {
-    fontSize: 13, fontWeight: '700', color: colors.labelAlternative,
+    fontSize: scale(13), fontWeight: '700', color: colors.labelAlternative,
     letterSpacing: 0.04, textTransform: 'uppercase', marginBottom: space.s10,
   },
   grid: { gap: space.s8 },
@@ -60,9 +60,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: space.s8,
   },
   iconBox: {
-    width: 40, height: 40, borderRadius: radius.r10,
+    width: scale(40), height: scale(40), borderRadius: radius.r10,
     alignItems: 'center', justifyContent: 'center',
   },
-  catIcon: { fontSize: 18, fontWeight: '700' },
+  catIcon: { fontSize: scale(18), fontWeight: '700' },
   catName: { ...typography.label2, color: colors.labelNormal, fontWeight: '600', textAlign: 'center' },
 });

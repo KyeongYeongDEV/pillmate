@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, typography } from '@/styles/tokens';
+import { scale, colors, space, typography } from '@/styles/tokens';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import DaySection from '@/components/group/DaySection';
@@ -44,14 +44,14 @@ export default function ActivityScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => safeBack(`/group/${groupId}`)} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
-          <Feather name="chevron-left" size={26} color={colors.labelNormal} />
+          <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
         </Pressable>
         <View style={styles.headerTitleCol}>
           <Text style={styles.headerTitle}>가족 활동</Text>
           {detail && <Text style={styles.headerSub}>{detail.name} · {detail.memberCount}명</Text>}
         </View>
         <Pressable accessibilityLabel="필터" accessibilityRole="button" hitSlop={8}>
-          <Feather name="filter" size={20} color={colors.labelNormal} />
+          <Feather name="filter" size={scale(20)} color={colors.labelNormal} />
         </Pressable>
       </View>
 
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   headerTitleCol: { flex: 1 },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  headerSub: { fontSize: 12, color: colors.labelAlternative, marginTop: 2 },
+  headerSub: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 2 },
   tabsRow: {
     flexDirection: 'row', gap: space.s6,
     paddingHorizontal: space.s20, paddingTop: space.s4, paddingBottom: space.s14,
@@ -151,10 +151,10 @@ const styles = StyleSheet.create({
   },
   tab: {
     paddingHorizontal: space.s14, paddingVertical: space.s8,
-    borderRadius: 9999, backgroundColor: colors.fillNormal,
+    borderRadius: scale(9999), backgroundColor: colors.fillNormal,
   },
   tabActive: { backgroundColor: colors.labelNormal },
-  tabText: { fontSize: 13, fontWeight: '500', color: colors.labelAlternative },
+  tabText: { fontSize: scale(13), fontWeight: '500', color: colors.labelAlternative },
   tabTextActive: { color: colors.staticWhite, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   empty: { textAlign: 'center', color: colors.labelAlternative, padding: space.s40 },
   footer: {
     padding: space.s32, paddingHorizontal: space.s20,
-    textAlign: 'center', fontSize: 12, color: colors.labelAssistive,
+    textAlign: 'center', fontSize: scale(12), color: colors.labelAssistive,
   },
 });

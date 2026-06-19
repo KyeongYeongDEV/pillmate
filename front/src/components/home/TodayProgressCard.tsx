@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import type { TodayProgress } from '@/store/slices/activityApi';
 
 interface TodayProgressCardProps {
@@ -80,13 +80,13 @@ const styles = StyleSheet.create({
   },
   barBg: {
     width: '100%',
-    height: 8,
+    height: scale(8),
     backgroundColor: colors.bgAlt,
     borderRadius: radius.full,
     overflow: 'hidden',
   },
   barFill: {
-    height: 8,
+    height: scale(8),
     backgroundColor: colors.primaryNormal,
     borderRadius: radius.full,
   },

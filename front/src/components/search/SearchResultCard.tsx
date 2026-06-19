@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Highlight from './Highlight';
 import PillVisual from '@/components/common/PillVisual';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
 
 interface SearchResultCardProps {
@@ -23,7 +23,7 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd, onDetail }: Search
       accessibilityLabel={`${item.name} 상세 보기`}
       accessibilityRole="button"
     >
-      <PillVisual size={40} colorA="#a5c8f5" colorB="#d0e8ff" />
+      <PillVisual size={scale(40)} colorA="#a5c8f5" colorB="#d0e8ff" />
       <View style={styles.info}>
         <View style={styles.nameRow}>
           <Highlight text={item.name} term={query} style={styles.name} />
@@ -38,7 +38,7 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd, onDetail }: Search
 
       {/* info icon — visual indicator that card row = detail (not interactive, outer Pressable handles it) */}
       <View style={styles.infoIcon}>
-        <Feather name="info" size={14} color={colors.labelAssistive} />
+        <Feather name="info" size={scale(14)} color={colors.labelAssistive} />
       </View>
 
       <Pressable
@@ -51,7 +51,7 @@ function SearchResultCard({ item, query, alreadyAdded, onAdd, onDetail }: Search
       >
         <Feather
           name={alreadyAdded ? 'check' : 'plus'}
-          size={18}
+          size={scale(18)}
           color={alreadyAdded ? colors.statusPositive : colors.labelNormal}
         />
       </Pressable>
@@ -74,11 +74,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s6, paddingVertical: 2,
     borderRadius: radius.r4, backgroundColor: colors.blue95,
   },
-  addedBadgeText: { fontSize: 10, fontWeight: '700', color: colors.primaryNormal, letterSpacing: 0.02 },
+  addedBadgeText: { fontSize: scale(10), fontWeight: '700', color: colors.primaryNormal, letterSpacing: 0.02 },
   sub: { ...typography.caption1, color: colors.labelAlternative, marginTop: 1 },
-  infoIcon: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
+  infoIcon: { width: scale(20), height: scale(20), alignItems: 'center', justifyContent: 'center' },
   addBtn: {
-    width: 32, height: 32, borderRadius: radius.r8,
+    width: scale(32), height: scale(32), borderRadius: radius.r8,
     backgroundColor: colors.fillNormal,
     alignItems: 'center', justifyContent: 'center',
   },

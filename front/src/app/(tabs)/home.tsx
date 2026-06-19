@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { colors, typography, space, radius, shadows, scale } from '@/styles/tokens';
 import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
@@ -77,7 +77,7 @@ export default function HomeScreen() {
             accessibilityLabel="설정"
             accessibilityRole="button"
           >
-            <Feather name="settings" size={22} color={colors.labelNormal} />
+            <Feather name="settings" size={scale(22)} color={colors.labelNormal} />
           </Pressable>
         </View>
 
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.bgNormal,
     paddingHorizontal: space.s20,
-    paddingTop: space.s12,
-    paddingBottom: space.s20,
+    paddingTop: space.s6,
+    paddingBottom: space.s10,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
@@ -209,17 +209,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: space.s16,
-    marginBottom: space.s12,
+    marginBottom: space.s6,
   },
   dateLabel: { ...typography.label1n, color: colors.labelAlternative },
-  greeting: { fontSize: 26, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.6, marginTop: 2 },
+  greeting: { ...typography.heading2, lineHeight: scale(25), color: colors.labelNormal, letterSpacing: -0.6, marginTop: scale(1) },
   scroll: { flex: 1 },
   scrollContent: { padding: space.s16, gap: space.s20, paddingBottom: space.s40 },
   section: { gap: space.s10 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.labelNormal },
-  sectionDate: { fontSize: 13, fontWeight: '600', color: colors.labelAlternative },
-  viewAll: { fontSize: 13, fontWeight: '600', color: colors.primaryNormal },
+  sectionTitle: { ...typography.headline1, fontWeight: '700', color: colors.labelNormal },
+  sectionDate: { ...typography.label2, fontWeight: '600', color: colors.labelAlternative },
+  viewAll: { ...typography.label2, fontWeight: '600', color: colors.primaryNormal },
   feedCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
     borderWidth: 1, borderColor: colors.line, overflow: 'hidden', ...shadows.small,
@@ -230,10 +230,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: space.s8,
   },
   feedPlaceholderTxt: { ...typography.body2r, color: colors.labelAlternative },
-  separator: { height: 1, backgroundColor: colors.line, marginLeft: 64 },
+  separator: { height: scale(1), backgroundColor: colors.line, marginLeft: 64 },
   safetyFooter: {
     padding: space.s12, borderRadius: radius.r12, backgroundColor: '#F0F7FF',
     borderWidth: 1, borderColor: '#C8DDFF',
   },
-  safetyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center', lineHeight: 18 },
+  safetyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center', lineHeight: scale(18) },
 });

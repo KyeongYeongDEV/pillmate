@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 
 interface GroupSelectorProps {
   groupName: string;
@@ -17,7 +17,7 @@ function GroupSelector({ groupName, onPress }: GroupSelectorProps) {
       accessibilityRole="button"
     >
       <Text style={styles.name} numberOfLines={1}>{groupName}</Text>
-      <Feather name="chevron-down" size={16} color={colors.labelAlternative} />
+      <Feather name="chevron-down" size={scale(16)} color={colors.labelAlternative} />
     </Pressable>
   );
 }
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgAlt,
     borderWidth: 1,
     borderColor: colors.line,
-    maxWidth: 200,
+    maxWidth: scale(200),
   },
   name: {
     ...typography.label1n,

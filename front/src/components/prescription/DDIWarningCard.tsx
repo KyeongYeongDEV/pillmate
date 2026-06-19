@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 import type { InteractionSeverity, InteractionWarning } from '@/types/prescription';
 
 interface SeverityStyle {
@@ -61,15 +61,15 @@ const styles = StyleSheet.create({
     gap: space.s8,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
-  icon: { fontSize: 18 },
+  icon: { fontSize: scale(18) },
   headerText: { flex: 1 },
-  pair: { fontSize: 14, fontWeight: '700', letterSpacing: -0.01 },
+  pair: { fontSize: scale(14), fontWeight: '700', letterSpacing: -0.01 },
   chip: {
     paddingHorizontal: space.s8, paddingVertical: 4,
     borderRadius: radius.full,
   },
-  chipText: { fontSize: 11, fontWeight: '700', color: colors.staticWhite, letterSpacing: 0.04 },
-  description: { fontSize: 13, color: colors.labelNormal, lineHeight: 18 },
+  chipText: { fontSize: scale(11), fontWeight: '700', color: colors.staticWhite, letterSpacing: 0.04 },
+  description: { fontSize: scale(13), color: colors.labelNormal, lineHeight: scale(18) },
   sourceChip: { alignSelf: 'flex-start' },
-  sourceText: { fontSize: 11, color: colors.labelAlternative, fontWeight: '600' },
+  sourceText: { fontSize: scale(11), color: colors.labelAlternative, fontWeight: '600' },
 });

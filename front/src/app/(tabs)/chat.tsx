@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import AiBubble from '@/components/chat/AiBubble';
 import UserBubble from '@/components/chat/UserBubble';
 import { useSendMessageMutation } from '@/store/slices/chatApi';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ChatMessage } from '@/types/chat';
 
 // 비용 정책: AI 채팅은 출시 시점 비활성 (2026-06-11 사용자 명시). true 로 바꾸면 즉시 활성.
@@ -88,7 +88,7 @@ export default function ChatScreen() {
           </Text>
         </View>
         <Pressable accessibilityLabel="더 보기" accessibilityRole="button">
-          <Feather name="more-horizontal" size={22} color={colors.labelNormal} />
+          <Feather name="more-horizontal" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
       </View>
 
@@ -113,7 +113,7 @@ export default function ChatScreen() {
         <View style={styles.inputBar}>
           {CHAT_ENABLED ? (
             <Pressable style={styles.attachBtn} accessibilityLabel="파일 첨부" accessibilityRole="button">
-              <Feather name="plus" size={22} color={colors.labelAlternative} />
+              <Feather name="plus" size={scale(22)} color={colors.labelAlternative} />
             </Pressable>
           ) : (
             <Text style={styles.lockIcon}>🔒</Text>
@@ -136,7 +136,7 @@ export default function ChatScreen() {
             accessibilityLabel="전송"
             accessibilityRole="button"
           >
-            <Feather name="send" size={20} color="#fff" />
+            <Feather name="send" size={scale(20)} color="#fff" />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: colors.labelNormal },
-  headerSub: { fontSize: 11, color: colors.statusPositive, fontWeight: '600', marginTop: 1 },
+  headerTitle: { fontSize: scale(17), fontWeight: '600', color: colors.labelNormal },
+  headerSub: { fontSize: scale(11), color: colors.statusPositive, fontWeight: '600', marginTop: 1 },
   headerSubLocked: { color: colors.labelAlternative },
   kav: { flex: 1 },
   scroll: { flex: 1 },
@@ -163,25 +163,25 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: colors.bgNormal,
     borderWidth: 1, borderColor: colors.line,
   },
-  chipText: { fontSize: 12, color: colors.labelNormal, fontWeight: '500' },
+  chipText: { fontSize: scale(12), color: colors.labelNormal, fontWeight: '500' },
   inputBar: {
     flexDirection: 'row', alignItems: 'center', gap: space.s8,
     paddingHorizontal: space.s16, paddingTop: space.s10, paddingBottom: space.s28,
     backgroundColor: colors.bgNormal, borderTopWidth: 1, borderTopColor: colors.line,
   },
   attachBtn: {
-    width: 38, height: 38, borderRadius: 19,
+    width: scale(38), height: scale(38), borderRadius: scale(19),
     backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
   },
-  lockIcon: { fontSize: 20, width: 38, textAlign: 'center' },
+  lockIcon: { fontSize: scale(20), width: scale(38), textAlign: 'center' },
   input: {
-    flex: 1, height: 42, borderRadius: radius.full,
+    flex: 1, height: scale(42), borderRadius: radius.full,
     backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.line,
-    paddingHorizontal: space.s16, fontSize: 14, color: colors.labelNormal,
+    paddingHorizontal: space.s16, fontSize: scale(14), color: colors.labelNormal,
   },
   inputLocked: { backgroundColor: colors.fillNormal, borderColor: colors.line, color: colors.labelAssistive },
   sendBtn: {
-    width: 42, height: 42, borderRadius: 21,
+    width: scale(42), height: scale(42), borderRadius: scale(21),
     backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.4 },

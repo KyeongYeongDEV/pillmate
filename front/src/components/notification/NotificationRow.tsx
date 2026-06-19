@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import type { NotificationItem } from '@/types/notification';
 import { notificationMeta } from '@/lib/notificationMeta';
 import { relativeTime } from '@/utils/relativeTime';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 
 interface Props {
   item: NotificationItem;
@@ -22,7 +22,7 @@ function NotificationRow({ item, onPress }: Props) {
       accessibilityLabel={`${item.title}${unread ? ', 안 읽음' : ''}`}
     >
       <View style={[styles.iconWrap, { backgroundColor: `${color}1A` }]}>
-        <Feather name={icon} size={18} color={color} />
+        <Feather name={icon} size={scale(18)} color={color} />
       </View>
       <View style={styles.body}>
         <View style={styles.topRow}>
@@ -43,14 +43,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal,
   },
   rowUnread: { backgroundColor: colors.blue95 },
-  iconWrap: { width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  iconWrap: { width: scale(36), height: scale(36), borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, gap: space.s4 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
-  title: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.labelNormal },
+  title: { flex: 1, fontSize: scale(15), fontWeight: '600', color: colors.labelNormal },
   titleUnread: { fontWeight: '700' },
-  time: { fontSize: 12, color: colors.labelAssistive },
-  bodyText: { fontSize: 13, color: colors.labelAlternative, lineHeight: 18 },
-  unreadDot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primaryBase, marginTop: space.s4 },
+  time: { fontSize: scale(12), color: colors.labelAssistive },
+  bodyText: { fontSize: scale(13), color: colors.labelAlternative, lineHeight: scale(18) },
+  unreadDot: { width: scale(8), height: scale(8), borderRadius: radius.full, backgroundColor: colors.primaryBase, marginTop: space.s4 },
 });
 
 export default memo(NotificationRow);

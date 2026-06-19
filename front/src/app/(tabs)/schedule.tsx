@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
 import MonthPicker from '@/components/schedule/MonthPicker';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useGetDayScheduleQuery, useGetMonthAdherenceQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
@@ -124,7 +124,7 @@ export default function ScheduleScreen() {
               accessibilityLabel="이전 달"
               accessibilityRole="button"
             >
-              <Feather name="chevron-left" size={18} color={colors.labelNormal} />
+              <Feather name="chevron-left" size={scale(18)} color={colors.labelNormal} />
             </Pressable>
             <Pressable
               style={styles.chevronBtn}
@@ -132,7 +132,7 @@ export default function ScheduleScreen() {
               accessibilityLabel="다음 달"
               accessibilityRole="button"
             >
-              <Feather name="chevron-right" size={18} color={colors.labelNormal} />
+              <Feather name="chevron-right" size={scale(18)} color={colors.labelNormal} />
             </Pressable>
           </View>
         </View>
@@ -199,20 +199,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.s16, paddingVertical: space.s16,
   },
-  monthTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.018, color: colors.labelNormal },
+  monthTitle: { fontSize: scale(22), fontWeight: '700', letterSpacing: -0.018, color: colors.labelNormal },
   chevrons: { flexDirection: 'row', gap: space.s4 },
   chevronBtn: {
-    width: 32, height: 32, borderRadius: radius.r8,
+    width: scale(32), height: scale(32), borderRadius: radius.r8,
     backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
   },
   legend: { flexDirection: 'row', gap: space.s16, paddingHorizontal: space.s16, marginTop: space.s14, marginBottom: space.s12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendDot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { fontSize: 12, color: colors.labelAlternative },
-  separator: { height: 8, backgroundColor: colors.bgAlt },
+  legendDot: { width: scale(6), height: scale(6), borderRadius: scale(3) },
+  legendText: { fontSize: scale(12), color: colors.labelAlternative },
+  separator: { height: scale(8), backgroundColor: colors.bgAlt },
   todayArea: { backgroundColor: colors.bgAlt, paddingBottom: space.s24 },
   todayHeader: { paddingHorizontal: space.s16, paddingTop: space.s20, paddingBottom: space.s12 },
-  todayLabel: { fontSize: 12, color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
+  todayLabel: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
   todayCount: { ...typography.headline1, marginTop: 2, color: colors.labelNormal },
   medCard: {
     marginHorizontal: space.s16, backgroundColor: colors.bgNormal,

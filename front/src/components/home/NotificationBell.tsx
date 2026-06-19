@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useGetNotificationsQuery } from '@/store/slices/notificationApi';
 import { unreadCount } from '@/lib/notificationMeta';
-import { colors, radius, space } from '@/styles/tokens';
+import { scale, colors, radius, space } from '@/styles/tokens';
 
 const BADGE_MAX = 9;
 
@@ -18,7 +18,7 @@ export default function NotificationBell() {
       accessibilityRole="button"
       hitSlop={8}
     >
-      <Feather name="bell" size={22} color={colors.labelNormal} />
+      <Feather name="bell" size={scale(22)} color={colors.labelNormal} />
       {count > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{count > BADGE_MAX ? `${BADGE_MAX}+` : count}</Text>
@@ -31,8 +31,8 @@ export default function NotificationBell() {
 const styles = StyleSheet.create({
   badge: {
     position: 'absolute', top: -space.s4, right: -space.s4,
-    minWidth: 16, height: 16, paddingHorizontal: space.s4, borderRadius: radius.full,
+    minWidth: scale(16), height: scale(16), paddingHorizontal: space.s4, borderRadius: radius.full,
     backgroundColor: colors.statusNegative, alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { color: colors.staticWhite, fontSize: 10, fontWeight: '700' },
+  badgeText: { color: colors.staticWhite, fontSize: scale(10), fontWeight: '700' },
 });

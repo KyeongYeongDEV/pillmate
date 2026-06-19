@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Icon from '@/components/common/Icon';
-import { colors, space } from '@/styles/tokens';
+import { scale, colors, space } from '@/styles/tokens';
 import { MFDS_SOURCE } from '@/lib/constants';
 import type { MedSlot } from '@/types/schedule';
 
@@ -38,7 +38,7 @@ function MedTimeRow({ slot, isFirst, onPress, readOnly }: Props) {
           now && styles.circleNow,
         ]}
       >
-        {done && <Icon name="check" size={18} color="#fff" />}
+        {done && <Icon name="check" size={scale(18)} color="#fff" />}
       </View>
     </View>
   );
@@ -65,17 +65,17 @@ const styles = StyleSheet.create({
     gap: space.s14, paddingVertical: space.s14, paddingHorizontal: space.s16,
   },
   borderTop: { borderTopWidth: 1, borderTopColor: colors.line },
-  timeCol: { width: 48, alignItems: 'center' },
-  time: { fontSize: 15, fontWeight: '700', color: colors.labelNormal },
-  timeLabel: { fontSize: 11, color: colors.labelAlternative, marginTop: 1 },
+  timeCol: { width: scale(48), alignItems: 'center' },
+  time: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
+  timeLabel: { fontSize: scale(11), color: colors.labelAlternative, marginTop: 1 },
   muted: { color: colors.labelAlternative },
   strike: { textDecorationLine: 'line-through' },
-  divider: { width: 1, height: 36, backgroundColor: colors.line },
+  divider: { width: scale(1), height: scale(36), backgroundColor: colors.line },
   itemsCol: { flex: 1, gap: 1 },
-  item: { fontSize: 14, fontWeight: '500', color: colors.labelNormal, lineHeight: 20 },
-  source: { fontSize: 10, color: colors.labelAssistive, marginTop: 3 },
+  item: { fontSize: scale(14), fontWeight: '500', color: colors.labelNormal, lineHeight: scale(20) },
+  source: { fontSize: scale(10), color: colors.labelAssistive, marginTop: 3 },
   circle: {
-    width: 32, height: 32, borderRadius: 16,
+    width: scale(32), height: scale(32), borderRadius: scale(16),
     borderWidth: 1.5, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center',
   },

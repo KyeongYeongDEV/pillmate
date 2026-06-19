@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { PrescriptionDetailDrug } from '@/types/prescription';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 
 const CONFIDENCE_PERCENT = 100;
 
@@ -40,10 +40,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line, padding: space.s14, gap: space.s4,
   },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
-  name: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.labelNormal },
-  confidence: { fontSize: 12, fontWeight: '600', color: colors.labelAlternative },
-  matched: { fontSize: 12, color: colors.labelAssistive },
-  dosage: { fontSize: 13, color: colors.labelNeutral, marginTop: space.s4 },
+  name: { flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
+  confidence: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
+  matched: { fontSize: scale(12), color: colors.labelAssistive },
+  dosage: { fontSize: scale(13), color: colors.labelNeutral, marginTop: space.s4 },
 });
 
 export default memo(PrescriptionDrugRow);

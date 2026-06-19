@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { updateSlots, updateDoseAmount, removeItem, setMemo, addManual } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
@@ -212,10 +212,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  headerBtn: { width: 40, alignItems: 'center' },
-  headerBtnTxt: { fontSize: 22, color: colors.labelNormal },
+  headerBtn: { width: scale(40), alignItems: 'center' },
+  headerBtnTxt: { fontSize: scale(22), color: colors.labelNormal },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  saveBtn: { width: 40, alignItems: 'center' },
+  saveBtn: { width: scale(40), alignItems: 'center' },
   saveTxt: { ...typography.label1n, color: colors.primaryNormal, fontWeight: '600' },
   scroll: { padding: space.s16, paddingBottom: 100 },
   summaryCard: {
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     padding: space.s16, borderWidth: 1, borderColor: colors.line, ...shadows.small,
     marginBottom: space.s16,
   },
-  prescriptionThumb: { width: 64, height: 80, borderRadius: radius.r8, backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
-  prescriptionEmoji: { fontSize: 28 },
+  prescriptionThumb: { width: scale(64), height: scale(80), borderRadius: radius.r8, backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+  prescriptionEmoji: { fontSize: scale(28) },
   summaryText: { flex: 1, gap: space.s4 },
   aiBadge: {
     alignSelf: 'flex-start',
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
     borderColor: colors.red50,
     borderWidth: 2,
   },
-  warningTitle: { fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  warningGuide: { fontSize: 13, color: colors.red40, fontWeight: '600', lineHeight: 18 },
+  warningTitle: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
+  warningGuide: { fontSize: scale(13), color: colors.red40, fontWeight: '600', lineHeight: scale(18) },
   warningList: { gap: space.s10 },
   listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s8 },
   listTitle: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
@@ -260,11 +260,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F7FF', padding: space.s16, marginTop: space.s12,
   },
   addIcon: {
-    width: 36, height: 36, borderRadius: radius.r10,
+    width: scale(36), height: scale(36), borderRadius: radius.r10,
     backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: '#A0C4FF',
     alignItems: 'center', justifyContent: 'center',
   },
-  addIconTxt: { fontSize: 22, color: colors.primaryNormal },
+  addIconTxt: { fontSize: scale(22), color: colors.primaryNormal },
   addTxt: { ...typography.label1n, color: colors.labelNormal, fontWeight: '700' },
   memoCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16, padding: space.s16,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   memoLabel: { ...typography.label1n, color: colors.labelNeutral, fontWeight: '700' },
   memoInput: {
     ...typography.body2r, color: colors.labelNormal,
-    minHeight: 80, textAlignVertical: 'top', paddingTop: 0,
+    minHeight: scale(80), textAlignVertical: 'top', paddingTop: 0,
   },
   chipRow: { flexDirection: 'row', gap: space.s6 },
   chip: {

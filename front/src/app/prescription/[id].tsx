@@ -10,7 +10,7 @@ import OcrStatusChip from '@/components/prescription/OcrStatusChip';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
 import { formatMonthDay } from '@/utils/calendarUtils';
 import { safeBack } from '@/lib/router/safeBack';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 export default function PrescriptionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,7 +51,7 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
   if (!url || failed) {
     return (
       <Pressable style={styles.imagePlaceholder} onPress={onRefresh} accessibilityLabel="처방전 이미지 다시 불러오기">
-        <Feather name="image" size={32} color={colors.labelAssistive} />
+        <Feather name="image" size={scale(32)} color={colors.labelAssistive} />
         <Text style={styles.placeholderText}>
           {url ? '이미지를 불러올 수 없어요 · 탭하여 새로고침' : '등록된 이미지가 없어요'}
         </Text>
@@ -78,7 +78,7 @@ function Header() {
         accessibilityRole="button"
         hitSlop={8}
       >
-        <Feather name="chevron-left" size={24} color={colors.labelNormal} />
+        <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>처방전 상세</Text>
       <View style={styles.headerSpacer} />
@@ -105,22 +105,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  headerSpacer: { width: 24 },
+  headerSpacer: { width: scale(24) },
   loader: { flex: 1, marginTop: space.s40 },
   content: { padding: space.s16, gap: space.s16, paddingBottom: 40 },
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  date: { fontSize: 18, fontWeight: '700', color: colors.labelNormal },
-  image: { width: '100%', height: 220, borderRadius: radius.r16, backgroundColor: colors.fillNormal },
+  date: { fontSize: scale(18), fontWeight: '700', color: colors.labelNormal },
+  image: { width: '100%', height: scale(220), borderRadius: radius.r16, backgroundColor: colors.fillNormal },
   imagePlaceholder: {
-    width: '100%', height: 160, borderRadius: radius.r16, gap: space.s8,
+    width: '100%', height: scale(160), borderRadius: radius.r16, gap: space.s8,
     backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
   },
-  placeholderText: { fontSize: 13, color: colors.labelAlternative },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: colors.labelAlternative },
+  placeholderText: { fontSize: scale(13), color: colors.labelAlternative },
+  sectionLabel: { fontSize: scale(13), fontWeight: '700', color: colors.labelAlternative },
   drugList: { gap: space.s8 },
-  empty: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
+  empty: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s12, padding: space.s16 },
-  errorText: { fontSize: 14, color: colors.labelAlternative },
+  errorText: { fontSize: scale(14), color: colors.labelAlternative },
   retryBtn: { paddingHorizontal: space.s20, paddingVertical: space.s12, borderRadius: radius.r12, backgroundColor: colors.primaryNormal },
-  retryText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
+  retryText: { fontSize: scale(14), fontWeight: '600', color: colors.staticWhite },
 });

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Modal, View, Text, Pressable, StyleSheet,
 } from 'react-native';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월',
                 '7월', '8월', '9월', '10월', '11월', '12월'];
@@ -116,9 +116,9 @@ const styles = StyleSheet.create({
     gap: space.s24, marginBottom: space.s20,
   },
   yearBtn: { padding: space.s8 },
-  yearArrow: { fontSize: 26, fontWeight: '300', color: colors.labelNormal, lineHeight: 30 },
+  yearArrow: { fontSize: scale(26), fontWeight: '300', color: colors.labelNormal, lineHeight: scale(30) },
   arrowDisabled: { color: colors.labelAssistive },
-  yearLabel: { fontSize: 20, fontWeight: '700', color: colors.labelNormal, minWidth: 80, textAlign: 'center' },
+  yearLabel: { fontSize: scale(20), fontWeight: '700', color: colors.labelNormal, minWidth: scale(80), textAlign: 'center' },
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   monthCell: {
     width: '22%', paddingVertical: space.s12,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.fillNormal,
   },
   monthCellSelected: { backgroundColor: colors.labelNormal },
-  monthText: { fontSize: 14, fontWeight: '600', color: colors.labelNormal },
+  monthText: { fontSize: scale(14), fontWeight: '600', color: colors.labelNormal },
   monthTextSelected: { color: '#fff' },
   footer: {
     flexDirection: 'row', gap: space.s10,
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.line,
     alignItems: 'center',
   },
-  footerCancelTxt: { fontSize: 15, fontWeight: '600', color: colors.labelNormal },
+  footerCancelTxt: { fontSize: scale(15), fontWeight: '600', color: colors.labelNormal },
   footerBtnConfirm: {
     flex: 2, paddingVertical: space.s14,
     borderRadius: radius.r12,
     backgroundColor: colors.primaryNormal,
     alignItems: 'center',
   },
-  footerConfirmTxt: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  footerConfirmTxt: { fontSize: scale(15), fontWeight: '700', color: '#fff' },
 });

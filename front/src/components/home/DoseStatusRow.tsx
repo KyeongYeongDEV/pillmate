@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, radius, space } from '@/styles/tokens';
+import { scale, colors, radius, space } from '@/styles/tokens';
 import type { SlotDotStatus } from '@/lib/scheduleUtils';
 
 const STATUS_A11Y: Record<SlotDotStatus, string> = {
@@ -47,22 +47,22 @@ function Dot({ label, status }: DoseDot) {
       style={[styles.dotBase, dotStyles[status]]}
     >
       {status === 'done'
-        ? <Feather name="check" size={10} color={colors.bgNormal} />
+        ? <Feather name="check" size={scale(10)} color={colors.bgNormal} />
         : <Text style={styles.mark}>!</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.s8, marginTop: space.s16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.s8, marginTop: space.s6 },
   dots: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
   dotBase: {
-    height: 16, minWidth: 16, borderRadius: radius.full,
+    height: scale(13), minWidth: scale(13), borderRadius: radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  count: { fontSize: 13, fontWeight: '700', color: colors.labelNormal },
-  streak: { fontSize: 13, fontWeight: '600', color: colors.labelAlternative },
-  mark: { fontSize: 10, fontWeight: '700', color: colors.bgNormal, lineHeight: 12 },
+  count: { fontSize: scale(13), fontWeight: '700', color: colors.labelNormal },
+  streak: { fontSize: scale(13), fontWeight: '600', color: colors.labelAlternative },
+  mark: { fontSize: scale(10), fontWeight: '700', color: colors.bgNormal, lineHeight: scale(12) },
 });
 
 const dotStyles = StyleSheet.create({

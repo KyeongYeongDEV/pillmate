@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Avatar from '@/components/common/Avatar';
-import { colors, radius } from '@/styles/tokens';
+import { scale, colors, radius } from '@/styles/tokens';
 
 const OVERLAP = 18;
 const MAX_VISIBLE = 3;
@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moreText: { fontSize: 12, fontWeight: '700', color: colors.labelAlternative },
+  moreText: { fontSize: scale(12), fontWeight: '700', color: colors.labelAlternative },
 });

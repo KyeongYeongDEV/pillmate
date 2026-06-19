@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { MFDS_SOURCE } from '@/lib/constants';
 import type { DrugListItem } from '@/types/prescription';
 
@@ -123,9 +123,9 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12 },
-  thumb: { width: 52, height: 52, borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumb: { width: scale(52), height: scale(52), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  pillEmoji: { fontSize: 24 },
+  pillEmoji: { fontSize: scale(24) },
   nameBlock: { flex: 1 },
   name: { ...typography.body1n, color: colors.labelNormal, fontWeight: '600' },
   nameRaw: { ...typography.caption1, color: colors.labelAlternative, marginTop: 2 },
@@ -136,16 +136,16 @@ const styles = StyleSheet.create({
     paddingVertical: space.s4,
     alignItems: 'center',
     gap: 2,
-    minWidth: 64,
+    minWidth: scale(64),
   },
-  tierIcon: { fontSize: 14 },
+  tierIcon: { fontSize: scale(14) },
   tierLabel: { ...typography.caption1, fontWeight: '700', textAlign: 'center' },
   warnBanner: {
     backgroundColor: colors.red95,
     borderRadius: radius.r8,
     padding: space.s10,
   },
-  warnText: { ...typography.caption1, color: colors.red40, lineHeight: 18 },
+  warnText: { ...typography.caption1, color: colors.red40, lineHeight: scale(18) },
   actions: { flexDirection: 'row', gap: space.s8, justifyContent: 'flex-end' },
   actionBtn: {
     paddingHorizontal: space.s14,

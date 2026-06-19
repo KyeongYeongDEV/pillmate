@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import DrugSearchBar from '@/components/search/DrugSearchBar';
 import PillVisual from '@/components/common/PillVisual';
 import { useSearchDrugsQuery } from '@/store/slices/drugApi';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { MFDS_SOURCE } from '@/lib/constants';
 import type { DrugSearchResult } from '@/types/prescription';
 
@@ -59,7 +59,7 @@ export default function DrugsScreen() {
         />
       ) : (
         <View style={styles.hint}>
-          <Feather name="search" size={28} color={colors.labelAssistive} />
+          <Feather name="search" size={scale(28)} color={colors.labelAssistive} />
           <Text style={styles.hintText}>약 이름이나 성분으로 검색하세요</Text>
         </View>
       )}
@@ -76,12 +76,12 @@ function DrugRow({ item }: { item: DrugSearchResult }) {
       accessibilityLabel={`${item.name} 상세 보기`}
       accessibilityRole="button"
     >
-      <PillVisual size={40} colorA="#a5c8f5" colorB="#d0e8ff" />
+      <PillVisual size={scale(40)} colorA="#a5c8f5" colorB="#d0e8ff" />
       <View style={styles.rowInfo}>
         <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.rowSub} numberOfLines={1}>{item.ingredient ?? item.form ?? '—'}</Text>
       </View>
-      <Feather name="chevron-right" size={18} color={colors.labelAssistive} />
+      <Feather name="chevron-right" size={scale(18)} color={colors.labelAssistive} />
     </Pressable>
   );
 }

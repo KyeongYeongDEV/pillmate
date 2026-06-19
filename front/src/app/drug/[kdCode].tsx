@@ -9,7 +9,7 @@ import { useGetDrugDetailQuery } from '@/store/slices/drugApi';
 import DrugHero from '@/components/drug/DrugHero';
 import DrugInfoSection from '@/components/drug/DrugInfoSection';
 import SourceCard from '@/components/drug/SourceCard';
-import { colors, space, typography } from '@/styles/tokens';
+import { scale, colors, space, typography } from '@/styles/tokens';
 import { safeBack } from '@/lib/router/safeBack';
 
 export default function DrugDetailScreen() {
@@ -44,7 +44,7 @@ export default function DrugDetailScreen() {
           accessibilityLabel="뒤로 가기"
           accessibilityRole="button"
         >
-          <Feather name="chevron-left" size={26} color={colors.labelNormal} />
+          <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>약 정보</Text>
         <View style={styles.backBtn} />
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s4, paddingVertical: space.s8,
     borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: scale(44), height: scale(44), alignItems: 'center', justifyContent: 'center' },
   headerTitle: { ...typography.headline2, color: colors.labelNormal, fontWeight: '700' },
   scroll: { paddingBottom: space.s40 },
   errorText: { ...typography.body2n, color: colors.labelAlternative, marginBottom: space.s16 },

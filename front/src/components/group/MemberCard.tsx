@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Avatar from '@/components/common/Avatar';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 import type { GroupMember } from '@/types/group';
 
 interface Props {
@@ -20,7 +20,7 @@ function MemberCard({ member, isFirst, onPress }: Props) {
       accessibilityRole="button"
     >
       <View>
-        <Avatar name={member.name[0]} tint={member.tint} size={44} />
+        <Avatar name={member.name[0]} tint={member.tint} size={scale(44)} />
         {member.online && <View style={styles.onlineDot} />}
       </View>
       <View style={styles.info}>
@@ -49,22 +49,22 @@ const styles = StyleSheet.create({
   borderTop: { borderTopWidth: 1, borderTopColor: colors.line },
   onlineDot: {
     position: 'absolute', right: -1, bottom: -1,
-    width: 12, height: 12, borderRadius: 6,
+    width: scale(12), height: scale(12), borderRadius: scale(6),
     backgroundColor: colors.statusPositive, borderWidth: 2, borderColor: colors.staticWhite,
   },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
-  name: { fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
+  name: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
   meBadge: {
     paddingHorizontal: space.s6, paddingVertical: 2,
     backgroundColor: colors.fillStrong, borderRadius: radius.r4,
   },
-  meBadgeText: { fontSize: 10, color: colors.labelAlternative, fontWeight: '600' },
-  sub: { fontSize: 12, color: colors.labelAlternative, marginTop: 1 },
+  meBadgeText: { fontSize: scale(10), color: colors.labelAlternative, fontWeight: '600' },
+  sub: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 1 },
   roleBadge: { paddingHorizontal: space.s10, paddingVertical: 4, borderRadius: radius.r6 },
   patientBadge: { backgroundColor: colors.orange95 },
   guardianBadge: { backgroundColor: colors.blue95 },
-  roleText: { fontSize: 11, fontWeight: '600' },
+  roleText: { fontSize: scale(11), fontWeight: '600' },
   patientText: { color: colors.orange40 },
   guardianText: { color: colors.primaryNormal },
 });

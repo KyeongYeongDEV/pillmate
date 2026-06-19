@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import type { ActivityFeedItem as ActivityFeedItemType, ActivitySeverity, TimeSlot } from '@/types/activity';
 
 // Legacy export — 하위 호환 (사용처 없으면 Phase 2에서 제거)
@@ -76,14 +76,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.s12,
     paddingVertical: space.s12, paddingHorizontal: space.s16,
   },
-  avatar: { width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  avatar: { width: scale(36), height: scale(36), borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  avatarLetter: { fontSize: scale(14), fontWeight: '700', color: '#fff' },
   content: { flex: 1, gap: 4 },
   body: { ...typography.body2r, color: colors.labelNeutral },
   nameSpan: { fontWeight: '700', color: colors.labelNormal },
   badge: {
     alignSelf: 'flex-start', paddingHorizontal: space.s6, paddingVertical: 2, borderRadius: radius.r4,
   },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+  badgeText: { fontSize: scale(11), fontWeight: '700' },
   time: { ...typography.caption1, color: colors.labelAlternative },
 });

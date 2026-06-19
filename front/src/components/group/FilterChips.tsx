@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 
 export type GroupFilter = '전체' | '내가 환자' | '내가 보호자' | '비공개';
 
@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.labelNormal,
   },
   chipText: {
-    fontSize: 12, fontWeight: '500', color: colors.labelAlternative,
-    lineHeight: 16, includeFontPadding: false,
+    fontSize: scale(12), fontWeight: '500', color: colors.labelAlternative,
+    lineHeight: scale(16), includeFontPadding: false,
   },
   chipTextActive: { color: colors.staticWhite, fontWeight: '700' },
 });

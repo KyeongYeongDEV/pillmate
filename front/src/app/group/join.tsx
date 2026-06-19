@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 import { API_BASE_URL } from '@/lib/api/client';
 import { getToken, getCurrentUserId } from '@/lib/auth/storage';
 import type { ApiEnvelope } from '@/lib/api/client';
@@ -39,7 +39,7 @@ export default function JoinGroupScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
-          <Feather name="x" size={22} color={colors.labelNormal} />
+          <Feather name="x" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>초대 코드로 참여</Text>
         <Pressable
@@ -48,7 +48,7 @@ export default function JoinGroupScreen() {
           accessibilityRole="button"
           hitSlop={8}
         >
-          <Feather name="maximize" size={22} color={colors.labelNormal} />
+          <Feather name="maximize" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
       </View>
 
@@ -108,18 +108,18 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
   body: { flex: 1, padding: space.s20, gap: space.s16 },
-  desc: { fontSize: 15, color: colors.labelAlternative, lineHeight: 22 },
+  desc: { fontSize: scale(15), color: colors.labelAlternative, lineHeight: scale(22) },
   input: {
     borderWidth: 1, borderColor: colors.line, borderRadius: radius.r12,
     paddingHorizontal: space.s16, paddingVertical: space.s14,
-    fontSize: 24, fontWeight: '700', color: colors.labelNormal,
+    fontSize: scale(24), fontWeight: '700', color: colors.labelNormal,
     backgroundColor: colors.bgAlt, letterSpacing: 4, textAlign: 'center',
   },
-  errorText: { fontSize: 13, color: colors.statusNegative },
+  errorText: { fontSize: scale(13), color: colors.statusNegative },
   submitBtn: {
-    height: 52, borderRadius: radius.r12,
+    height: scale(52), borderRadius: radius.r12,
     backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
   },
   submitBtnDisabled: { backgroundColor: colors.fillStrong },
-  submitText: { fontSize: 16, fontWeight: '700', color: colors.staticWhite },
+  submitText: { fontSize: scale(16), fontWeight: '700', color: colors.staticWhite },
 });

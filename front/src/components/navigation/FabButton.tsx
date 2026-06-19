@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, shadows } from '@/styles/tokens';
+import { scale, colors, shadows } from '@/styles/tokens';
 
 interface FabButtonProps {
   onPress: () => void;
@@ -17,7 +17,7 @@ function FabButton({ onPress }: FabButtonProps) {
         accessibilityRole="button"
         accessibilityHint="처방전 등록 화면으로 이동합니다"
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={scale(30)} color="#fff" />
       </Pressable>
     </View>
   );
@@ -27,13 +27,13 @@ export default React.memo(FabButton);
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: 80,
+    width: scale(80),
     alignItems: 'center',
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
     backgroundColor: colors.primaryBase,
     alignItems: 'center',
     justifyContent: 'center',

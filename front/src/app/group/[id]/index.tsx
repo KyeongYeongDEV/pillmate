@@ -10,7 +10,7 @@ import AvatarStack from '@/components/common/AvatarStack';
 import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
-import { colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
@@ -96,7 +96,7 @@ export default function GroupDetailScreen() {
         {/* 그룹 카드 */}
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
-            <AvatarStack names={memberNames} size={44} />
+            <AvatarStack names={memberNames} size={scale(44)} />
             <View style={styles.heroInfo}>
               <Text style={styles.heroName}>{detail.name}</Text>
               <Text style={styles.heroSub}>{detail.memberCount}명</Text>
@@ -121,7 +121,7 @@ export default function GroupDetailScreen() {
                 <Text style={styles.inviteBtnIssuedText}>발급됨 · {remainingSeconds}초</Text>
               ) : (
                 <>
-                  <Feather name="plus" size={18} color={colors.staticWhite} />
+                  <Feather name="plus" size={scale(18)} color={colors.staticWhite} />
                   <Text style={styles.inviteBtnText}>초대하기</Text>
                 </>
               )}
@@ -132,7 +132,7 @@ export default function GroupDetailScreen() {
               accessibilityLabel="QR 스캔으로 가입"
               accessibilityRole="button"
             >
-              <Feather name="maximize" size={20} color={colors.labelNormal} />
+              <Feather name="maximize" size={scale(20)} color={colors.labelNormal} />
             </Pressable>
           </View>
 
@@ -192,7 +192,7 @@ export default function GroupDetailScreen() {
             <ActivityIndicator size="small" color={colors.statusNegative} />
           ) : (
             <>
-              <Feather name="log-out" size={18} color={colors.statusNegative} />
+              <Feather name="log-out" size={scale(18)} color={colors.statusNegative} />
               <Text style={styles.leaveBtnText}>그룹 나가기</Text>
             </>
           )}
@@ -211,11 +211,11 @@ function Header({ title }: { title: string }) {
         accessibilityRole="button"
         hitSlop={8}
       >
-        <Feather name="chevron-left" size={24} color={colors.labelNormal} />
+        <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
       <Pressable accessibilityLabel="그룹 설정" accessibilityRole="button" hitSlop={8}>
-        <Feather name="settings" size={20} color={colors.labelNormal} />
+        <Feather name="settings" size={scale(20)} color={colors.labelNormal} />
       </Pressable>
     </View>
   );
@@ -251,40 +251,40 @@ const styles = StyleSheet.create({
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.s14 },
   heroInfo: { flex: 1, marginLeft: space.s8 },
-  heroName: { fontSize: 18, fontWeight: '700', letterSpacing: -0.015, color: colors.labelNormal },
-  heroSub: { fontSize: 13, color: colors.labelAlternative, marginTop: 2 },
+  heroName: { fontSize: scale(18), fontWeight: '700', letterSpacing: -0.015, color: colors.labelNormal },
+  heroSub: { fontSize: scale(13), color: colors.labelAlternative, marginTop: 2 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
   inviteBtn: {
     flex: 1,
-    height: 42, borderRadius: radius.r10,
+    height: scale(42), borderRadius: radius.r10,
     backgroundColor: colors.labelNormal, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: space.s6,
   },
-  inviteBtnText: { fontSize: 14, fontWeight: '600', color: colors.staticWhite },
+  inviteBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.staticWhite },
   inviteBtnDisabled: { opacity: 0.6 },
   inviteBtnIssued: { backgroundColor: colors.fillNormal },
-  inviteBtnIssuedText: { fontSize: 14, fontWeight: '600', color: colors.labelAlternative },
+  inviteBtnIssuedText: { fontSize: scale(14), fontWeight: '600', color: colors.labelAlternative },
   scanIconBtn: {
-    width: 42, height: 42, borderRadius: radius.r10,
+    width: scale(42), height: scale(42), borderRadius: radius.r10,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.fillNormal,
   },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
+  sectionLabel: { fontSize: scale(11), fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
   listCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
     borderWidth: 1, borderColor: colors.line, overflow: 'hidden',
   },
   activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  activityTitle: { fontSize: 13, fontWeight: '700', color: colors.labelNormal },
-  activityAll: { fontSize: 12, color: colors.primaryBase, fontWeight: '600' },
-  emptyText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
+  activityTitle: { fontSize: scale(13), fontWeight: '700', color: colors.labelNormal },
+  activityAll: { fontSize: scale(12), color: colors.primaryBase, fontWeight: '600' },
+  emptyText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
-  errorText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center' },
+  errorText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center' },
   leaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s6,
-    height: 48, borderRadius: radius.r12,
+    height: scale(48), borderRadius: radius.r12,
     backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.statusNegative,
   },
   leaveBtnDisabled: { opacity: 0.6 },
-  leaveBtnText: { fontSize: 14, fontWeight: '600', color: colors.statusNegative },
+  leaveBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.statusNegative },
 });

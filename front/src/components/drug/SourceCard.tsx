@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 interface SourceCardProps {
   source: string | null;
@@ -18,7 +18,7 @@ export default function SourceCard({ source }: SourceCardProps) {
       <View style={styles.body}>
         <Text style={styles.sourceLine}>출처: {source ?? DEFAULT_SOURCE}</Text>
       </View>
-      <Feather name="external-link" size={16} color={colors.labelAlternative} />
+      <Feather name="external-link" size={scale(16)} color={colors.labelAlternative} />
     </View>
   );
 }
@@ -31,11 +31,11 @@ const styles = StyleSheet.create({
     marginHorizontal: space.s16, marginBottom: space.s24,
   },
   badge: {
-    width: 28, height: 28, borderRadius: space.s6,
+    width: scale(28), height: scale(28), borderRadius: space.s6,
     backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center',
   },
-  badgeTxt: { fontSize: 11, fontWeight: '700', color: colors.primaryNormal },
+  badgeTxt: { fontSize: scale(11), fontWeight: '700', color: colors.primaryNormal },
   body: { flex: 1 },
-  sourceLine: { ...typography.caption1, color: colors.labelAlternative, lineHeight: 17 },
+  sourceLine: { ...typography.caption1, color: colors.labelAlternative, lineHeight: scale(17) },
 });

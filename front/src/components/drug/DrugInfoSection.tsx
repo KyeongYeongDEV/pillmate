@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 interface DrugInfoSectionProps {
   title: string;
@@ -27,6 +27,6 @@ const styles = StyleSheet.create({
     padding: space.s16, marginHorizontal: space.s16, marginBottom: space.s12,
   },
   title: { ...typography.headline2, color: colors.labelNormal, fontWeight: '700', marginBottom: space.s8 },
-  body: { ...typography.body2r, color: colors.labelNormal, lineHeight: 22 },
+  body: { ...typography.body2r, color: colors.labelNormal, lineHeight: scale(22) },
   empty: { color: colors.labelAssistive },
 });

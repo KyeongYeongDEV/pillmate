@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { space, radius } from '@/styles/tokens';
+import { scale, space, radius } from '@/styles/tokens';
 import type { CameraHints, HintStatus } from '@/hooks/useCameraGuide';
 
 const HINT_META: Record<string, { icon: string; label: string }> = {
@@ -150,15 +150,15 @@ const styles = StyleSheet.create({
   },
   centerHintTxt: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: scale(13),
     fontWeight: '600',
     textAlign: 'center',
   },
   countdownRing: {
     position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     borderWidth: 3,
     borderColor: '#00bf40',
   },
@@ -178,9 +178,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s12,
     paddingVertical: space.s6,
   },
-  hintIcon: { fontSize: 12 },
-  hintLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600' },
-  hintStatus: { fontSize: 12, fontWeight: '700' },
+  hintIcon: { fontSize: scale(12) },
+  hintLabel: { color: 'rgba(255,255,255,0.8)', fontSize: scale(11), fontWeight: '600' },
+  hintStatus: { fontSize: scale(12), fontWeight: '700' },
 });
 
 export default memo(CameraGuideOverlay);

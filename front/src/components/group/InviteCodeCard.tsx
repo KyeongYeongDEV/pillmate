@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, space, radius, fontFamily } from '@/styles/tokens';
+import { scale, colors, space, radius, fontFamily } from '@/styles/tokens';
 import { useCountdown } from '@/hooks/useCountdown';
 import type { InviteCodeView } from '@/types/caregroup';
 
@@ -98,24 +98,24 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   emptyIconWrap: {
-    width: 40, height: 40, borderRadius: radius.r10,
+    width: scale(40), height: scale(40), borderRadius: radius.r10,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.fillNormal,
   },
   emptyTextCol: { flex: 1, gap: 2 },
-  emptyTitle: { fontSize: 14, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  emptyCaption: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17 },
+  emptyTitle: { fontSize: scale(14), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
+  emptyCaption: { fontSize: scale(12), color: colors.labelAlternative, lineHeight: scale(17) },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontSize: 11, color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
+  label: { fontSize: scale(11), color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
   code: {
-    fontSize: 22, fontWeight: '700', letterSpacing: 1.76, marginTop: 4,
+    fontSize: scale(22), fontWeight: '700', letterSpacing: 1.76, marginTop: 4,
     color: colors.labelNormal, fontFamily: fontFamily.mono,
   },
   copyBtn: {
     paddingHorizontal: space.s14, paddingVertical: space.s8,
     borderRadius: radius.full, backgroundColor: colors.fillNormal,
   },
-  copyText: { fontSize: 13, fontWeight: '600', color: colors.labelNormal },
+  copyText: { fontSize: scale(13), fontWeight: '600', color: colors.labelNormal },
   qrBox: {
     alignSelf: 'center',
     padding: space.s10,
@@ -123,5 +123,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal,
     marginTop: space.s4,
   },
-  expiry: { fontSize: 12, color: colors.labelAlternative, lineHeight: 17, textAlign: 'center' },
+  expiry: { fontSize: scale(12), color: colors.labelAlternative, lineHeight: scale(17), textAlign: 'center' },
 });

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { OcrStatus } from '@/types/prescription';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 
 interface Props {
   status: OcrStatus;
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     marginHorizontal: space.s16,
     marginBottom: space.s12,
   },
-  manualIcon: { fontSize: 16 },
+  manualIcon: { fontSize: scale(16) },
   manualText: { ...typography.caption1, color: colors.labelNeutral, flex: 1 },
   manualBold: { fontWeight: '700', color: colors.labelNormal },
   failed: {
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     marginHorizontal: space.s16,
     marginBottom: space.s12,
   },
-  failedIcon: { fontSize: 16 },
+  failedIcon: { fontSize: scale(16) },
   failedText: { ...typography.caption1, color: colors.statusNegative, flex: 1 },
 });
 

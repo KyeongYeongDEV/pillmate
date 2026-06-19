@@ -5,7 +5,7 @@ import {
 import { Image } from 'expo-image';
 import { useLazySearchDrugsQuery } from '@/store/slices/drugApi';
 import { DEBOUNCE_MS, MFDS_SOURCE } from '@/lib/constants';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
 
 interface Props {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.primaryNormal,
     paddingHorizontal: space.s12,
-    height: 52,
+    height: scale(52),
   },
   input: { flex: 1, ...typography.body1n, color: colors.labelNormal },
   spinner: { marginLeft: space.s8 },
@@ -121,18 +121,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.r12,
     borderWidth: 1,
     borderColor: colors.line,
-    maxHeight: 240,
+    maxHeight: scale(240),
     ...shadows.small,
   },
   resultItem: { flexDirection: 'row', alignItems: 'center', padding: space.s12, gap: space.s10 },
-  thumb: { width: 48, height: 48, borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumb: { width: scale(48), height: scale(48), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  pillEmoji: { fontSize: 22 },
+  pillEmoji: { fontSize: scale(22) },
   resultText: { flex: 1 },
   resultName: { ...typography.body2n, color: colors.labelNormal, fontWeight: '600' },
   resultCompany: { ...typography.caption1, color: colors.labelAlternative, marginTop: 2 },
   resultSource: { ...typography.caption1, color: colors.labelAssistive, marginTop: 2 },
-  separator: { height: 1, backgroundColor: colors.line, marginHorizontal: space.s12 },
+  separator: { height: scale(1), backgroundColor: colors.line, marginHorizontal: space.s12 },
   empty: { padding: space.s12 },
   emptyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center' },
 });

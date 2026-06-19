@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
 import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
 import GroupCard from '@/components/group/GroupCard';
@@ -56,7 +56,7 @@ export default function GroupScreen() {
           accessibilityRole="button"
           hitSlop={8}
         >
-          <Feather name="chevron-left" size={26} color={colors.labelNormal} />
+          <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>그룹</Text>
@@ -68,7 +68,7 @@ export default function GroupScreen() {
           accessibilityRole="button"
           hitSlop={8}
         >
-          <Feather name="maximize" size={22} color={colors.labelNormal} />
+          <Feather name="maximize" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
       </View>
 
@@ -114,9 +114,9 @@ export default function GroupScreen() {
           accessibilityLabel="새 그룹 만들기"
           accessibilityRole="button"
         >
-          <Feather name="plus-circle" size={22} color={colors.primaryBase} />
+          <Feather name="plus-circle" size={scale(22)} color={colors.primaryBase} />
           <Text style={styles.ctaText}>새 그룹 만들기</Text>
-          <Feather name="chevron-right" size={18} color={colors.labelAlternative} />
+          <Feather name="chevron-right" size={scale(18)} color={colors.labelAlternative} />
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -140,17 +140,17 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  headerSub: { fontSize: 11, color: colors.labelAlternative, fontWeight: '500' },
+  headerSub: { fontSize: scale(11), color: colors.labelAlternative, fontWeight: '500' },
   scroll: { flex: 1 },
   content: { paddingVertical: space.s16, gap: space.s8, paddingBottom: 100 },
   loader: { marginTop: space.s40 },
   section: { paddingHorizontal: space.s16, gap: space.s10 },
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06,
+    fontSize: scale(11), fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06,
   },
-  emptyText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
+  emptyText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
-  errorText: { fontSize: 14, color: colors.labelAlternative, textAlign: 'center' },
+  errorText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center' },
   ctaCard: {
     marginHorizontal: space.s16,
     flexDirection: 'row', alignItems: 'center', gap: space.s12,
@@ -158,5 +158,5 @@ const styles = StyleSheet.create({
     padding: space.s16, borderWidth: 1, borderColor: colors.line,
     ...shadows.small,
   },
-  ctaText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.primaryBase },
+  ctaText: { flex: 1, fontSize: scale(15), fontWeight: '600', color: colors.primaryBase },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 interface RecentSearchChipsProps {
   items: string[];
@@ -23,7 +23,7 @@ export default function RecentSearchChips({ items, onSelect, onRemove, onClearAl
       <View style={styles.chips}>
         {items.map(r => (
           <View key={r} style={styles.chip}>
-            <Feather name="clock" size={13} color={colors.labelAlternative} />
+            <Feather name="clock" size={scale(13)} color={colors.labelAlternative} />
             <Pressable onPress={() => onSelect(r)} accessibilityLabel={`${r} 검색`} accessibilityRole="button">
               <Text style={styles.chipText}>{r}</Text>
             </Pressable>
@@ -33,7 +33,7 @@ export default function RecentSearchChips({ items, onSelect, onRemove, onClearAl
               accessibilityLabel={`${r} 삭제`}
               accessibilityRole="button"
             >
-              <Feather name="x" size={9} color="#fff" />
+              <Feather name="x" size={scale(9)} color="#fff" />
             </Pressable>
           </View>
         ))}
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     marginBottom: space.s10,
   },
   label: {
-    fontSize: 13, fontWeight: '700', color: colors.labelAlternative,
+    fontSize: scale(13), fontWeight: '700', color: colors.labelAlternative,
     letterSpacing: 0.04, textTransform: 'uppercase',
   },
   clearAll: { ...typography.caption1, color: colors.labelAlternative },
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   chipText: { ...typography.label2, color: colors.labelNormal, fontWeight: '500' },
   removeBtn: {
-    width: 14, height: 14, borderRadius: 7,
+    width: scale(14), height: scale(14), borderRadius: scale(7),
     backgroundColor: colors.labelAssistive,
     alignItems: 'center', justifyContent: 'center',
     marginLeft: 2,

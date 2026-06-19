@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, space } from '@/styles/tokens';
+import { scale, colors, space } from '@/styles/tokens';
 import ActivityItemFull from '@/components/group/ActivityItemFull';
 import type { ActivityView } from '@/types/caregroup';
 
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   title: {
     paddingHorizontal: space.s20,
     paddingBottom: space.s12,
-    fontSize: 12, color: colors.labelAlternative,
+    fontSize: scale(12), color: colors.labelAlternative,
     fontWeight: '700', letterSpacing: 0.48,
     textTransform: 'uppercase',
   },

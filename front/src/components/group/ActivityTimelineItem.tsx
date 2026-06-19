@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
 
 interface DotColorMap {
@@ -39,7 +39,7 @@ function ActivityTimelineItem({ item, isLast, whoLabel }: ActivityTimelineItemPr
       </View>
       <View style={[styles.card, isLast ? styles.cardLast : styles.cardSpaced]}>
         <View style={styles.head}>
-          <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={28} />
+          <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={scale(28)} />
           <View style={styles.headTextCol}>
             <Text style={styles.actor}>
               <Text style={styles.actorName}>{item.actorName}</Text>
@@ -52,7 +52,7 @@ function ActivityTimelineItem({ item, isLast, whoLabel }: ActivityTimelineItemPr
         <View style={styles.titleRow}>
           {isMiss && (
             <View style={styles.warnBadge}>
-              <Feather name="alert-triangle" size={11} color={colors.red40} />
+              <Feather name="alert-triangle" size={scale(11)} color={colors.red40} />
             </View>
           )}
           <Text style={styles.title}>{item.summary}</Text>
@@ -76,9 +76,9 @@ export default React.memo(ActivityTimelineItem);
 
 const styles = StyleSheet.create({
   wrapper: { flexDirection: 'row', gap: space.s14 },
-  rail: { width: 14, alignItems: 'center', paddingTop: 18 },
-  line: { position: 'absolute', top: 22, bottom: -2, width: 2, backgroundColor: colors.line, left: 6 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  rail: { width: scale(14), alignItems: 'center', paddingTop: 18 },
+  line: { position: 'absolute', top: 22, bottom: -2, width: scale(2), backgroundColor: colors.line, left: 6 },
+  dot: { width: scale(10), height: scale(10), borderRadius: scale(5) },
   card: {
     flex: 1, backgroundColor: colors.bgNormal,
     borderRadius: radius.r14, padding: space.s14,
@@ -88,18 +88,18 @@ const styles = StyleSheet.create({
   cardLast: {},
   head: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   headTextCol: { flex: 1 },
-  actor: { fontSize: 13, color: colors.labelNormal },
+  actor: { fontSize: scale(13), color: colors.labelNormal },
   actorName: { fontWeight: '700' },
   actorLabel: { color: colors.labelAlternative },
-  time: { fontSize: 12, fontWeight: '500', color: colors.labelAlternative },
+  time: { fontSize: scale(12), fontWeight: '500', color: colors.labelAlternative },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   warnBadge: {
-    width: 16, height: 16, borderRadius: 4,
+    width: scale(16), height: scale(16), borderRadius: scale(4),
     backgroundColor: colors.red95,
     alignItems: 'center', justifyContent: 'center',
   },
   title: {
-    flex: 1, fontSize: 15, fontWeight: '700', color: colors.labelNormal,
-    letterSpacing: -0.15, lineHeight: 21,
+    flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal,
+    letterSpacing: -0.15, lineHeight: scale(21),
   },
 });

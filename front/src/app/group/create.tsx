@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 import { useCreateGroupMutation } from '@/store/slices/caregroupApi';
 import { safeBack } from '@/lib/router/safeBack';
 
@@ -33,10 +33,10 @@ export default function CreateGroupScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
-          <Feather name="x" size={22} color={colors.labelNormal} />
+          <Feather name="x" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.headerTitle}>새 그룹 만들기</Text>
-        <View style={{ width: 22 }} />
+        <View style={{ width: scale(22) }} />
       </View>
 
       <KeyboardAvoidingView style={styles.body} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -80,18 +80,18 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
   body: { flex: 1, padding: space.s20, gap: space.s8 },
-  label: { fontSize: 14, fontWeight: '700', color: colors.labelNormal, marginBottom: space.s4 },
+  label: { fontSize: scale(14), fontWeight: '700', color: colors.labelNormal, marginBottom: space.s4 },
   input: {
     borderWidth: 1, borderColor: colors.line, borderRadius: radius.r12,
     paddingHorizontal: space.s16, paddingVertical: space.s14,
-    fontSize: 16, color: colors.labelNormal, backgroundColor: colors.bgAlt,
+    fontSize: scale(16), color: colors.labelNormal, backgroundColor: colors.bgAlt,
   },
-  charCount: { fontSize: 12, color: colors.labelAlternative, textAlign: 'right' },
-  errorText: { fontSize: 13, color: colors.statusNegative },
+  charCount: { fontSize: scale(12), color: colors.labelAlternative, textAlign: 'right' },
+  errorText: { fontSize: scale(13), color: colors.statusNegative },
   submitBtn: {
-    marginTop: space.s16, height: 52, borderRadius: radius.r12,
+    marginTop: space.s16, height: scale(52), borderRadius: radius.r12,
     backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
   },
   submitBtnDisabled: { backgroundColor: colors.fillStrong },
-  submitText: { fontSize: 16, fontWeight: '700', color: colors.staticWhite },
+  submitText: { fontSize: scale(16), fontWeight: '700', color: colors.staticWhite },
 });

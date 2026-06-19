@@ -2,7 +2,7 @@ import { View, Pressable, Text, StyleSheet, FlatList, ActivityIndicator } from "
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { colors, typography, space, radius } from "@/styles/tokens";
+import { scale, colors, typography, space, radius } from "@/styles/tokens";
 import { useGetNotificationsQuery, useMarkReadMutation } from "@/store/slices/notificationApi";
 import { notificationRoute } from "@/lib/notificationMeta";
 import NotificationRow from "@/components/notification/NotificationRow";
@@ -23,7 +23,7 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
         <Pressable onPress={() => safeBack('/(tabs)/home')} accessibilityLabel="뒤로" accessibilityRole="button" hitSlop={8}>
-          <Feather name="chevron-left" size={24} color={colors.labelNormal} />
+          <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.title}>알림</Text>
         <View style={styles.headerSpacer} />
@@ -73,11 +73,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingTop: space.s8, paddingBottom: space.s12,
   },
   title: { ...typography.headline1, color: colors.labelNormal },
-  headerSpacer: { width: 24 },
+  headerSpacer: { width: scale(24) },
   content: { flex: 1, padding: space.s16, gap: space.s12, alignItems: 'center', justifyContent: 'center' },
   loader: { flex: 1 },
   sub: { ...typography.body2r, color: colors.labelAlternative },
-  separator: { height: 1, backgroundColor: colors.line, marginLeft: space.s16 },
+  separator: { height: scale(1), backgroundColor: colors.line, marginLeft: space.s16 },
   cta: {
     backgroundColor: colors.primaryNormal, borderRadius: radius.r16,
     paddingVertical: space.s12, paddingHorizontal: space.s24, alignItems: 'center', marginTop: space.s8,

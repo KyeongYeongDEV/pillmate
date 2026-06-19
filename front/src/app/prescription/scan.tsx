@@ -4,7 +4,7 @@ import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addFromOcr, setImageKey } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16,
   },
   circle: {
-    width: 40, height: 40, borderRadius: 20,
+    width: scale(40), height: scale(40), borderRadius: scale(20),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
-  circleIcon: { fontSize: 18, color: '#fff' },
+  circleIcon: { fontSize: scale(18), color: '#fff' },
   aiBadge: {
     paddingHorizontal: space.s16, paddingVertical: space.s8,
     borderRadius: radius.full,
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
   },
   aiBadgeTxt: { ...typography.label2, color: '#fff', fontWeight: '600' },
   frameArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  frame: { width: 280, height: 370, position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  corner: { position: 'absolute', width: 36, height: 36 },
+  frame: { width: scale(280), height: scale(370), position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  corner: { position: 'absolute', width: scale(36), height: scale(36) },
   cornerTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderColor: '#fff', borderTopLeftRadius: 8 },
   cornerTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderColor: '#fff', borderTopRightRadius: 8 },
   cornerBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: '#fff', borderBottomLeftRadius: 8 },
@@ -169,21 +169,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s32,
   },
   galleryBtn: {
-    width: 52, height: 52, borderRadius: radius.r12,
+    width: scale(52), height: scale(52), borderRadius: radius.r12,
     backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
-  galleryIcon: { fontSize: 24 },
+  galleryIcon: { fontSize: scale(24) },
   shutter: {
-    width: 76, height: 76, borderRadius: 38, backgroundColor: '#fff',
+    width: scale(76), height: scale(76), borderRadius: scale(38), backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.25)',
   },
-  shutterInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#fff', borderWidth: 2, borderColor: '#0F0F10' },
+  shutterInner: { width: scale(62), height: scale(62), borderRadius: scale(31), backgroundColor: '#fff', borderWidth: 2, borderColor: '#0F0F10' },
   manualBtn: {
-    width: 52, height: 52, borderRadius: radius.r12,
+    width: scale(52), height: scale(52), borderRadius: radius.r12,
     backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
-  manualIcon: { fontSize: 18 },
+  manualIcon: { fontSize: scale(18) },
   manualTxt: { ...typography.caption1, color: '#fff', fontWeight: '600' },
   permRoot: { flex: 1, backgroundColor: colors.bgAlt, alignItems: 'center', justifyContent: 'center', gap: space.s16 },
   permText: { ...typography.body1n, color: colors.labelNormal },

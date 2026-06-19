@@ -4,7 +4,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, space } from '@/styles/tokens';
+import { scale, colors, space } from '@/styles/tokens';
 
 const TAB_ICONS: Record<string, { icon: string; label: string }> = {
   home:     { icon: 'home',           label: '홈' },
@@ -19,7 +19,7 @@ function TabIcon({ name, focused, label }: TabIconProps) {
   const color = focused ? colors.primaryNormal : colors.tabInactive;
   return (
     <View style={styles.tabItem}>
-      <Feather name={name as any} size={22} color={color} />
+      <Feather name={name as any} size={scale(22)} color={color} />
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
     </View>
   );
@@ -100,24 +100,24 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    height: scale(56),
     paddingHorizontal: space.s8,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
+    height: scale(56),
   },
   fabSlot: {
-    width: 80,
+    width: scale(80),
   },
   tabItem: {
     alignItems: 'center',
     gap: 2,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: scale(10),
     color: colors.tabInactive,
     fontWeight: '500',
   },

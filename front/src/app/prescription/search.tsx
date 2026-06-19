@@ -13,7 +13,7 @@ import DrugSearchBar from '@/components/search/DrugSearchBar';
 import SearchResultCard from '@/components/search/SearchResultCard';
 import RecentSearchChips from '@/components/search/RecentSearchChips';
 import CategoryGrid from '@/components/search/CategoryGrid';
-import { colors, space, radius, typography } from '@/styles/tokens';
+import { scale, colors, space, radius, typography } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: colors.fillNormal,
   },
   filterActive: { backgroundColor: colors.violet95 },
-  filterActiveTxt: { fontSize: 12, fontWeight: '700', color: colors.violet45 },
-  filterTxt: { fontSize: 12, fontWeight: '600', color: colors.labelAlternative },
+  filterActiveTxt: { fontSize: scale(12), fontWeight: '700', color: colors.violet45 },
+  filterTxt: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
   kav: { flex: 1 },
   resultList: { padding: space.s16, paddingBottom: space.s48, gap: space.s8 },
   resultHeader: { marginBottom: space.s4 },
@@ -249,14 +249,14 @@ const styles = StyleSheet.create({
     marginHorizontal: space.s16, marginTop: space.s24,
   },
   aiHintIcon: {
-    width: 32, height: 32, borderRadius: radius.r10,
+    width: scale(32), height: scale(32), borderRadius: radius.r10,
     backgroundColor: colors.bgNormal, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
-  aiHintIconTxt: { fontSize: 16 },
+  aiHintIconTxt: { fontSize: scale(16) },
   aiHintBody: { flex: 1 },
-  aiHintTitle: { fontSize: 13, fontWeight: '700', color: colors.violet45, letterSpacing: -0.005 },
-  aiHintSub: { fontSize: 12, color: colors.violet45, marginTop: 4, lineHeight: 18, opacity: 0.85 },
+  aiHintTitle: { fontSize: scale(13), fontWeight: '700', color: colors.violet45, letterSpacing: -0.005 },
+  aiHintSub: { fontSize: scale(12), color: colors.violet45, marginTop: 4, lineHeight: scale(18), opacity: 0.85 },
   toast: {
     position: 'absolute', bottom: space.s24, alignSelf: 'center',
     backgroundColor: colors.labelNormal, borderRadius: radius.r20,

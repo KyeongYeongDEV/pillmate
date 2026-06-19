@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import PillVisual from '@/components/common/PillVisual';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { reset, removeItem } from '@/store/slices/prescriptionFlowSlice';
 import { safeBack } from '@/lib/router/safeBack';
@@ -120,9 +120,9 @@ export default function PrescriptionRegisterHub() {
           accessibilityLabel="약 검색하기"
           accessibilityRole="button"
         >
-          <Feather name="search" size={18} color={colors.primaryBase} />
+          <Feather name="search" size={scale(18)} color={colors.primaryBase} />
           <Text style={styles.searchBtnTxt}>약 검색하기</Text>
-          <Feather name="chevron-right" size={16} color={colors.labelAlternative} style={styles.searchChevron} />
+          <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} style={styles.searchChevron} />
         </Pressable>
 
         {/* 추가된 약 목록 */}
@@ -131,7 +131,7 @@ export default function PrescriptionRegisterHub() {
             <Text style={styles.selectedTitle}>추가된 약 · {selectedItems.length}개</Text>
             {selectedItems.map(item => (
               <View key={item.id} style={styles.selectedItem}>
-                <PillVisual size={32} colorA="#a5c8f5" colorB="#d0e8ff" />
+                <PillVisual size={scale(32)} colorA="#a5c8f5" colorB="#d0e8ff" />
                 <Text style={styles.selectedName} numberOfLines={1}>
                   {item.matchedName ?? item.nameRaw}
                 </Text>
@@ -141,7 +141,7 @@ export default function PrescriptionRegisterHub() {
                   accessibilityRole="button"
                   style={styles.removeItemBtn}
                 >
-                  <Feather name="x" size={14} color={colors.labelAlternative} />
+                  <Feather name="x" size={scale(14)} color={colors.labelAlternative} />
                 </Pressable>
               </View>
             ))}
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  headerBtn: { width: 40, alignItems: 'center' },
-  headerBtnTxt: { fontSize: 22, color: colors.labelNormal },
+  headerBtn: { width: scale(40), alignItems: 'center' },
+  headerBtnTxt: { fontSize: scale(22), color: colors.labelNormal },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
   scroll: { padding: space.s16, gap: space.s12, paddingBottom: space.s48 },
   heroCard: {
@@ -190,32 +190,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal, borderRadius: radius.r16, padding: space.s16,
     borderWidth: 1, borderColor: colors.line, ...shadows.small,
   },
-  prescriptionIcon: { width: 60, height: 76, backgroundColor: '#F4F1EA', borderRadius: 6, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  prescriptionEmoji: { fontSize: 28 },
-  aiBadge: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accentViolet, alignItems: 'center', justifyContent: 'center' },
-  aiBadgeTxt: { fontSize: 10 },
+  prescriptionIcon: { width: scale(60), height: scale(76), backgroundColor: '#F4F1EA', borderRadius: scale(6), alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  prescriptionEmoji: { fontSize: scale(28) },
+  aiBadge: { position: 'absolute', top: -6, right: -6, width: scale(20), height: scale(20), borderRadius: scale(10), backgroundColor: colors.accentViolet, alignItems: 'center', justifyContent: 'center' },
+  aiBadgeTxt: { fontSize: scale(10) },
   heroText: { flex: 1 },
   heroTitle: { ...typography.headline2, color: colors.labelNormal },
-  heroSub: { ...typography.caption1, color: colors.labelAlternative, marginTop: 4, lineHeight: 18 },
+  heroSub: { ...typography.caption1, color: colors.labelAlternative, marginTop: 4, lineHeight: scale(18) },
   cameraBtn: {
     flexDirection: 'row', alignItems: 'center', gap: space.s16,
     backgroundColor: colors.labelNormal, borderRadius: radius.r16, padding: space.s20,
     ...shadows.medium,
   },
-  cameraIconBox: { width: 56, height: 56, borderRadius: radius.r16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
-  cameraIcon: { fontSize: 28 },
+  cameraIconBox: { width: scale(56), height: scale(56), borderRadius: radius.r16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  cameraIcon: { fontSize: scale(28) },
   cameraTxtBox: { flex: 1 },
   cameraLabel: { ...typography.caption1, color: 'rgba(255,255,255,0.7)', fontWeight: '700', textTransform: 'uppercase' },
   cameraTitle: { ...typography.headline1, color: '#fff', marginTop: 4 },
   cameraSub: { ...typography.caption1, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  chevron: { fontSize: 24, color: 'rgba(255,255,255,0.6)' },
+  chevron: { fontSize: scale(24), color: 'rgba(255,255,255,0.6)' },
   secondaryRow: { flexDirection: 'row', gap: space.s10 },
   secondaryBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s8,
     backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s16,
     borderWidth: 1, borderColor: colors.line,
   },
-  secondaryIcon: { fontSize: 20 },
+  secondaryIcon: { fontSize: scale(20) },
   secondaryTxt: { ...typography.body2n, color: colors.labelNormal, fontWeight: '600' },
   tipCard: { backgroundColor: colors.bgAlt, borderRadius: radius.r12, padding: space.s16, gap: space.s8, borderWidth: 1, borderColor: colors.line },
   tipTitle: { ...typography.label1n, color: colors.labelNeutral, fontWeight: '700' },
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s12,
     borderWidth: 1, borderColor: colors.line, gap: space.s8,
   },
-  recentDate: { ...typography.caption1, color: colors.labelAlternative, width: 40 },
+  recentDate: { ...typography.caption1, color: colors.labelAlternative, width: scale(40) },
   recentName: { ...typography.body2n, color: colors.labelNormal, flex: 1, fontWeight: '600' },
   recentCount: { ...typography.caption1, color: colors.labelAlternative },
   searchBtn: {
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line, overflow: 'hidden',
   },
   selectedTitle: {
-    fontSize: 11, fontWeight: '700', color: colors.labelAlternative,
+    fontSize: scale(11), fontWeight: '700', color: colors.labelAlternative,
     letterSpacing: 0.06, paddingHorizontal: space.s14, paddingVertical: space.s10,
     borderBottomWidth: 1, borderBottomColor: colors.line,
   },

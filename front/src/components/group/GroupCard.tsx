@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import AvatarStack from '@/components/common/AvatarStack';
 import Avatar from '@/components/common/Avatar';
-import { colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { resolveEventStyle, isPersonalGroup, composeGroupDesc, getActivityLabel } from '@/lib/groupCardHelpers';
 import type { MyGroupSummary } from '@/types/caregroup';
 
@@ -33,8 +33,8 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
     >
       <View style={styles.avatarCol}>
         {personal
-          ? <Avatar name={group.membersPreview[0]?.[0] ?? '나'} tint={PERSONAL_AVATAR_TINT} size={44} />
-          : <AvatarStack names={group.membersPreview} size={28} />}
+          ? <Avatar name={group.membersPreview[0]?.[0] ?? '나'} tint={PERSONAL_AVATAR_TINT} size={scale(44)} />
+          : <AvatarStack names={group.membersPreview} size={scale(28)} />}
       </View>
 
       <View style={styles.contentCol}>
@@ -102,39 +102,39 @@ const styles = StyleSheet.create({
   cardHighlight: {
     borderColor: colors.blue90,
     shadowColor: colors.primaryBase,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 2,
   },
-  avatarCol: { width: 52, height: 44, flexShrink: 0 },
+  avatarCol: { width: scale(52), height: scale(44), flexShrink: 0 },
   contentCol: { flex: 1, minWidth: 0 },
   row1: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   name: {
-    fontSize: 15, fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.18,
+    fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.18,
     flexShrink: 1,
   },
   privateBadge: {
     paddingHorizontal: 6, paddingVertical: 1,
     borderRadius: radius.r4, backgroundColor: colors.fillNormal,
   },
-  privateBadgeText: { fontSize: 10, fontWeight: '700', color: colors.labelAlternative },
-  time: { fontSize: 12, color: colors.labelAlternative, fontWeight: '500', marginLeft: 'auto' },
-  desc: { fontSize: 12, color: colors.labelAlternative, marginTop: 2 },
+  privateBadgeText: { fontSize: scale(10), fontWeight: '700', color: colors.labelAlternative },
+  time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500', marginLeft: 'auto' },
+  desc: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 2 },
   row3: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: space.s4,
     paddingHorizontal: space.s8, paddingVertical: 3,
     borderRadius: radius.full, flexShrink: 0,
   },
-  chipDot: { width: 4, height: 4, borderRadius: 2 },
-  chipText: { fontSize: 11, fontWeight: '600' },
-  lastActivityText: { flex: 1, fontSize: 13, fontWeight: '500', color: colors.labelNeutral },
+  chipDot: { width: scale(4), height: scale(4), borderRadius: scale(2) },
+  chipText: { fontSize: scale(11), fontWeight: '600' },
+  lastActivityText: { flex: 1, fontSize: scale(13), fontWeight: '500', color: colors.labelNeutral },
   badge: {
-    minWidth: 18, height: 18, borderRadius: 9,
+    minWidth: scale(18), height: scale(18), borderRadius: scale(9),
     backgroundColor: colors.primaryBase,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 5,
   },
-  badgeText: { fontSize: 11, fontWeight: '700', color: colors.staticWhite },
+  badgeText: { fontSize: scale(11), fontWeight: '700', color: colors.staticWhite },
 });

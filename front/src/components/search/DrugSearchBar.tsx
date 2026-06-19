@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space, radius } from '@/styles/tokens';
 
 interface DrugSearchBarProps {
   value: string;
@@ -13,7 +13,7 @@ interface DrugSearchBarProps {
 export default function DrugSearchBar({ value, onChangeText, onClear, autoFocus }: DrugSearchBarProps) {
   return (
     <View style={styles.container}>
-      <Feather name="search" size={20} color={colors.labelAlternative} />
+      <Feather name="search" size={scale(20)} color={colors.labelAlternative} />
       <TextInput
         style={styles.input}
         value={value}
@@ -32,7 +32,7 @@ export default function DrugSearchBar({ value, onChangeText, onClear, autoFocus 
           accessibilityLabel="검색어 지우기"
           accessibilityRole="button"
         >
-          <Feather name="x" size={12} color="#fff" />
+          <Feather name="x" size={scale(12)} color="#fff" />
         </Pressable>
       )}
     </View>
@@ -41,15 +41,15 @@ export default function DrugSearchBar({ value, onChangeText, onClear, autoFocus 
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, height: 44, borderRadius: radius.r12,
+    flex: 1, height: scale(44), borderRadius: radius.r12,
     backgroundColor: colors.fillNormal, borderWidth: 1.5, borderColor: colors.primaryBase,
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.s14, gap: space.s10,
   },
   input: {
-    flex: 1, fontSize: 15, color: colors.labelNormal, fontWeight: '500',
+    flex: 1, fontSize: scale(15), color: colors.labelNormal, fontWeight: '500',
   },
   clearBtn: {
-    width: 18, height: 18, borderRadius: 9,
+    width: scale(18), height: scale(18), borderRadius: scale(9),
     backgroundColor: colors.labelAssistive,
     alignItems: 'center', justifyContent: 'center',
   },

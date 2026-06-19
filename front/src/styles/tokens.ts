@@ -1,5 +1,30 @@
 // Design tokens — exact match with 디자인/styles/tokens.css
 
+import { Dimensions, PixelRatio, Platform, type TextStyle } from 'react-native';
+
+// 기기 적응형 스케일(moderateScale) — 디자인 기준기기 iPhone 390×844 에서 scale(x)=x 로 불변.
+// width 비율에 0.7 댐핑을 적용해 큰/작은 기기에서 과도한 확대·축소를 막고,
+// PixelRatio 로 물리 픽셀에 정렬한다. react-native-size-matters 무의존 인라인 구현.
+const BASE_WIDTH = 390;
+const SCALE_DAMPING = 0.7;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const widthRatio = SCREEN_WIDTH / BASE_WIDTH;
+
+export const scale = (size: number): number =>
+  PixelRatio.roundToNearestPixel(size * (1 + (widthRatio - 1) * SCALE_DAMPING));
+
+// Android 는 동일 dp 여도 includeFontPadding 으로 글자 위/아래 여백이 추가돼 크게 보인다.
+// 일괄 배율 대신 원인을 제거 — 공용 텍스트 토큰에만 적용(iOS 는 무시되는 키).
+const androidTextMetricFix = Platform.OS === 'android' ? { includeFontPadding: false as const } : null;
+
+type FontWeight = TextStyle['fontWeight'];
+const textToken = (fontSize: number, lineHeight: number, fontWeight: FontWeight) => ({
+  fontSize: scale(fontSize),
+  lineHeight: scale(lineHeight),
+  fontWeight,
+  ...androidTextMetricFix,
+});
+
 export const colors = {
   // Primary blue
   primaryNormal: '#005eeb',    // --c-blue-45
@@ -84,13 +109,16 @@ export const colors = {
   tabInactive: '#878a93',      // --c-coolNeutral-60
 } as const;
 
+// borderRadius 도 글자·박스와 함께 균일 축소(기준기기 iOS 는 scale(x)=x 불변). full 은 원/캡슐 sentinel 이라 미스케일.
 export const radius = {
-  r4: 4, r6: 6, r8: 8, r10: 10, r12: 12, r14: 14, r16: 16, r20: 20, r24: 24, r32: 32, full: 9999,
+  r4: scale(4), r6: scale(6), r8: scale(8), r10: scale(10), r12: scale(12),
+  r14: scale(14), r16: scale(16), r20: scale(20), r24: scale(24), r32: scale(32), full: 9999,
 } as const;
 
 export const space = {
-  s2: 2, s4: 4, s6: 6, s8: 8, s10: 10, s12: 12, s14: 14, s16: 16, s18: 18, s20: 20,
-  s24: 24, s28: 28, s32: 32, s40: 40, s48: 48, s64: 64,
+  s2: scale(2), s4: scale(4), s6: scale(6), s8: scale(8), s10: scale(10),
+  s12: scale(12), s14: scale(14), s16: scale(16), s18: scale(18), s20: scale(20),
+  s24: scale(24), s28: scale(28), s32: scale(32), s40: scale(40), s48: scale(48), s64: scale(64),
 } as const;
 
 // Font families — Pretendard JP 로드되면 사용, 없으면 system fallback (iOS: San Francisco / Android: Roboto)
@@ -101,22 +129,22 @@ export const fontFamily = {
 } as const;
 
 export const typography = {
-  display1:  { fontSize: 56, lineHeight: 72, fontWeight: '700' as const },
-  display2:  { fontSize: 40, lineHeight: 52, fontWeight: '700' as const },
-  title1:    { fontSize: 32, lineHeight: 44, fontWeight: '700' as const },
-  title2:    { fontSize: 28, lineHeight: 38, fontWeight: '700' as const },
-  title3:    { fontSize: 24, lineHeight: 32, fontWeight: '700' as const },
-  heading1:  { fontSize: 22, lineHeight: 30, fontWeight: '700' as const },
-  heading2:  { fontSize: 20, lineHeight: 28, fontWeight: '700' as const },
-  headline1: { fontSize: 18, lineHeight: 26, fontWeight: '600' as const },
-  headline2: { fontSize: 17, lineHeight: 24, fontWeight: '600' as const },
-  body1n:    { fontSize: 16, lineHeight: 24, fontWeight: '500' as const },
-  body1r:    { fontSize: 16, lineHeight: 26, fontWeight: '500' as const },
-  body2n:    { fontSize: 15, lineHeight: 22, fontWeight: '500' as const },
-  body2r:    { fontSize: 15, lineHeight: 24, fontWeight: '500' as const },
-  label1n:   { fontSize: 14, lineHeight: 20, fontWeight: '500' as const },
-  label2:    { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
-  caption1:  { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
+  display1:  textToken(56, 72, '700'),
+  display2:  textToken(40, 52, '700'),
+  title1:    textToken(32, 44, '700'),
+  title2:    textToken(28, 38, '700'),
+  title3:    textToken(24, 32, '700'),
+  heading1:  textToken(22, 30, '700'),
+  heading2:  textToken(20, 28, '700'),
+  headline1: textToken(18, 26, '600'),
+  headline2: textToken(17, 24, '600'),
+  body1n:    textToken(16, 24, '500'),
+  body1r:    textToken(16, 26, '500'),
+  body2n:    textToken(15, 22, '500'),
+  body2r:    textToken(15, 24, '500'),
+  label1n:   textToken(14, 20, '500'),
+  label2:    textToken(13, 18, '500'),
+  caption1:  textToken(12, 16, '500'),
 } as const;
 
 export const shadows = {

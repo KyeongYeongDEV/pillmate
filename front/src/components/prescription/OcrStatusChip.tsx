@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { OcrStatus } from '@/types/prescription';
 import { ocrStatusChip } from '@/lib/ocrStatusLabel';
-import { space, radius } from '@/styles/tokens';
+import { scale, space, radius } from '@/styles/tokens';
 
 function OcrStatusChip({ status }: { status: OcrStatus }) {
   const { label, color } = ocrStatusChip(status);
@@ -20,8 +20,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s8, paddingVertical: space.s4,
     borderRadius: radius.full, borderWidth: 1,
   },
-  dot: { width: 6, height: 6, borderRadius: radius.full },
-  label: { fontSize: 12, fontWeight: '700' },
+  dot: { width: scale(6), height: scale(6), borderRadius: radius.full },
+  label: { fontSize: scale(12), fontWeight: '700' },
 });
 
 export default memo(OcrStatusChip);

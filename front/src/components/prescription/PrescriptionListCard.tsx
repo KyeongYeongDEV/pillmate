@@ -3,7 +3,7 @@ import { Pressable, View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { PrescriptionSummary } from '@/types/prescription';
 import { formatMonthDay } from '@/utils/calendarUtils';
-import { colors, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, shadows } from '@/styles/tokens';
 import OcrStatusChip from './OcrStatusChip';
 
 interface Props {
@@ -26,7 +26,7 @@ function PrescriptionListCard({ item, onPress }: Props) {
         </View>
         <Text style={styles.names} numberOfLines={1}>{summarize(item)}</Text>
       </View>
-      <Feather name="chevron-right" size={20} color={colors.labelAssistive} />
+      <Feather name="chevron-right" size={scale(20)} color={colors.labelAssistive} />
     </Pressable>
   );
 }
@@ -45,8 +45,8 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1, gap: space.s8 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  date: { fontSize: 15, fontWeight: '700', color: colors.labelNormal },
-  names: { fontSize: 13, color: colors.labelAlternative },
+  date: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
+  names: { fontSize: scale(13), color: colors.labelAlternative },
 });
 
 export default memo(PrescriptionListCard);

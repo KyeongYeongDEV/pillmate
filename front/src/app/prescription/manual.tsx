@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addManual } from '@/store/slices/prescriptionFlowSlice';
 import DrugSearchAutocomplete from '@/components/prescription/DrugSearchAutocomplete';
@@ -260,8 +260,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s12,
     backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  headerBtn: { width: 44, alignItems: 'center' },
-  headerBtnTxt: { fontSize: 20, color: colors.labelNormal },
+  headerBtn: { width: scale(44), alignItems: 'center' },
+  headerBtnTxt: { fontSize: scale(20), color: colors.labelNormal },
   headerTitle: { ...typography.headline1, color: colors.labelNormal, textAlign: 'center' },
   headerSub: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center' },
   resetTxt: { ...typography.label2, color: colors.labelAlternative },
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   safetyBold: { fontWeight: '700', color: colors.labelNormal },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   nameInput: {
-    flex: 1, height: 52, backgroundColor: colors.bgNormal, borderRadius: radius.r12,
+    flex: 1, height: scale(52), backgroundColor: colors.bgNormal, borderRadius: radius.r12,
     borderWidth: 1.5, borderColor: colors.primaryNormal,
     paddingHorizontal: space.s12, ...typography.body1n, color: colors.labelNormal,
   },
@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
   shapeLabel: { ...typography.label2, color: colors.labelAlternative },
   shapeLabelOn: { color: colors.labelNormal, fontWeight: '700' },
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s12 },
-  colorItem: { alignItems: 'center', gap: space.s4, width: 44 },
-  colorCircle: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.line },
+  colorItem: { alignItems: 'center', gap: space.s4, width: scale(44) },
+  colorCircle: { width: scale(36), height: scale(36), borderRadius: scale(18), borderWidth: 1, borderColor: colors.line },
   colorCircleOn: { borderWidth: 2.5, borderColor: colors.primaryNormal },
   colorLabel: { ...typography.caption1, color: colors.labelAssistive },
   colorLabelOn: { color: colors.labelNormal, fontWeight: '700' },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     ...typography.body2r, color: colors.labelNormal,
     backgroundColor: colors.bgNormal, borderRadius: radius.r12,
     borderWidth: 1, borderColor: colors.line,
-    padding: space.s12, minHeight: 80, textAlignVertical: 'top',
+    padding: space.s12, minHeight: scale(80), textAlignVertical: 'top',
   },
   sourceNote: { ...typography.caption1, color: colors.labelAssistive, textAlign: 'center' },
   footer: {

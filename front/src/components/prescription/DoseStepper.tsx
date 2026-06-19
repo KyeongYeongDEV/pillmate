@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
-import { colors, typography, space, radius } from '@/styles/tokens';
+import { scale, colors, typography, space, radius } from '@/styles/tokens';
 
 interface Props {
   value: number;
@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
     padding: space.s4,
   },
   btn: {
-    width: 36,
-    height: 36,
+    width: scale(36),
+    height: scale(36),
     borderRadius: radius.r8,
     backgroundColor: colors.bgNormal,
     alignItems: 'center',

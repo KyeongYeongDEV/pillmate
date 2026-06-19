@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Icon from '@/components/common/Icon';
 import PillVisual from '@/components/common/PillVisual';
-import { colors, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, shadows } from '@/styles/tokens';
 
 export type SlotState = 'done' | 'now' | 'wait';
 
@@ -63,7 +63,7 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
       accessibilityRole="button"
     >
       <View style={[styles.checkbox, isDone && styles.checkboxDone]}>
-        {isDone && <Icon name="check" size={20} color="#fff" />}
+        {isDone && <Icon name="check" size={scale(20)} color="#fff" />}
       </View>
 
       <View style={styles.textArea}>
@@ -76,7 +76,7 @@ function SlotItem({ slot, onPress }: SlotItemProps) {
       </View>
 
       <PillVisual
-        size={32}
+        size={scale(32)}
         colorA={slot.pillColors[0] ?? '#aaa'}
         colorB={slot.pillColors[1]}
         dimmed={!isDone}
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     padding: space.s16,
   },
   checkbox: {
-    width: 40,
-    height: 40,
+    width: scale(40),
+    height: scale(40),
     borderRadius: radius.full,
     borderWidth: 2,
     borderColor: colors.labelAssistive,
@@ -136,14 +136,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   slotLabel: {
-    fontSize: 11,
+    fontSize: scale(11),
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   statusText: {
-    fontSize: 16,
+    fontSize: scale(16),
     fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: scale(22),
   },
 });

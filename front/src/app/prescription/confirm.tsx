@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { colors, typography, space, radius, shadows } from '@/styles/tokens';
+import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { usePrescriptionReview } from '@/hooks/usePrescriptionReview';
 import { useLogAliasMutation } from '@/store/slices/prescriptionApi';
 import { useAppDispatch } from '@/store/hooks';
@@ -206,8 +206,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal,
     borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  headerBtn: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  headerBtnTxt: { fontSize: 18, color: colors.labelNormal },
+  headerBtn: { width: scale(40), alignItems: 'center', justifyContent: 'center' },
+  headerBtnTxt: { fontSize: scale(18), color: colors.labelNormal },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
   scroll: { padding: space.s16, gap: space.s12, paddingBottom: space.s24 },
   sectionHeader: {
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     padding: space.s14,
     borderWidth: 1, borderColor: colors.orange40,
   },
-  safetyText: { ...typography.caption1, color: colors.orange40, lineHeight: 18 },
+  safetyText: { ...typography.caption1, color: colors.orange40, lineHeight: scale(18) },
   footer: {
     flexDirection: 'row', gap: space.s10,
     paddingHorizontal: space.s16, paddingVertical: space.s12,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line,
     alignItems: 'center',
   },
-  retakeTxt: { fontSize: 12, color: colors.labelNormal, fontWeight: '600', textAlign: 'center' },
+  retakeTxt: { fontSize: scale(12), color: colors.labelNormal, fontWeight: '600', textAlign: 'center' },
   cancelBtn: {
     flex: 1, paddingVertical: space.s14,
     borderRadius: radius.r12,
