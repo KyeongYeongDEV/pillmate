@@ -2,14 +2,23 @@ import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useRegisterDeviceTokenMutation } from '@/store/slices/userApi';
+import type { RegisterDeviceTokenRequest } from '@/store/slices/userApi';
 import {
   configureNotificationHandler,
   ensurePushPermission,
   fetchExpoPushToken,
+  fetchNativeDeviceToken,
 } from './setup';
 import { extractRouteFromNotification } from './deepLink';
 
 const NOTIFICATION_INBOX_ROUTE = '/notifications';
+
+async function resolveDeviceTokenRequest(): Promise<RegisterDeviceTokenRequest | null> {
+  const native = await fetchNativeDeviceToken();
+  if (native) return native;
+  const expoToken = await fetchExpoPushToken();
+  return expoToken ? { token: expoToken, provider: 'EXPO' } : null;
+}
 
 export default function NotificationsBootstrap() {
   const [registerDeviceToken] = useRegisterDeviceTokenMutation();
@@ -24,10 +33,10 @@ export default function NotificationsBootstrap() {
     (async () => {
       const ok = await ensurePushPermission();
       if (!ok) return;
-      const token = await fetchExpoPushToken();
-      if (!token) return;
+      const request = await resolveDeviceTokenRequest();
+      if (!request) return;
       try {
-        await registerDeviceToken({ token, provider: 'EXPO' }).unwrap();
+        await registerDeviceToken(request).unwrap();
       } catch {
         // BE 미준비 시 fail-gracefully (#107 BE 측 endpoint 도착 전 대비)
       }

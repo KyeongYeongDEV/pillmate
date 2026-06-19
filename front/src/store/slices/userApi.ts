@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 
-export type DeviceTokenProvider = 'EXPO' | 'FCM' | 'APNS';
+export type DeviceTokenProvider = 'EXPO' | 'FCM';
 
 export interface RegisterDeviceTokenRequest {
   token: string;
