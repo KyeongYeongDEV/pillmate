@@ -1,17 +1,24 @@
 // Design tokens — exact match with 디자인/styles/tokens.css
 
-import { Dimensions, PixelRatio, Platform, type TextStyle } from 'react-native';
+import { Dimensions, Platform, useWindowDimensions, type TextStyle } from 'react-native';
 
-// 기기 적응형 스케일(moderateScale) — 디자인 기준기기 iPhone 390×844 에서 scale(x)=x 로 불변.
-// width 비율에 0.7 댐핑을 적용해 큰/작은 기기에서 과도한 확대·축소를 막고,
-// PixelRatio 로 물리 픽셀에 정렬한다. react-native-size-matters 무의존 인라인 구현.
-const BASE_WIDTH = 390;
-const SCALE_DAMPING = 0.7;
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const widthRatio = SCREEN_WIDTH / BASE_WIDTH;
+// RN 정석(orthodox) 반응형 전략.
+// 폰트·치수는 폭-비례 scale 이 아니라 고정 dp. 물리 크기는 OS 픽셀 밀도에 위임한다.
+// (구) moderateScale(width 비례 + 0.7 댐핑) 폐지 — 기기마다 레이아웃이 미세하게 흔들리고
+// Android 가 iOS 보다 커 보이던 문제의 정석 해법(원인은 폰트패딩, 아래에서 제거).
+//
+// 폭-비례 scale 헬퍼는 외부 호출부(컴포넌트 다수) 점진 정리를 위해 시그니처만 유지하고
+// 항등(고정 dp)으로 동작시킨다. 신규 코드는 고정 dp 리터럴 또는 flex 를 사용한다.
+export const scale = (size: number): number => size;
 
-export const scale = (size: number): number =>
-  PixelRatio.roundToNearestPixel(size * (1 + (widthRatio - 1) * SCALE_DAMPING));
+// 타입스케일 단일 튜닝 레버. 1.0 = 디자인 원본 dp(노인 친화로 약간 큼).
+// 합의된 컴팩트 크기보다 크게 느껴지면 이 값만 낮춘다(문서화된 1회 균일 축소).
+const TYPE_SCALE = 1.0;
+
+// 태블릿 분기 준비(레이아웃 변경은 후속, 유틸만 제공). width >= 600dp = 태블릿.
+const TABLET_MIN_WIDTH = 600;
+export const isTablet = (): boolean => Dimensions.get('window').width >= TABLET_MIN_WIDTH;
+export const useIsTablet = (): boolean => useWindowDimensions().width >= TABLET_MIN_WIDTH;
 
 // Android 는 동일 dp 여도 includeFontPadding 으로 글자 위/아래 여백이 추가돼 크게 보인다.
 // 일괄 배율 대신 원인을 제거 — 공용 텍스트 토큰에만 적용(iOS 는 무시되는 키).
@@ -19,8 +26,8 @@ const androidTextMetricFix = Platform.OS === 'android' ? { includeFontPadding: f
 
 type FontWeight = TextStyle['fontWeight'];
 const textToken = (fontSize: number, lineHeight: number, fontWeight: FontWeight) => ({
-  fontSize: scale(fontSize),
-  lineHeight: scale(lineHeight),
+  fontSize: Math.round(fontSize * TYPE_SCALE),
+  lineHeight: Math.round(lineHeight * TYPE_SCALE),
   fontWeight,
   ...androidTextMetricFix,
 });
@@ -109,16 +116,16 @@ export const colors = {
   tabInactive: '#878a93',      // --c-coolNeutral-60
 } as const;
 
-// borderRadius 도 글자·박스와 함께 균일 축소(기준기기 iOS 는 scale(x)=x 불변). full 은 원/캡슐 sentinel 이라 미스케일.
+// 고정 dp. full 은 원/캡슐 sentinel.
 export const radius = {
-  r4: scale(4), r6: scale(6), r8: scale(8), r10: scale(10), r12: scale(12),
-  r14: scale(14), r16: scale(16), r20: scale(20), r24: scale(24), r32: scale(32), full: 9999,
+  r4: 4, r6: 6, r8: 8, r10: 10, r12: 12,
+  r14: 14, r16: 16, r20: 20, r24: 24, r32: 32, full: 9999,
 } as const;
 
 export const space = {
-  s2: scale(2), s4: scale(4), s6: scale(6), s8: scale(8), s10: scale(10),
-  s12: scale(12), s14: scale(14), s16: scale(16), s18: scale(18), s20: scale(20),
-  s24: scale(24), s28: scale(28), s32: scale(32), s40: scale(40), s48: scale(48), s64: scale(64),
+  s2: 2, s4: 4, s6: 6, s8: 8, s10: 10,
+  s12: 12, s14: 14, s16: 16, s18: 18, s20: 20,
+  s24: 24, s28: 28, s32: 32, s40: 40, s48: 48, s64: 64,
 } as const;
 
 // Font families — Pretendard JP 로드되면 사용, 없으면 system fallback (iOS: San Francisco / Android: Roboto)

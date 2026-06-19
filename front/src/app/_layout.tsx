@@ -2,10 +2,25 @@ import "../global.css";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Text as RNText, TextInput as RNTextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import NotificationsBootstrap from "@/lib/notifications/NotificationsBootstrap";
+
+// 노인 사용자 글꼴 확대(allowFontScaling) 는 허용하되, 레이아웃 붕괴를 막기 위해 상한을 둔다.
+// 끄지 않고(상한만) 접근성을 보존한다.
+const MAX_FONT_SCALE = 1.3;
+const RNTextWithDefaults = RNText as unknown as { defaultProps?: Record<string, unknown> };
+const RNTextInputWithDefaults = RNTextInput as unknown as { defaultProps?: Record<string, unknown> };
+RNTextWithDefaults.defaultProps = {
+  ...RNTextWithDefaults.defaultProps,
+  maxFontSizeMultiplier: MAX_FONT_SCALE,
+};
+RNTextInputWithDefaults.defaultProps = {
+  ...RNTextInputWithDefaults.defaultProps,
+  maxFontSizeMultiplier: MAX_FONT_SCALE,
+};
 
 export default function RootLayout() {
   return (
