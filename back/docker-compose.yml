@@ -92,6 +92,10 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-pillmate-prescriptions}
       AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8001}
+      PILLMATE_NOTIFICATION_PROVIDER: ${PILLMATE_NOTIFICATION_PROVIDER:-log}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     ports:
       - "8080:8080"
     healthcheck:
