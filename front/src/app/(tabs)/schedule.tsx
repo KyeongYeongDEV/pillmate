@@ -164,7 +164,7 @@ export default function ScheduleScreen() {
           <View style={styles.medCard}>
             {displaySlots.map((slot, i) => (
               <MedTimeRow
-                key={slot.id}
+                key={`${slot.id}-${i}`}
                 slot={slot}
                 isFirst={i === 0}
                 onPress={handleSlotPress}
