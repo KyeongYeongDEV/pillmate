@@ -10,7 +10,6 @@ import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.event.PrescriptionRegistered;
 import com.pillmate.report.domain.event.WeeklyReportGenerated;
 import com.pillmate.schedule.domain.model.Schedule;
-import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
@@ -21,6 +20,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +29,8 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class NotificationDispatcher {
+
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
@@ -103,7 +105,7 @@ public class NotificationDispatcher {
 
     private List<Notification> buildCanceledNotifications(DoseCheckCanceled event, Schedule schedule) {
         String actorName = resolveUserName(event.actorUserId());
-        String timeLabel = toKoreanTimeLabel(schedule.getTimeOfDay());
+        String timeLabel = schedule.getCustomTime().format(HH_MM);
         return membershipRepository.findGroupMemberUserIds(event.actorUserId()).stream()
                 .filter(id -> !id.equals(event.actorUserId()))
                 .map(recipientId -> Notification.doseCanceled(
@@ -116,15 +118,6 @@ public class NotificationDispatcher {
         return userRepository.findById(userId)
                 .map(User::getName)
                 .orElse("멤버");
-    }
-
-    private String toKoreanTimeLabel(TimeOfDay timeOfDay) {
-        return switch (timeOfDay) {
-            case MORNING -> "아침";
-            case NOON -> "점심";
-            case EVENING -> "저녁";
-            case BEDTIME -> "취침 전";
-        };
     }
 
     private void dispatchOne(Notification notification, String route) {

@@ -197,7 +197,7 @@ class NotificationDispatcherTest {
     }
 
     @Test
-    @DisplayName("DoseCheckCanceled — 'OO님이 아침 약 복용을 취소했습니다' DOSE_CANCELED 그룹 발송")
+    @DisplayName("DoseCheckCanceled — 'OO님이 08:00 약 복용을 취소했습니다' DOSE_CANCELED 그룹 발송 (시각 라벨)")
     void on_doseCheckCanceled_sendsCanceledNotificationToGroup() {
         // given
         Long DOSE_LOG_ID = 7L;
@@ -225,7 +225,7 @@ class NotificationDispatcherTest {
         assertThat(n.getRecipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(n.getCareGroupId()).isEqualTo(GROUP_ID);
         assertThat(n.getDoseLogId()).isEqualTo(DOSE_LOG_ID);
-        assertThat(n.getBody()).contains("아침").contains("취소했습니다");
+        assertThat(n.getBody()).contains("08:00").contains("취소했습니다");
         verify(notificationSenderPort).send(any());
     }
 

@@ -25,8 +25,14 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     }
 
     @Override
-    public Optional<DoseLog> findByScheduleIdAndScheduledAt(Long scheduleId, Instant scheduledAt) {
-        return jpa.findByScheduleIdAndScheduledAt(scheduleId, scheduledAt);
+    public boolean existsByScheduleIdAndScheduledAtInRange(Long scheduleId, Instant fromInclusive, Instant toExclusive) {
+        return jpa.existsByScheduleIdAndScheduledAtGreaterThanEqualAndScheduledAtLessThan(
+                scheduleId, fromInclusive, toExclusive);
+    }
+
+    @Override
+    public List<DoseLog> findByScheduleIdAndStatusFrom(Long scheduleId, DoseStatus status, Instant fromInclusive) {
+        return jpa.findByScheduleIdAndStatusAndScheduledAtGreaterThanEqual(scheduleId, status, fromInclusive);
     }
 
     @Override

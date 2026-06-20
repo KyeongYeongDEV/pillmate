@@ -15,12 +15,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
-@DisplayName("GetDayScheduleUseCase — 단위 테스트")
+@DisplayName("GetDayScheduleUseCase — customTime 그룹핑 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class GetDayScheduleUseCaseTest {
 
@@ -41,15 +42,15 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("4개 슬롯 반환 — TAKEN→done, PENDING→wait, SKIPPED→wait")
-    void execute_returns4Slots_withStatusMapping() {
+    @DisplayName("서로 다른 customTime 4개 → 4개 슬롯, 시각 ASC, HH:mm 라벨, TAKEN→done")
+    void execute_distinctTimes_returns4Slots() {
         // given
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(
-                        projection(6L, "MORNING", "타이레놀500mg", null, 9L, "TAKEN"),
-                        projection(7L, "NOON",    "타이레놀500mg", null, 10L, "PENDING"),
-                        projection(8L, "EVENING", "타이레놀500mg", null, 11L, "SKIPPED"),
-                        projection(9L, "BEDTIME", "타이레놀500mg", null, 12L, "PENDING")
+                        projection(6L, "MORNING", LocalTime.of(8, 0),  "타이레놀500mg", null, 9L, "TAKEN"),
+                        projection(7L, "NOON",    LocalTime.of(12, 30), "타이레놀500mg", null, 10L, "PENDING"),
+                        projection(8L, "EVENING", LocalTime.of(19, 0),  "타이레놀500mg", null, 11L, "SKIPPED"),
+                        projection(9L, "BEDTIME", LocalTime.of(22, 0),  "타이레놀500mg", null, 12L, "PENDING")
                 )
         );
 
@@ -62,27 +63,72 @@ class GetDayScheduleUseCaseTest {
         assertThat(response.doneCount()).isEqualTo(1);
         assertThat(response.slots()).hasSize(4);
 
-        SlotView morning = response.slots().get(0);
-        assertThat(morning.id()).isEqualTo("morning");
-        assertThat(morning.time()).isEqualTo("08:00");
-        assertThat(morning.label()).isEqualTo("아침");
-        assertThat(morning.state()).isEqualTo("done");
-        assertThat(morning.doseLogId()).isEqualTo(9L);
+        SlotView first = response.slots().get(0);
+        assertThat(first.id()).isEqualTo("08:00");
+        assertThat(first.time()).isEqualTo("08:00");
+        assertThat(first.label()).isEqualTo("08:00");
+        assertThat(first.customTime()).isEqualTo("08:00");
+        assertThat(first.state()).isEqualTo("done");
+        assertThat(first.doseLogId()).isEqualTo(9L);
+        assertThat(first.doseLogIds()).containsExactly(9L);
 
-        SlotView noon = response.slots().get(1);
-        assertThat(noon.state()).isEqualTo("wait");
-
-        SlotView evening = response.slots().get(2);
-        assertThat(evening.state()).isEqualTo("wait");
+        assertThat(response.slots().get(1).state()).isEqualTo("wait");
+        assertThat(response.slots().get(2).state()).isEqualTo("wait");
     }
 
     @Test
-    @DisplayName("dose_log 없는 슬롯 — state=wait, doseLogId=null")
+    @DisplayName("동일 customTime 약 2개 → 1개 슬롯으로 그룹 (items 2, doseLogIds 2, 전부 TAKEN→done)")
+    void execute_sameTime_mergesIntoOneSlot() {
+        // given
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        projection(6L, "MORNING", LocalTime.of(8, 0), "타이레놀500mg", "#ff0000", 9L, "TAKEN"),
+                        projection(7L, "MORNING", LocalTime.of(8, 0), "게보린",       "#00ff00", 10L, "TAKEN")
+                )
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // then
+        assertThat(response.slots()).hasSize(1);
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.customTime()).isEqualTo("08:00");
+        assertThat(slot.items()).containsExactly("타이레놀500mg", "게보린");
+        assertThat(slot.drugCount()).isEqualTo(2);
+        assertThat(slot.doseLogIds()).containsExactly(9L, 10L);
+        assertThat(slot.pillColors()).containsExactly("#ff0000", "#00ff00");
+        assertThat(slot.state()).isEqualTo("done");
+        assertThat(response.doneCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("동일 customTime 그룹에 하나라도 미복용 → state=wait")
+    void execute_sameTime_partialTaken_isWait() {
+        // given
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        projection(6L, "MORNING", LocalTime.of(8, 0), "타이레놀500mg", null, 9L, "TAKEN"),
+                        projection(7L, "MORNING", LocalTime.of(8, 0), "게보린",       null, 10L, "PENDING")
+                )
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // then
+        assertThat(response.slots()).hasSize(1);
+        assertThat(response.slots().get(0).state()).isEqualTo("wait");
+        assertThat(response.slots().get(0).doseLogIds()).containsExactly(9L, 10L);
+    }
+
+    @Test
+    @DisplayName("dose_log 없는 슬롯 — state=wait, doseLogId=null, doseLogIds 비어있음")
     void execute_whenNoDoseLog_slotStateIsWait() {
         // given
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(
-                        projection(6L, "MORNING", "타이레놀500mg", null, null, null)
+                        projection(6L, "MORNING", LocalTime.of(8, 0), "타이레놀500mg", null, null, null)
                 )
         );
 
@@ -93,6 +139,7 @@ class GetDayScheduleUseCaseTest {
         SlotView slot = response.slots().get(0);
         assertThat(slot.state()).isEqualTo("wait");
         assertThat(slot.doseLogId()).isNull();
+        assertThat(slot.doseLogIds()).isEmpty();
         assertThat(slot.drugCount()).isEqualTo(1);
     }
 
@@ -111,9 +158,9 @@ class GetDayScheduleUseCaseTest {
         assertThat(response.totalCount()).isZero();
     }
 
-    private DayScheduleProjection projection(Long scheduleId, String timeOfDay,
+    private DayScheduleProjection projection(Long scheduleId, String timeOfDay, LocalTime customTime,
                                               String drugName, String pillColor,
                                               Long doseLogId, String doseStatus) {
-        return new DayScheduleProjection(scheduleId, timeOfDay, drugName, pillColor, doseLogId, doseStatus);
+        return new DayScheduleProjection(scheduleId, timeOfDay, customTime, drugName, pillColor, doseLogId, doseStatus);
     }
 }

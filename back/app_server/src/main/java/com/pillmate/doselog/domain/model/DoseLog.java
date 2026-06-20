@@ -85,6 +85,13 @@ public class DoseLog {
         skip(checkedBy, reason, Clock.systemUTC());
     }
 
+    public void reschedule(Instant newScheduledAt) {
+        if (status != DoseStatus.PENDING) {
+            return;
+        }
+        this.scheduledAt = newScheduledAt;
+    }
+
     public void cancel() {
         if (status != DoseStatus.TAKEN) {
             return;

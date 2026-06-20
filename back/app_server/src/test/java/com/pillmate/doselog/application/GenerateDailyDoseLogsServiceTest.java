@@ -14,10 +14,8 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,7 +26,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
-@DisplayName("GenerateDailyDoseLogsService — 일일 dose_logs 생성 + 멱등")
+@DisplayName("GenerateDailyDoseLogsService — 일일 dose_logs 생성 + (schedule, 날짜) 멱등")
 @ExtendWith(MockitoExtension.class)
 class GenerateDailyDoseLogsServiceTest {
 
@@ -52,7 +50,7 @@ class GenerateDailyDoseLogsServiceTest {
                 schedule(4L, PATIENT_1, TimeOfDay.BEDTIME)
         );
         given(scheduleRepository.findAllActiveOn(TODAY)).willReturn(schedules);
-        given(doseLogRepository.findByScheduleIdAndScheduledAt(anyLong(), any())).willReturn(Optional.empty());
+        given(doseLogRepository.existsByScheduleIdAndScheduledAtInRange(anyLong(), any(), any())).willReturn(false);
         given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -64,13 +62,12 @@ class GenerateDailyDoseLogsServiceTest {
     }
 
     @Test
-    @DisplayName("이미 생성된 날 재실행 — 0건 추가 (멱등)")
-    void generate_whenLogsAlreadyExist_createsZero() {
-        // given
+    @DisplayName("같은 날 이미 dose_log 존재(시각 무관) — 0건 추가 (날짜 기준 멱등)")
+    void generate_whenLogExistsOnDate_createsZero() {
+        // given — 시각이 달라도(시간 변경 후 재실행) 같은 날 존재하면 신규 생성 X
         given(scheduleRepository.findAllActiveOn(TODAY))
                 .willReturn(List.of(schedule(1L, PATIENT_1, TimeOfDay.MORNING)));
-        given(doseLogRepository.findByScheduleIdAndScheduledAt(anyLong(), any()))
-                .willReturn(Optional.of(DoseLog.of(1L, PATIENT_1, Instant.now())));
+        given(doseLogRepository.existsByScheduleIdAndScheduledAtInRange(anyLong(), any(), any())).willReturn(true);
 
         // when
         int created = sut.generate(TODAY);
@@ -99,7 +96,7 @@ class GenerateDailyDoseLogsServiceTest {
                 schedule(1L, PATIENT_1, TimeOfDay.MORNING),
                 schedule(2L, PATIENT_2, TimeOfDay.MORNING)
         ));
-        given(doseLogRepository.findByScheduleIdAndScheduledAt(anyLong(), any())).willReturn(Optional.empty());
+        given(doseLogRepository.existsByScheduleIdAndScheduledAtInRange(anyLong(), any(), any())).willReturn(false);
         given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
@@ -110,20 +107,15 @@ class GenerateDailyDoseLogsServiceTest {
     }
 
     @Test
-    @DisplayName("일부 기존 + 일부 신규 — 신규만 생성")
+    @DisplayName("일부 기존 + 일부 신규 — 신규만 생성 (schedule 별 날짜 멱등)")
     void generate_whenSomeExist_createsOnlyMissing() {
         // given
         Schedule s1 = schedule(10L, PATIENT_1, TimeOfDay.MORNING);
         Schedule s2 = schedule(20L, PATIENT_1, TimeOfDay.NOON);
         given(scheduleRepository.findAllActiveOn(TODAY)).willReturn(List.of(s1, s2));
 
-        Instant morningKst = policy.scheduledAtFor(TimeOfDay.MORNING, TODAY);
-        Instant noonKst    = policy.scheduledAtFor(TimeOfDay.NOON, TODAY);
-
-        given(doseLogRepository.findByScheduleIdAndScheduledAt(eq(10L), eq(morningKst)))
-                .willReturn(Optional.of(DoseLog.of(10L, PATIENT_1, morningKst)));
-        given(doseLogRepository.findByScheduleIdAndScheduledAt(eq(20L), eq(noonKst)))
-                .willReturn(Optional.empty());
+        given(doseLogRepository.existsByScheduleIdAndScheduledAtInRange(eq(10L), any(), any())).willReturn(true);
+        given(doseLogRepository.existsByScheduleIdAndScheduledAtInRange(eq(20L), any(), any())).willReturn(false);
         given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when

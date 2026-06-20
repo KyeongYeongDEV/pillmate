@@ -151,9 +151,9 @@ class ScheduleMonthQueryAdapterIntegrationTest {
 
     private Long insertSchedule(Long patientId) {
         return ((Number) entityManager.createNativeQuery(
-                "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, " +
+                "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, custom_time, " +
                 "start_date, end_date, active, created_by, created_at) " +
-                "VALUES (:g, :p, :d, 'MORNING', '2026-01-01', '2026-12-31', true, :p, NOW()) RETURNING id")
+                "VALUES (:g, :p, :d, 'MORNING', '08:00', '2026-01-01', '2026-12-31', true, :p, NOW()) RETURNING id")
                 .setParameter("g", insertCareGroup())
                 .setParameter("p", patientId)
                 .setParameter("d", insertDrug())

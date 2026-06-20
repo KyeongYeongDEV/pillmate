@@ -9,6 +9,8 @@ public record SlotView(
         String state,
         List<String> items,
         Long doseLogId,
+        List<Long> doseLogIds,
+        String customTime,
         int drugCount,
         List<String> pillColors
 ) {}

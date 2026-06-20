@@ -131,6 +131,30 @@ class DoseLogTest {
     }
 
     @Test
+    @DisplayName("reschedule — PENDING 은 scheduledAt 갱신 (시각 변경 반영)")
+    void reschedule_whenPending_updatesScheduledAt() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        Instant newAt = FIXED_NOW.plus(Duration.ofHours(1));
+
+        log.reschedule(newAt);
+
+        assertThat(log.getScheduledAt()).isEqualTo(newAt);
+    }
+
+    @Test
+    @DisplayName("reschedule — TAKEN 은 no-op (완료 기록 보존, 재복용 방지)")
+    void reschedule_whenTaken_isNoOp() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+        Instant newAt = FIXED_NOW.plus(Duration.ofHours(1));
+
+        log.reschedule(newAt);
+
+        assertThat(log.getScheduledAt()).isEqualTo(FIXED_NOW);
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.TAKEN);
+    }
+
+    @Test
     @DisplayName("isEditableOn — scheduledAt KST 날짜 == 오늘 KST 날짜면 true")
     void isEditableOn_whenScheduledToday_returnsTrue() {
         // given — now: KST 2026-06-12 19:00, scheduled: KST 2026-06-12 08:00

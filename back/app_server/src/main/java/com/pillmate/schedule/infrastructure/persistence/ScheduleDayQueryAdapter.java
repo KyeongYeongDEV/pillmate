@@ -6,7 +6,9 @@ import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Time;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -16,6 +18,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
     private static final String DAY_SQL = """
             SELECT s.id          AS schedule_id,
                    s.time_of_day,
+                   s.custom_time,
                    d.name        AS drug_name,
                    d.color_class AS pill_color,
                    dl.id         AS dose_log_id,
@@ -29,13 +32,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
               AND s.active = TRUE
               AND s.start_date <= :date
               AND (s.end_date IS NULL OR s.end_date >= :date)
-            ORDER BY CASE s.time_of_day
-                WHEN 'MORNING' THEN 1
-                WHEN 'NOON'    THEN 2
-                WHEN 'EVENING' THEN 3
-                WHEN 'BEDTIME' THEN 4
-                ELSE 5
-            END
+            ORDER BY s.custom_time ASC, s.id ASC
             """;
 
     private final EntityManager entityManager;
@@ -54,16 +51,27 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
     }
 
     private DayScheduleProjection toProjection(Tuple row) {
-        Long scheduleId = toLong(row.get("schedule_id"));
-        String timeOfDay = (String) row.get("time_of_day");
-        String drugName  = (String) row.get("drug_name");
-        String pillColor = (String) row.get("pill_color");
-        Long doseLogId   = toLong(row.get("dose_log_id"));
-        String status    = (String) row.get("dose_status");
-        return new DayScheduleProjection(scheduleId, timeOfDay, drugName, pillColor, doseLogId, status);
+        Long scheduleId     = toLong(row.get("schedule_id"));
+        String timeOfDay    = (String) row.get("time_of_day");
+        LocalTime customTime = toLocalTime(row.get("custom_time"));
+        String drugName     = (String) row.get("drug_name");
+        String pillColor    = (String) row.get("pill_color");
+        Long doseLogId      = toLong(row.get("dose_log_id"));
+        String status       = (String) row.get("dose_status");
+        return new DayScheduleProjection(scheduleId, timeOfDay, customTime, drugName, pillColor, doseLogId, status);
     }
 
     private Long toLong(Object v) {
         return v == null ? null : ((Number) v).longValue();
+    }
+
+    private LocalTime toLocalTime(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof LocalTime localTime) {
+            return localTime;
+        }
+        return ((Time) v).toLocalTime();
     }
 }

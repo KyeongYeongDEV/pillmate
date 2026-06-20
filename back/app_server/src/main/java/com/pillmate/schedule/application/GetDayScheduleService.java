@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,12 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GetDayScheduleService implements GetDayScheduleUseCase {
 
-    private static final Map<String, String> SLOT_ID = Map.of(
-            "MORNING", "morning", "NOON", "noon", "EVENING", "evening", "BEDTIME", "bedtime");
-    private static final Map<String, String> SLOT_TIME = Map.of(
-            "MORNING", "08:00", "NOON", "12:30", "EVENING", "19:00", "BEDTIME", "22:00");
-    private static final Map<String, String> SLOT_LABEL = Map.of(
-            "MORNING", "아침", "NOON", "점심", "EVENING", "저녁", "BEDTIME", "취침");
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
     private static final String DEFAULT_COLOR = "#999999";
 
     private final ScheduleDayQueryPort scheduleDayQueryPort;
@@ -32,24 +31,46 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
     public DayScheduleResponse execute(LocalDate date) {
         Long patientId = UserContext.get();
         List<DayScheduleProjection> projections = scheduleDayQueryPort.findByPatientAndDate(patientId, date);
-        List<SlotView> slots = projections.stream().map(this::toSlotView).toList();
+        List<SlotView> slots = groupByCustomTime(projections);
         int doneCount = (int) slots.stream().filter(s -> "done".equals(s.state())).count();
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
     }
 
-    private SlotView toSlotView(DayScheduleProjection p) {
-        String state = "TAKEN".equals(p.doseStatus()) ? "done" : "wait";
-        String color = p.pillColor() != null ? p.pillColor() : DEFAULT_COLOR;
-        List<String> items = p.drugName() != null ? List.of(p.drugName()) : List.of();
+    private List<SlotView> groupByCustomTime(List<DayScheduleProjection> projections) {
+        Map<LocalTime, List<DayScheduleProjection>> grouped = new LinkedHashMap<>();
+        for (DayScheduleProjection projection : projections) {
+            grouped.computeIfAbsent(projection.customTime(), key -> new ArrayList<>()).add(projection);
+        }
+        return grouped.entrySet().stream()
+                .map(entry -> toSlotView(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private SlotView toSlotView(LocalTime customTime, List<DayScheduleProjection> group) {
+        String time = customTime != null ? customTime.format(HH_MM) : "";
+        List<String> items = group.stream().map(DayScheduleProjection::drugName).filter(n -> n != null).toList();
+        List<Long> doseLogIds = group.stream().map(DayScheduleProjection::doseLogId).filter(id -> id != null).toList();
+        List<String> pillColors = group.stream().map(this::colorOf).toList();
         return new SlotView(
-                SLOT_ID.getOrDefault(p.timeOfDay(), p.timeOfDay().toLowerCase()),
-                SLOT_TIME.getOrDefault(p.timeOfDay(), ""),
-                SLOT_LABEL.getOrDefault(p.timeOfDay(), p.timeOfDay()),
-                state,
+                time,
+                time,
+                time,
+                resolveState(group),
                 items,
-                p.doseLogId(),
+                doseLogIds.isEmpty() ? null : doseLogIds.get(0),
+                doseLogIds,
+                time,
                 items.size(),
-                List.of(color)
+                pillColors
         );
+    }
+
+    private String resolveState(List<DayScheduleProjection> group) {
+        boolean allTaken = group.stream().allMatch(p -> "TAKEN".equals(p.doseStatus()));
+        return allTaken ? "done" : "wait";
+    }
+
+    private String colorOf(DayScheduleProjection projection) {
+        return projection.pillColor() != null ? projection.pillColor() : DEFAULT_COLOR;
     }
 }

@@ -36,13 +36,12 @@ public class GenerateDailyDoseLogsService implements GenerateDailyDoseLogsUseCas
     }
 
     private int createIfAbsent(Schedule schedule, LocalDate date) {
-        Instant scheduledAt = policy.scheduledAtFor(schedule.getTimeOfDay(), date);
-        boolean exists = doseLogRepository
-                .findByScheduleIdAndScheduledAt(schedule.getId(), scheduledAt)
-                .isPresent();
-        if (exists) {
+        boolean existsToday = doseLogRepository.existsByScheduleIdAndScheduledAtInRange(
+                schedule.getId(), policy.startOfDay(date), policy.startOfNextDay(date));
+        if (existsToday) {
             return 0;
         }
+        Instant scheduledAt = policy.scheduledAtFor(schedule.getCustomTime(), date);
         doseLogRepository.save(DoseLog.of(schedule.getId(), schedule.getPatientId(), scheduledAt));
         return 1;
     }
