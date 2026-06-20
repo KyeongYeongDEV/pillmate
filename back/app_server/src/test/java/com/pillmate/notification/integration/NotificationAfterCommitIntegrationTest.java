@@ -135,9 +135,9 @@ class NotificationAfterCommitIntegrationTest {
 
     private Long insertSchedule(Long groupId, Long patientId, Long drugId) {
         return jdbcTemplate.queryForObject(
-                "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, " +
+                "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, custom_time, " +
                 "start_date, end_date, active, created_by, created_at) " +
-                "VALUES (?, ?, ?, 'MORNING', '2026-01-01', '2026-12-31', true, ?, NOW()) RETURNING id",
+                "VALUES (?, ?, ?, 'MORNING', '08:00', '2026-01-01', '2026-12-31', true, ?, NOW()) RETURNING id",
                 Long.class, groupId, patientId, drugId, patientId);
     }
 

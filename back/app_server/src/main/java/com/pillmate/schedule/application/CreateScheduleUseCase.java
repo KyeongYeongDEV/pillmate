@@ -34,7 +34,7 @@ public class CreateScheduleUseCase {
         }
 
         Schedule schedule = Schedule.of(req.careGroupId(), req.patientId(), req.drugId(),
-                req.timeOfDay(), req.startDate(), req.endDate(), createdBy);
+                req.timeOfDay(), req.customTime(), req.startDate(), req.endDate(), createdBy);
 
         return CreateScheduleResponse.from(scheduleRepository.save(schedule));
     }

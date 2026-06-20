@@ -1,5 +1,7 @@
 package com.pillmate.schedule.domain.model;
 
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -7,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "schedules")
@@ -31,6 +34,9 @@ public class Schedule {
     @Column(nullable = false)
     private TimeOfDay timeOfDay;
 
+    @Column(name = "custom_time", nullable = false)
+    private LocalTime customTime;
+
     @Column(nullable = false)
     private LocalDate startDate;
 
@@ -47,13 +53,20 @@ public class Schedule {
     private Instant createdAt;
 
     public static Schedule of(Long careGroupId, Long patientId, Long drugId,
-                               TimeOfDay timeOfDay, LocalDate startDate, LocalDate endDate,
-                               Long createdBy) {
+                              TimeOfDay timeOfDay, LocalDate startDate, LocalDate endDate,
+                              Long createdBy) {
+        return of(careGroupId, patientId, drugId, timeOfDay, null, startDate, endDate, createdBy);
+    }
+
+    public static Schedule of(Long careGroupId, Long patientId, Long drugId,
+                              TimeOfDay timeOfDay, LocalTime customTime,
+                              LocalDate startDate, LocalDate endDate, Long createdBy) {
         Schedule s = new Schedule();
         s.careGroupId = careGroupId;
         s.patientId = patientId;
         s.drugId = drugId;
         s.timeOfDay = timeOfDay;
+        s.customTime = customTime != null ? customTime : timeOfDay.defaultTime();
         s.startDate = startDate;
         s.endDate = endDate;
         s.active = true;
@@ -76,5 +89,16 @@ public class Schedule {
 
     public void updateEndDate(LocalDate newEndDate) {
         this.endDate = newEndDate;
+    }
+
+    public void changeTime(LocalTime newTime, LocalDate today) {
+        requireWithinPeriod(today);
+        this.customTime = newTime;
+    }
+
+    private void requireWithinPeriod(LocalDate today) {
+        if (endDate != null && today.isAfter(endDate)) {
+            throw new PillmateException(ErrorCode.SCHEDULE_PERIOD_ENDED);
+        }
     }
 }
