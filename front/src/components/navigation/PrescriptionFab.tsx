@@ -14,7 +14,7 @@ function PrescriptionFab() {
 
   const handlePress = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/prescription' as any);
+    router.push('/prescriptions' as any);
   }, []);
 
   const fabBottom = insets.bottom + BAR_H - FAB_D / 2;
@@ -27,9 +27,9 @@ function PrescriptionFab() {
       {/* Wrap in View so backgroundColor renders reliably; Pressable handles touch */}
       <Pressable
         onPress={handlePress}
-        accessibilityLabel="처방전 등록"
+        accessibilityLabel="처방전 목록"
         accessibilityRole="button"
-        accessibilityHint="처방전 등록 화면으로 이동합니다"
+        accessibilityHint="처방전 목록 화면으로 이동합니다"
       >
         {({ pressed }) => (
           <View style={[styles.fab, pressed && styles.fabPressed]}>
