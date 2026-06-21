@@ -9,6 +9,7 @@ import com.pillmate.schedule.application.DeactivateScheduleUseCase;
 import com.pillmate.schedule.application.GetDayScheduleUseCase;
 import com.pillmate.schedule.application.GetMonthScheduleUseCase;
 import com.pillmate.schedule.application.ListSchedulesUseCase;
+import com.pillmate.schedule.application.GetPrescriptionSlotsUseCase;
 import com.pillmate.schedule.application.RemovePrescriptionSlotUseCase;
 import com.pillmate.schedule.application.UpdateScheduleUseCase;
 import com.pillmate.schedule.application.dto.AddPrescriptionSlotRequest;
@@ -17,6 +18,7 @@ import com.pillmate.schedule.application.dto.CreateScheduleResponse;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.pillmate.schedule.application.dto.MonthScheduleResponse;
 import com.pillmate.schedule.application.dto.ScheduleResponse;
+import com.pillmate.schedule.application.dto.SlotEditView;
 import com.pillmate.schedule.application.dto.UpdateScheduleRequest;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import jakarta.validation.Valid;
@@ -49,6 +51,7 @@ public class ScheduleController {
     private final GetMonthScheduleUseCase getMonthScheduleUseCase;
     private final AddPrescriptionSlotUseCase addPrescriptionSlotUseCase;
     private final RemovePrescriptionSlotUseCase removePrescriptionSlotUseCase;
+    private final GetPrescriptionSlotsUseCase getPrescriptionSlotsUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateScheduleResponse>> create(
@@ -84,6 +87,12 @@ public class ScheduleController {
             @PathVariable TimeOfDay timeOfDay) {
         int removed = removePrescriptionSlotUseCase.removeSlot(prescriptionId, timeOfDay);
         return ResponseEntity.ok(ApiResponse.success(removed));
+    }
+
+    @GetMapping("/prescriptions/{prescriptionId}/slots")
+    public ResponseEntity<ApiResponse<List<SlotEditView>>> getPrescriptionSlots(
+            @PathVariable Long prescriptionId) {
+        return ResponseEntity.ok(ApiResponse.success(getPrescriptionSlotsUseCase.execute(prescriptionId)));
     }
 
     @GetMapping
