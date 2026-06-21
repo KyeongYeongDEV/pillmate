@@ -27,8 +27,11 @@ public class Schedule {
     @Column(nullable = false)
     private Long patientId;
 
-    @Column(nullable = false)
+    @Column(name = "drug_id")
     private Long drugId;
+
+    @Column(name = "prescription_id")
+    private Long prescriptionId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -61,10 +64,23 @@ public class Schedule {
     public static Schedule of(Long careGroupId, Long patientId, Long drugId,
                               TimeOfDay timeOfDay, LocalTime customTime,
                               LocalDate startDate, LocalDate endDate, Long createdBy) {
+        return of(careGroupId, patientId, drugId, null, timeOfDay, customTime, startDate, endDate, createdBy);
+    }
+
+    public static Schedule forPrescription(Long careGroupId, Long patientId, Long prescriptionId,
+                                           TimeOfDay timeOfDay, LocalTime customTime,
+                                           LocalDate startDate, LocalDate endDate, Long createdBy) {
+        return of(careGroupId, patientId, null, prescriptionId, timeOfDay, customTime, startDate, endDate, createdBy);
+    }
+
+    public static Schedule of(Long careGroupId, Long patientId, Long drugId, Long prescriptionId,
+                              TimeOfDay timeOfDay, LocalTime customTime,
+                              LocalDate startDate, LocalDate endDate, Long createdBy) {
         Schedule s = new Schedule();
         s.careGroupId = careGroupId;
         s.patientId = patientId;
         s.drugId = drugId;
+        s.prescriptionId = prescriptionId;
         s.timeOfDay = timeOfDay;
         s.customTime = customTime != null ? customTime : timeOfDay.defaultTime();
         s.startDate = startDate;

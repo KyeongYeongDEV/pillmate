@@ -49,6 +49,7 @@ class SendGroupDoseNotificationServiceTest {
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock UserRepository userRepository;
     @Mock NotificationSenderPort notificationSenderPort;
+    @Mock com.pillmate.notification.application.port.PrescriptionSummaryPort prescriptionSummaryPort;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
 
@@ -202,6 +203,32 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(captor.getValue().get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
     }
 
+    @Test
+    @DisplayName("처방전 단위 스케줄 — 처방전 이름 body + deep-link route /prescription/{id}")
+    void notify_prescriptionSchedule_usesPrescriptionNameAndRoute() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[abc]", PushProvider.EXPO);
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(MEMBER_ID));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+        given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
+                new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
+                        LocalDate.of(2026, 6, 21), "타이레놀", 3)));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<NotificationCommand> captor = ArgumentCaptor.forClass(NotificationCommand.class);
+        verify(notificationSenderPort).send(captor.capture());
+        NotificationCommand cmd = captor.getValue();
+        assertThat(cmd.data()).containsEntry("route", "/prescription/77");
+        assertThat(cmd.body()).contains("6월21일·타이레놀 외2종");
+    }
+
     private DoseLog takenDoseLog() {
         DoseLog doseLog = DoseLog.of(SCHEDULE_ID, ACTOR_ID, Instant.now());
         doseLog.take(ACTOR_ID);
@@ -211,6 +238,12 @@ class SendGroupDoseNotificationServiceTest {
     private Schedule scheduleOf(Long careGroupId) {
         return Schedule.of(careGroupId, ACTOR_ID, 1L,
                 com.pillmate.schedule.domain.model.TimeOfDay.MORNING,
+                LocalDate.now(), LocalDate.now().plusDays(30), ACTOR_ID);
+    }
+
+    private Schedule prescriptionScheduleOf(Long careGroupId, Long prescriptionId) {
+        return Schedule.forPrescription(careGroupId, ACTOR_ID, prescriptionId,
+                com.pillmate.schedule.domain.model.TimeOfDay.MORNING, null,
                 LocalDate.now(), LocalDate.now().plusDays(30), ACTOR_ID);
     }
 }

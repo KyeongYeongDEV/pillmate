@@ -93,6 +93,40 @@ class ScheduleTest {
     }
 
     @Test
+    @DisplayName("prescriptionId 를 지정한 of() 는 약봉투 링크를 보관한다")
+    void create_withPrescriptionId_linksPrescription() {
+        Schedule s = Schedule.of(1L, 2L, 10L, 77L, TimeOfDay.MORNING, LocalTime.of(8, 0), START, END, 1L);
+
+        assertThat(s.getPrescriptionId()).isEqualTo(77L);
+    }
+
+    @Test
+    @DisplayName("prescriptionId 미지정(기존 7/9-인자 of) 시 링크는 null 이다")
+    void create_withoutPrescriptionId_hasNullLink() {
+        Schedule s = newSchedule();
+
+        assertThat(s.getPrescriptionId()).isNull();
+    }
+
+    @Test
+    @DisplayName("forPrescription() 는 약을 가리지 않는 처방전 단위 스케줄을 만든다 — drugId null")
+    void forPrescription_createsPrescriptionUnitSchedule_withNullDrug() {
+        Schedule s = Schedule.forPrescription(1L, 2L, 77L, TimeOfDay.MORNING, LocalTime.of(8, 0), START, END, 1L);
+
+        assertThat(s.getDrugId()).isNull();
+        assertThat(s.getPrescriptionId()).isEqualTo(77L);
+        assertThat(s.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("forPrescription() customTime 미지정 시 timeOfDay 기본 시각으로 채운다 — EVENING 19:00")
+    void forPrescription_whenCustomTimeNull_fillsDefault() {
+        Schedule s = Schedule.forPrescription(1L, 2L, 77L, TimeOfDay.EVENING, null, START, END, 1L);
+
+        assertThat(s.getCustomTime()).isEqualTo(LocalTime.of(19, 0));
+    }
+
+    @Test
     @DisplayName("복약 기간 내 changeTime 호출 시 customTime 이 변경된다")
     void changeTime_withinPeriod_changesCustomTime() {
         Schedule s = newSchedule();

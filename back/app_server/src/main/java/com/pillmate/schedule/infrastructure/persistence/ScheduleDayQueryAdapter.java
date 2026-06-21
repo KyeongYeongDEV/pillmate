@@ -6,33 +6,48 @@ import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Array;
+import java.sql.Date;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
 class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
 
+    // 처방전(약봉투) 단위 조회 — drug_id 가 아닌 prescription_id 로 묶고, 약 목록은 lateral 집계.
+    // prescription_id IS NULL 인 레거시 per-drug seed 행은 INNER JOIN + 필터로 day view 에서 제외(보존).
     private static final String DAY_SQL = """
-            SELECT s.id          AS schedule_id,
-                   s.time_of_day,
+            SELECT s.id              AS schedule_id,
                    s.custom_time,
-                   d.name        AS drug_name,
-                   d.color_class AS pill_color,
-                   dl.id         AS dose_log_id,
-                   dl.status     AS dose_status
+                   s.prescription_id,
+                   p.prescribed_at,
+                   agg.drug_names,
+                   agg.pill_colors,
+                   dl.id             AS dose_log_id,
+                   dl.status         AS dose_status
             FROM schedules s
-            LEFT JOIN drugs d ON d.id = s.drug_id
+            JOIN prescriptions p ON p.id = s.prescription_id
+            LEFT JOIN LATERAL (
+                SELECT array_agg(COALESCE(d.name, pd.name_raw) ORDER BY pd.id) AS drug_names,
+                       array_agg(d.color_class ORDER BY pd.id)                 AS pill_colors
+                FROM prescribed_drugs pd
+                LEFT JOIN drugs d ON d.id = pd.drug_id
+                WHERE pd.prescription_id = s.prescription_id
+            ) agg ON TRUE
             LEFT JOIN dose_logs dl
                    ON dl.schedule_id = s.id
                   AND (dl.scheduled_at AT TIME ZONE 'Asia/Seoul')::date = :date
             WHERE s.patient_id = :pid
               AND s.active = TRUE
+              AND s.prescription_id IS NOT NULL
               AND s.start_date <= :date
               AND (s.end_date IS NULL OR s.end_date >= :date)
-            ORDER BY s.custom_time ASC, s.id ASC
+            ORDER BY s.custom_time ASC, s.prescription_id ASC, s.id ASC
             """;
 
     private final EntityManager entityManager;
@@ -51,27 +66,66 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
     }
 
     private DayScheduleProjection toProjection(Tuple row) {
-        Long scheduleId     = toLong(row.get("schedule_id"));
-        String timeOfDay    = (String) row.get("time_of_day");
+        Long scheduleId      = toLong(row.get("schedule_id"));
         LocalTime customTime = toLocalTime(row.get("custom_time"));
-        String drugName     = (String) row.get("drug_name");
-        String pillColor    = (String) row.get("pill_color");
-        Long doseLogId      = toLong(row.get("dose_log_id"));
-        String status       = (String) row.get("dose_status");
-        return new DayScheduleProjection(scheduleId, timeOfDay, customTime, drugName, pillColor, doseLogId, status);
+        Long prescriptionId  = toLong(row.get("prescription_id"));
+        LocalDate prescribedAt = toLocalDate(row.get("prescribed_at"));
+        List<String> drugNames = toStringList(row.get("drug_names"));
+        List<String> pillColors = toStringList(row.get("pill_colors"));
+        Long doseLogId       = toLong(row.get("dose_log_id"));
+        String status        = (String) row.get("dose_status");
+        return new DayScheduleProjection(
+                scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors, doseLogId, status);
     }
 
-    private Long toLong(Object v) {
-        return v == null ? null : ((Number) v).longValue();
+    private Long toLong(Object value) {
+        return value == null ? null : ((Number) value).longValue();
     }
 
-    private LocalTime toLocalTime(Object v) {
-        if (v == null) {
+    private LocalDate toLocalDate(Object value) {
+        if (value == null) {
             return null;
         }
-        if (v instanceof LocalTime localTime) {
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        return ((Date) value).toLocalDate();
+    }
+
+    private LocalTime toLocalTime(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalTime localTime) {
             return localTime;
         }
-        return ((Time) v).toLocalTime();
+        return ((Time) value).toLocalTime();
+    }
+
+    private List<String> toStringList(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        Object[] elements = unwrapArray(value);
+        if (elements == null) {
+            return List.of();
+        }
+        return Arrays.stream(elements)
+                .map(element -> element != null ? element.toString() : null)
+                .toList();
+    }
+
+    private Object[] unwrapArray(Object value) {
+        if (value instanceof Object[] array) {
+            return array;
+        }
+        if (value instanceof Array sqlArray) {
+            try {
+                return (Object[]) sqlArray.getArray();
+            } catch (SQLException e) {
+                throw new IllegalStateException("day schedule 배열 변환 실패", e);
+            }
+        }
+        return null;
     }
 }

@@ -1,5 +1,6 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.common.prescription.PrescriptionLabel;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotView;
@@ -10,12 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -30,47 +31,65 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
     @Transactional(readOnly = true)
     public DayScheduleResponse execute(LocalDate date) {
         Long patientId = UserContext.get();
-        List<DayScheduleProjection> projections = scheduleDayQueryPort.findByPatientAndDate(patientId, date);
-        List<SlotView> slots = groupByCustomTime(projections);
-        int doneCount = (int) slots.stream().filter(s -> "done".equals(s.state())).count();
+        List<DayScheduleProjection> rows = scheduleDayQueryPort.findByPatientAndDate(patientId, date);
+        List<SlotView> slots = mergeToSlots(rows);
+        int doneCount = (int) slots.stream().filter(slot -> "done".equals(slot.state())).count();
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
     }
 
-    private List<SlotView> groupByCustomTime(List<DayScheduleProjection> projections) {
-        Map<LocalTime, List<DayScheduleProjection>> grouped = new LinkedHashMap<>();
-        for (DayScheduleProjection projection : projections) {
-            grouped.computeIfAbsent(projection.customTime(), key -> new ArrayList<>()).add(projection);
+    // 동일 (customTime, prescriptionId) 그룹을 1개 SlotView로 병합 — slotId 중복 방지
+    private List<SlotView> mergeToSlots(List<DayScheduleProjection> rows) {
+        Map<String, List<DayScheduleProjection>> grouped = new LinkedHashMap<>();
+        for (DayScheduleProjection row : rows) {
+            String key = slotId(formatTime(row.customTime()), row.prescriptionId());
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
         }
-        return grouped.entrySet().stream()
-                .map(entry -> toSlotView(entry.getKey(), entry.getValue()))
-                .toList();
+        return grouped.values().stream().map(this::mergeGroup).toList();
     }
 
-    private SlotView toSlotView(LocalTime customTime, List<DayScheduleProjection> group) {
-        String time = customTime != null ? customTime.format(HH_MM) : "";
-        List<String> items = group.stream().map(DayScheduleProjection::drugName).filter(n -> n != null).toList();
-        List<Long> doseLogIds = group.stream().map(DayScheduleProjection::doseLogId).filter(id -> id != null).toList();
-        List<String> pillColors = group.stream().map(this::colorOf).toList();
+    private SlotView mergeGroup(List<DayScheduleProjection> group) {
+        DayScheduleProjection first = group.get(0);
+        String time = formatTime(first.customTime());
+        List<String> items = first.drugNames() != null ? first.drugNames() : List.of();
+        String prescriptionName = PrescriptionLabel.of(first.prescribedAt(), leadDrugName(items), items.size());
+        List<Long> doseLogIds = group.stream()
+                .map(DayScheduleProjection::doseLogId)
+                .filter(Objects::nonNull)
+                .toList();
+        Long primaryDoseLogId = doseLogIds.isEmpty() ? null : doseLogIds.get(0);
+        String state = group.stream().allMatch(r -> "TAKEN".equals(r.doseStatus())) ? "done" : "wait";
         return new SlotView(
+                slotId(time, first.prescriptionId()),
                 time,
                 time,
-                time,
-                resolveState(group),
+                state,
                 items,
-                doseLogIds.isEmpty() ? null : doseLogIds.get(0),
+                primaryDoseLogId,
                 doseLogIds,
                 time,
                 items.size(),
-                pillColors
+                resolveColors(first.pillColors()),
+                first.prescriptionId(),
+                prescriptionName
         );
     }
 
-    private String resolveState(List<DayScheduleProjection> group) {
-        boolean allTaken = group.stream().allMatch(p -> "TAKEN".equals(p.doseStatus()));
-        return allTaken ? "done" : "wait";
+    private String formatTime(java.time.LocalTime customTime) {
+        return customTime != null ? customTime.format(HH_MM) : "";
     }
 
-    private String colorOf(DayScheduleProjection projection) {
-        return projection.pillColor() != null ? projection.pillColor() : DEFAULT_COLOR;
+    private String slotId(String time, Long prescriptionId) {
+        return time + "@" + prescriptionId;
+    }
+
+    private String leadDrugName(List<String> items) {
+        return items.isEmpty() ? null : items.get(0);
+    }
+
+    private List<String> resolveColors(List<String> colors) {
+        if (colors == null) {
+            return List.of();
+        }
+        return colors.stream().map(color -> color != null ? color : DEFAULT_COLOR).toList();
     }
 }

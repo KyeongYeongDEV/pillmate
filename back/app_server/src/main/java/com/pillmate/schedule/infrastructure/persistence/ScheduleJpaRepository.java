@@ -22,4 +22,6 @@ interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
     @Query("SELECT s FROM Schedule s WHERE s.active = true AND s.startDate <= :date AND s.endDate >= :date")
     List<Schedule> findAllActiveOn(@Param("date") LocalDate date);
+
+    List<Schedule> findByPrescriptionIdAndActiveTrue(Long prescriptionId);
 }

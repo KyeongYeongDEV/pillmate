@@ -2,6 +2,7 @@ package com.pillmate.prescription.presentation.dto;
 
 import com.pillmate.prescription.application.dto.DrugItem;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
+import com.pillmate.prescription.application.dto.ScheduleSpec;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -9,17 +10,24 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public record RegisterPrescriptionRequest(
         @NotNull LocalDate prescribedAt,
         @NotBlank String imageKey,
-        @NotEmpty @Valid List<Item> items
+        @NotEmpty @Valid List<Item> items,
+        @Valid ScheduleSpecRequest schedule
 ) {
+    public RegisterPrescriptionRequest(LocalDate prescribedAt, String imageKey, List<Item> items) {
+        this(prescribedAt, imageKey, items, null);
+    }
+
     public RegisterPrescriptionCommand toCommand(Long patientId) {
         return new RegisterPrescriptionCommand(
                 patientId, prescribedAt, imageKey,
-                items.stream().map(Item::toDrugItem).toList());
+                items.stream().map(Item::toDrugItem).toList(),
+                schedule != null ? schedule.toSpec() : null);
     }
 
     public record Item(
@@ -33,6 +41,27 @@ public record RegisterPrescriptionRequest(
     ) {
         public DrugItem toDrugItem() {
             return new DrugItem(kdCode, nameRaw, doseAmount, doseUnit, frequency, durationDays, confidence);
+        }
+    }
+
+    public record ScheduleSpecRequest(
+            @NotNull Long careGroupId,
+            @Valid List<SlotRequest> slots,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        public ScheduleSpec toSpec() {
+            return new ScheduleSpec(careGroupId, toSlotInputs(), startDate, endDate);
+        }
+
+        private List<ScheduleSpec.SlotInput> toSlotInputs() {
+            return slots == null ? null : slots.stream().map(SlotRequest::toInput).toList();
+        }
+    }
+
+    public record SlotRequest(@NotBlank String timeOfDay, LocalTime customTime) {
+        public ScheduleSpec.SlotInput toInput() {
+            return new ScheduleSpec.SlotInput(timeOfDay, customTime);
         }
     }
 }

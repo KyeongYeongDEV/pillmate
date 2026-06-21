@@ -26,6 +26,8 @@ public enum ErrorCode {
     SCHEDULE_NOT_FOUND("PILL_030", "복약 스케줄을 찾을 수 없습니다."),
     SCHEDULE_CONFLICT("PILL_031", "동일 시간대에 이미 스케줄이 존재합니다."),
     SCHEDULE_PERIOD_ENDED("PILL_032", "복약 기간이 종료되어 시간을 수정할 수 없습니다."),
+    SCHEDULE_INVALID_TIME_OF_DAY("PILL_033", "유효하지 않은 복약 시간대입니다."),
+    SCHEDULE_INVALID_PERIOD("PILL_034", "복약 시작일이 종료일보다 늦을 수 없습니다."),
     INVALID_REQUEST("PILL_040", "잘못된 요청입니다."),
     DOSE_LOG_DATE_LOCKED("PILL_041", "지난 날짜의 복약 기록은 수정할 수 없습니다."),
     OCR_UPSTREAM_TIMEOUT("PILL_050", "OCR 서비스 응답 시간이 초과되었습니다."),

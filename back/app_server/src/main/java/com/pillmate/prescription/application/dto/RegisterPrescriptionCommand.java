@@ -7,5 +7,11 @@ public record RegisterPrescriptionCommand(
         Long patientId,
         LocalDate prescribedAt,
         String imageKey,
-        List<DrugItem> items
-) {}
+        List<DrugItem> items,
+        ScheduleSpec scheduleSpec
+) {
+    public RegisterPrescriptionCommand(Long patientId, LocalDate prescribedAt,
+                                       String imageKey, List<DrugItem> items) {
+        this(patientId, prescribedAt, imageKey, items, null);
+    }
+}

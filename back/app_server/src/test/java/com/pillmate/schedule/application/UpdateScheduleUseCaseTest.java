@@ -3,12 +3,16 @@ package com.pillmate.schedule.application;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.ScheduleResponse;
 import com.pillmate.schedule.application.dto.UpdateScheduleRequest;
 import com.pillmate.schedule.application.port.RescheduleDoseLogsPort;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -38,6 +43,7 @@ class UpdateScheduleUseCaseTest {
     @Mock ScheduleRepository scheduleRepository;
     @Mock RescheduleDoseLogsPort rescheduleDoseLogsPort;
     @Mock CareGroupGuard careGroupGuard;
+    @Mock PatientAccessGuard patientAccessGuard;
 
     private static final Long SCHEDULE_ID = 1L;
     private static final LocalDate START = LocalDate.of(2026, 5, 25);
@@ -48,6 +54,16 @@ class UpdateScheduleUseCaseTest {
     // KST 2026-06-02 12:00 (기간 종료 후)
     private static final Clock AFTER_PERIOD = Clock.fixed(Instant.parse("2026-06-02T03:00:00Z"), ZoneOffset.UTC);
 
+    @BeforeEach
+    void setUp() {
+        UserContext.set(2L);
+    }
+
+    @AfterEach
+    void tearDown() {
+        UserContext.clear();
+    }
+
     private Schedule schedule(LocalDate endDate) {
         Schedule s = Schedule.of(5L, 2L, 10L, TimeOfDay.MORNING, LocalTime.of(8, 0), START, endDate, 1L);
         ReflectionTestUtils.setField(s, "id", SCHEDULE_ID);
@@ -55,7 +71,7 @@ class UpdateScheduleUseCaseTest {
     }
 
     private UpdateScheduleUseCase sutWith(Clock clock) {
-        return new UpdateScheduleUseCase(scheduleRepository, rescheduleDoseLogsPort, careGroupGuard, clock);
+        return new UpdateScheduleUseCase(scheduleRepository, rescheduleDoseLogsPort, careGroupGuard, patientAccessGuard, clock);
     }
 
     @Test
@@ -142,5 +158,23 @@ class UpdateScheduleUseCaseTest {
         assertThatThrownBy(() -> sutWith(WITHIN_PERIOD).update(SCHEDULE_ID, request))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SCHEDULE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("처방전 소유자 아닌 요청자 수정 시도 → PATIENT_ACCESS_DENIED, 저장 X")
+    void update_whenNotOwner_throwsPatientAccessDenied() {
+        // given
+        UserContext.set(99L);
+        Schedule schedule = schedule(END);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        doThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
+                .when(patientAccessGuard).requireAccess(99L, 2L);
+
+        // when / then
+        assertThatThrownBy(() -> sutWith(WITHIN_PERIOD).update(SCHEDULE_ID,
+                new UpdateScheduleRequest(null, LocalTime.of(9, 30), null)))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
+        verify(scheduleRepository, never()).save(any());
     }
 }

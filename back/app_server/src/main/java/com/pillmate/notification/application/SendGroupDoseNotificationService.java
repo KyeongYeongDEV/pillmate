@@ -3,12 +3,15 @@ package com.pillmate.notification.application;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.prescription.PrescriptionLabel;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
+import com.pillmate.notification.application.port.PrescriptionSummaryPort;
 import com.pillmate.notification.domain.model.Notification;
+import com.pillmate.notification.domain.model.NotificationReferenceType;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import com.pillmate.user.domain.model.User;
@@ -33,6 +36,7 @@ public class SendGroupDoseNotificationService {
     private final NotificationPersistenceService notificationPersistenceService;
     private final UserRepository userRepository;
     private final NotificationSenderPort notificationSenderPort;
+    private final PrescriptionSummaryPort prescriptionSummaryPort;
     private final Clock clock;
 
     public void send(Long doseLogId, Long actorUserId) {
@@ -49,7 +53,7 @@ public class SendGroupDoseNotificationService {
         }
 
         List<Notification> notifications = buildNotifications(
-                doseLog, actorUserId, schedule.getCareGroupId(), recipientIds);
+                doseLog, actorUserId, schedule, recipientIds);
         if (notifications.isEmpty()) {
             return;
         }
@@ -86,8 +90,15 @@ public class SendGroupDoseNotificationService {
                 token,
                 n.getTitle(),
                 n.getBody(),
-                Map.of("route", "/group/" + n.getCareGroupId())
+                Map.of("route", resolveRoute(n))
         );
+    }
+
+    private String resolveRoute(Notification n) {
+        if (n.getReferenceType() == NotificationReferenceType.PRESCRIPTION && n.getReferenceId() != null) {
+            return "/prescription/" + n.getReferenceId();
+        }
+        return "/group/" + n.getCareGroupId();
     }
 
     private DoseLog findDoseLog(Long doseLogId) {
@@ -105,15 +116,40 @@ public class SendGroupDoseNotificationService {
     }
 
     private List<Notification> buildNotifications(DoseLog doseLog, Long actorUserId,
-                                                   Long careGroupId, List<Long> recipientIds) {
+                                                   Schedule schedule, List<Long> recipientIds) {
         boolean isMissed = doseLog.getStatus() == DoseStatus.SKIPPED
                 || doseLog.getStatus() == DoseStatus.MISSED;
+        Long prescriptionId = schedule.getPrescriptionId();
+        String prescriptionName = resolvePrescriptionName(prescriptionId);
+        Long careGroupId = schedule.getCareGroupId();
         return recipientIds.stream()
                 .filter(id -> !id.equals(actorUserId))
                 .filter(id -> !id.equals(doseLog.getPatientId()))
-                .map(recipientId -> isMissed
-                        ? Notification.doseMissed(recipientId, actorUserId, careGroupId, doseLog.getId())
-                        : Notification.doseTaken(recipientId, actorUserId, careGroupId, doseLog.getId()))
+                .map(recipientId -> buildOne(
+                        isMissed, recipientId, actorUserId, careGroupId, doseLog.getId(),
+                        prescriptionId, prescriptionName))
                 .toList();
+    }
+
+    private Notification buildOne(boolean isMissed, Long recipientId, Long actorUserId, Long careGroupId,
+                                   Long doseLogId, Long prescriptionId, String prescriptionName) {
+        if (prescriptionName == null) {
+            return isMissed
+                    ? Notification.doseMissed(recipientId, actorUserId, careGroupId, doseLogId)
+                    : Notification.doseTaken(recipientId, actorUserId, careGroupId, doseLogId);
+        }
+        return isMissed
+                ? Notification.doseMissed(recipientId, actorUserId, careGroupId, doseLogId, prescriptionId, prescriptionName)
+                : Notification.doseTaken(recipientId, actorUserId, careGroupId, doseLogId, prescriptionId, prescriptionName);
+    }
+
+    private String resolvePrescriptionName(Long prescriptionId) {
+        if (prescriptionId == null) {
+            return null;
+        }
+        return prescriptionSummaryPort.findById(prescriptionId)
+                .map(summary -> PrescriptionLabel.of(
+                        summary.prescribedAt(), summary.leadDrugName(), summary.drugCount()))
+                .orElse(null);
     }
 }

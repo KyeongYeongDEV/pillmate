@@ -38,4 +38,9 @@ class ScheduleRepositoryImpl implements ScheduleRepository {
     public List<Schedule> findAllActiveOn(LocalDate date) {
         return jpa.findAllActiveOn(date);
     }
+
+    @Override
+    public List<Schedule> findActiveByPrescriptionId(Long prescriptionId) {
+        return jpa.findByPrescriptionIdAndActiveTrue(prescriptionId);
+    }
 }

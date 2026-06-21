@@ -80,6 +80,31 @@ public class Notification {
                 NotificationType.DOSE_MISSED, "복약 알림", "그룹 멤버가 복약을 건너뛰었어요");
     }
 
+    public static Notification doseTaken(Long recipientUserId, Long actorUserId,
+                                         Long careGroupId, Long doseLogId,
+                                         Long prescriptionId, String prescriptionName) {
+        return doseForPrescription(recipientUserId, actorUserId, careGroupId, doseLogId,
+                prescriptionId, NotificationType.DOSE_TAKEN,
+                "'" + prescriptionName + "' 복약을 완료했어요");
+    }
+
+    public static Notification doseMissed(Long recipientUserId, Long actorUserId,
+                                          Long careGroupId, Long doseLogId,
+                                          Long prescriptionId, String prescriptionName) {
+        return doseForPrescription(recipientUserId, actorUserId, careGroupId, doseLogId,
+                prescriptionId, NotificationType.DOSE_MISSED,
+                "'" + prescriptionName + "' 복약을 건너뛰었어요");
+    }
+
+    private static Notification doseForPrescription(Long recipientUserId, Long actorUserId,
+                                                    Long careGroupId, Long doseLogId, Long prescriptionId,
+                                                    NotificationType type, String body) {
+        Notification n = create(recipientUserId, actorUserId, careGroupId, doseLogId, type, "복약 알림", body);
+        n.referenceId = prescriptionId;
+        n.referenceType = NotificationReferenceType.PRESCRIPTION;
+        return n;
+    }
+
     public static Notification doseCanceled(Long recipientUserId, Long actorUserId,
                                             Long careGroupId, Long doseLogId,
                                             String actorName, String timeOfDayLabel) {

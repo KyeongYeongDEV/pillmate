@@ -8,9 +8,11 @@ import com.pillmate.prescription.application.dto.InteractionWarning;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
+import com.pillmate.prescription.application.dto.ScheduleSpec;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
+import com.pillmate.prescription.application.port.SchedulingPort;
 import com.pillmate.prescription.domain.event.DdiCriticalDetected;
 import com.pillmate.prescription.domain.event.PrescriptionRegistered;
 import com.pillmate.prescription.domain.model.InteractionSeverity;
@@ -25,9 +27,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -35,11 +39,14 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RegisterPrescriptionService {
 
+    private static final int DEFAULT_MEDICATION_DAYS = 30;
+
     private final PrescriptionRepository prescriptionRepository;
     private final DrugLookupPort drugLookupPort;
     private final ObjectMapper objectMapper;
     private final CheckInteractionsUseCase checkInteractionsUseCase;
     private final ApplicationEventPublisher eventPublisher;
+    private final SchedulingPort schedulingPort;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
@@ -70,7 +77,40 @@ public class RegisterPrescriptionService {
         }
         eventPublisher.publishEvent(new PrescriptionRegistered(command.patientId(), saved.getId()));
 
-        return new RegisterPrescriptionResponse(saved.getId(), saved.getOcrStatus(), registered, unresolvedCount, warnings);
+        List<SchedulingPort.ScheduledSlot> createdSchedules = createSchedules(command, saved.getId());
+        return new RegisterPrescriptionResponse(
+                saved.getId(), saved.getOcrStatus(), registered, unresolvedCount, warnings, createdSchedules);
+    }
+
+    private List<SchedulingPort.ScheduledSlot> createSchedules(RegisterPrescriptionCommand command, Long prescriptionId) {
+        ScheduleSpec spec = command.scheduleSpec();
+        if (spec == null) {
+            return List.of();
+        }
+        LocalDate startDate = spec.startDate() != null ? spec.startDate() : command.prescribedAt();
+        LocalDate endDate = spec.endDate() != null
+                ? spec.endDate()
+                : startDate.plusDays(medicationDays(command.items()) - 1);
+        return schedulingPort.createForPrescription(new SchedulingPort.CreateScheduleCommand(
+                spec.careGroupId(), command.patientId(), prescriptionId, command.patientId(),
+                toSlotInputs(spec.slots()), startDate, endDate));
+    }
+
+    private List<SchedulingPort.SlotInput> toSlotInputs(List<ScheduleSpec.SlotInput> slots) {
+        if (slots == null) {
+            return null;
+        }
+        return slots.stream()
+                .map(slot -> new SchedulingPort.SlotInput(slot.timeOfDay(), slot.customTime()))
+                .toList();
+    }
+
+    private int medicationDays(List<DrugItem> items) {
+        return items.stream()
+                .map(DrugItem::durationDays)
+                .filter(d -> d != null && d > 0)
+                .max(Integer::compareTo)
+                .orElse(DEFAULT_MEDICATION_DAYS);
     }
 
     private void requireNonEmptyItems(List<DrugItem> items) {

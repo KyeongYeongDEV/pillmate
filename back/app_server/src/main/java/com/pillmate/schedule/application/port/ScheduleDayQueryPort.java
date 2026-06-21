@@ -10,10 +10,11 @@ public interface ScheduleDayQueryPort {
 
     record DayScheduleProjection(
             Long scheduleId,
-            String timeOfDay,
             LocalTime customTime,
-            String drugName,
-            String pillColor,
+            Long prescriptionId,
+            LocalDate prescribedAt,
+            List<String> drugNames,
+            List<String> pillColors,
             Long doseLogId,
             String doseStatus
     ) {}

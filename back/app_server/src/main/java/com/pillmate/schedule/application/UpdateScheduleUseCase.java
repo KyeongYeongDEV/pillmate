@@ -3,6 +3,8 @@ package com.pillmate.schedule.application;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.ScheduleResponse;
 import com.pillmate.schedule.application.dto.UpdateScheduleRequest;
 import com.pillmate.schedule.application.port.RescheduleDoseLogsPort;
@@ -26,12 +28,14 @@ public class UpdateScheduleUseCase {
     private final ScheduleRepository scheduleRepository;
     private final RescheduleDoseLogsPort rescheduleDoseLogsPort;
     private final CareGroupGuard careGroupGuard;
+    private final PatientAccessGuard patientAccessGuard;
     private final Clock clock;
 
     @Transactional
     public ScheduleResponse update(Long scheduleId, UpdateScheduleRequest request) {
         Schedule schedule = findOrThrow(scheduleId);
         careGroupGuard.requireAccessible(schedule.getCareGroupId());
+        patientAccessGuard.requireAccess(UserContext.get(), schedule.getPatientId());
         applyChanges(schedule, request);
         return ScheduleResponse.from(scheduleRepository.save(schedule));
     }

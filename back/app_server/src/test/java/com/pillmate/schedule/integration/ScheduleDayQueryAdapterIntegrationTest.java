@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Testcontainers
 @Transactional
-@DisplayName("ScheduleDayQueryAdapter — timezone 경계 통합 테스트")
+@DisplayName("ScheduleDayQueryAdapter — 처방전 단위 조회 + timezone 경계 통합 테스트")
 class ScheduleDayQueryAdapterIntegrationTest {
 
     @SuppressWarnings("resource")
@@ -59,8 +59,8 @@ class ScheduleDayQueryAdapterIntegrationTest {
     @Autowired EntityManager entityManager;
 
     @Test
-    @DisplayName("UTC 23:00 (= KST 익일 08:00) MORNING dose_log 은 KST 익일 조회 시 매칭")
-    void findByPatientAndDate_kstBoundary_matchesDoseLog() {
+    @DisplayName("UTC 23:00 (= KST 익일 08:00) 처방전 스케줄 dose_log 은 KST 익일 조회 시 매칭 + 약 목록 노출")
+    void findByPatientAndDate_kstBoundary_matchesPrescriptionRow() {
         // 프로덕션 동일하게 PostgreSQL 세션 timezone=UTC 강제 (JDBC 드라이버가 JVM TZ 무시)
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
 
@@ -68,19 +68,43 @@ class ScheduleDayQueryAdapterIntegrationTest {
         Long patientId = insertUser("tz-patient");
         Long careGroupId = insertCareGroup();
         Long drugId = insertDrug("타이레놀500mg");
-        Long scheduleId = insertSchedule(careGroupId, patientId, drugId, "MORNING");
+        Long prescriptionId = insertPrescription(careGroupId, patientId, "2026-05-30");
+        insertPrescribedDrug(prescriptionId, drugId);
+        Long scheduleId = insertPrescriptionSchedule(careGroupId, patientId, prescriptionId, "MORNING");
         // UTC 2026-05-30 23:00 = KST 2026-05-31 08:00
-        Long doseLogId = insertDoseLog(scheduleId, patientId,
-                "2026-05-30 23:00:00+00", "PENDING");
+        Long doseLogId = insertDoseLog(scheduleId, patientId, "2026-05-30 23:00:00+00", "PENDING");
 
         // when — KST 기준 익일(2026-05-31)로 조회
         List<DayScheduleProjection> result =
                 scheduleDayQueryPort.findByPatientAndDate(patientId, LocalDate.of(2026, 5, 31));
 
-        // then — doseLogId 매칭되어야 함 (현재 SQL 은 UTC date 비교라 null 반환 = RED)
+        // then — doseLogId 매칭 + 처방전/약 정보 노출
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).doseLogId()).isEqualTo(doseLogId);
-        assertThat(result.get(0).doseStatus()).isEqualTo("PENDING");
+        DayScheduleProjection row = result.get(0);
+        assertThat(row.doseLogId()).isEqualTo(doseLogId);
+        assertThat(row.doseStatus()).isEqualTo("PENDING");
+        assertThat(row.prescriptionId()).isEqualTo(prescriptionId);
+        assertThat(row.prescribedAt()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(row.drugNames()).containsExactly("타이레놀500mg");
+    }
+
+    @Test
+    @DisplayName("prescription_id NULL 레거시 per-drug seed 행은 day view 에서 제외(보존)")
+    void findByPatientAndDate_excludesLegacyPerDrugRows() {
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+
+        // given
+        Long patientId = insertUser("legacy-patient");
+        Long careGroupId = insertCareGroup();
+        Long drugId = insertDrug("게보린");
+        insertLegacyDrugSchedule(careGroupId, patientId, drugId, "MORNING");
+
+        // when
+        List<DayScheduleProjection> result =
+                scheduleDayQueryPort.findByPatientAndDate(patientId, LocalDate.of(2026, 6, 1));
+
+        // then — 레거시 행은 조회되지 않음
+        assertThat(result).isEmpty();
     }
 
     private Long insertDrug(String name) {
@@ -107,16 +131,47 @@ class ScheduleDayQueryAdapterIntegrationTest {
                 .getSingleResult()).longValue();
     }
 
-    private Long insertSchedule(Long careGroupId, Long patientId, Long drugId, String timeOfDay) {
+    private Long insertPrescription(Long careGroupId, Long patientId, String prescribedAt) {
         return ((Number) entityManager.createNativeQuery(
+                "INSERT INTO prescriptions (care_group_id, patient_id, prescribed_at, ocr_status, created_at) " +
+                "VALUES (:g, :p, CAST(:pa AS date), 'DONE', NOW()) RETURNING id")
+                .setParameter("g", careGroupId)
+                .setParameter("p", patientId)
+                .setParameter("pa", prescribedAt)
+                .getSingleResult()).longValue();
+    }
+
+    private void insertPrescribedDrug(Long prescriptionId, Long drugId) {
+        entityManager.createNativeQuery(
+                "INSERT INTO prescribed_drugs (prescription_id, drug_id, name_raw, frequency, created_at) " +
+                "VALUES (:pid, :did, '원문약명', 3, NOW())")
+                .setParameter("pid", prescriptionId)
+                .setParameter("did", drugId)
+                .executeUpdate();
+    }
+
+    private Long insertPrescriptionSchedule(Long careGroupId, Long patientId, Long prescriptionId, String timeOfDay) {
+        return ((Number) entityManager.createNativeQuery(
+                "INSERT INTO schedules (care_group_id, patient_id, prescription_id, time_of_day, custom_time, " +
+                "start_date, end_date, active, created_by, created_at) " +
+                "VALUES (:g, :p, :pr, :t, '08:00', '2026-01-01', '2026-12-31', true, :p, NOW()) RETURNING id")
+                .setParameter("g", careGroupId)
+                .setParameter("p", patientId)
+                .setParameter("pr", prescriptionId)
+                .setParameter("t", timeOfDay)
+                .getSingleResult()).longValue();
+    }
+
+    private void insertLegacyDrugSchedule(Long careGroupId, Long patientId, Long drugId, String timeOfDay) {
+        entityManager.createNativeQuery(
                 "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, custom_time, " +
                 "start_date, end_date, active, created_by, created_at) " +
-                "VALUES (:g, :p, :d, :t, '08:00', '2026-01-01', '2026-12-31', true, :p, NOW()) RETURNING id")
+                "VALUES (:g, :p, :d, :t, '08:00', '2026-01-01', '2026-12-31', true, :p, NOW())")
                 .setParameter("g", careGroupId)
                 .setParameter("p", patientId)
                 .setParameter("d", drugId)
                 .setParameter("t", timeOfDay)
-                .getSingleResult()).longValue();
+                .executeUpdate();
     }
 
     private Long insertDoseLog(Long scheduleId, Long patientId, String scheduledAt, String status) {

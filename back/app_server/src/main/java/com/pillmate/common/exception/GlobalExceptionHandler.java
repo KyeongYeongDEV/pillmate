@@ -51,6 +51,7 @@ public class GlobalExceptionHandler {
                  SCHEDULE_PERIOD_ENDED, DOSE_LOG_DATE_LOCKED -> HttpStatus.CONFLICT;
             case DRUG_SEARCH_EMPTY_QUERY, INVALID_REQUEST,
                  PRESCRIPTION_DRUG_NOT_MATCHED, PRESCRIPTION_ITEMS_EMPTY,
+                 SCHEDULE_INVALID_TIME_OF_DAY, SCHEDULE_INVALID_PERIOD,
                  OCR_REQUEST_INVALID -> HttpStatus.BAD_REQUEST;
             case OCR_UPSTREAM_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
             case OCR_UPSTREAM_FAILED -> HttpStatus.BAD_GATEWAY;

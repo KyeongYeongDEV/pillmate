@@ -6,6 +6,7 @@ import com.pillmate.prescription.application.dto.RegisterPrescriptionCommand;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
 import com.pillmate.prescription.application.port.DrugLookupPort;
+import com.pillmate.prescription.application.port.SchedulingPort;
 import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
@@ -41,6 +42,7 @@ class RegisterPrescriptionUseCaseTest {
     @Mock ObjectMapper objectMapper;
     @Mock CheckInteractionsUseCase checkInteractionsUseCase;
     @Mock ApplicationEventPublisher eventPublisher;
+    @Mock SchedulingPort schedulingPort;
     @InjectMocks RegisterPrescriptionService sut;
 
     @BeforeEach
