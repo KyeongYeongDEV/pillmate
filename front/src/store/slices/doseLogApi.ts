@@ -16,14 +16,18 @@ export const doseLogApiSlice = createApi({
         body,
       }),
       invalidatesTags: ['Schedule', 'DoseLog', 'Activity'],
-      async onQueryStarted({ doseLogId, action }, { dispatch, queryFulfilled }) {
-        dispatch(action === 'TAKE' ? markDone({ doseLogId }) : markWait({ doseLogId }));
+      async onQueryStarted({ doseLogId, action, skipOptimistic }, { dispatch, queryFulfilled }) {
+        if (!skipOptimistic) {
+          dispatch(action === 'TAKE' ? markDone({ doseLogId }) : markWait({ doseLogId }));
+        }
         try {
           await queryFulfilled;
           dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
         } catch {
           // Revert on network failure; markDoneNoLock avoids restarting the 60s timer
-          dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId }));
+          if (!skipOptimistic) {
+            dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId }));
+          }
         }
       },
     }),

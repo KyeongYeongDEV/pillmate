@@ -9,15 +9,34 @@ interface Props {
   slot: MedSlot;
   isFirst?: boolean;
   onPress?: (slot: MedSlot) => void;
+  onPrescriptionPress?: (slot: MedSlot) => void;
   readOnly?: boolean;
 }
 
-function MedTimeRow({ slot, isFirst, onPress, readOnly }: Props) {
+function MedTimeRow({ slot, isFirst, onPress, onPrescriptionPress, readOnly }: Props) {
   const done = slot.state === 'done';
   const now  = !readOnly && slot.state === 'now';
-  const handlePress = useCallback(() => onPress?.(slot), [onPress, slot]);
+  const handleCheckPress  = useCallback(() => onPress?.(slot), [onPress, slot]);
+  const handlePrescriptionPress = useCallback(
+    () => onPrescriptionPress?.(slot),
+    [onPrescriptionPress, slot],
+  );
+  const canNavigate = !!slot.prescriptionId && !!onPrescriptionPress;
 
-  const rowContent = (
+  const circleEl = (
+    <View
+      testID="dose-circle"
+      style={[
+        styles.circle,
+        done && (readOnly ? styles.circleDoneReadOnly : styles.circleDone),
+        now && styles.circleNow,
+      ]}
+    >
+      {done && <Icon name="check" size={scale(18)} color="#fff" />}
+    </View>
+  );
+
+  return (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
       <View style={styles.timeCol}>
         <Text style={[styles.time, done && styles.muted]}>{slot.time}</Text>
@@ -25,36 +44,47 @@ function MedTimeRow({ slot, isFirst, onPress, readOnly }: Props) {
       </View>
       <View style={styles.divider} />
       <View style={styles.itemsCol}>
-        {slot.items.map((it, i) => (
-          <Text key={i} style={[styles.item, done && styles.muted, done && styles.strike]}>{it}</Text>
-        ))}
+        {slot.prescriptionName ? (
+          canNavigate ? (
+            <Pressable onPress={handlePrescriptionPress} accessibilityRole="link">
+              <Text
+                style={[styles.item, done && styles.muted, done && styles.strike]}
+                numberOfLines={1}
+              >
+                {slot.prescriptionName}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={[styles.item, done && styles.muted, done && styles.strike]}>
+              {slot.prescriptionName}
+            </Text>
+          )
+        ) : (
+          slot.items.map((it, i) => (
+            <Text key={i} style={[styles.item, done && styles.muted, done && styles.strike]}>{it}</Text>
+          ))
+        )}
         <Text style={styles.source}>출처: {MFDS_SOURCE}</Text>
       </View>
-      <View
-        testID="dose-circle"
-        style={[
-          styles.circle,
-          done && (readOnly ? styles.circleDoneReadOnly : styles.circleDone),
-          now && styles.circleNow,
-        ]}
-      >
-        {done && <Icon name="check" size={scale(18)} color="#fff" />}
-      </View>
+      {onPress ? (
+        <Pressable
+          testID="dose-circle"
+          style={[
+            styles.circle,
+            done && (readOnly ? styles.circleDoneReadOnly : styles.circleDone),
+            now && styles.circleNow,
+          ]}
+          onPress={handleCheckPress}
+          accessibilityLabel={`${slot.label} ${slot.time} 복약 체크`}
+          accessibilityRole="button"
+        >
+          {done && <Icon name="check" size={scale(18)} color="#fff" />}
+        </Pressable>
+      ) : (
+        circleEl
+      )}
     </View>
   );
-
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={handlePress}
-        accessibilityRole="button"
-        accessibilityLabel={`${slot.label} ${slot.time} 복용 체크`}
-      >
-        {rowContent}
-      </Pressable>
-    );
-  }
-  return rowContent;
 }
 
 export default React.memo(MedTimeRow);

@@ -19,12 +19,12 @@ import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import {
   medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, STREAK_DISPLAY_MIN,
+  deriveOverlayState,
 } from '@/lib/scheduleUtils';
 import { formatFullDate, formatMonthDay, getKstToday } from '@/utils/calendarUtils';
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
 import NotificationBell from '@/components/home/NotificationBell';
-import type { MedState } from '@/types/schedule';
 
 export default function HomeScreen() {
   const today = getKstToday();
@@ -47,15 +47,25 @@ export default function HomeScreen() {
 
   const slots = useMemo(
     () => rawSlots.map(s => {
-      const entry = s.doseLogId != null ? doseStateMap[s.doseLogId] : undefined;
-      return medSlotToTimeSlot({ ...s, state: (entry?.state ?? s.state) as MedState });
+      const ids = s.doseLogIds?.length ? s.doseLogIds : s.doseLogId != null ? [s.doseLogId] : [];
+      const state = deriveOverlayState(ids, s.state, doseStateMap);
+      return medSlotToTimeSlot({ ...s, state });
     }),
     [rawSlots, doseStateMap],
   );
 
   const handleSlotPress = useMemo(
-    () => (slot: TimeSlot) => pressSlot(slot.doseLogId, slot.state),
+    () => (slot: TimeSlot) => pressSlot(slot.doseLogIds, slot.state),
     [pressSlot],
+  );
+
+  const handlePrescriptionPress = useMemo(
+    () => (slot: TimeSlot) => {
+      if (slot.prescriptionId) {
+        router.push({ pathname: '/prescription/[id]', params: { id: String(slot.prescriptionId) } } as any);
+      }
+    },
+    [],
   );
 
   const now = new Date();
@@ -105,7 +115,11 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
             <Text style={styles.sectionDate}>{formatMonthDay(today)}</Text>
           </View>
-          <TimeSlotCards slots={slots} onSlotPress={handleSlotPress} />
+          <TimeSlotCards
+            slots={slots}
+            onSlotPress={handleSlotPress}
+            onPrescriptionPress={handlePrescriptionPress}
+          />
         </View>
 
         {/* AI 인사이트 */}

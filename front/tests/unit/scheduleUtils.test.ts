@@ -1,6 +1,7 @@
-import { medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses } from '@/lib/scheduleUtils';
+import { medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, deriveOverlayState } from '@/lib/scheduleUtils';
 import type { HeadlineSlot } from '@/lib/scheduleUtils';
 import { MOCK_SCHEDULE } from '@/store/slices/scheduleApi';
+import type { DoseOverrideState } from '@/store/slices/doseStateSlice';
 
 describe('medSlotToTimeSlot', () => {
   it('MOCK_SCHEDULE.slots[0] → TimeSlot 변환 (drugCount, pillColors)', () => {
@@ -93,6 +94,51 @@ describe('buildDoseHeadline', () => {
   it('모두 완료 → 복약 끝 (스트릭은 줄3 전담 — 병합 없음)', () => {
     const slots = [slot('08:00', '아침', 'done'), slot('19:00', '저녁', 'done')];
     expect(buildDoseHeadline(slots, at(20))).toBe('오늘 복약 끝!');
+  });
+});
+
+describe('deriveOverlayState', () => {
+  const done = (lockedAt = 100): DoseOverrideState[number] => ({ state: 'done', lockedAt });
+  const wait = (): DoseOverrideState[number] => ({ state: 'wait' });
+
+  it('ids 빈 배열 → apiState 그대로 반환', () => {
+    expect(deriveOverlayState([], 'wait', {})).toBe('wait');
+    expect(deriveOverlayState([], 'now', {})).toBe('now');
+    expect(deriveOverlayState([], 'done', {})).toBe('done');
+  });
+
+  it('overlay 없음 → apiState 그대로', () => {
+    expect(deriveOverlayState([1, 2], 'now', {})).toBe('now');
+  });
+
+  it('모든 id done in overlay → done', () => {
+    const map: DoseOverrideState = { 1: done(), 2: done() };
+    expect(deriveOverlayState([1, 2], 'wait', map)).toBe('done');
+  });
+
+  it('단일 id done in overlay → done', () => {
+    const map: DoseOverrideState = { 5: done() };
+    expect(deriveOverlayState([5], 'wait', map)).toBe('done');
+  });
+
+  it('일부 id done, 일부 wait, apiState=wait → wait', () => {
+    const map: DoseOverrideState = { 1: done(), 2: wait() };
+    expect(deriveOverlayState([1, 2], 'wait', map)).toBe('wait');
+  });
+
+  it('일부 id done, 일부 wait, apiState=now → now (시간 기반 상태 보존)', () => {
+    const map: DoseOverrideState = { 1: done(), 2: wait() };
+    expect(deriveOverlayState([1, 2], 'now', map)).toBe('now');
+  });
+
+  it('apiState=done + 일부 wait 오버라이드 → wait (취소 실패 반영)', () => {
+    const map: DoseOverrideState = { 1: done(), 2: wait() };
+    expect(deriveOverlayState([1, 2], 'done', map)).toBe('wait');
+  });
+
+  it('일부 id만 overlay 있음 (partial optimistic) → apiState 유지', () => {
+    const map: DoseOverrideState = { 1: done() };
+    expect(deriveOverlayState([1, 2], 'wait', map)).toBe('wait');
   });
 });
 

@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import type { ScheduleDay } from '@/types/schedule';
+import type { ScheduleDay, SlotEditView } from '@/types/schedule';
 import type { AdherenceLevel } from '@/utils/calendarUtils';
 
 export interface MonthAdherenceDay {
@@ -56,7 +56,30 @@ export const scheduleApiSlice = createApi({
         toAdherenceMap(response?.data),
       providesTags: ['MonthSchedule'],
     }),
+
+    getPrescriptionSlots: build.query<SlotEditView[], number>({
+      query: (prescriptionId) => `/schedules/prescriptions/${prescriptionId}/slots`,
+      transformResponse: (response: ApiEnvelope<SlotEditView[]>) => response?.data ?? [],
+      providesTags: (_r, _e, prescriptionId) => [{ type: 'Schedule', id: `presc-${prescriptionId}` }],
+    }),
+
+    updateScheduleTime: build.mutation<void, { scheduleId: number; customTime: string }>({
+      query: ({ scheduleId, customTime }) => ({
+        url: `/schedules/${scheduleId}`,
+        method: 'PATCH',
+        body: { customTime },
+      }),
+      invalidatesTags: (_r, _e, { scheduleId }) => [
+        'Schedule',
+        { type: 'Schedule', id: `presc-${scheduleId}` },
+      ],
+    }),
   }),
 });
 
-export const { useGetDayScheduleQuery, useGetMonthAdherenceQuery } = scheduleApiSlice;
+export const {
+  useGetDayScheduleQuery,
+  useGetMonthAdherenceQuery,
+  useGetPrescriptionSlotsQuery,
+  useUpdateScheduleTimeMutation,
+} = scheduleApiSlice;

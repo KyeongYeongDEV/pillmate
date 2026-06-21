@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import CalendarGrid from '@/components/schedule/CalendarGrid';
 import MonthPicker from '@/components/schedule/MonthPicker';
@@ -13,8 +14,9 @@ import {
   prevMonth, nextMonth, toMonthString, formatDayLabel, deriveAdherence,
   getKstToday, isEditableDate,
 } from '@/utils/calendarUtils';
+import { deriveOverlayState } from '@/lib/scheduleUtils';
 import type { RootState } from '@/store';
-import type { MedSlot, MedState } from '@/types/schedule';
+import type { MedSlot } from '@/types/schedule';
 
 const LEGEND: [string, string][] = [
   ['전체 복용', colors.statusPositive],
@@ -45,8 +47,9 @@ export default function ScheduleScreen() {
   const rawSlots: MedSlot[] = scheduleDay?.slots ?? [];
   const displaySlots = useMemo(
     () => rawSlots.map(s => {
-      const entry = s.doseLogId != null ? doseStateMap[s.doseLogId] : undefined;
-      return { ...s, state: (entry?.state ?? s.state) as MedState };
+      const ids = s.doseLogIds?.length ? s.doseLogIds : s.doseLogId != null ? [s.doseLogId] : [];
+      const state = deriveOverlayState(ids, s.state, doseStateMap);
+      return { ...s, state };
     }),
     [rawSlots, doseStateMap],
   );
@@ -64,9 +67,21 @@ export default function ScheduleScreen() {
         alertDateLocked(selectedDate, getKstToday());
         return;
       }
-      pressSlot(slot.doseLogId, slot.state);
+      const ids = slot.doseLogIds?.length
+        ? slot.doseLogIds
+        : slot.doseLogId != null ? [slot.doseLogId] : [];
+      pressSlot(ids, slot.state);
     },
     [pressSlot, selectedDate],
+  );
+
+  const handlePrescriptionPress = useMemo(
+    () => (slot: MedSlot) => {
+      if (slot.prescriptionId) {
+        router.push({ pathname: '/prescription/[id]', params: { id: String(slot.prescriptionId) } } as any);
+      }
+    },
+    [],
   );
 
   const handlePrevMonth = useCallback(() => {
@@ -168,6 +183,7 @@ export default function ScheduleScreen() {
                 slot={slot}
                 isFirst={i === 0}
                 onPress={handleSlotPress}
+                onPrescriptionPress={handlePrescriptionPress}
                 readOnly={!editable}
               />
             ))}

@@ -17,22 +17,22 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 describe('PrescriptionFab', () => {
-  it('처방전 등록 버튼 렌더', () => {
+  it('처방전 목록 버튼 렌더', () => {
     render(<PrescriptionFab />);
-    expect(screen.getByLabelText('처방전 등록')).toBeTruthy();
+    expect(screen.getByLabelText('처방전 목록')).toBeTruthy();
   });
 
-  it('탭 → /prescription 으로 이동', async () => {
+  it('탭 → /prescriptions(목록) 으로 이동', async () => {
     const { router } = require('expo-router');
     render(<PrescriptionFab />);
-    fireEvent.press(screen.getByLabelText('처방전 등록'));
+    fireEvent.press(screen.getByLabelText('처방전 목록'));
     await Promise.resolve();
     await Promise.resolve();
-    expect(router.push).toHaveBeenCalledWith('/prescription');
+    expect(router.push).toHaveBeenCalledWith('/prescriptions');
   });
 
   it('탭에 무관하게 항상 렌더 (모든 탭 중앙 유지)', () => {
     render(<PrescriptionFab />);
-    expect(screen.getByLabelText('처방전 등록')).toBeTruthy();
+    expect(screen.getByLabelText('처방전 목록')).toBeTruthy();
   });
 });

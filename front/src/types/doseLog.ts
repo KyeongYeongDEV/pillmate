@@ -4,6 +4,7 @@ export interface CheckDoseInput {
   doseLogId: number;
   action: 'TAKE' | 'SKIP' | 'CANCEL';
   skipReason?: string;
+  skipOptimistic?: boolean;
 }
 
 export interface DoseLogResponse {

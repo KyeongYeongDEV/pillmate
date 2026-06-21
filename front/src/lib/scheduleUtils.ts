@@ -1,5 +1,6 @@
-import type { MedSlot } from '@/types/schedule';
+import type { MedSlot, MedState } from '@/types/schedule';
 import type { TimeSlot } from '@/components/home/TimeSlotCards';
+import type { DoseOverrideState } from '@/store/slices/doseStateSlice';
 
 const HEADLINE_NO_DOSE = '오늘은 드실 약이 없어요';
 const HEADLINE_ALL_DONE = '오늘 복약 끝!';
@@ -49,7 +50,23 @@ function formatSlotTime(time: string): string {
   return m === 0 ? `${h}시` : `${h}시 ${m}분`;
 }
 
+export function deriveOverlayState(
+  ids: number[],
+  apiState: MedState,
+  doseStateMap: DoseOverrideState,
+): MedState {
+  if (ids.length === 0) return apiState;
+  // Slot is done ONLY when ALL ids are marked done in the overlay
+  if (ids.every(id => doseStateMap[id]?.state === 'done')) return 'done';
+  // If the API says done but an explicit wait override exists, trust the revert
+  if (apiState === 'done' && ids.some(id => doseStateMap[id]?.state === 'wait')) return 'wait';
+  return apiState;
+}
+
 export function medSlotToTimeSlot(slot: MedSlot): TimeSlot {
+  const ids = slot.doseLogIds?.length
+    ? slot.doseLogIds
+    : slot.doseLogId != null ? [slot.doseLogId] : [];
   return {
     id: slot.id,
     label: slot.label,
@@ -58,5 +75,8 @@ export function medSlotToTimeSlot(slot: MedSlot): TimeSlot {
     drugCount: slot.drugCount ?? slot.items.length,
     pillColors: slot.pillColors ?? [],
     doseLogId: slot.doseLogId,
+    doseLogIds: ids,
+    prescriptionId: slot.prescriptionId,
+    prescriptionName: slot.prescriptionName,
   };
 }
