@@ -33,7 +33,7 @@ function PrescriptionFab() {
       >
         {({ pressed }) => (
           <View style={[styles.fab, pressed && styles.fabPressed]}>
-            <Ionicons name="add" size={scale(30)} color="#fff" />
+            <Ionicons name="document-text" size={scale(26)} color="#fff" />
           </View>
         )}
       </Pressable>
