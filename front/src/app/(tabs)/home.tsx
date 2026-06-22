@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { skipToken } from '@reduxjs/toolkit/query';
 import { colors, typography, space, radius, shadows, scale } from '@/styles/tokens';
 import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
@@ -13,8 +14,7 @@ import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
-import ActivityFeedItem from '@/components/home/ActivityFeedItem';
-import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity';
+import FamilyActivityFeed from '@/components/home/FamilyActivityFeed';
 import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import {
@@ -38,7 +38,7 @@ export default function HomeScreen() {
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(
-      pinnedGroupId != null ? { groupId: pinnedGroupId } : undefined,
+      pinnedGroupId != null ? { groupId: pinnedGroupId } : skipToken,
       { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
     );
 
@@ -66,6 +66,17 @@ export default function HomeScreen() {
       }
     },
     [],
+  );
+
+  const handleViewAllActivity = useMemo(
+    () => () => {
+      if (pinnedGroupId != null) {
+        router.push(`/group/${pinnedGroupId}/activity` as any);
+      } else {
+        router.push('/(tabs)/group' as any);
+      }
+    },
+    [pinnedGroupId],
   );
 
   const now = new Date();
@@ -136,14 +147,14 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* 가족 활동 */}
+        {/* 고정 그룹 알림 */}
         <View style={styles.section}>
           <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>가족 활동</Text>
+            <Text style={styles.sectionTitle}>고정 그룹 알림</Text>
             <Pressable
               accessibilityLabel="전체보기"
               accessibilityRole="button"
-              onPress={() => { /* Phase 2: /activity */ }}
+              onPress={handleViewAllActivity}
             >
               <Text style={styles.viewAll}>전체보기</Text>
             </Pressable>
@@ -153,6 +164,7 @@ export default function HomeScreen() {
             feed={feed}
             isLoading={feedLoading}
             isError={feedError}
+            hasPinnedGroup={pinnedGroupId != null}
           />
         </View>
 
@@ -164,47 +176,6 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-interface FamilyActivityFeedProps {
-  feed: ActivityFeedItemType[];
-  isLoading: boolean;
-  isError: boolean;
-}
-
-function FamilyActivityFeed({ feed = [], isLoading, isError }: FamilyActivityFeedProps) {
-  if (isLoading) {
-    return (
-      <View style={styles.feedPlaceholder} testID="activity-loading">
-        <ActivityIndicator size="small" color={colors.primaryBase} />
-        <Text style={styles.feedPlaceholderTxt}>활동 불러오는 중…</Text>
-      </View>
-    );
-  }
-  if (isError) {
-    return (
-      <View style={styles.feedPlaceholder} testID="activity-error">
-        <Text style={styles.feedPlaceholderTxt}>활동을 불러올 수 없어요</Text>
-      </View>
-    );
-  }
-  if (feed.length === 0) {
-    return (
-      <View style={styles.feedPlaceholder} testID="activity-empty">
-        <Text style={styles.feedPlaceholderTxt}>아직 가족 활동이 없어요</Text>
-      </View>
-    );
-  }
-  return (
-    <View style={styles.feedCard} testID="activity-data">
-      {feed.map((item, idx) => (
-        <React.Fragment key={`${item.actorNickname}-${item.occurredAt}`}>
-          <ActivityFeedItem item={item} />
-          {idx < feed.length - 1 && <View style={styles.separator} />}
-        </React.Fragment>
-      ))}
-    </View>
   );
 }
 
@@ -234,17 +205,6 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.headline1, fontWeight: '700', color: colors.labelNormal },
   sectionDate: { ...typography.label2, fontWeight: '600', color: colors.labelAlternative },
   viewAll: { ...typography.label2, fontWeight: '600', color: colors.primaryNormal },
-  feedCard: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
-    borderWidth: 1, borderColor: colors.line, overflow: 'hidden', ...shadows.small,
-  },
-  feedPlaceholder: {
-    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
-    borderWidth: 1, borderColor: colors.line, padding: space.s20,
-    alignItems: 'center', gap: space.s8,
-  },
-  feedPlaceholderTxt: { ...typography.body2r, color: colors.labelAlternative },
-  separator: { height: scale(1), backgroundColor: colors.line, marginLeft: 64 },
   safetyFooter: {
     padding: space.s12, borderRadius: radius.r12, backgroundColor: '#F0F7FF',
     borderWidth: 1, borderColor: '#C8DDFF',

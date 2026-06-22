@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AvatarStack from '@/components/common/AvatarStack';
 import Avatar from '@/components/common/Avatar';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
@@ -45,9 +46,23 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
               <Text style={styles.privateBadgeText}>비공개</Text>
             </View>
           )}
-          {group.lastActivity && (
-            <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
-          )}
+          <View style={styles.row1Right}>
+            {group.lastActivity && (
+              <Text style={styles.time}>{formatRelativeTime(group.lastActivity.occurredAt)}</Text>
+            )}
+            <Pressable
+              onPress={() => onPinToggle(group.groupId, isPinned ?? false)}
+              accessibilityLabel={isPinned ? '그룹 핀 해제' : '그룹 핀 고정'}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons
+                name={isPinned ? 'pin' : 'pin-outline'}
+                size={scale(16)}
+                color={isPinned ? colors.primaryBase : colors.labelAlternative}
+              />
+            </Pressable>
+          </View>
         </View>
 
         <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
@@ -110,6 +125,9 @@ const styles = StyleSheet.create({
   avatarCol: { width: scale(52), height: scale(44), flexShrink: 0 },
   contentCol: { flex: 1, minWidth: 0 },
   row1: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
+  row1Right: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s6, marginLeft: 'auto',
+  },
   name: {
     fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.18,
     flexShrink: 1,
@@ -119,7 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.r4, backgroundColor: colors.fillNormal,
   },
   privateBadgeText: { fontSize: scale(10), fontWeight: '700', color: colors.labelAlternative },
-  time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500', marginLeft: 'auto' },
+  time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500' },
   desc: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 2 },
   row3: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s8 },
   chip: {

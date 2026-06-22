@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import GroupCard from '@/components/group/GroupCard';
 import type { MyGroupSummary } from '@/types/caregroup';
 
-jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null }));
 jest.mock('@/components/common/AvatarStack', () => () => null);
 
 const GROUP: MyGroupSummary = {
@@ -44,5 +44,24 @@ describe('GroupCard', () => {
   it('lastActivity null — summary 미렌더', () => {
     render(<GroupCard group={{ ...GROUP, lastActivity: null }} onPress={jest.fn()} onPinToggle={jest.fn()} />);
     expect(screen.queryByText('아침약 복용')).toBeNull();
+  });
+
+  it('핀 버튼 미고정 상태 — 고정 레이블 렌더', () => {
+    render(<GroupCard group={GROUP} onPress={jest.fn()} onPinToggle={jest.fn()} isPinned={false} />);
+    expect(screen.getByLabelText('그룹 핀 고정')).toBeTruthy();
+  });
+
+  it('isPinned=true — 핀 해제 레이블 렌더', () => {
+    render(<GroupCard group={{ ...GROUP, pinned: true }} onPress={jest.fn()} onPinToggle={jest.fn()} isPinned />);
+    expect(screen.getByLabelText('그룹 핀 해제')).toBeTruthy();
+  });
+
+  it('핀 버튼 → onPinToggle 호출, onPress 미호출', () => {
+    const onPress = jest.fn();
+    const onPinToggle = jest.fn();
+    render(<GroupCard group={GROUP} onPress={onPress} onPinToggle={onPinToggle} isPinned={false} />);
+    fireEvent.press(screen.getByLabelText('그룹 핀 고정'));
+    expect(onPinToggle).toHaveBeenCalledWith(1, false);
+    expect(onPress).not.toHaveBeenCalled();
   });
 });

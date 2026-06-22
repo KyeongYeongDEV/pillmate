@@ -20,10 +20,11 @@ export default function GroupScreen() {
   const [unpinGroup] = useUnpinGroupMutation();
 
   const filteredGroups = useMemo(() => applyGroupFilter(groups, filter), [groups, filter]);
+  // BE PinGroupUseCase 단일 핀 — 새 핀 시 기존 해제
   const pinnedGroup = useMemo(() => groups.find(g => g.pinned) ?? null, [groups]);
   const unpinnedGroups = useMemo(
-    () => filteredGroups.filter(g => !g.pinned),
-    [filteredGroups],
+    () => filteredGroups.filter(g => g.groupId !== pinnedGroup?.groupId),
+    [filteredGroups, pinnedGroup],
   );
   const totalUnread = useMemo(
     () => groups.reduce((sum, g) => sum + g.unreadCount, 0),
@@ -75,6 +76,18 @@ export default function GroupScreen() {
       <FilterChips selected={filter} onSelect={setFilter} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* 새 그룹 CTA */}
+        <Pressable
+          style={styles.ctaCard}
+          onPress={handleCreate}
+          accessibilityLabel="새 그룹 만들기"
+          accessibilityRole="button"
+        >
+          <Feather name="plus-circle" size={scale(22)} color={colors.primaryBase} />
+          <Text style={styles.ctaText}>새 그룹 만들기</Text>
+          <Feather name="chevron-right" size={scale(18)} color={colors.labelAlternative} />
+        </Pressable>
+
         {isLoading && <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />}
         {isError && <ErrorPlaceholder />}
 
@@ -106,18 +119,6 @@ export default function GroupScreen() {
             <Text style={styles.emptyText}>표시할 그룹이 없어요</Text>
           )}
         </View>
-
-        {/* 새 그룹 CTA */}
-        <Pressable
-          style={styles.ctaCard}
-          onPress={handleCreate}
-          accessibilityLabel="새 그룹 만들기"
-          accessibilityRole="button"
-        >
-          <Feather name="plus-circle" size={scale(22)} color={colors.primaryBase} />
-          <Text style={styles.ctaText}>새 그룹 만들기</Text>
-          <Feather name="chevron-right" size={scale(18)} color={colors.labelAlternative} />
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
