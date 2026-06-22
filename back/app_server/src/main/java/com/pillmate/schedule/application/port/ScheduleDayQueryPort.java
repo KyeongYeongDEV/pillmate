@@ -16,6 +16,7 @@ public interface ScheduleDayQueryPort {
             List<String> drugNames,
             List<String> pillColors,
             Long doseLogId,
-            String doseStatus
+            String doseStatus,
+            String singleDrugName    // prescription_id IS NULL 레거시 행의 drugs.name fallback
     ) {}
 }

@@ -37,11 +37,11 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
     }
 
-    // 동일 (customTime, prescriptionId) 그룹을 1개 SlotView로 병합 — slotId 중복 방지
+    // 처방전 행: (customTime, prescriptionId) 그룹. 레거시 행: (customTime, scheduleId) 단독 슬롯.
     private List<SlotView> mergeToSlots(List<DayScheduleProjection> rows) {
         Map<String, List<DayScheduleProjection>> grouped = new LinkedHashMap<>();
         for (DayScheduleProjection row : rows) {
-            String key = slotId(formatTime(row.customTime()), row.prescriptionId());
+            String key = slotId(formatTime(row.customTime()), row.prescriptionId(), row.scheduleId());
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
         }
         return grouped.values().stream().map(this::mergeGroup).toList();
@@ -50,16 +50,30 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
     private SlotView mergeGroup(List<DayScheduleProjection> group) {
         DayScheduleProjection first = group.get(0);
         String time = formatTime(first.customTime());
-        List<String> items = first.drugNames() != null ? first.drugNames() : List.of();
-        String prescriptionName = PrescriptionLabel.of(first.prescribedAt(), leadDrugName(items), items.size());
         List<Long> doseLogIds = group.stream()
                 .map(DayScheduleProjection::doseLogId)
                 .filter(Objects::nonNull)
                 .toList();
         Long primaryDoseLogId = doseLogIds.isEmpty() ? null : doseLogIds.get(0);
         String state = group.stream().allMatch(r -> "TAKEN".equals(r.doseStatus())) ? "done" : "wait";
+
+        List<String> items;
+        String prescriptionName;
+        List<String> colors;
+
+        if (first.prescriptionId() != null) {
+            items = first.drugNames() != null ? first.drugNames() : List.of();
+            prescriptionName = PrescriptionLabel.of(first.prescribedAt(), leadDrugName(items), items.size());
+            colors = resolveColors(first.pillColors());
+        } else {
+            String drugName = first.singleDrugName();
+            items = drugName != null ? List.of(drugName) : List.of();
+            prescriptionName = drugName != null ? drugName : "복약";
+            colors = List.of();
+        }
+
         return new SlotView(
-                slotId(time, first.prescriptionId()),
+                slotId(time, first.prescriptionId(), first.scheduleId()),
                 time,
                 time,
                 state,
@@ -68,7 +82,7 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
                 doseLogIds,
                 time,
                 items.size(),
-                resolveColors(first.pillColors()),
+                colors,
                 first.prescriptionId(),
                 prescriptionName
         );
@@ -78,8 +92,10 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
         return customTime != null ? customTime.format(HH_MM) : "";
     }
 
-    private String slotId(String time, Long prescriptionId) {
-        return time + "@" + prescriptionId;
+    private String slotId(String time, Long prescriptionId, Long scheduleId) {
+        return prescriptionId != null
+                ? time + "@" + prescriptionId
+                : time + "@s" + scheduleId;
     }
 
     private String leadDrugName(List<String> items) {

@@ -19,8 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
 
-    // 처방전(약봉투) 단위 조회 — drug_id 가 아닌 prescription_id 로 묶고, 약 목록은 lateral 집계.
-    // prescription_id IS NULL 인 레거시 per-drug seed 행은 INNER JOIN + 필터로 day view 에서 제외(보존).
+    // 처방전(약봉투) 단위 조회 — prescription_id 있으면 처방전 라벨, 없으면 drugs.name fallback.
+    // LEFT JOIN 으로 레거시 per-drug seed(prescription_id IS NULL) 도 day view 에 포함.
     private static final String DAY_SQL = """
             SELECT s.id              AS schedule_id,
                    s.custom_time,
@@ -29,9 +29,10 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
                    agg.drug_names,
                    agg.pill_colors,
                    dl.id             AS dose_log_id,
-                   dl.status         AS dose_status
+                   dl.status         AS dose_status,
+                   d_single.name     AS single_drug_name
             FROM schedules s
-            JOIN prescriptions p ON p.id = s.prescription_id
+            LEFT JOIN prescriptions p ON p.id = s.prescription_id
             LEFT JOIN LATERAL (
                 SELECT array_agg(COALESCE(d.name, pd.name_raw) ORDER BY pd.id) AS drug_names,
                        array_agg(d.color_class ORDER BY pd.id)                 AS pill_colors
@@ -39,15 +40,15 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
                 LEFT JOIN drugs d ON d.id = pd.drug_id
                 WHERE pd.prescription_id = s.prescription_id
             ) agg ON TRUE
+            LEFT JOIN drugs d_single ON d_single.id = s.drug_id
             LEFT JOIN dose_logs dl
                    ON dl.schedule_id = s.id
                   AND (dl.scheduled_at AT TIME ZONE 'Asia/Seoul')::date = :date
             WHERE s.patient_id = :pid
               AND s.active = TRUE
-              AND s.prescription_id IS NOT NULL
               AND s.start_date <= :date
               AND (s.end_date IS NULL OR s.end_date >= :date)
-            ORDER BY s.custom_time ASC, s.prescription_id ASC, s.id ASC
+            ORDER BY s.custom_time ASC, s.prescription_id ASC NULLS LAST, s.id ASC
             """;
 
     private final EntityManager entityManager;
@@ -66,16 +67,18 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
     }
 
     private DayScheduleProjection toProjection(Tuple row) {
-        Long scheduleId      = toLong(row.get("schedule_id"));
-        LocalTime customTime = toLocalTime(row.get("custom_time"));
-        Long prescriptionId  = toLong(row.get("prescription_id"));
+        Long scheduleId        = toLong(row.get("schedule_id"));
+        LocalTime customTime   = toLocalTime(row.get("custom_time"));
+        Long prescriptionId    = toLong(row.get("prescription_id"));
         LocalDate prescribedAt = toLocalDate(row.get("prescribed_at"));
-        List<String> drugNames = toStringList(row.get("drug_names"));
+        List<String> drugNames  = toStringList(row.get("drug_names"));
         List<String> pillColors = toStringList(row.get("pill_colors"));
-        Long doseLogId       = toLong(row.get("dose_log_id"));
-        String status        = (String) row.get("dose_status");
+        Long doseLogId         = toLong(row.get("dose_log_id"));
+        String status          = (String) row.get("dose_status");
+        String singleDrugName  = (String) row.get("single_drug_name");
         return new DayScheduleProjection(
-                scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors, doseLogId, status);
+                scheduleId, customTime, prescriptionId, prescribedAt,
+                drugNames, pillColors, doseLogId, status, singleDrugName);
     }
 
     private Long toLong(Object value) {

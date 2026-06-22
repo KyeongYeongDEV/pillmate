@@ -89,8 +89,8 @@ class ScheduleDayQueryAdapterIntegrationTest {
     }
 
     @Test
-    @DisplayName("prescription_id NULL 레거시 per-drug seed 행은 day view 에서 제외(보존)")
-    void findByPatientAndDate_excludesLegacyPerDrugRows() {
+    @DisplayName("prescription_id NULL 레거시 per-drug seed 행도 day view 에 포함, singleDrugName = drugs.name")
+    void findByPatientAndDate_includesLegacyPerDrugRows() {
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
 
         // given
@@ -103,8 +103,11 @@ class ScheduleDayQueryAdapterIntegrationTest {
         List<DayScheduleProjection> result =
                 scheduleDayQueryPort.findByPatientAndDate(patientId, LocalDate.of(2026, 6, 1));
 
-        // then — 레거시 행은 조회되지 않음
-        assertThat(result).isEmpty();
+        // then — 레거시 행이 1개 조회되고 singleDrugName = "게보린"
+        assertThat(result).hasSize(1);
+        DayScheduleProjection row = result.get(0);
+        assertThat(row.prescriptionId()).isNull();
+        assertThat(row.singleDrugName()).isEqualTo("게보린");
     }
 
     private Long insertDrug(String name) {

@@ -194,10 +194,91 @@ class GetDayScheduleUseCaseTest {
         assertThat(response.slots().get(0).doseLogIds()).containsExactly(10L);
     }
 
+    // ─── 레거시(prescription_id IS NULL) 시드 표시 ────────────────────────────
+
+    @Test
+    @DisplayName("레거시 — prescription_id IS NULL 스케줄의 dose_log 가 day view 에 표시, 라벨=약이름")
+    void execute_legacyNullPrescription_appearsWithDrugNameLabel() {
+        // given — prescription_id IS NULL, singleDrugName="타이레놀"
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(legacyRow(10L, LocalTime.of(8, 0), "타이레놀", 20L, "TAKEN"))
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // then
+        assertThat(response.totalCount()).isEqualTo(1);
+        assertThat(response.doneCount()).isEqualTo(1);
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.prescriptionId()).isNull();
+        assertThat(slot.prescriptionName()).isEqualTo("타이레놀");
+        assertThat(slot.state()).isEqualTo("done");
+        assertThat(slot.doseLogId()).isEqualTo(20L);
+    }
+
+    @Test
+    @DisplayName("레거시 — singleDrugName 도 없으면 라벨='복약'")
+    void execute_legacyNoSingleDrugName_labelIsFallback() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(legacyRow(10L, LocalTime.of(9, 0), null, null, null))
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        assertThat(response.slots()).hasSize(1);
+        assertThat(response.slots().get(0).prescriptionName()).isEqualTo("복약");
+    }
+
+    @Test
+    @DisplayName("레거시 — 같은 시각 서로 다른 약 2개 → slotId 충돌 없이 2 슬롯")
+    void execute_twoLegacyAtSameTime_noSlotIdCollision() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        legacyRow(10L, LocalTime.of(8, 0), "타이레놀", 20L, "TAKEN"),
+                        legacyRow(11L, LocalTime.of(8, 0), "아스피린",  21L, "PENDING")
+                )
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        assertThat(response.slots()).hasSize(2);
+        assertThat(response.slots().get(0).id()).isNotEqualTo(response.slots().get(1).id());
+    }
+
+    @Test
+    @DisplayName("레거시·처방전 혼재 — 각각 별도 슬롯, 처방전 기반 슬롯 회귀 0")
+    void execute_mixedLegacyAndPrescription_separateSlots() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("게보린"), List.of("#fff"), 9L, "TAKEN"),
+                        legacyRow(10L, LocalTime.of(8, 0), "타이레놀", 20L, "TAKEN")
+                )
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        assertThat(response.slots()).hasSize(2);
+        long prescriptionSlots = response.slots().stream().filter(s -> s.prescriptionId() != null).count();
+        long legacySlots       = response.slots().stream().filter(s -> s.prescriptionId() == null).count();
+        assertThat(prescriptionSlots).isEqualTo(1);
+        assertThat(legacySlots).isEqualTo(1);
+    }
+
+    // ─── Fixtures ────────────────────────────────────────────────────────────
+
     private DayScheduleProjection row(Long scheduleId, LocalTime customTime, Long prescriptionId,
                                       LocalDate prescribedAt, List<String> drugNames, List<String> pillColors,
                                       Long doseLogId, String doseStatus) {
         return new DayScheduleProjection(
-                scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors, doseLogId, doseStatus);
+                scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors,
+                doseLogId, doseStatus, null);
+    }
+
+    private DayScheduleProjection legacyRow(Long scheduleId, LocalTime customTime,
+                                             String singleDrugName, Long doseLogId, String doseStatus) {
+        return new DayScheduleProjection(
+                scheduleId, customTime, null, null, List.of(), List.of(),
+                doseLogId, doseStatus, singleDrugName);
     }
 }
