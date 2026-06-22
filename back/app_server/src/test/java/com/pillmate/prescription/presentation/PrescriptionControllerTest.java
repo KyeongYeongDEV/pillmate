@@ -137,6 +137,31 @@ class PrescriptionControllerTest {
     }
 
     @Test
+    @DisplayName("imageKey null + 직접입력 약 → 200, MANUAL 상태로 등록")
+    void postRegister_whenImageKeyNullAndDirectInput_returns200WithManualStatus() throws Exception {
+        given(registerPrescriptionService.register(any()))
+                .willReturn(new RegisterPrescriptionResponse(
+                        77L, OcrStatus.MANUAL,
+                        List.of(new RegisteredDrugItem(
+                                null, null, "타이레놀", null,
+                                null, null))));
+
+        RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
+                LocalDate.of(2026, 5, 23),
+                null,
+                List.of(new RegisterPrescriptionRequest.Item(
+                        null, "타이레놀", new BigDecimal("1.00"), "정", 3, 7, null)));
+
+        mockMvc.perform(post("/prescriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.prescriptionId").value(77))
+                .andExpect(jsonPath("$.data.ocrStatus").value("MANUAL"));
+    }
+
+    @Test
     @DisplayName("POST /prescriptions items 비어있으면 400")
     void postRegister_returns400_whenItemsEmpty() throws Exception {
         RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
@@ -241,6 +266,48 @@ class PrescriptionControllerTest {
         mockMvc.perform(get("/prescriptions/42").header("X-User-Id", "99"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("PILL_016"));
+    }
+
+    @Test
+    @DisplayName("kdCode null + nameRaw 있는 item → 200, MANUAL 상태로 등록")
+    void postRegister_whenKdCodeNullAndNameRawPresent_returns200WithManualStatus() throws Exception {
+        given(registerPrescriptionService.register(any()))
+                .willReturn(new RegisterPrescriptionResponse(
+                        99L, OcrStatus.MANUAL,
+                        List.of(new RegisteredDrugItem(
+                                null, null, "동광나자티딘캡슐", null,
+                                new BigDecimal("0.95"), null))));
+
+        RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
+                LocalDate.of(2026, 5, 23),
+                "prescriptions/2026/05/uuid.jpg",
+                List.of(new RegisterPrescriptionRequest.Item(
+                        null, "동광나자티딘캡슐", new BigDecimal("150"), "mg", 2, 7, new BigDecimal("0.95"))));
+
+        mockMvc.perform(post("/prescriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.prescriptionId").value(99))
+                .andExpect(jsonPath("$.data.ocrStatus").value("MANUAL"))
+                .andExpect(jsonPath("$.data.items[0].nameRaw").value("동광나자티딘캡슐"));
+    }
+
+    @Test
+    @DisplayName("nameRaw 빈 값 → 400 (약 이름 필수)")
+    void postRegister_whenNameRawBlank_returns400() throws Exception {
+        RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
+                LocalDate.of(2026, 5, 23),
+                "prescriptions/2026/05/uuid.jpg",
+                List.of(new RegisterPrescriptionRequest.Item(
+                        "KD-001", "", new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95"))));
+
+        mockMvc.perform(post("/prescriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
     }
 
     private RegisterPrescriptionRequest validRegisterRequest() {

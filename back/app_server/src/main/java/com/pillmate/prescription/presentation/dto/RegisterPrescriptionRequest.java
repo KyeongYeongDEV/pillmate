@@ -15,7 +15,7 @@ import java.util.List;
 
 public record RegisterPrescriptionRequest(
         @NotNull LocalDate prescribedAt,
-        @NotBlank String imageKey,
+        String imageKey,
         @NotEmpty @Valid List<Item> items,
         @Valid ScheduleSpecRequest schedule
 ) {
@@ -31,8 +31,8 @@ public record RegisterPrescriptionRequest(
     }
 
     public record Item(
-            @NotBlank String kdCode,
-            String nameRaw,
+            String kdCode,
+            @NotBlank String nameRaw,
             BigDecimal doseAmount,
             String doseUnit,
             Integer frequency,
