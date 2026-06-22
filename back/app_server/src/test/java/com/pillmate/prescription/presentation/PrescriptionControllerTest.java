@@ -7,6 +7,7 @@ import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
+import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
@@ -56,6 +57,7 @@ class PrescriptionControllerTest {
     @MockitoBean GetUploadUrlUseCase getUploadUrlUseCase;
     @MockitoBean RegisterPrescriptionService registerPrescriptionService;
     @MockitoBean OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
+    @MockitoBean ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase;
     @MockitoBean GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     @MockitoBean ResolveCandidateUseCase resolveCandidateUseCase;
     @MockitoBean GetPrescriptionsUseCase getPrescriptionsUseCase;

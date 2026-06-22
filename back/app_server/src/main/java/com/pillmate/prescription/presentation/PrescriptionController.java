@@ -5,14 +5,17 @@ import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
+import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
+import com.pillmate.prescription.application.dto.OcrExtractResponse;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
 import com.pillmate.prescription.application.dto.PrescriptionSummary;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
+import com.pillmate.prescription.presentation.dto.OcrExtractRequest;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
@@ -38,6 +41,7 @@ public class PrescriptionController {
     private final GetUploadUrlUseCase getUploadUrlUseCase;
     private final RegisterPrescriptionService registerPrescriptionService;
     private final OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
+    private final ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase;
     private final GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     private final ResolveCandidateUseCase resolveCandidateUseCase;
     private final GetPrescriptionsUseCase getPrescriptionsUseCase;
@@ -73,6 +77,13 @@ public class PrescriptionController {
         RegisterPrescriptionResponse response = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
                 request.prescribedAt(), request.imageKey());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/ocr/extract")
+    public ResponseEntity<ApiResponse<OcrExtractResponse>> ocrExtract(
+            @Valid @RequestBody OcrExtractRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                extractPrescriptionOcrUseCase.extract(request.imageKey())));
     }
 
     @GetMapping("/{id}/candidates")
