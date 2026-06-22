@@ -1,20 +1,35 @@
 import prescriptionFlowReducer, {
   addFromOcr,
+  addFromExtract,
   addFromSearch,
   addManual,
-  updateSlots,
   updateDoseAmount,
   removeItem,
+  addSlot,
+  removeSlot,
+  setSlotTime,
+  setStartDate,
+  setEndDate,
   reset,
 } from '../../src/store/slices/prescriptionFlowSlice';
-import type { OcrItem, InteractionWarning } from '../../src/types/prescription';
+import type { OcrItem, InteractionWarning, OcrExtractItem } from '../../src/types/prescription';
+
+const DEFAULT_SLOTS = [
+  { uid: 'morning', timeOfDay: 'MORNING' as const, customTime: '08:00:00' },
+  { uid: 'noon',    timeOfDay: 'NOON' as const,    customTime: '12:30:00' },
+  { uid: 'evening', timeOfDay: 'EVENING' as const, customTime: '19:00:00' },
+];
 
 const initialState = {
   items: [],
+  prescriptionSlots: DEFAULT_SLOTS,
+  prescribedAt: '',
+  startDate: '',
+  endDate: '',
+  imageKey: null,
+  memo: '',
   prescriptionId: null,
   ocrStatus: null,
-  memo: '',
-  imageKey: null,
   warnings: [],
 };
 
@@ -44,6 +59,16 @@ const mockOcrItemUnmatched: OcrItem = {
   nameRaw: '미확인약품 100mg',
   confidence: 0.45,
   imageUrl: null,
+};
+
+const mockExtractItem: OcrExtractItem = {
+  kdCode: 'KD001',
+  nameRaw: '암로디핀정 5mg',
+  doseAmount: 1,
+  doseUnit: '정',
+  frequency: 1,
+  durationDays: 7,
+  confidence: 0.9,
 };
 
 describe('prescriptionFlowSlice', () => {
@@ -101,6 +126,52 @@ describe('prescriptionFlowSlice', () => {
     });
   });
 
+  describe('addFromExtract', () => {
+    it('sets items, prescribedAt, startDate, imageKey from extract response', () => {
+      const state = prescriptionFlowReducer(initialState, addFromExtract({
+        items: [mockExtractItem],
+        prescribedAt: '2026-06-22',
+        imageKey: 'test-key',
+      }));
+      expect(state.prescribedAt).toBe('2026-06-22');
+      expect(state.startDate).toBe('2026-06-22');
+      expect(state.imageKey).toBe('test-key');
+      expect(state.items).toHaveLength(1);
+      expect(state.items[0].source).toBe('OCR_AUTO');
+      expect(state.items[0].nameRaw).toBe('암로디핀정 5mg');
+    });
+
+    it('calculates endDate as startDate + max(durationDays) - 1', () => {
+      const state = prescriptionFlowReducer(initialState, addFromExtract({
+        items: [
+          { ...mockExtractItem, durationDays: 7 },
+          { ...mockExtractItem, kdCode: null, nameRaw: '모름약', durationDays: 14 },
+        ],
+        prescribedAt: '2026-06-22',
+        imageKey: 'k',
+      }));
+      expect(state.endDate).toBe('2026-07-05');
+    });
+
+    it('leaves endDate empty when all durationDays are null/0', () => {
+      const state = prescriptionFlowReducer(initialState, addFromExtract({
+        items: [{ ...mockExtractItem, durationDays: null }],
+        prescribedAt: '2026-06-22',
+        imageKey: 'k',
+      }));
+      expect(state.endDate).toBe('');
+    });
+
+    it('marks unmatched item as MANUAL decision', () => {
+      const state = prescriptionFlowReducer(initialState, addFromExtract({
+        items: [{ ...mockExtractItem, kdCode: null }],
+        prescribedAt: '2026-06-22',
+        imageKey: 'k',
+      }));
+      expect(state.items[0].decision).toBe('MANUAL');
+    });
+  });
+
   describe('addFromSearch', () => {
     it('adds a MANUAL_SEARCH item with confidence 1.0', () => {
       const state = prescriptionFlowReducer(initialState, addFromSearch({
@@ -123,7 +194,6 @@ describe('prescriptionFlowSlice', () => {
         doseUnit: '정',
         frequency: 1,
         durationDays: 30,
-        slots: { morning: true, noon: false, evening: false, bedtime: false },
       }));
       expect(state.items).toHaveLength(1);
       expect(state.items[0].source).toBe('MANUAL_INPUT');
@@ -132,18 +202,63 @@ describe('prescriptionFlowSlice', () => {
     });
   });
 
-  describe('updateSlots', () => {
-    it('updates slots for the matching item', () => {
-      let state = prescriptionFlowReducer(initialState, addFromOcr({
-        prescriptionId: 1, ocrStatus: 'DONE', items: [mockOcrItem],
+  describe('prescriptionSlots — 처방전 단위 슬롯', () => {
+    it('initial state has 3 default slots (아침/점심/저녁)', () => {
+      const state = prescriptionFlowReducer(undefined, { type: '@@INIT' });
+      expect(state.prescriptionSlots).toHaveLength(3);
+      expect(state.prescriptionSlots[0].timeOfDay).toBe('MORNING');
+      expect(state.prescriptionSlots[1].timeOfDay).toBe('NOON');
+      expect(state.prescriptionSlots[2].timeOfDay).toBe('EVENING');
+    });
+
+    it('addSlot appends a new slot', () => {
+      const state = prescriptionFlowReducer(initialState, addSlot({
+        timeOfDay: 'MORNING', customTime: '07:30:00',
       }));
-      const id = state.items[0].id;
-      state = prescriptionFlowReducer(state, updateSlots({
-        id,
-        slots: { morning: false, noon: true, evening: true, bedtime: false },
+      expect(state.prescriptionSlots).toHaveLength(4);
+      const added = state.prescriptionSlots.at(-1);
+      expect(added?.timeOfDay).toBe('MORNING');
+      expect(added?.customTime).toBe('07:30:00');
+      expect(added?.uid).toBeTruthy();
+    });
+
+    it('removeSlot removes by uid', () => {
+      const state = prescriptionFlowReducer(initialState, removeSlot('morning'));
+      expect(state.prescriptionSlots).toHaveLength(2);
+      expect(state.prescriptionSlots.find(s => s.uid === 'morning')).toBeUndefined();
+    });
+
+    it('setSlotTime updates customTime for matching uid', () => {
+      const state = prescriptionFlowReducer(initialState, setSlotTime({
+        uid: 'morning', customTime: '07:00:00',
       }));
-      expect(state.items[0].slots.noon).toBe(true);
-      expect(state.items[0].slots.morning).toBe(false);
+      const morningSlot = state.prescriptionSlots.find(s => s.uid === 'morning');
+      expect(morningSlot?.customTime).toBe('07:00:00');
+    });
+
+    it('setSlotTime does nothing for unknown uid', () => {
+      const state = prescriptionFlowReducer(initialState, setSlotTime({
+        uid: 'nonexistent', customTime: '07:00:00',
+      }));
+      expect(state.prescriptionSlots).toHaveLength(3);
+    });
+  });
+
+  describe('날짜 관리', () => {
+    it('setStartDate updates startDate', () => {
+      const state = prescriptionFlowReducer(initialState, setStartDate('2026-07-01'));
+      expect(state.startDate).toBe('2026-07-01');
+    });
+
+    it('setEndDate updates endDate', () => {
+      const state = prescriptionFlowReducer(initialState, setEndDate('2026-07-30'));
+      expect(state.endDate).toBe('2026-07-30');
+    });
+
+    it('setEndDate with empty string sets 무기한', () => {
+      let state = prescriptionFlowReducer(initialState, setEndDate('2026-07-30'));
+      state = prescriptionFlowReducer(state, setEndDate(''));
+      expect(state.endDate).toBe('');
     });
   });
 
@@ -151,7 +266,6 @@ describe('prescriptionFlowSlice', () => {
     it('updates dose amount', () => {
       let state = prescriptionFlowReducer(initialState, addManual({
         nameRaw: '테스트', doseAmount: 1, doseUnit: '정', frequency: 1, durationDays: 7,
-        slots: { morning: true, noon: false, evening: false, bedtime: false },
       }));
       const id = state.items[0].id;
       state = prescriptionFlowReducer(state, updateDoseAmount({ id, amount: 3 }));

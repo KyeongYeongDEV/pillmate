@@ -15,7 +15,6 @@ const baseItem: DrugListItem = {
   doseUnit: '정',
   frequency: 1,
   durationDays: 7,
-  slots: { morning: true, noon: false, evening: false, bedtime: false },
   decision: 'AUTO',
 };
 

@@ -9,9 +9,8 @@ import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addManual } from '@/store/slices/prescriptionFlowSlice';
 import DrugSearchAutocomplete from '@/components/prescription/DrugSearchAutocomplete';
-import SlotToggle from '@/components/prescription/SlotToggle';
 import DoseStepper from '@/components/prescription/DoseStepper';
-import type { DrugSearchResult, DrugSlots } from '@/types/prescription';
+import type { DrugSearchResult } from '@/types/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 
 const SHAPES = ['원형', '타원형', '캡슐', '기타'] as const;
@@ -29,8 +28,6 @@ const COLORS = [
 const DURATION_PRESETS = ['7일', '14일', '30일', '90일', '장기'] as const;
 const DOSE_UNITS = ['정', '캡슐', 'mL', 'mg'] as const;
 
-const DEFAULT_SLOTS: DrugSlots = { morning: true, noon: false, evening: false, bedtime: false };
-
 export default function ManualScreen() {
   const dispatch = useAppDispatch();
   const [nameRaw, setNameRaw] = useState('');
@@ -38,7 +35,6 @@ export default function ManualScreen() {
   const [selectedColor, setSelectedColor] = useState<string>('white');
   const [doseAmount, setDoseAmount] = useState(1);
   const [doseUnit, setDoseUnit] = useState<string>('정');
-  const [slots, setSlots] = useState<DrugSlots>(DEFAULT_SLOTS);
   const [durationPreset, setDurationPreset] = useState<string>('7일');
   const [memo, setMemo] = useState('');
   const [searchMode, setSearchMode] = useState(false);
@@ -58,13 +54,12 @@ export default function ManualScreen() {
       nameRaw: nameRaw.trim(),
       doseAmount,
       doseUnit,
-      frequency: Object.values(slots).filter(Boolean).length,
+      frequency: 1,
       durationDays,
-      slots,
     }));
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    safeBack('/prescription');
-  }, [nameRaw, doseAmount, doseUnit, slots, durationPreset, dispatch]);
+    safeBack('/prescription/review');
+  }, [nameRaw, doseAmount, doseUnit, durationPreset, dispatch]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -78,7 +73,7 @@ export default function ManualScreen() {
           <Text style={styles.headerSub}>처방전에 없는 약도 등록할 수 있어요</Text>
         </View>
         <Pressable
-          onPress={() => { setNameRaw(''); setMatched(null); setDoseAmount(1); setSlots(DEFAULT_SLOTS); }}
+          onPress={() => { setNameRaw(''); setMatched(null); setDoseAmount(1); }}
           style={styles.headerBtn}
           accessibilityLabel="초기화"
           accessibilityRole="button"
@@ -178,11 +173,6 @@ export default function ManualScreen() {
                 ))}
               </View>
             </View>
-          </Section>
-
-          {/* Section: 복용 시간대 */}
-          <Section title="복용 시간대" required>
-            <SlotToggle slots={slots} onChange={setSlots} />
           </Section>
 
           {/* Section: 복용 기간 */}

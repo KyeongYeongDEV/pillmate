@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
-import { addFromOcr, setImageKey } from '@/store/slices/prescriptionFlowSlice';
+import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 
@@ -26,15 +26,16 @@ export default function ScanScreen() {
         const uploadResp = await prescriptionApi.issueUploadUrl({
           contentType: 'image/jpeg',
         });
+        const prescribedAt = new Date().toISOString().slice(0, 10);
         dispatch(setImageKey(uploadResp.objectKey));
         await prescriptionApi.uploadToS3(uploadResp.uploadUrl, uri);
-        const ocrResp = await prescriptionApi.ocr({
-          prescribedAt: new Date().toISOString().slice(0, 10),
+        const extractResp = await prescriptionApi.ocrExtract({
+          prescribedAt,
           imageKey: uploadResp.objectKey,
         });
-        dispatch(addFromOcr(ocrResp));
+        dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey: uploadResp.objectKey }));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/prescription/confirm' as any);
+        router.replace('/prescription/review' as any);
       } catch {
         Alert.alert('인식 실패', 'AI 분석에 실패했습니다. 다시 시도하거나 직접 입력해주세요.');
         setLoading(false);

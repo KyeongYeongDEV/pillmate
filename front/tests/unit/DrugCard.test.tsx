@@ -15,26 +15,20 @@ const baseItem: DrugListItem = {
   doseUnit: '정',
   frequency: 1,
   durationDays: 7,
-  slots: { morning: true, noon: false, evening: false, bedtime: false },
   decision: 'AUTO',
 };
 
 describe('DrugCard', () => {
   it('renders matched drug name', () => {
     const { getByText } = render(
-      <DrugCard
-        item={baseItem}
-        onSlotsChange={jest.fn()}
-        onDoseChange={jest.fn()}
-        onRemove={jest.fn()}
-      />
+      <DrugCard item={baseItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
     );
     expect(getByText('암로디핀정 5mg')).toBeTruthy();
   });
 
   it('renders MFDS source for OCR_AUTO item', () => {
     const { getByText } = render(
-      <DrugCard item={baseItem} onSlotsChange={jest.fn()} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={baseItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
     );
     expect(getByText(/식품의약품안전처/)).toBeTruthy();
   });
@@ -49,7 +43,7 @@ describe('DrugCard', () => {
       confidence: null,
     };
     const { getByText } = render(
-      <DrugCard item={manualItem} onSlotsChange={jest.fn()} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={manualItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
     );
     expect(getByText(/사용자 입력/)).toBeTruthy();
   });
@@ -57,7 +51,7 @@ describe('DrugCard', () => {
   it('shows warning badge for low confidence', () => {
     const lowConfItem: DrugListItem = { ...baseItem, id: 'low-1', confidence: 0.5 };
     const { getByLabelText } = render(
-      <DrugCard item={lowConfItem} onSlotsChange={jest.fn()} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={lowConfItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
     );
     expect(getByLabelText('신뢰도 낮음')).toBeTruthy();
   });
@@ -71,7 +65,7 @@ describe('DrugCard', () => {
       source: 'OCR_AUTO',
     };
     const { getByText } = render(
-      <DrugCard item={unmatchedItem} onSlotsChange={jest.fn()} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={unmatchedItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
     );
     expect(getByText(/자동 확인되지 않았어요/)).toBeTruthy();
   });

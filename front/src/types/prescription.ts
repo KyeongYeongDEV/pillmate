@@ -145,7 +145,50 @@ export interface DrugListItem {
   doseUnit: string;
   frequency: number;
   durationDays: number;
-  slots: DrugSlots;
   decision?: 'AUTO' | 'CONFIRM' | 'MANUAL';
   candidateId?: number;
+}
+
+// ── Extract-only OCR (신규 흐름: 추출만, 미등록) ──────────────────────────
+export interface OcrExtractItem {
+  kdCode: string | null;
+  nameRaw: string;
+  doseAmount: number | null;
+  doseUnit: string | null;
+  frequency: number | null;
+  durationDays: number | null;
+  confidence: number | null;
+}
+
+export interface OcrExtractResponse {
+  items: OcrExtractItem[];
+}
+
+// ── 처방전 단위 슬롯 (알림 시각, 약별 아님) ────────────────────────────────
+export type PrescriptionTimeOfDay = 'MORNING' | 'NOON' | 'EVENING';
+
+export interface PrescriptionSlotDraft {
+  uid: string;
+  timeOfDay: PrescriptionTimeOfDay;
+  customTime: string;
+}
+
+// ── 등록 API 입력 ────────────────────────────────────────────────────────
+export interface PrescriptionSlotInput {
+  timeOfDay: PrescriptionTimeOfDay;
+  customTime: string;
+}
+
+export interface PrescriptionScheduleInput {
+  careGroupId: number;
+  slots: PrescriptionSlotInput[];
+  startDate: string;
+  endDate: string | null;
+}
+
+export interface RegisterPrescriptionInput {
+  prescribedAt: string;
+  imageKey: string | null;
+  items: RegisterPrescriptionItem[];
+  schedule: PrescriptionScheduleInput;
 }

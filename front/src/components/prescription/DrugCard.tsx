@@ -3,22 +3,16 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { OCR_MIN_CONFIDENCE, MFDS_SOURCE } from '@/lib/constants';
-import type { DrugListItem, DrugSlots } from '@/types/prescription';
-import SlotToggle from './SlotToggle';
+import type { DrugListItem } from '@/types/prescription';
 import DoseStepper from './DoseStepper';
 
 interface Props {
   item: DrugListItem;
-  onSlotsChange: (id: string, slots: DrugSlots) => void;
   onDoseChange: (id: string, amount: number) => void;
   onRemove: (id: string) => void;
 }
 
-function DrugCard({ item, onSlotsChange, onDoseChange, onRemove }: Props) {
-  const handleSlotsChange = useCallback(
-    (slots: DrugSlots) => onSlotsChange(item.id, slots),
-    [item.id, onSlotsChange],
-  );
+function DrugCard({ item, onDoseChange, onRemove }: Props) {
   const handleDoseChange = useCallback(
     (amount: number) => onDoseChange(item.id, amount),
     [item.id, onDoseChange],
@@ -104,12 +98,6 @@ function DrugCard({ item, onSlotsChange, onDoseChange, onRemove }: Props) {
         />
       </View>
 
-      {/* 4슬롯 토글 */}
-      <View style={styles.slotSection}>
-        <Text style={styles.sectionLabel}>복용 시간대</Text>
-        <SlotToggle slots={item.slots} onChange={handleSlotsChange} />
-      </View>
-
       {/* 삭제 */}
       <Pressable onPress={handleRemove} style={styles.removeBtn} accessibilityLabel="약 삭제" accessibilityRole="button">
         <Text style={styles.removeTxt}>삭제</Text>
@@ -150,7 +138,6 @@ const styles = StyleSheet.create({
   },
   unmatchedText: { ...typography.caption1, color: colors.labelNeutral },
   doseRow: { gap: space.s6 },
-  slotSection: { gap: space.s6 },
   sectionLabel: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600' },
   removeBtn: { alignSelf: 'flex-end' },
   removeTxt: { ...typography.label2, color: colors.statusNegative },

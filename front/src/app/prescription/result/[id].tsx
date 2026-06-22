@@ -5,14 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateSlots, updateDoseAmount, removeItem, setMemo, addManual } from '@/store/slices/prescriptionFlowSlice';
-import { prescriptionApi } from '@/lib/api/prescription';
+import { updateDoseAmount, removeItem, setMemo } from '@/store/slices/prescriptionFlowSlice';
 import { createSelector } from 'reselect';
 import type { RootState } from '@/store';
-import type { DrugSlots } from '@/types/prescription';
 import DrugCard from '@/components/prescription/DrugCard';
 import OcrStatusBanner from '@/components/prescription/OcrStatusBanner';
 import DDIWarningCard from '@/components/prescription/DDIWarningCard';
@@ -26,13 +23,9 @@ const selectFlow = createSelector(
 
 export default function ResultScreen() {
   const dispatch = useAppDispatch();
-  const { items, ocrStatus, prescriptionId, memo, warnings } = useAppSelector(selectFlow);
+  const { items, ocrStatus, memo, warnings } = useAppSelector(selectFlow);
   const criticalCount = useMemo(() => warnings.filter(w => w.severity === 'CRITICAL').length, [warnings]);
 
-  const handleSlotsChange = useCallback(
-    (id: string, slots: DrugSlots) => dispatch(updateSlots({ id, slots })),
-    [dispatch],
-  );
   const handleDoseChange = useCallback(
     (id: string, amount: number) => dispatch(updateDoseAmount({ id, amount })),
     [dispatch],
@@ -41,20 +34,6 @@ export default function ResultScreen() {
     (id: string) => dispatch(removeItem(id)),
     [dispatch],
   );
-
-  const handleSave = useCallback(async () => {
-    if (items.length === 0) {
-      Alert.alert('약 목록이 비어있습니다', '1개 이상 약을 추가해주세요.');
-      return;
-    }
-    try {
-      await prescriptionApi.register({ prescriptionId, items, memo });
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(tabs)/home');
-    } catch {
-      Alert.alert('저장 실패', '다시 시도해주세요.');
-    }
-  }, [items, prescriptionId, memo]);
 
   const handleAddManual = useCallback(() => {
     router.push('/prescription/manual' as any);
@@ -71,12 +50,11 @@ export default function ResultScreen() {
     ({ item }: { item: typeof items[0] }) => (
       <DrugCard
         item={item}
-        onSlotsChange={handleSlotsChange}
         onDoseChange={handleDoseChange}
         onRemove={handleRemove}
       />
     ),
-    [handleSlotsChange, handleDoseChange, handleRemove],
+    [handleDoseChange, handleRemove],
   );
 
   return (
@@ -87,9 +65,7 @@ export default function ResultScreen() {
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>AI 인식 결과</Text>
-        <Pressable onPress={handleSave} style={styles.saveBtn} accessibilityLabel="저장" accessibilityRole="button">
-          <Text style={styles.saveTxt}>저장</Text>
-        </Pressable>
+        <View style={styles.headerBtn} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -190,17 +166,6 @@ export default function ResultScreen() {
         </View>
       </ScrollView>
 
-      {/* 하단 저장 버튼 */}
-      <View style={styles.footer}>
-        <Pressable
-          style={styles.saveFullBtn}
-          onPress={handleSave}
-          accessibilityLabel="저장하기"
-          accessibilityRole="button"
-        >
-          <Text style={styles.saveFullTxt}>저장하기</Text>
-        </Pressable>
-      </View>
     </SafeAreaView>
   );
 }
@@ -215,8 +180,6 @@ const styles = StyleSheet.create({
   headerBtn: { width: scale(40), alignItems: 'center' },
   headerBtnTxt: { fontSize: scale(22), color: colors.labelNormal },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  saveBtn: { width: scale(40), alignItems: 'center' },
-  saveTxt: { ...typography.label1n, color: colors.primaryNormal, fontWeight: '600' },
   scroll: { padding: space.s16, paddingBottom: 100 },
   summaryCard: {
     flexDirection: 'row', alignItems: 'center', gap: space.s16,
@@ -282,14 +245,4 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line,
   },
   chipTxt: { ...typography.caption1, color: colors.labelNeutral },
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: space.s16, backgroundColor: colors.bgNormal,
-    borderTopWidth: 1, borderTopColor: colors.line,
-  },
-  saveFullBtn: {
-    backgroundColor: colors.primaryNormal, borderRadius: radius.r16,
-    paddingVertical: space.s16, alignItems: 'center',
-  },
-  saveFullTxt: { ...typography.headline1, color: '#fff' },
 });

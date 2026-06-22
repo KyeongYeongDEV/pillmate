@@ -4,9 +4,11 @@ import type { ApiEnvelope } from '@/lib/api/client';
 import type {
   Candidate,
   OcrInput,
+  OcrExtractResponse,
   PrescriptionDetailView,
   PrescriptionSummary,
   RegisterPrescriptionResponse,
+  RegisterPrescriptionInput,
   UploadUrlInput,
   UploadUrlResponse,
 } from '@/types/prescription';
@@ -50,6 +52,13 @@ export const prescriptionApiSlice = createApi({
         'Prescription',
       ],
     }),
+    ocrExtract: build.mutation<OcrExtractResponse, { imageKey: string; prescribedAt: string }>({
+      query: (body) => ({ url: '/prescriptions/ocr/extract', method: 'POST', body }),
+    }),
+    registerPrescription: build.mutation<{ prescriptionId: number }, RegisterPrescriptionInput>({
+      query: (body) => ({ url: '/prescriptions', method: 'POST', body }),
+      invalidatesTags: ['Prescription'],
+    }),
     // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)
     logAlias: build.mutation<void, AliasLog>({
       query: (body) => ({
@@ -66,6 +75,8 @@ export const {
   useGetPrescriptionDetailQuery,
   useIssueUploadUrlMutation,
   useOcrMutation,
+  useOcrExtractMutation,
+  useRegisterPrescriptionMutation,
   useGetCandidatesQuery,
   useResolveCandidateMutation,
   useLogAliasMutation,

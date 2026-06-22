@@ -1,25 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
-  DrugListItem, DrugSlots, DrugSource, InteractionWarning, OcrItem, OcrStatus,
+  DrugListItem, DrugSource, InteractionWarning, OcrItem, OcrStatus,
+  OcrExtractItem, PrescriptionSlotDraft, PrescriptionTimeOfDay,
 } from '@/types/prescription';
 
-interface PrescriptionFlowState {
-  items: DrugListItem[];
-  prescriptionId: number | null;
-  ocrStatus: OcrStatus | null;
-  memo: string;
-  imageKey: string | null;
-  warnings: InteractionWarning[];
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
-
-const initialState: PrescriptionFlowState = {
-  items: [],
-  prescriptionId: null,
-  ocrStatus: null,
-  memo: '',
-  imageKey: null,
-  warnings: [],
-};
 
 function parseConfidence(raw: number | string | null): number | null {
   if (raw == null) return null;
@@ -40,10 +28,58 @@ function ocrItemToListItem(item: OcrItem): DrugListItem {
     doseUnit: '정',
     frequency: 1,
     durationDays: 7,
-    slots: { morning: true, noon: false, evening: false, bedtime: false },
     decision: item.drugId == null ? 'MANUAL' : 'AUTO',
   };
 }
+
+function extractItemToListItem(item: OcrExtractItem): DrugListItem {
+  return {
+    id: `extract-${item.nameRaw}-${Date.now()}-${Math.random()}`,
+    source: 'OCR_AUTO' as DrugSource,
+    kdCode: item.kdCode,
+    nameRaw: item.nameRaw,
+    matchedName: null,
+    imageUrl: null,
+    confidence: item.confidence,
+    doseAmount: item.doseAmount ?? 1,
+    doseUnit: item.doseUnit ?? '정',
+    frequency: item.frequency ?? 1,
+    durationDays: item.durationDays ?? 7,
+    decision: item.kdCode == null ? 'MANUAL' : 'AUTO',
+  };
+}
+
+const DEFAULT_PRESCRIPTION_SLOTS: PrescriptionSlotDraft[] = [
+  { uid: 'morning', timeOfDay: 'MORNING', customTime: '08:00:00' },
+  { uid: 'noon',    timeOfDay: 'NOON',    customTime: '12:30:00' },
+  { uid: 'evening', timeOfDay: 'EVENING', customTime: '19:00:00' },
+];
+
+interface PrescriptionFlowState {
+  items: DrugListItem[];
+  prescriptionSlots: PrescriptionSlotDraft[];
+  prescribedAt: string;
+  startDate: string;
+  endDate: string;
+  imageKey: string | null;
+  memo: string;
+  prescriptionId: number | null;
+  ocrStatus: OcrStatus | null;
+  warnings: InteractionWarning[];
+}
+
+const initialState: PrescriptionFlowState = {
+  items: [],
+  prescriptionSlots: DEFAULT_PRESCRIPTION_SLOTS,
+  prescribedAt: '',
+  startDate: '',
+  endDate: '',
+  imageKey: null,
+  memo: '',
+  prescriptionId: null,
+  ocrStatus: null,
+  warnings: [],
+};
 
 const prescriptionFlowSlice = createSlice({
   name: 'prescriptionFlow',
@@ -58,11 +94,32 @@ const prescriptionFlowSlice = createSlice({
     setPrescriptionId(state, action: PayloadAction<number>) {
       state.prescriptionId = action.payload;
     },
+    setPrescribedAt(state, action: PayloadAction<string>) {
+      state.prescribedAt = action.payload;
+      state.startDate = action.payload;
+    },
+    setStartDate(state, action: PayloadAction<string>) {
+      state.startDate = action.payload;
+    },
+    setEndDate(state, action: PayloadAction<string>) {
+      state.endDate = action.payload;
+    },
     addFromOcr(state, action: PayloadAction<{ prescriptionId: number; ocrStatus: OcrStatus; items: OcrItem[]; warnings?: InteractionWarning[] }>) {
       state.prescriptionId = action.payload.prescriptionId;
       state.ocrStatus = action.payload.ocrStatus;
       state.items = action.payload.items.map(ocrItemToListItem);
       state.warnings = action.payload.warnings ?? [];
+    },
+    addFromExtract(state, action: PayloadAction<{ items: OcrExtractItem[]; prescribedAt: string; imageKey: string }>) {
+      const { items, prescribedAt, imageKey } = action.payload;
+      state.imageKey = imageKey;
+      state.prescribedAt = prescribedAt;
+      state.startDate = prescribedAt;
+      const durations = items.map(i => i.durationDays ?? 0).filter(d => d > 0);
+      const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
+      state.endDate = maxDuration > 0 ? addDays(prescribedAt, maxDuration - 1) : '';
+      state.items = items.map(extractItemToListItem);
+      state.warnings = [];
     },
     addFromSearch(state, action: PayloadAction<{ kdCode: string; nameRaw: string; matchedName: string; imageUrl: string | null }>) {
       const drug = action.payload;
@@ -78,11 +135,10 @@ const prescriptionFlowSlice = createSlice({
         doseUnit: '정',
         frequency: 1,
         durationDays: 7,
-        slots: { morning: true, noon: false, evening: false, bedtime: false },
         decision: 'AUTO',
       });
     },
-    addManual(state, action: PayloadAction<{ nameRaw: string; doseAmount: number; doseUnit: string; frequency: number; durationDays: number; slots: DrugSlots }>) {
+    addManual(state, action: PayloadAction<{ nameRaw: string; doseAmount: number; doseUnit: string; frequency: number; durationDays: number }>) {
       const input = action.payload;
       state.items.push({
         id: `manual-${Date.now()}-${Math.random()}`,
@@ -96,13 +152,19 @@ const prescriptionFlowSlice = createSlice({
         doseUnit: input.doseUnit,
         frequency: input.frequency,
         durationDays: input.durationDays,
-        slots: input.slots,
         decision: 'MANUAL',
       });
     },
-    updateSlots(state, action: PayloadAction<{ id: string; slots: DrugSlots }>) {
-      const item = state.items.find(i => i.id === action.payload.id);
-      if (item) item.slots = action.payload.slots;
+    addSlot(state, action: PayloadAction<{ timeOfDay: PrescriptionTimeOfDay; customTime: string }>) {
+      const uid = `${action.payload.timeOfDay.toLowerCase()}-${Date.now()}`;
+      state.prescriptionSlots.push({ uid, ...action.payload });
+    },
+    removeSlot(state, action: PayloadAction<string>) {
+      state.prescriptionSlots = state.prescriptionSlots.filter(s => s.uid !== action.payload);
+    },
+    setSlotTime(state, action: PayloadAction<{ uid: string; customTime: string }>) {
+      const slot = state.prescriptionSlots.find(s => s.uid === action.payload.uid);
+      if (slot) slot.customTime = action.payload.customTime;
     },
     updateDoseAmount(state, action: PayloadAction<{ id: string; amount: number }>) {
       const item = state.items.find(i => i.id === action.payload.id);
@@ -130,9 +192,11 @@ const prescriptionFlowSlice = createSlice({
 });
 
 export const {
-  setImageKey, setOcrStatus, setPrescriptionId,
-  addFromOcr, addFromSearch, addManual,
-  updateSlots, updateDoseAmount, replaceItem, removeItem,
+  setImageKey, setOcrStatus, setPrescriptionId, setPrescribedAt,
+  setStartDate, setEndDate,
+  addFromOcr, addFromExtract, addFromSearch, addManual,
+  addSlot, removeSlot, setSlotTime,
+  updateDoseAmount, replaceItem, removeItem,
   setMemo, reset,
 } = prescriptionFlowSlice.actions;
 
