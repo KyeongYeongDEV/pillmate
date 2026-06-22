@@ -58,8 +58,8 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
             >
               <Ionicons
                 name={isPinned ? 'pin' : 'pin-outline'}
-                size={scale(16)}
-                color={isPinned ? colors.primaryBase : colors.labelAlternative}
+                size={scale(22)}
+                color={isPinned ? colors.red40 : colors.labelAlternative}
               />
             </Pressable>
           </View>
