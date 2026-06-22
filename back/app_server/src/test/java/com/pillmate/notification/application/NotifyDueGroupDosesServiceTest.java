@@ -23,7 +23,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
-@DisplayName("NotifyDueGroupDosesService — 60초 경과 TAKEN 그룹 알림 폴링")
+@DisplayName("NotifyDueGroupDosesService — 30초 경과 TAKEN 그룹 알림 폴링")
 @ExtendWith(MockitoExtension.class)
 class NotifyDueGroupDosesServiceTest {
 
@@ -37,11 +37,11 @@ class NotifyDueGroupDosesServiceTest {
     private static final Long PATIENT_ID = 1L;
 
     @Test
-    @DisplayName("선택 윈도우 — windowStart = now-10분 (과거 행 폭주 방지), cutoff = now-60초")
+    @DisplayName("선택 윈도우 — windowStart = now-10분 (과거 행 폭주 방지), cutoff = now-30초")
     void notifyDue_queriesWithRecencyWindowAndCutoff() {
         // given
         given(doseLogRepository.findTakenNotGroupNotifiedBetween(
-                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
                 .willReturn(List.of());
 
         // when
@@ -53,7 +53,36 @@ class NotifyDueGroupDosesServiceTest {
         then(doseLogRepository).should()
                 .findTakenNotGroupNotifiedBetween(fromCaptor.capture(), toCaptor.capture());
         assertThat(fromCaptor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:50:00Z"));
-        assertThat(toCaptor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:59:00Z"));
+        assertThat(toCaptor.getValue()).isEqualTo(Instant.parse("2026-06-12T09:59:30Z"));
+    }
+
+    @Test
+    @DisplayName("경계 — 29초 전 TAKEN dose 는 cutoff 미만이므로 미발송")
+    void notifyDue_whenDoseTaken29sAgo_isNotSent() {
+        // 29초 전 takenAt > cutoff(=now-30s) → repository 반환 X
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
+                .willReturn(List.of());
+
+        int sent = sut.notifyDue();
+
+        assertThat(sent).isZero();
+        then(sendGroupDoseNotificationService).should(never()).send(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("경계 — 31초 전 TAKEN dose 는 cutoff 이상이므로 발송됨")
+    void notifyDue_whenDoseTaken31sAgo_isSent() {
+        // 31초 전 takenAt <= cutoff(=now-30s) → repository 반환 O
+        DoseLog log = takenLog(21L, 300L);
+        given(doseLogRepository.findTakenNotGroupNotifiedBetween(
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
+                .willReturn(List.of(log));
+
+        int sent = sut.notifyDue();
+
+        assertThat(sent).isEqualTo(1);
+        then(sendGroupDoseNotificationService).should().send(21L, 300L);
     }
 
     @Test
@@ -63,7 +92,7 @@ class NotifyDueGroupDosesServiceTest {
         DoseLog log1 = takenLog(11L, 100L);
         DoseLog log2 = takenLog(12L, 200L);
         given(doseLogRepository.findTakenNotGroupNotifiedBetween(
-                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
                 .willReturn(List.of(log1, log2));
 
         // when
@@ -79,7 +108,7 @@ class NotifyDueGroupDosesServiceTest {
     @DisplayName("due 없으면 0 반환, send 미호출")
     void notifyDue_whenEmpty_returnsZero() {
         given(doseLogRepository.findTakenNotGroupNotifiedBetween(
-                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
                 .willReturn(List.of());
 
         int sent = sut.notifyDue();
@@ -95,7 +124,7 @@ class NotifyDueGroupDosesServiceTest {
         DoseLog log1 = takenLog(11L, 100L);
         DoseLog log2 = takenLog(12L, 200L);
         given(doseLogRepository.findTakenNotGroupNotifiedBetween(
-                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(60)))
+                FIXED_NOW.minusSeconds(600), FIXED_NOW.minusSeconds(30)))
                 .willReturn(List.of(log1, log2));
         willThrow(new RuntimeException("push down"))
                 .given(sendGroupDoseNotificationService).send(11L, 100L);

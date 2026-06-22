@@ -61,13 +61,13 @@ describe('doseStateSlice — lockedAt + selectIsLocked', () => {
     expect(state[1].lockedAt).toBeUndefined();
   });
 
-  it('selectIsLocked false within 60s', () => {
+  it('selectIsLocked false within 30s', () => {
     const state = doseStateReducer({}, markDone({ doseLogId: 1 }));
     const now = (state[1].lockedAt ?? 0) + LOCK_DURATION_MS - 1;
     expect(selectIsLocked(state, 1, now)).toBe(false);
   });
 
-  it('selectIsLocked true at exactly 60s', () => {
+  it('selectIsLocked true at exactly 30s', () => {
     const state = doseStateReducer({}, markDone({ doseLogId: 1 }));
     const now = (state[1].lockedAt ?? 0) + LOCK_DURATION_MS;
     expect(selectIsLocked(state, 1, now)).toBe(true);
@@ -85,7 +85,7 @@ describe('doseStateSlice — lockedAt + selectIsLocked', () => {
     expect(selectIsLocked(state, 99, Date.now() + LOCK_DURATION_MS)).toBe(false);
   });
 
-  it('LOCK_DURATION_MS = 60_000', () => {
-    expect(LOCK_DURATION_MS).toBe(60_000);
+  it('LOCK_DURATION_MS = 30_000', () => {
+    expect(LOCK_DURATION_MS).toBe(30_000);
   });
 });

@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-// OCR_MIN_CONFIDENCE analogue: grace period before group notification fires
-export const LOCK_DURATION_MS = 60_000;
+// BE GROUP_NOTIFY_DELAY 와 동일 유지
+export const LOCK_DURATION_MS = 30_000;
 
 export interface DoseEntry {
   state: 'done' | 'wait';

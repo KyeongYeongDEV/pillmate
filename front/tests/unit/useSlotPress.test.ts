@@ -114,7 +114,7 @@ describe('useSlotPress', () => {
     expect(mockDispatch).not.toHaveBeenCalled();
   });
 
-  it('state=done + 60초 이내 → CANCEL action 즉시 발사 (자유 토글, SKIP 아님)', () => {
+  it('state=done + 30초 이내 → CANCEL action 즉시 발사 (자유 토글, SKIP 아님)', () => {
     const lockedAt = Date.now() - 1_000;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
@@ -123,7 +123,7 @@ describe('useSlotPress', () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
-  it('state=done + 60초 초과 → confirm Alert 표시, 즉시 발사 없음', () => {
+  it('state=done + 30초 초과 → confirm Alert 표시, 즉시 발사 없음', () => {
     const lockedAt = Date.now() - LOCK_DURATION_MS - 1_000;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
@@ -167,7 +167,7 @@ describe('useSlotPress', () => {
     expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
   });
 
-  it('state=done + lockedAt 정확히 60초 전 → 경계값 confirm 분기', () => {
+  it('state=done + lockedAt 정확히 30초 전 → 경계값 confirm 분기', () => {
     const lockedAt = Date.now() - LOCK_DURATION_MS;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());

@@ -16,7 +16,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotifyDueGroupDosesService implements NotifyDueGroupDosesUseCase {
 
-    private static final Duration GROUP_NOTIFY_DELAY = Duration.ofSeconds(60);
+    // FE LOCK_DURATION_MS 와 동일 유지 — 자유취소 윈도우 = 그룹알림 유예
+    private static final Duration GROUP_NOTIFY_DELAY = Duration.ofSeconds(30);
     // V27 이전 기존 TAKEN 행(group_notified_at=NULL) 폭주 방지 — 윈도우 밖 과거 행은 영구 미발송
     private static final Duration RECENCY_WINDOW = Duration.ofMinutes(10);
 
