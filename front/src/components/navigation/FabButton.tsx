@@ -13,9 +13,9 @@ function FabButton({ onPress }: FabButtonProps) {
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-        accessibilityLabel="처방전 등록"
+        accessibilityLabel="약봉투 등록"
         accessibilityRole="button"
-        accessibilityHint="처방전 등록 화면으로 이동합니다"
+        accessibilityHint="약봉투 등록 화면으로 이동합니다"
       >
         <Ionicons name="add" size={scale(30)} color="#fff" />
       </Pressable>

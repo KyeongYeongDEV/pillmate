@@ -17,7 +17,7 @@ function PrescriptionListCard({ item, onPress }: Props) {
       style={styles.card}
       onPress={() => onPress(item.id)}
       accessibilityRole="button"
-      accessibilityLabel={`${formatMonthDay(item.prescribedAt)} 처방전, 약 ${item.drugCount}종`}
+      accessibilityLabel={`${formatMonthDay(item.prescribedAt)} 약봉투, 약 ${item.drugCount}종`}
     >
       <View style={styles.body}>
         <View style={styles.topRow}>

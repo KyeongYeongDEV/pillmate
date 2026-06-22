@@ -15,7 +15,7 @@ export default function PrescriptionsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>처방전</Text>
+        <Text style={styles.title}>약봉투</Text>
       </View>
       {renderBody()}
       <RegisterFab bottom={space.s24} />
@@ -52,9 +52,9 @@ function RegisterFab({ bottom }: { bottom: number }) {
     <View style={[styles.fabWrap, { bottom }]} pointerEvents="box-none">
       <Pressable
         onPress={handlePress}
-        accessibilityLabel="처방전 등록"
+        accessibilityLabel="약봉투 등록"
         accessibilityRole="button"
-        accessibilityHint="처방전 등록 화면으로 이동합니다"
+        accessibilityHint="약봉투 등록 화면으로 이동합니다"
       >
         {({ pressed }) => (
           <View style={[styles.fab, pressed && styles.fabPressed]}>
@@ -69,14 +69,14 @@ function RegisterFab({ bottom }: { bottom: number }) {
 function EmptyState() {
   return (
     <View style={styles.content}>
-      <Text style={styles.sub}>등록된 처방전이 아직 없습니다.</Text>
+      <Text style={styles.sub}>등록된 약봉투가 아직 없습니다.</Text>
       <Pressable
         style={styles.cta}
         onPress={() => router.push('/prescription' as any)}
-        accessibilityLabel="처방전 등록하기"
+        accessibilityLabel="약봉투 등록하기"
         accessibilityRole="button"
       >
-        <Text style={styles.ctaTxt}>+ 처방전 등록하기</Text>
+        <Text style={styles.ctaTxt}>+ 약봉투 등록하기</Text>
       </Pressable>
     </View>
   );
@@ -85,7 +85,7 @@ function EmptyState() {
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <View style={styles.content}>
-      <Text style={styles.sub}>처방전을 불러올 수 없습니다.</Text>
+      <Text style={styles.sub}>약봉투를 불러올 수 없습니다.</Text>
       <Pressable style={styles.cta} onPress={onRetry} accessibilityLabel="다시 시도" accessibilityRole="button">
         <Text style={styles.ctaTxt}>다시 시도</Text>
       </Pressable>

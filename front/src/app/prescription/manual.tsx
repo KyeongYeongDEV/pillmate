@@ -70,7 +70,7 @@ export default function ManualScreen() {
         </Pressable>
         <View>
           <Text style={styles.headerTitle}>약 직접 추가</Text>
-          <Text style={styles.headerSub}>처방전에 없는 약도 등록할 수 있어요</Text>
+          <Text style={styles.headerSub}>약봉투에 없는 약도 등록할 수 있어요</Text>
         </View>
         <Pressable
           onPress={() => { setNameRaw(''); setMatched(null); setDoseAmount(1); }}

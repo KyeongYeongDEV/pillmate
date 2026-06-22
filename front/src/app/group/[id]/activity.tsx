@@ -18,7 +18,7 @@ type FilterTab = 'all' | 'dose' | 'rx' | 'ai';
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'all',  label: '전체' },
   { id: 'dose', label: '복약' },
-  { id: 'rx',   label: '처방전' },
+  { id: 'rx',   label: '약봉투' },
   { id: 'ai',   label: 'AI' },
 ];
 

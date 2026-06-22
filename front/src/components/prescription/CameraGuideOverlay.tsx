@@ -67,8 +67,8 @@ function CameraGuideOverlay({
               {allOk
                 ? autoShutterCountdown != null
                   ? `${autoShutterCountdown}초 후 자동 촬영`
-                  : '처방전을 맞춰주세요'
-                : '여기에 처방전을 맞춰주세요'}
+                  : '약봉투를 맞춰주세요'
+                : '여기에 약봉투를 맞춰주세요'}
             </Text>
           </View>
 

@@ -7,7 +7,7 @@ jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 
 const ITEMS: ActivityView[] = [
   { actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: new Date().toISOString() },
-  { actorName: '김민지', activityType: 'PRESCRIPTION_ADDED', summary: '처방전 등록', occurredAt: new Date().toISOString() },
+  { actorName: '김민지', activityType: 'PRESCRIPTION_ADDED', summary: '약봉투 등록', occurredAt: new Date().toISOString() },
 ];
 
 describe('DaySection', () => {
@@ -19,7 +19,7 @@ describe('DaySection', () => {
   it('모든 item summary 렌더', () => {
     render(<DaySection title="오늘" items={ITEMS} />);
     expect(screen.getByText('아침약 복용')).toBeTruthy();
-    expect(screen.getByText('처방전 등록')).toBeTruthy();
+    expect(screen.getByText('약봉투 등록')).toBeTruthy();
   });
 
   it('빈 items → null 렌더 (아무것도 표시 안함)', () => {

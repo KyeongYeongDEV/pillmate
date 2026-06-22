@@ -207,7 +207,7 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
   const [failed, setFailed] = useState(false);
   if (!url || failed) {
     return (
-      <Pressable style={styles.imagePlaceholder} onPress={onRefresh} accessibilityLabel="처방전 이미지 다시 불러오기">
+      <Pressable style={styles.imagePlaceholder} onPress={onRefresh} accessibilityLabel="약봉투 이미지 다시 불러오기">
         <Feather name="image" size={scale(32)} color={colors.labelAssistive} />
         <Text style={styles.placeholderText}>
           {url ? '이미지를 불러올 수 없어요 · 탭하여 새로고침' : '등록된 이미지가 없어요'}
@@ -220,7 +220,7 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
       source={{ uri: url }}
       style={styles.image}
       resizeMode="cover"
-      accessibilityLabel="처방전 이미지"
+      accessibilityLabel="약봉투 이미지"
       onError={() => setFailed(true)}
     />
   );
@@ -237,7 +237,7 @@ function Header() {
       >
         <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
-      <Text style={styles.headerTitle}>처방전 상세</Text>
+      <Text style={styles.headerTitle}>약봉투 상세</Text>
       <View style={styles.headerSpacer} />
     </View>
   );
@@ -246,7 +246,7 @@ function Header() {
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <View style={styles.errorBox}>
-      <Text style={styles.errorText}>처방전을 불러올 수 없어요</Text>
+      <Text style={styles.errorText}>약봉투를 불러올 수 없어요</Text>
       <Pressable style={styles.retryBtn} onPress={onRetry} accessibilityLabel="다시 시도" accessibilityRole="button">
         <Text style={styles.retryText}>다시 시도</Text>
       </Pressable>

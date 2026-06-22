@@ -78,7 +78,7 @@ export default function ScanScreen() {
     return (
       <View style={styles.loadingRoot}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.loadingTxt}>AI가 처방전을 분석 중이에요...</Text>
+        <Text style={styles.loadingTxt}>AI가 약봉투를 분석 중이에요...</Text>
         <Text style={styles.loadingSub}>(보통 10초)</Text>
       </View>
     );
@@ -110,7 +110,7 @@ export default function ScanScreen() {
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
           <View style={styles.hintPill}>
-            <Text style={styles.hintTxt}>처방전을 사각형 안에 맞춰주세요</Text>
+            <Text style={styles.hintTxt}>약봉투를 사각형 안에 맞춰주세요</Text>
           </View>
         </View>
       </View>

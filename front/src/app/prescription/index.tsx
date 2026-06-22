@@ -56,7 +56,7 @@ export default function PrescriptionRegisterHub() {
         <Pressable onPress={() => safeBack('/(tabs)/prescriptions')} accessibilityLabel="뒤로" accessibilityRole="button" style={styles.headerBtn}>
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>내 처방전 등록</Text>
+        <Text style={styles.headerTitle}>내 약봉투 등록</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -86,7 +86,7 @@ export default function PrescriptionRegisterHub() {
           <View style={styles.cameraTxtBox}>
             <Text style={styles.cameraLabel}>추천 · 가장 빠름</Text>
             <Text style={styles.cameraTitle}>카메라로 촬영하기</Text>
-            <Text style={styles.cameraSub}>처방전을 사각형 안에 맞추세요</Text>
+            <Text style={styles.cameraSub}>약봉투를 사각형 안에 맞추세요</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </Pressable>
@@ -152,7 +152,7 @@ export default function PrescriptionRegisterHub() {
         <View style={styles.tipCard}>
           <Text style={styles.tipTitle}>📌 촬영 팁</Text>
           {[
-            '처방전 전체가 보이도록 촬영하세요',
+            '약봉투 전체가 보이도록 촬영하세요',
             '조명이 충분한 곳에서 촬영하세요',
             '글자가 흐릿하면 사용자 확인이 필요해요',
           ].map((tip) => (

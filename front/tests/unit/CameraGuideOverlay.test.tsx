@@ -35,14 +35,14 @@ describe('CameraGuideOverlay', () => {
     const { getByText } = render(
       <CameraGuideOverlay hints={loadingHints} allOk={false} />,
     );
-    expect(getByText('여기에 처방전을 맞춰주세요')).toBeTruthy();
+    expect(getByText('여기에 약봉투를 맞춰주세요')).toBeTruthy();
   });
 
   it('allOk=true + autoShutterCountdown=null 시 안내 문구 표시', () => {
     const { getByText } = render(
       <CameraGuideOverlay hints={allOkHints} allOk={true} autoShutterCountdown={null} />,
     );
-    expect(getByText('처방전을 맞춰주세요')).toBeTruthy();
+    expect(getByText('약봉투를 맞춰주세요')).toBeTruthy();
   });
 
   it('autoShutterCountdown=3 시 카운트다운 텍스트 표시', () => {

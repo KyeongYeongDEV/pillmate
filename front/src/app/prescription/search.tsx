@@ -200,7 +200,7 @@ export default function DrugSearchScreen() {
       {toastVisible && (
         <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
           <Text style={styles.toastTxt} numberOfLines={1}>
-            ✓ 처방전에 추가됨
+            ✓ 약봉투에 추가됨
           </Text>
         </Animated.View>
       )}

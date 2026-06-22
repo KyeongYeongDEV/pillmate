@@ -64,8 +64,8 @@ describe('getActivityLabel', () => {
     expect(getActivityLabel('AI_REPORT')).toBe('AI');
   });
 
-  it('PRESCRIPTION_ADDED → "처방전"', () => {
-    expect(getActivityLabel('PRESCRIPTION_ADDED')).toBe('처방전');
+  it('PRESCRIPTION_ADDED → "약봉투"', () => {
+    expect(getActivityLabel('PRESCRIPTION_ADDED')).toBe('약봉투');
   });
 
   it('unknown type → "활동" fallback', () => {

@@ -182,7 +182,7 @@ export default function PrescriptionReviewScreen() {
         >
           <Text style={styles.headerBtnTxt}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>처방전 검토 · 등록</Text>
+        <Text style={styles.headerTitle}>약봉투 검토 · 등록</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -311,7 +311,7 @@ export default function PrescriptionReviewScreen() {
           style={[styles.registerBtn, isLoading && styles.registerBtnDisabled]}
           onPress={handleRegister}
           disabled={isLoading}
-          accessibilityLabel="처방전 등록"
+          accessibilityLabel="약봉투 등록"
           accessibilityRole="button"
         >
           <Text style={styles.registerBtnTxt}>{isLoading ? '등록 중…' : '등록하기'}</Text>

@@ -139,7 +139,7 @@ export default function ResultScreen() {
 
         {/* 메모 */}
         <View style={styles.memoCard}>
-          <Text style={styles.memoLabel}>처방전 메모</Text>
+          <Text style={styles.memoLabel}>약봉투 메모</Text>
           <TextInput
             value={memo}
             onChangeText={(t) => dispatch(setMemo(t))}
@@ -147,7 +147,7 @@ export default function ResultScreen() {
             placeholderTextColor={colors.labelAssistive}
             multiline
             style={styles.memoInput}
-            accessibilityLabel="처방전 메모"
+            accessibilityLabel="약봉투 메모"
           />
           {/* 빠른 프리필 칩 */}
           <View style={styles.chipRow}>

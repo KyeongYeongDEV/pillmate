@@ -24,7 +24,7 @@ function OcrStatusBanner({ status }: Props) {
 
   if (status === 'FAILED') {
     return (
-      <View style={styles.failed} accessibilityRole="alert" accessibilityLabel="처방전 인식에 실패했습니다">
+      <View style={styles.failed} accessibilityRole="alert" accessibilityLabel="약봉투 인식에 실패했습니다">
         <Text style={styles.failedIcon}>❌</Text>
         <Text style={styles.failedText}>인식에 실패했습니다. 다시 시도하거나 직접 입력해주세요.</Text>
       </View>

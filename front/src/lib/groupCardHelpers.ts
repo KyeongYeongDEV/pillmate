@@ -43,7 +43,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   DOSE_MISSED: '미복용',
   AI_INSIGHT: 'AI',
   AI_REPORT: 'AI',
-  PRESCRIPTION_ADDED: '처방전',
+  PRESCRIPTION_ADDED: '약봉투',
   COMMENT: '메모',
   MEMBER_JOINED: '멤버',
 };

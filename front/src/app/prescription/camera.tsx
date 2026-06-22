@@ -99,7 +99,7 @@ export default function CameraScreen() {
     return (
       <View style={styles.loadingRoot}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.loadingTxt}>AI가 처방전을 분석 중이에요...</Text>
+        <Text style={styles.loadingTxt}>AI가 약봉투를 분석 중이에요...</Text>
         <Text style={styles.loadingSub}>(보통 10초)</Text>
       </View>
     );

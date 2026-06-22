@@ -85,7 +85,7 @@ export default function PrescriptionConfirmScreen() {
         >
           <Text style={styles.headerBtnTxt}>✕</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>처방전 확인</Text>
+        <Text style={styles.headerTitle}>약봉투 확인</Text>
         <View style={styles.headerBtn} />
       </View>
 
