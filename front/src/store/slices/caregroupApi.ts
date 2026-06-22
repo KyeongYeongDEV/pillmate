@@ -27,6 +27,19 @@ export const caregroupApiSlice = createApi({
     }),
     pinGroup: build.mutation<void, number>({
       query: (id) => ({ url: `/groups/${id}/pin`, method: 'POST' }),
+      // BE PinGroupUseCase 단일 핀 — 새 핀 시 기존 해제
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          caregroupApiSlice.util.updateQueryData('getMyGroups', undefined, (draft) => {
+            draft.forEach(g => { g.pinned = g.groupId === id; });
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
       invalidatesTags: ['Group'],
     }),
     unpinGroup: build.mutation<void, number>({

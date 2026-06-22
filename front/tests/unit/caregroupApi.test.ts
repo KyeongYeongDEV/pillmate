@@ -96,4 +96,35 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
     const pinned = groups.find(g => g.pinned);
     expect(pinned?.groupId).toBe(2);
   });
+
+  it('트랜지언트 2-pinned — groupId 기반 필터로 그룹 누락 없음', () => {
+    // 낙관적 업데이트 인플라이트 중 A·B 모두 pinned:true 인 순간
+    const groups: MyGroupSummary[] = [
+      { groupId: 1, name: 'A', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: true },
+      { groupId: 2, name: 'B', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: true },
+      { groupId: 3, name: 'C', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: false },
+    ];
+    const pinnedGroup = groups.find(g => g.pinned) ?? null; // → A (groupId=1)
+    // Fix: id 기반 필터 — B가 사라지지 않아야 한다
+    const unpinnedGroups = groups.filter(g => g.groupId !== pinnedGroup?.groupId);
+    expect(unpinnedGroups).toHaveLength(2);
+    expect(unpinnedGroups.find(g => g.groupId === 2)).toBeTruthy(); // B 보임
+    expect(unpinnedGroups.find(g => g.groupId === 3)).toBeTruthy(); // C 보임
+  });
+
+  it('단일 핀 낙관적 업데이트 변환 — 새 핀 시 나머지 그룹 pinned=false', () => {
+    const newPinnedId = 2;
+    const groups: MyGroupSummary[] = [
+      { groupId: 1, name: 'A', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: true },
+      { groupId: 2, name: 'B', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: false },
+      { groupId: 3, name: 'C', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: false },
+    ];
+    // onQueryStarted 에서 실행되는 draft 변환과 동일한 로직
+    const updated = groups.map(g => ({ ...g, pinned: g.groupId === newPinnedId }));
+    expect(updated.find(g => g.groupId === 1)?.pinned).toBe(false); // 기존 핀 해제
+    expect(updated.find(g => g.groupId === 2)?.pinned).toBe(true);  // 새 핀
+    expect(updated.find(g => g.groupId === 3)?.pinned).toBe(false);
+    // 단 하나만 pinned
+    expect(updated.filter(g => g.pinned)).toHaveLength(1);
+  });
 });
