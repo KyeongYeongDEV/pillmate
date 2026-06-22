@@ -5,6 +5,7 @@ import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.doselog.domain.event.DoseCheckCanceled;
+import com.pillmate.notification.application.port.CareGroupLookupPort;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.notification.domain.model.NotificationReferenceType;
@@ -47,6 +48,7 @@ class NotificationDispatcherTest {
     @Mock ScheduleRepository scheduleRepository;
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock NotificationSenderPort notificationSenderPort;
+    @Mock CareGroupLookupPort careGroupLookupPort;
     @InjectMocks NotificationDispatcher sut;
 
     private static final Long ACTOR_ID = 10L;
@@ -63,6 +65,7 @@ class NotificationDispatcherTest {
         User actor = User.dummy("actor");
         actor.registerPushToken("ExponentPushToken[actor]", PushProvider.EXPO);
         lenient().when(userRepository.findById(ACTOR_ID)).thenReturn(Optional.of(actor));
+        lenient().when(careGroupLookupPort.findNameById(any())).thenReturn(Optional.of("테스트그룹"));
     }
 
     @Test
@@ -115,6 +118,36 @@ class NotificationDispatcherTest {
         assertThat(filtered.get(0).getReferenceId()).isEqualTo(PRESCRIPTION_ID);
         assertThat(filtered.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
         verify(notificationSenderPort).send(any());
+    }
+
+    @Test
+    @DisplayName("PrescriptionRegistered — route '/group/{careGroupId}' + 본문 '약봉투' + actor 이름 포함")
+    void on_prescriptionRegistered_routeIsGroupAndBodyContainsYakBongTuAndActorName() {
+        // given
+        PrescriptionRegistered event = new PrescriptionRegistered(ACTOR_ID, PRESCRIPTION_ID);
+        given(membershipRepository.findGroupMemberPairs(ACTOR_ID))
+                .willReturn(List.of(new MembershipPair(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        // when
+        sut.on(event);
+
+        // then — 알림 본문
+        ArgumentCaptor<List<Notification>> notifCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(notifCaptor.capture());
+        String body = notifCaptor.getValue().get(0).getBody();
+        assertThat(body).contains("약봉투");
+        assertThat(body).contains("actor");   // User.dummy("actor") 의 name
+        assertThat(body).contains("테스트그룹");
+
+        // then — FCM data route
+        ArgumentCaptor<NotificationSenderPort.NotificationCommand> cmdCaptor =
+                ArgumentCaptor.forClass(NotificationSenderPort.NotificationCommand.class);
+        verify(notificationSenderPort).send(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().data()).containsEntry("route", "/group/" + GROUP_ID);
     }
 
     @Test
@@ -206,7 +239,10 @@ class NotificationDispatcherTest {
         Schedule schedule = Schedule.of(GROUP_ID, ACTOR_ID, 1L, TimeOfDay.MORNING,
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31), ACTOR_ID);
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(ACTOR_ID, MEMBER_ID));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null),
+                Membership.of(GROUP_ID, MEMBER_ID, MemberRole.GUARDIAN, null)
+        ));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         User member = User.dummy("member");
         member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
@@ -237,13 +273,51 @@ class NotificationDispatcherTest {
         Schedule schedule = Schedule.of(GROUP_ID, ACTOR_ID, 1L, TimeOfDay.MORNING,
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31), ACTOR_ID);
         given(scheduleRepository.findById(11L)).willReturn(Optional.of(schedule));
-        given(membershipRepository.findGroupMemberUserIds(ACTOR_ID)).willReturn(List.of(ACTOR_ID));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null)
+        ));
 
         // when
         sut.on(event);
 
         // then
         verify(notificationPersistenceService, org.mockito.Mockito.never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("DoseCheckCanceled P1 — actor 가 두 그룹 소속이어도 취소 dose 의 careGroupId 그룹 멤버에게만 발송")
+    void on_doseCheckCanceled_onlySendsToScheduleGroup_notAllActorGroups() {
+        // given
+        Long DOSE_LOG_ID = 7L;
+        Long SCHEDULE_ID = 11L;
+        Long GROUP_B = 6L;
+        Long MEMBER_B_ONLY = 30L;  // groupB 전용 멤버 — 누출 대상
+        DoseCheckCanceled event = new DoseCheckCanceled(DOSE_LOG_ID, ACTOR_ID, SCHEDULE_ID);
+        // groupA(GROUP_ID) 스케줄
+        Schedule schedule = Schedule.of(GROUP_ID, ACTOR_ID, 1L, TimeOfDay.MORNING,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31), ACTOR_ID);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        // groupA 멤버: actor + MEMBER_ID
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null),
+                Membership.of(GROUP_ID, MEMBER_ID, MemberRole.GUARDIAN, null)
+        ));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        // when
+        sut.on(event);
+
+        // then
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        List<Long> recipients = captor.getValue().stream()
+                .map(Notification::getRecipientUserId).toList();
+        assertThat(recipients).containsExactly(MEMBER_ID);
+        assertThat(recipients).doesNotContain(ACTOR_ID);      // actor 제외
+        assertThat(recipients).doesNotContain(MEMBER_B_ONLY); // groupB 전용 미수신
     }
 
     private Notification buildNotification(Long recipientId, NotificationType type) {

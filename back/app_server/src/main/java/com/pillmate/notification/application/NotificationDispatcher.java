@@ -1,8 +1,10 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.doselog.domain.event.DoseCheckCanceled;
+import com.pillmate.notification.application.port.CareGroupLookupPort;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.domain.model.Notification;
@@ -37,6 +39,7 @@ public class NotificationDispatcher {
     private final ScheduleRepository scheduleRepository;
     private final NotificationPersistenceService notificationPersistenceService;
     private final NotificationSenderPort notificationSenderPort;
+    private final CareGroupLookupPort careGroupLookupPort;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(DdiCriticalDetected event) {
@@ -56,9 +59,11 @@ public class NotificationDispatcher {
     public void on(PrescriptionRegistered event) {
         List<MembershipPair> pairs = membershipRepository.findGroupMemberPairs(event.actorUserId());
 
+        String actorName = resolveUserName(event.actorUserId());
         List<Notification> notifications = pairs.stream()
                 .map(pair -> Notification.prescriptionNew(
-                        pair.memberId(), event.actorUserId(), pair.groupId(), event.prescriptionId()))
+                        pair.memberId(), event.actorUserId(), pair.groupId(), event.prescriptionId(),
+                        actorName, careGroupLookupPort.findNameById(pair.groupId()).orElse(null)))
                 .toList();
 
         if (notifications.isEmpty()) {
@@ -66,7 +71,7 @@ public class NotificationDispatcher {
         }
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
-        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId() + "/prescription/" + event.prescriptionId()));
+        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -104,12 +109,15 @@ public class NotificationDispatcher {
     }
 
     private List<Notification> buildCanceledNotifications(DoseCheckCanceled event, Schedule schedule) {
+        Long careGroupId = schedule.getCareGroupId();
+        if (careGroupId == null) return List.of();
         String actorName = resolveUserName(event.actorUserId());
         String timeLabel = schedule.getCustomTime().format(HH_MM);
-        return membershipRepository.findGroupMemberUserIds(event.actorUserId()).stream()
+        return membershipRepository.findByCareGroupId(careGroupId).stream()
+                .map(Membership::getUserId)
                 .filter(id -> !id.equals(event.actorUserId()))
                 .map(recipientId -> Notification.doseCanceled(
-                        recipientId, event.actorUserId(), schedule.getCareGroupId(),
+                        recipientId, event.actorUserId(), careGroupId,
                         event.doseLogId(), actorName, timeLabel))
                 .toList();
     }

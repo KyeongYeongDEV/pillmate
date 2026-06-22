@@ -119,4 +119,39 @@ class NotificationTest {
         assertThat(n.getReferenceId()).isNull();
         assertThat(n.getReferenceType()).isNull();
     }
+
+    @Test
+    @DisplayName("prescriptionNew(6-param) — 본문/타이틀에 '약봉투' 포함, actor·groupName 반영")
+    void create_prescriptionNewWithNames_bodyContainsYakBongTu() {
+        Long prescriptionId = 200L;
+        Notification n = Notification.prescriptionNew(
+                RECIPIENT, ACTOR, GROUP_ID, prescriptionId, "홍길동", "우리가족");
+
+        assertThat(n.getTitle()).contains("약봉투");
+        assertThat(n.getBody()).contains("약봉투");
+        assertThat(n.getBody()).contains("홍길동");
+        assertThat(n.getBody()).contains("우리가족");
+    }
+
+    @Test
+    @DisplayName("prescriptionNew(6-param) — actorName null 시 '그룹 멤버' fallback")
+    void create_prescriptionNewWithNullActor_fallback() {
+        Notification n = Notification.prescriptionNew(
+                RECIPIENT, ACTOR, GROUP_ID, 200L, null, null);
+
+        assertThat(n.getBody()).contains("그룹 멤버");
+        assertThat(n.getBody()).contains("약봉투");
+    }
+
+    @Test
+    @DisplayName("doseTaken(6-param) — 본문에 actor·groupName 반영, actorName null 시 '그룹 멤버가' fallback")
+    void create_doseTakenWithNames_bodyContainsNamesAndFallback() {
+        Notification withNames = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG,
+                "김철수", "우리가족");
+        assertThat(withNames.getBody()).contains("김철수").contains("우리가족");
+
+        Notification withFallback = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG,
+                null, null);
+        assertThat(withFallback.getBody()).contains("그룹 멤버가");
+    }
 }

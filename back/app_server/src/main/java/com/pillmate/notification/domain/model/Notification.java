@@ -82,18 +82,49 @@ public class Notification {
 
     public static Notification doseTaken(Long recipientUserId, Long actorUserId,
                                          Long careGroupId, Long doseLogId,
-                                         Long prescriptionId, String prescriptionName) {
-        return doseForPrescription(recipientUserId, actorUserId, careGroupId, doseLogId,
-                prescriptionId, NotificationType.DOSE_TAKEN,
-                "'" + prescriptionName + "' 복약을 완료했어요");
+                                         String actorName, String groupName) {
+        return create(recipientUserId, actorUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_TAKEN, "복약 알림",
+                buildDoseBody(groupName, actorName, null, false));
     }
 
     public static Notification doseMissed(Long recipientUserId, Long actorUserId,
                                           Long careGroupId, Long doseLogId,
-                                          Long prescriptionId, String prescriptionName) {
+                                          String actorName, String groupName) {
+        return create(recipientUserId, actorUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_MISSED, "복약 알림",
+                buildDoseBody(groupName, actorName, null, true));
+    }
+
+    public static Notification doseTaken(Long recipientUserId, Long actorUserId,
+                                         Long careGroupId, Long doseLogId,
+                                         Long prescriptionId, String prescriptionName,
+                                         String actorName, String groupName) {
+        return doseForPrescription(recipientUserId, actorUserId, careGroupId, doseLogId,
+                prescriptionId, NotificationType.DOSE_TAKEN,
+                buildDoseBody(groupName, actorName, prescriptionName, false));
+    }
+
+    public static Notification doseMissed(Long recipientUserId, Long actorUserId,
+                                          Long careGroupId, Long doseLogId,
+                                          Long prescriptionId, String prescriptionName,
+                                          String actorName, String groupName) {
         return doseForPrescription(recipientUserId, actorUserId, careGroupId, doseLogId,
                 prescriptionId, NotificationType.DOSE_MISSED,
-                "'" + prescriptionName + "' 복약을 건너뛰었어요");
+                buildDoseBody(groupName, actorName, prescriptionName, true));
+    }
+
+    private static String buildDoseBody(String groupName, String actorName,
+                                        String prescriptionName, boolean missed) {
+        String action = prescriptionName != null
+                ? (missed ? "'" + prescriptionName + "' 복약을 건너뛰었어요"
+                          : "'" + prescriptionName + "' 복약을 완료했어요")
+                : (missed ? "복약을 건너뛰었어요" : "복약을 완료했어요");
+        if (actorName == null) {
+            return "그룹 멤버가 " + action;
+        }
+        String prefix = groupName != null ? "[" + groupName + "] " : "";
+        return prefix + actorName + "님이 " + action;
     }
 
     private static Notification doseForPrescription(Long recipientUserId, Long actorUserId,
@@ -127,7 +158,19 @@ public class Notification {
                                                 Long careGroupId, Long prescriptionId) {
         return createWithReference(recipientUserId, actorUserId, careGroupId,
                 prescriptionId, NotificationReferenceType.PRESCRIPTION,
-                NotificationType.PRESCRIPTION_NEW, "새 처방전 등록", "그룹 멤버의 새 처방전이 등록되었어요");
+                NotificationType.PRESCRIPTION_NEW, "새 약봉투 등록", "그룹 멤버가 새 약봉투를 등록했어요");
+    }
+
+    public static Notification prescriptionNew(Long recipientUserId, Long actorUserId,
+                                                Long careGroupId, Long prescriptionId,
+                                                String actorName, String groupName) {
+        String actor = actorName != null ? actorName : "그룹 멤버";
+        String body = groupName != null
+                ? "[" + groupName + "] " + actor + "님이 새 약봉투를 등록했어요"
+                : actor + "님이 새 약봉투를 등록했어요";
+        return createWithReference(recipientUserId, actorUserId, careGroupId,
+                prescriptionId, NotificationReferenceType.PRESCRIPTION,
+                NotificationType.PRESCRIPTION_NEW, "새 약봉투 등록", body);
     }
 
     public static Notification weeklyReport(Long recipientUserId, Long actorUserId,
