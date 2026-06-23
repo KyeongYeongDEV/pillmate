@@ -12,8 +12,7 @@ import { addFromSearch } from '@/store/slices/prescriptionFlowSlice';
 import DrugSearchBar from '@/components/search/DrugSearchBar';
 import SearchResultCard from '@/components/search/SearchResultCard';
 import RecentSearchChips from '@/components/search/RecentSearchChips';
-import CategoryGrid from '@/components/search/CategoryGrid';
-import { scale, colors, space, radius, typography } from '@/styles/tokens';
+import { colors, space, radius, typography } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 
@@ -78,10 +77,6 @@ export default function DrugSearchScreen() {
   }, []);
 
   const handleClear = useCallback(() => setQuery(''), []);
-
-  const handleCategorySelect = useCallback((category: string) => {
-    setQuery(category);
-  }, []);
 
   const handleRecentSelect = useCallback((term: string) => {
     setQuery(term);
@@ -168,19 +163,6 @@ export default function DrugSearchScreen() {
               onRemove={handleRecentRemove}
               onClearAll={handleClearAllRecent}
             />
-            <CategoryGrid onSelect={handleCategorySelect} />
-
-            <View style={styles.aiHint}>
-              <View style={styles.aiHintIcon}>
-                <Text style={styles.aiHintIconTxt}>✨</Text>
-              </View>
-              <View style={styles.aiHintBody}>
-                <Text style={styles.aiHintTitle}>약 이름이 기억나지 않으세요?</Text>
-                <Text style={styles.aiHintSub}>
-                  "흰색 동그란 알약, 혈압약" 처럼 설명해도 찾아드려요.
-                </Text>
-              </View>
-            </View>
           </ScrollView>
         )}
       </KeyboardAvoidingView>
@@ -221,20 +203,6 @@ const styles = StyleSheet.create({
     textAlign: 'center', marginTop: space.s16,
   },
   emptyState: { paddingBottom: space.s48 },
-  aiHint: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: space.s12,
-    backgroundColor: colors.violet95, borderRadius: radius.r14, padding: space.s16,
-    marginHorizontal: space.s16, marginTop: space.s24,
-  },
-  aiHintIcon: {
-    width: scale(32), height: scale(32), borderRadius: radius.r10,
-    backgroundColor: colors.bgNormal, alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  aiHintIconTxt: { fontSize: scale(16) },
-  aiHintBody: { flex: 1 },
-  aiHintTitle: { fontSize: scale(13), fontWeight: '700', color: colors.violet45, letterSpacing: -0.005 },
-  aiHintSub: { fontSize: scale(12), color: colors.violet45, marginTop: 4, lineHeight: scale(18), opacity: 0.85 },
   toast: {
     position: 'absolute', bottom: space.s24, alignSelf: 'center',
     backgroundColor: colors.labelNormal, borderRadius: radius.r20,

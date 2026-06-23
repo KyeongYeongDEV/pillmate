@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import Highlight from '@/components/search/Highlight';
 import DrugSearchBar from '@/components/search/DrugSearchBar';
 import SearchResultCard from '@/components/search/SearchResultCard';
-import CategoryGrid from '@/components/search/CategoryGrid';
 import RecentSearchChips from '@/components/search/RecentSearchChips';
 import type { DrugSearchResult } from '@/types/prescription';
 
@@ -92,27 +91,6 @@ describe('SearchResultCard', () => {
     render(<SearchResultCard item={DRUG} query="" alreadyAdded={false} onAdd={onAdd} onDetail={jest.fn()} />);
     fireEvent.press(screen.getByTestId(`add-btn-${DRUG.kdCode}`));
     expect(onAdd).toHaveBeenCalledWith(DRUG);
-  });
-});
-
-// ── CategoryGrid ──────────────────────────────────────────────────────
-
-describe('CategoryGrid', () => {
-  it('6개 카테고리 모두 렌더', () => {
-    render(<CategoryGrid onSelect={jest.fn()} />);
-    expect(screen.getByText('고혈압')).toBeTruthy();
-    expect(screen.getByText('당뇨')).toBeTruthy();
-    expect(screen.getByText('콜레스테롤')).toBeTruthy();
-    expect(screen.getByText('소화제')).toBeTruthy();
-    expect(screen.getByText('진통제')).toBeTruthy();
-    expect(screen.getByText('감기')).toBeTruthy();
-  });
-
-  it('카테고리 클릭 시 onSelect 호출', () => {
-    const onSelect = jest.fn();
-    render(<CategoryGrid onSelect={onSelect} />);
-    fireEvent.press(screen.getByRole('button', { name: '고혈압 카테고리 검색' }));
-    expect(onSelect).toHaveBeenCalledWith('고혈압');
   });
 });
 
