@@ -7,6 +7,12 @@ import { useCountdown } from '@/hooks/useCountdown';
 import type { InviteCodeView } from '@/types/caregroup';
 
 const QR_SIZE = 132;
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 const EMPTY_ICON_SIZE = 28;
 
 interface InviteCodeCardProps {
@@ -41,7 +47,7 @@ function InviteCodeCard({ inviteCode, onExpire }: InviteCodeCardProps) {
   }
 
   const expiryText = remainingSeconds > 0
-    ? `유효 ${remainingSeconds}초 · 가족에게 코드 또는 QR을 전송하세요.`
+    ? `유효 ${formatCountdown(remainingSeconds)} · 가족에게 코드 또는 QR을 전송하세요.`
     : '만료됨';
 
   return (

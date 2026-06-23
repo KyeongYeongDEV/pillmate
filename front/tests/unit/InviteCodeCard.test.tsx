@@ -48,7 +48,7 @@ describe('InviteCodeCard', () => {
     expect(screen.queryByLabelText('초대 코드 QR')).toBeNull();
   });
 
-  describe('카운트다운 (1분 TTL)', () => {
+  describe('카운트다운 (3분 TTL)', () => {
     beforeEach(() => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-06-02T00:00:00Z'));
@@ -57,17 +57,17 @@ describe('InviteCodeCard', () => {
       jest.useRealTimers();
     });
 
-    it('유효 inviteCode — "유효 60초" 문구 렌더', () => {
-      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 60_000).toISOString() };
+    it('유효 inviteCode — "유효 3:00" 문구 렌더', () => {
+      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 180_000).toISOString() };
       render(<InviteCodeCard inviteCode={code} />);
-      expect(screen.getByText(/유효 60초/)).toBeTruthy();
+      expect(screen.getByText(/유효 3:00/)).toBeTruthy();
     });
 
     it('만료 도달 → onExpire 콜백 1회 호출', () => {
-      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 60_000).toISOString() };
+      const code = { code: '3F9K2P', expiresAt: new Date(Date.now() + 180_000).toISOString() };
       const onExpire = jest.fn();
       render(<InviteCodeCard inviteCode={code} onExpire={onExpire} />);
-      jest.advanceTimersByTime(60_000);
+      jest.advanceTimersByTime(180_000);
       expect(onExpire).toHaveBeenCalledTimes(1);
     });
   });

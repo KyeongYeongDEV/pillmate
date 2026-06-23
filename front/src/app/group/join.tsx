@@ -85,17 +85,34 @@ export default function JoinGroupScreen() {
   );
 }
 
+const JOIN_TIMEOUT_MS = 10_000;
+
 async function joinGroup(code: string): Promise<void> {
   const token = await getToken();
   const userId = await getCurrentUserId();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (userId != null) headers['X-User-Id'] = String(userId);
 
-  const res = await fetch(`${API_BASE_URL}/groups/join/${code}`, { method: 'POST', headers });
-  const envelope: ApiEnvelope<unknown> = await res.json();
-  if (!res.ok) {
-    throw new Error(envelope?.error?.message ?? '초대 코드가 올바르지 않아요');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), JOIN_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE_URL}/groups/join/${code}`, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+    });
+    const envelope: ApiEnvelope<unknown> = await res.json();
+    if (!res.ok) {
+      if (res.status === 410) throw new Error('만료되었거나 잘못된 코드예요');
+      if (res.status === 404) throw new Error('초대 코드를 찾을 수 없어요');
+      throw new Error(envelope?.error?.message ?? '초대 코드가 올바르지 않아요');
+    }
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('연결 시간이 초과됐어요. 네트워크를 확인해주세요');
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
