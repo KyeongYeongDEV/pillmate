@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { scale, colors, space, radius, typography } from '@/styles/tokens';
 
 interface SourceCardProps {
@@ -18,7 +17,6 @@ export default function SourceCard({ source }: SourceCardProps) {
       <View style={styles.body}>
         <Text style={styles.sourceLine}>출처: {source ?? DEFAULT_SOURCE}</Text>
       </View>
-      <Feather name="external-link" size={scale(16)} color={colors.labelAlternative} />
     </View>
   );
 }

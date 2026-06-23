@@ -114,17 +114,6 @@ export default function DrugSearchScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.filterRow}>
-        <View style={[styles.filterChip, styles.filterActive]}>
-          <Text style={styles.filterActiveTxt}>✨ AI 의미 검색</Text>
-        </View>
-        {['이름', '성분', '효능'].map(f => (
-          <View key={f} style={styles.filterChip}>
-            <Text style={styles.filterTxt}>{f}</Text>
-          </View>
-        ))}
-      </View>
-
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -217,17 +206,6 @@ const styles = StyleSheet.create({
   },
   cancelBtn: { paddingVertical: space.s4 },
   cancelTxt: { ...typography.body2n, color: colors.labelNormal, fontWeight: '600' },
-  filterRow: {
-    flexDirection: 'row', gap: space.s8,
-    paddingHorizontal: space.s16, paddingBottom: space.s8,
-  },
-  filterChip: {
-    paddingHorizontal: space.s12, paddingVertical: 7,
-    borderRadius: radius.full, backgroundColor: colors.fillNormal,
-  },
-  filterActive: { backgroundColor: colors.violet95 },
-  filterActiveTxt: { fontSize: scale(12), fontWeight: '700', color: colors.violet45 },
-  filterTxt: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
   kav: { flex: 1 },
   resultList: { padding: space.s16, paddingBottom: space.s48, gap: space.s8 },
   resultHeader: { marginBottom: space.s4 },
