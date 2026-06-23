@@ -33,7 +33,7 @@ describe('prescriptionApi — 목록·상세 엔드포인트', () => {
     const detail: PrescriptionDetailView = {
       id: 1, prescribedAt: '2026-06-14', ocrStatus: 'MANUAL', imageUrl: null,
       drugs: [{
-        nameRaw: '아토르바', matchedDrugName: null,
+        nameRaw: '아토르바', matchedDrugName: null, matchedKdCode: null,
         doseAmount: 10, doseUnit: 'mg', frequency: 1, durationDays: 30, confidence: null,
       }],
     };

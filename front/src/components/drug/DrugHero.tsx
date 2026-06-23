@@ -32,9 +32,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: space.s16, marginTop: space.s12, marginBottom: space.s24,
   },
-  image: { width: scale(140), height: scale(140), borderRadius: radius.r16, backgroundColor: colors.bgNormal },
+  image: { width: scale(180), height: scale(180), borderRadius: radius.r16, backgroundColor: colors.bgNormal },
   name: {
-    ...typography.heading2, color: colors.labelNormal,
+    ...typography.headline1, fontWeight: '700', color: colors.labelNormal,
     marginTop: space.s14, textAlign: 'center', letterSpacing: -0.018,
   },
   sub: {

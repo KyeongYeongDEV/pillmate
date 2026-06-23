@@ -50,6 +50,7 @@ export interface PrescriptionSummary {
 export interface PrescriptionDetailDrug {
   nameRaw: string;
   matchedDrugName: string | null;
+  matchedKdCode: string | null;
   doseAmount: number | null;
   doseUnit: string | null;
   frequency: number | null;
