@@ -17,7 +17,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class IssueInviteCodeUseCase {
 
-    private static final Duration REDIS_TTL = Duration.ofMinutes(1);
+    private static final Duration REDIS_TTL = Duration.ofMinutes(InviteCode.INVITE_CODE_TTL_MINUTES);
 
     private final InviteCodeRepository inviteCodeRepository;
     private final MembershipRepository membershipRepository;

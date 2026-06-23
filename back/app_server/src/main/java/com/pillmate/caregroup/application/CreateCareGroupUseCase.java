@@ -19,7 +19,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class CreateCareGroupUseCase {
 
-    private static final Duration REDIS_TTL = Duration.ofMinutes(1);
+    private static final Duration REDIS_TTL = Duration.ofMinutes(InviteCode.INVITE_CODE_TTL_MINUTES);
 
     private final CareGroupRepository careGroupRepository;
     private final MembershipRepository membershipRepository;

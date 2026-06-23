@@ -4,6 +4,9 @@ import com.pillmate.caregroup.domain.model.InviteCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -19,6 +22,18 @@ class InviteCodeTest {
         assertThat(code.getCode()).matches("[A-Z0-9]{6}");
         assertThat(code.getExpiresAt()).isNotNull();
         assertThat(code.isExpired()).isFalse();
+    }
+
+    @Test
+    @DisplayName("generate() 발급 코드의 expiresAt 은 발급 시각 + 3분")
+    void generate_expiresAt_isCreatedAtPlus3Minutes() {
+        Instant before = Instant.now();
+        InviteCode code = InviteCode.generate(1L, 1L);
+        Instant after = Instant.now();
+
+        assertThat(code.getExpiresAt())
+                .isAfterOrEqualTo(before.plus(3, ChronoUnit.MINUTES))
+                .isBeforeOrEqualTo(after.plus(3, ChronoUnit.MINUTES).plusSeconds(1));
     }
 
     @Test

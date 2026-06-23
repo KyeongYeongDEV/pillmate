@@ -48,7 +48,7 @@ public class InviteCode {
         return ic;
     }
 
-    private static final int INVITE_CODE_TTL_MINUTES = 1;
+    public static final int INVITE_CODE_TTL_MINUTES = 3;
 
     public static InviteCode ofExpired(String code, Long careGroupId, Long createdBy) {
         InviteCode ic = new InviteCode();
