@@ -56,9 +56,11 @@ public class GetPrescriptionDetailUseCase {
     }
 
     private DrugDetail toDrugDetail(PrescribedDrug drug) {
+        DrugLookupPort.DrugSummary summary = resolveSummary(drug.getDrugId());
         return new DrugDetail(
                 drug.getNameRaw(),
-                resolveMatchedName(drug.getDrugId()),
+                summary != null ? summary.name() : null,
+                summary != null ? summary.kdCode() : null,
                 drug.getDoseAmount(),
                 drug.getDoseUnit(),
                 drug.getFrequency(),
@@ -66,12 +68,10 @@ public class GetPrescriptionDetailUseCase {
                 drug.getConfidence());
     }
 
-    private String resolveMatchedName(Long drugId) {
+    private DrugLookupPort.DrugSummary resolveSummary(Long drugId) {
         if (drugId == null) {
             return null;
         }
-        return drugLookupPort.findById(drugId)
-                .map(DrugLookupPort.DrugSummary::name)
-                .orElse(null);
+        return drugLookupPort.findById(drugId).orElse(null);
     }
 }

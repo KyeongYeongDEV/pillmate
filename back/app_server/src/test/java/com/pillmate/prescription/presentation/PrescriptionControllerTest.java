@@ -247,7 +247,7 @@ class PrescriptionControllerTest {
                 new PrescriptionDetailResponse(42L, LocalDate.of(2026, 6, 10), OcrStatus.DONE,
                         "https://s3.test/presigned?sig=x",
                         List.of(new PrescriptionDetailResponse.DrugDetail(
-                                "타이레놀", "타이레놀정500밀리그램",
+                                "타이레놀", "타이레놀정500밀리그램", "KD-001",
                                 new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95")))));
 
         mockMvc.perform(get("/prescriptions/42").header("X-User-Id", "7"))

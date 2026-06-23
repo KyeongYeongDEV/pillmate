@@ -88,7 +88,23 @@ class GetPrescriptionDetailUseCaseTest {
     }
 
     @Test
-    @DisplayName("미매칭 약품(drugId null) — matchedDrugName null")
+    @DisplayName("매칭 약품 — matchedKdCode 채워짐")
+    void detail_matchedDrug_matchedKdCodeFilled() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        p.addDrug(matchedDrug(101L, "타이레놀정"));
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(drugLookupPort.findById(101L))
+                .willReturn(Optional.of(new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", "img")));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.drugs().get(0).matchedKdCode()).isEqualTo("KD-001");
+        assertThat(detail.drugs().get(0).matchedDrugName()).isEqualTo("타이레놀정500밀리그램");
+    }
+
+    @Test
+    @DisplayName("미매칭 약품(drugId null) — matchedDrugName null, matchedKdCode null")
     void detail_unmatchedDrug_matchedNameNull() {
         UserContext.set(OWNER_ID);
         Prescription p = prescription(OWNER_ID, "prescriptions/uuid.jpg");
@@ -100,6 +116,7 @@ class GetPrescriptionDetailUseCaseTest {
         PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
 
         assertThat(detail.drugs().get(0).matchedDrugName()).isNull();
+        assertThat(detail.drugs().get(0).matchedKdCode()).isNull();
         verify(drugLookupPort, never()).findById(org.mockito.ArgumentMatchers.anyLong());
     }
 

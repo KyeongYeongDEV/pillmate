@@ -16,6 +16,7 @@ public record PrescriptionDetailResponse(
     public record DrugDetail(
             String nameRaw,
             String matchedDrugName,
+            String matchedKdCode,
             BigDecimal doseAmount,
             String doseUnit,
             Integer frequency,
