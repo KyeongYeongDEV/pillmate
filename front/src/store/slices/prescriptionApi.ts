@@ -55,8 +55,10 @@ export const prescriptionApiSlice = createApi({
     ocrExtract: build.mutation<OcrExtractResponse, { imageKey: string; prescribedAt: string }>({
       query: (body) => ({ url: '/prescriptions/ocr/extract', method: 'POST', body }),
     }),
-    registerPrescription: build.mutation<{ prescriptionId: number }, RegisterPrescriptionInput>({
+    registerPrescription: build.mutation<RegisterPrescriptionResponse, RegisterPrescriptionInput>({
       query: (body) => ({ url: '/prescriptions', method: 'POST', body }),
+      transformResponse: (response: ApiEnvelope<RegisterPrescriptionResponse>) =>
+        response?.data ?? { prescriptionId: 0, ocrStatus: 'MANUAL' as const, items: [], warnings: [] },
       invalidatesTags: ['Prescription'],
     }),
     // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)

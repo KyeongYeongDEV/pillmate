@@ -1,3 +1,4 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { prescriptionApiSlice } from '@/store/slices/prescriptionApi';
 import type { PrescriptionSummary, PrescriptionDetailView } from '@/types/prescription';
 import type { AliasLog } from '@/hooks/usePrescriptionReview';
@@ -38,6 +39,72 @@ describe('prescriptionApi — 목록·상세 엔드포인트', () => {
     };
     expect(detail.imageUrl).toBeNull();
     expect(detail.drugs[0].matchedDrugName).toBeNull();
+  });
+});
+
+describe('prescriptionApi — registerPrescription transformResponse (실제 endpoint 직접 실행)', () => {
+  // RTK Query 내부 구독 setTimeout 이 테스트 환경 종료 후 발화하지 않도록 fake timers 사용
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => {
+    jest.runAllTimers();
+    jest.useRealTimers();
+    jest.unmock('@/lib/api/baseQuery');
+  });
+
+  it('registerPrescription 엔드포인트 존재', () => {
+    expect(prescriptionApiSlice.endpoints).toHaveProperty('registerPrescription');
+  });
+
+  it('실제 transformResponse — raw ApiEnvelope.data.warnings 가 그대로 보존됨', async () => {
+    const WARNING = {
+      drugCodeA: 'KD001', drugCodeB: 'KD002', nameA: '와파린', nameB: '아스피린',
+      severity: 'CRITICAL', description: '출혈 위험', source: '식약처',
+    };
+    const rawEnvelope = { data: { prescriptionId: 42, ocrStatus: 'DONE', items: [], warnings: [WARNING] } };
+
+    // baseQuery 를 mock 한 신선한 슬라이스 생성 → 실제 transformResponse 실행 경로 사용
+    let testSlice: any;
+    jest.isolateModules(() => {
+      jest.doMock('@/lib/api/baseQuery', () => ({
+        createPillmateBaseQuery: () => async () => ({ data: rawEnvelope }),
+      }));
+      testSlice = require('@/store/slices/prescriptionApi').prescriptionApiSlice;
+    });
+
+    const store = configureStore({
+      reducer: { [testSlice.reducerPath]: testSlice.reducer },
+      middleware: (gDM: any) => gDM().concat(testSlice.middleware),
+    });
+
+    const result: any = await store.dispatch(
+      testSlice.endpoints.registerPrescription.initiate({} as any),
+    );
+
+    expect(result.data?.prescriptionId).toBe(42);
+    expect(result.data?.warnings).toHaveLength(1);
+    expect(result.data?.warnings[0].severity).toBe('CRITICAL');
+  });
+
+  it('실제 transformResponse — data null 시 warnings [] fallback', async () => {
+    let testSlice: any;
+    jest.isolateModules(() => {
+      jest.doMock('@/lib/api/baseQuery', () => ({
+        createPillmateBaseQuery: () => async () => ({ data: null }),
+      }));
+      testSlice = require('@/store/slices/prescriptionApi').prescriptionApiSlice;
+    });
+
+    const store = configureStore({
+      reducer: { [testSlice.reducerPath]: testSlice.reducer },
+      middleware: (gDM: any) => gDM().concat(testSlice.middleware),
+    });
+
+    const result: any = await store.dispatch(
+      testSlice.endpoints.registerPrescription.initiate({} as any),
+    );
+
+    expect(result.data?.warnings).toEqual([]);
+    expect(result.data?.prescriptionId).toBe(0);
   });
 });
 

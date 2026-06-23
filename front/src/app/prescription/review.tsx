@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, ScrollView, StyleSheet, Alert, Modal,
+  View, Text, Pressable, ScrollView, StyleSheet, Alert, Modal, BackHandler,
 } from 'react-native';
+import { usePreventRemove } from '@react-navigation/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -18,10 +19,12 @@ import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
 import TimePicker from '@/components/schedule/TimePicker';
 import DrugCard from '@/components/prescription/DrugCard';
 import DrugSearchModal from '@/components/prescription/DrugSearchModal';
+import DDIWarningCard from '@/components/prescription/DDIWarningCard';
 import type { RootState } from '@/store';
 import type {
   PrescriptionTimeOfDay, DrugSearchResult,
   DrugListItem, PrescriptionSlotDraft, RegisterPrescriptionInput,
+  InteractionWarning,
 } from '@/types/prescription';
 import { MFDS_SOURCE } from '@/lib/constants';
 
@@ -94,6 +97,17 @@ export default function PrescriptionReviewScreen() {
   const [addTodPickerVisible, setAddTodPickerVisible] = useState(false);
   const [pendingTod, setPendingTod] = useState<PrescriptionTimeOfDay | null>(null);
   const [addTimePickerVisible, setAddTimePickerVisible] = useState(false);
+  const [ddiWarnings, setDdiWarnings] = useState<InteractionWarning[] | null>(null);
+
+  // swipe-back / navigation.goBack() 차단 — warnings 확인 전 화면 이탈 방지 (의료 P0)
+  usePreventRemove(ddiWarnings !== null, () => {});
+
+  // Android 하드웨어 뒤로가기 차단 — usePreventRemove의 보조 안전망
+  useEffect(() => {
+    if (!ddiWarnings) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [ddiWarnings]);
 
   const editingSlot = useMemo(
     () => prescriptionSlots.find(s => s.uid === editingSlotUid) ?? null,
@@ -159,16 +173,33 @@ export default function PrescriptionReviewScreen() {
       return;
     }
     try {
-      await registerPrescription(
+      const result = await registerPrescription(
         buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!),
       ).unwrap();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      dispatch(reset());
-      router.replace('/(tabs)/home');
+      const warnings = result.warnings ?? [];
+      if (warnings.length > 0) {
+        // 병용금기 경고 존재 → 4단계 severity 정렬 후 모달 표시. 홈 이동은 사용자 확인 후.
+        const SEVERITY_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+        const sorted = [...warnings].sort(
+          (a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4),
+        );
+        setDdiWarnings(sorted);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        dispatch(reset());
+        router.replace('/(tabs)/home');
+      }
     } catch {
       Alert.alert('등록 실패', '다시 시도해주세요.');
     }
   }, [items, careGroupId, prescribedAt, imageKey, prescriptionSlots, startDate, endDate, registerPrescription, dispatch]);
+
+  const handleDdiAcknowledge = useCallback(async () => {
+    setDdiWarnings(null);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    dispatch(reset());
+    router.replace('/(tabs)/home');
+  }, [dispatch]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -179,8 +210,9 @@ export default function PrescriptionReviewScreen() {
           style={styles.headerBtn}
           accessibilityLabel="뒤로"
           accessibilityRole="button"
+          disabled={ddiWarnings !== null}
         >
-          <Text style={styles.headerBtnTxt}>←</Text>
+          <Text style={[styles.headerBtnTxt, ddiWarnings !== null && styles.headerBtnHidden]}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>약봉투 검토 · 등록</Text>
         <View style={styles.headerBtn} />
@@ -378,6 +410,46 @@ export default function PrescriptionReviewScreen() {
         onConfirm={handleAddSlotConfirm}
         onClose={() => { setAddTimePickerVisible(false); setPendingTod(null); }}
       />
+
+      {/* DDI 병용금기 경고 모달 — 등록 성공 후 warnings 있을 때 */}
+      <Modal
+        visible={ddiWarnings !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {/* 뒤로가기로 닫기 방지 — 반드시 확인 버튼 사용 */}}
+      >
+        <View style={styles.ddiBackdrop}>
+          <View style={styles.ddiSheet}>
+            <View style={styles.ddiTitleRow}>
+              <Text style={styles.ddiTitle}>
+                ⚠️ 약물 상호작용 주의 ({ddiWarnings?.length ?? 0}건)
+              </Text>
+            </View>
+            <ScrollView
+              style={styles.ddiScroll}
+              contentContainerStyle={styles.ddiScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {ddiWarnings?.map((w, i) => (
+                <DDIWarningCard key={i} warning={w} />
+              ))}
+              <View style={styles.ddiConsultBox}>
+                <Text style={styles.ddiConsultText}>
+                  약사·의사와 상담해 주세요
+                </Text>
+              </View>
+            </ScrollView>
+            <Pressable
+              style={styles.ddiAckBtn}
+              onPress={handleDdiAcknowledge}
+              accessibilityLabel="병용금기 경고 확인"
+              accessibilityRole="button"
+            >
+              <Text style={styles.ddiAckTxt}>확인했습니다</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -407,6 +479,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: scale(40), alignItems: 'center' },
   headerBtnTxt: { fontSize: scale(22), color: colors.labelNormal },
+  headerBtnHidden: { opacity: 0 },
   headerTitle: { ...typography.headline1, color: colors.labelNormal },
   scroll: { padding: space.s16, paddingBottom: 120 },
   emptyBox: {
@@ -516,4 +589,36 @@ const styles = StyleSheet.create({
     paddingVertical: space.s16, alignItems: 'center', marginTop: space.s8,
   },
   todCancelTxt: { ...typography.body1n, color: colors.labelAlternative },
+  ddiBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end',
+  },
+  ddiSheet: {
+    backgroundColor: colors.bgNormal,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    maxHeight: '85%', paddingBottom: space.s40,
+  },
+  ddiTitleRow: {
+    paddingHorizontal: space.s20, paddingTop: space.s24, paddingBottom: space.s12,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
+  },
+  ddiTitle: {
+    fontSize: scale(17), fontWeight: '700', color: colors.labelNormal, textAlign: 'center',
+  },
+  ddiScroll: { flexShrink: 1 },
+  ddiScrollContent: { padding: space.s16, gap: space.s10 },
+  ddiConsultBox: {
+    marginTop: space.s4, padding: space.s14,
+    borderRadius: radius.r12, backgroundColor: '#F0F7FF',
+    borderWidth: 1, borderColor: '#C8DDFF',
+  },
+  ddiConsultText: {
+    fontSize: scale(13), color: colors.labelAlternative,
+    textAlign: 'center', lineHeight: scale(18),
+  },
+  ddiAckBtn: {
+    marginHorizontal: space.s16, marginTop: space.s12,
+    backgroundColor: colors.primaryNormal, borderRadius: radius.r16,
+    paddingVertical: space.s16, alignItems: 'center', ...shadows.small,
+  },
+  ddiAckTxt: { fontSize: scale(16), fontWeight: '700', color: '#fff' },
 });
