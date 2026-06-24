@@ -1,6 +1,7 @@
 package com.pillmate.prescription.application.dto;
 
 import com.pillmate.prescription.domain.model.OcrStatus;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,7 +12,15 @@ public record PrescriptionDetailResponse(
         LocalDate prescribedAt,
         OcrStatus ocrStatus,
         String imageUrl,
-        List<DrugDetail> drugs
+        List<DrugDetail> drugs,
+        String label,
+        String memo,
+        PrescriptionStatus status,
+        LocalDate periodStart,
+        LocalDate periodEnd,
+        Integer daysRemaining,
+        Double progressRate,
+        Double adherenceRate
 ) {
     public record DrugDetail(
             String nameRaw,
@@ -21,6 +30,7 @@ public record PrescriptionDetailResponse(
             String doseUnit,
             Integer frequency,
             Integer durationDays,
-            BigDecimal confidence
+            BigDecimal confidence,
+            String imageUrl
     ) {}
 }

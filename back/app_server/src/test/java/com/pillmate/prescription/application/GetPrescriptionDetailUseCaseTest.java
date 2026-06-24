@@ -8,8 +8,11 @@ import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
 import com.pillmate.prescription.application.port.FileStoragePort;
+import com.pillmate.prescription.application.port.PrescriptionPeriodPort;
+import com.pillmate.prescription.application.port.PrescriptionPeriodPort.PeriodStats;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.Prescription;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +24,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,16 +47,25 @@ class GetPrescriptionDetailUseCaseTest {
     private static final Long OTHER_ID = 99L;
     private static final Long PRESCRIPTION_ID = 1L;
 
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"), ZoneId.of("UTC"));
+
     @Mock PrescriptionRepository prescriptionRepository;
     @Mock DrugLookupPort drugLookupPort;
     @Mock FileStoragePort fileStoragePort;
+    @Mock PrescriptionPeriodPort prescriptionPeriodPort;
 
     private GetPrescriptionDetailUseCase sut;
 
     @BeforeEach
     void setUp() {
+        lenient().when(prescriptionPeriodPort.fetchStatsByPrescriptionIds(List.of(PRESCRIPTION_ID)))
+                .thenReturn(Map.of());
+        lenient().when(drugLookupPort.findByIds(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(Map.of());
         sut = new GetPrescriptionDetailUseCase(
-                prescriptionRepository, drugLookupPort, fileStoragePort, new PatientAccessGuard());
+                prescriptionRepository, drugLookupPort, fileStoragePort,
+                new PatientAccessGuard(), prescriptionPeriodPort, FIXED_CLOCK);
     }
 
     @AfterEach void tearDown() { UserContext.clear(); }
@@ -60,8 +77,8 @@ class GetPrescriptionDetailUseCaseTest {
         Prescription p = prescription(OWNER_ID, "prescriptions/uuid.jpg");
         p.addDrug(matchedDrug(101L, "타이레놀정"));
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
-        given(drugLookupPort.findById(101L))
-                .willReturn(Optional.of(new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", "img")));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", "https://img.test/t.png")));
         given(fileStoragePort.generateGetUrl("prescriptions/uuid.jpg"))
                 .willReturn("https://s3.test/presigned?sig=x");
 
@@ -71,6 +88,7 @@ class GetPrescriptionDetailUseCaseTest {
         assertThat(detail.drugs()).hasSize(1);
         assertThat(detail.drugs().get(0).nameRaw()).isEqualTo("타이레놀정");
         assertThat(detail.drugs().get(0).matchedDrugName()).isEqualTo("타이레놀정500밀리그램");
+        assertThat(detail.drugs().get(0).imageUrl()).isEqualTo("https://img.test/t.png");
     }
 
     @Test
@@ -94,8 +112,8 @@ class GetPrescriptionDetailUseCaseTest {
         Prescription p = prescription(OWNER_ID, null);
         p.addDrug(matchedDrug(101L, "타이레놀정"));
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
-        given(drugLookupPort.findById(101L))
-                .willReturn(Optional.of(new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", "img")));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", "https://img.test/t.png")));
 
         PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
 
@@ -117,7 +135,7 @@ class GetPrescriptionDetailUseCaseTest {
 
         assertThat(detail.drugs().get(0).matchedDrugName()).isNull();
         assertThat(detail.drugs().get(0).matchedKdCode()).isNull();
-        verify(drugLookupPort, never()).findById(org.mockito.ArgumentMatchers.anyLong());
+        assertThat(detail.drugs().get(0).imageUrl()).isNull();
     }
 
     @Test
@@ -142,6 +160,41 @@ class GetPrescriptionDetailUseCaseTest {
         assertThatThrownBy(() -> sut.detail(PRESCRIPTION_ID))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRESCRIPTION_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("label/memo 필드 — 반환 확인")
+    void detail_labelAndMemo_returnedInResponse() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        ReflectionTestUtils.setField(p, "label", "복약 A");
+        ReflectionTestUtils.setField(p, "memo", "식후 30분");
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.label()).isEqualTo("복약 A");
+        assertThat(detail.memo()).isEqualTo("식후 30분");
+    }
+
+    @Test
+    @DisplayName("PeriodStats 있으면 adherenceRate + status 계산")
+    void detail_withPeriodStats_computesAdherenceAndStatus() {
+        UserContext.set(OWNER_ID);
+        LocalDate start = LocalDate.of(2026, 6, 1);
+        LocalDate end   = LocalDate.of(2026, 6, 30);
+        Prescription p = prescription(OWNER_ID, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        PeriodStats stats = new PeriodStats(start, end, 90L, 63L);
+        given(prescriptionPeriodPort.fetchStatsByPrescriptionIds(List.of(PRESCRIPTION_ID)))
+                .willReturn(Map.of(PRESCRIPTION_ID, stats));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.status()).isEqualTo(PrescriptionStatus.ONGOING);
+        assertThat(detail.adherenceRate()).isEqualTo(63.0 / 90.0);
+        assertThat(detail.periodStart()).isEqualTo(start);
+        assertThat(detail.periodEnd()).isEqualTo(end);
     }
 
     private Prescription prescription(Long patientId, String imageKey) {

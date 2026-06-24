@@ -61,6 +61,14 @@ export const prescriptionApiSlice = createApi({
         response?.data ?? { prescriptionId: 0, ocrStatus: 'MANUAL' as const, items: [], warnings: [] },
       invalidatesTags: ['Prescription'],
     }),
+    updatePrescription: build.mutation<void, { id: number; label?: string | null; memo?: string | null }>({
+      query: ({ id, ...body }) => ({
+        url: `/prescriptions/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Prescription', id }, 'Prescription'],
+    }),
     // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)
     logAlias: build.mutation<void, AliasLog>({
       query: (body) => ({
@@ -81,5 +89,6 @@ export const {
   useRegisterPrescriptionMutation,
   useGetCandidatesQuery,
   useResolveCandidateMutation,
+  useUpdatePrescriptionMutation,
   useLogAliasMutation,
 } = prescriptionApiSlice;

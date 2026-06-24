@@ -129,6 +129,11 @@ public class Prescription {
         this.ocrStatus = OcrStatus.MANUAL;
     }
 
+    public void updateMemo(String label, String memo) {
+        this.label = label;
+        this.memo = memo;
+    }
+
     private boolean hasLowConfidenceDrug() {
         return drugs.stream().anyMatch(this::isBelowMinConfidence);
     }

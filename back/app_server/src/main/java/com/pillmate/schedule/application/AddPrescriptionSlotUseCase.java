@@ -40,7 +40,7 @@ public class AddPrescriptionSlotUseCase {
         requireNotExpired(endDate);
         requireNoTimeConflict(existing, effectiveTime(timeOfDay, customTime));
         return prescriptionScheduleService.createForPrescription(
-                buildCommand(prescriptionId, owner, startDate, endDate, timeOfDay, customTime));
+                buildCommand(prescriptionId, owner, existing, startDate, endDate, timeOfDay, customTime));
     }
 
     private PrescriptionOwner requireOwner(Long prescriptionId) {
@@ -76,10 +76,13 @@ public class AddPrescriptionSlotUseCase {
     }
 
     private CreatePrescriptionSchedulesCommand buildCommand(
-            Long prescriptionId, PrescriptionOwner owner,
+            Long prescriptionId, PrescriptionOwner owner, List<Schedule> existing,
             LocalDate startDate, LocalDate endDate, TimeOfDay timeOfDay, LocalTime customTime) {
+        Schedule sample = existing.isEmpty() ? null : existing.get(0);
+        Long careGroupId = sample != null ? sample.getCareGroupId() : owner.careGroupId();
+        Long patientId   = sample != null ? sample.getPatientId()   : owner.patientId();
         return new CreatePrescriptionSchedulesCommand(
-                owner.careGroupId(), owner.patientId(), prescriptionId, UserContext.get(),
+                careGroupId, patientId, prescriptionId, UserContext.get(),
                 List.of(new SlotSpec(timeOfDay.name(), customTime)),
                 startDate, endDate);
     }

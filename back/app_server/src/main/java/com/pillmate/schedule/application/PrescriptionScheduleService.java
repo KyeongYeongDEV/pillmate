@@ -39,8 +39,10 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
     @Transactional
     public List<CreatedSchedule> createForPrescription(CreatePrescriptionSchedulesCommand command) {
         patientAccessGuard.requireAccess(command.requesterId(), command.patientId());
-        careGroupGuard.requireAccessible(command.careGroupId());
         requireValidPeriod(command.startDate(), command.endDate());
+        if (command.careGroupId() != null) {
+            careGroupGuard.requireAccessible(command.careGroupId());
+        }
 
         List<Schedule> existing = new ArrayList<>(
                 scheduleRepository.findActiveByPrescriptionId(command.prescriptionId()));

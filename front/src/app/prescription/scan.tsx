@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -10,19 +10,24 @@ import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlic
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 
+const OCR_TYPICAL_LOW_SEC  = 20;
+const OCR_TYPICAL_HIGH_SEC = 30;
+const OCR_MAX_MIN          = 1;  // p95 실측 ~65초 기준 → 1분으로 안내
+
 export default function ScanScreen() {
   const { galleryUri } = useLocalSearchParams<{ galleryUri?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [flash, setFlash] = useState<'on' | 'off'>('off');
   const [loading, setLoading] = useState(false);
+  const [ocrError, setOcrError] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const dispatch = useAppDispatch();
 
   const processImage = useCallback(
     async (uri: string) => {
       setLoading(true);
+      setOcrError(false);
       try {
-        // Phase 1: upload-url → S3 PUT → OCR (BE identifies user from JWT)
         const uploadResp = await prescriptionApi.issueUploadUrl({
           contentType: 'image/jpeg',
         });
@@ -37,12 +42,16 @@ export default function ScanScreen() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
-        Alert.alert('인식 실패', 'AI 분석에 실패했습니다. 다시 시도하거나 직접 입력해주세요.');
         setLoading(false);
+        setOcrError(true);
       }
     },
     [dispatch],
   );
+
+  const handleRetry = useCallback(() => {
+    setOcrError(false);
+  }, []);
 
   const handleShutter = useCallback(async () => {
     if (!cameraRef.current) return;
@@ -78,8 +87,38 @@ export default function ScanScreen() {
     return (
       <View style={styles.loadingRoot}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.loadingTxt}>AI가 약봉투를 분석 중이에요...</Text>
-        <Text style={styles.loadingSub}>(보통 10초)</Text>
+        <Text style={styles.loadingTxt}>약을 인식하고 있어요</Text>
+        <Text style={styles.loadingSub}>
+          {`보통 ${OCR_TYPICAL_LOW_SEC}~${OCR_TYPICAL_HIGH_SEC}초, 최대 ${OCR_MAX_MIN}분 정도 걸릴 수 있어요`}
+        </Text>
+      </View>
+    );
+  }
+
+  if (ocrError) {
+    return (
+      <View style={styles.loadingRoot}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.loadingTxt}>약 인식에 시간이 오래 걸려요</Text>
+        <Text style={styles.loadingSub}>잠시 후 다시 시도해 주세요</Text>
+        <View style={styles.errorActions}>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={handleRetry}
+            accessibilityLabel="다시 시도"
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryBtnTxt}>다시 시도</Text>
+          </Pressable>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => safeBack('/prescription')}
+            accessibilityLabel="뒤로"
+            accessibilityRole="button"
+          >
+            <Text style={styles.backBtnTxt}>뒤로</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -104,7 +143,6 @@ export default function ScanScreen() {
       {/* 가이드 프레임 */}
       <View style={styles.frameArea}>
         <View style={styles.frame}>
-          {/* 코너 브래킷 4개 */}
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
           <View style={[styles.corner, styles.cornerBL]} />
@@ -190,7 +228,19 @@ const styles = StyleSheet.create({
   permText: { ...typography.body1n, color: colors.labelNormal },
   permBtn: { backgroundColor: colors.primaryNormal, borderRadius: radius.r12, paddingHorizontal: space.s24, paddingVertical: space.s12 },
   permBtnTxt: { ...typography.body1n, color: '#fff', fontWeight: '700' },
-  loadingRoot: { flex: 1, backgroundColor: '#0F0F10', alignItems: 'center', justifyContent: 'center', gap: space.s16 },
-  loadingTxt: { ...typography.headline2, color: '#fff' },
-  loadingSub: { ...typography.body2r, color: 'rgba(255,255,255,0.6)' },
+  loadingRoot: { flex: 1, backgroundColor: '#0F0F10', alignItems: 'center', justifyContent: 'center', gap: space.s16, paddingHorizontal: space.s32 },
+  loadingTxt: { ...typography.headline2, color: '#fff', textAlign: 'center' },
+  loadingSub: { ...typography.body2r, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
+  errorIcon: { fontSize: scale(40) },
+  errorActions: { flexDirection: 'row', gap: space.s12, marginTop: space.s8 },
+  retryBtn: {
+    paddingHorizontal: space.s24, paddingVertical: space.s12,
+    borderRadius: radius.r12, backgroundColor: colors.primaryNormal,
+  },
+  retryBtnTxt: { ...typography.body2n, color: '#fff', fontWeight: '700' },
+  backBtn: {
+    paddingHorizontal: space.s24, paddingVertical: space.s12,
+    borderRadius: radius.r12, backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  backBtnTxt: { ...typography.body2n, color: '#fff' },
 });

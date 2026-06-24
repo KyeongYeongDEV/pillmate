@@ -59,6 +59,7 @@ export interface PrescriptionDetailDrug {
   nameRaw: string;
   matchedDrugName: string | null;
   matchedKdCode: string | null;
+  imageUrl?: string | null;
   doseAmount: number | null;
   doseUnit: string | null;
   frequency: number | null;
@@ -72,6 +73,15 @@ export interface PrescriptionDetailView {
   ocrStatus: OcrStatus;
   imageUrl: string | null;
   drugs: PrescriptionDetailDrug[];
+  // Optional — added progressively as BE implements T-BE-PRESC-MEMO and detail enrich
+  label?: string | null;
+  memo?: string | null;
+  status?: 'ONGOING' | 'COMPLETED';
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  daysRemaining?: number | null;
+  progressRate?: number | null;
+  adherenceRate?: number | null;
 }
 
 export interface Drug {

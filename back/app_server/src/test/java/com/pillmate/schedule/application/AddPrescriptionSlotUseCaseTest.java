@@ -135,6 +135,46 @@ class AddPrescriptionSlotUseCaseTest {
     }
 
     @Test
+    @DisplayName("기존 스케줄 있을 때 — careGroupId/patientId를 스케줄(sample)에서 가져온다")
+    void addSlot_existingSchedules_careGroupAndPatientFromSample() {
+        UserContext.set(1L);
+        // 처방 owner: careGroupId=NULL (개인), patientId=1
+        given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(1L, null, START, 7)));
+        // 스케줄은 careGroupId=2, patientId=1 로 저장돼 있음 (기존 데이터)
+        Schedule sampleWithGroup = Schedule.forPrescription(2L, 1L, 99L, TimeOfDay.MORNING, null, START, END, 1L);
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of(sampleWithGroup));
+        given(prescriptionScheduleService.createForPrescription(any(CreatePrescriptionSchedulesCommand.class)))
+                .willReturn(List.of());
+
+        sut.addSlot(99L, TimeOfDay.BEDTIME, LocalTime.of(22, 0));
+
+        ArgumentCaptor<CreatePrescriptionSchedulesCommand> captor =
+                ArgumentCaptor.forClass(CreatePrescriptionSchedulesCommand.class);
+        verify(prescriptionScheduleService).createForPrescription(captor.capture());
+        assertThat(captor.getValue().careGroupId()).isEqualTo(2L);  // sample, not owner(null)
+        assertThat(captor.getValue().patientId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("스케줄 0개 + 개인처방(careGroupId null) — careGroupId=null 그대로 넘긴다")
+    void addSlot_noExistingSchedules_personalPrescription_nullCareGroupId() {
+        UserContext.set(1L);
+        // 처방 owner: careGroupId=NULL, patientId=1
+        given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(1L, null, START, 7)));
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of());
+        given(prescriptionScheduleService.createForPrescription(any(CreatePrescriptionSchedulesCommand.class)))
+                .willReturn(List.of(new CreatedSchedule(5L, "MORNING", LocalTime.of(8, 0), START, START.plusDays(6))));
+
+        sut.addSlot(99L, TimeOfDay.MORNING, null);
+
+        ArgumentCaptor<CreatePrescriptionSchedulesCommand> captor =
+                ArgumentCaptor.forClass(CreatePrescriptionSchedulesCommand.class);
+        verify(prescriptionScheduleService).createForPrescription(captor.capture());
+        assertThat(captor.getValue().careGroupId()).isNull();   // personal → null
+        assertThat(captor.getValue().patientId()).isEqualTo(1L);
+    }
+
+    @Test
     @DisplayName("동일 처방전에 이미 같은 timeOfDay(기본 시각) 슬롯 있으면 SCHEDULE_CONFLICT")
     void addSlot_whenSameDefaultTimeExists_throws() {
         given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, START, 7)));

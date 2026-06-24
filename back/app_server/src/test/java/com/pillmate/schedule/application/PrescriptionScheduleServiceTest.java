@@ -130,6 +130,19 @@ class PrescriptionScheduleServiceTest {
     }
 
     @Test
+    @DisplayName("careGroupId null(개인 처방) — 그룹 가드 호출 없이 스케줄 생성 허용")
+    void create_whenCareGroupIdNull_skipsGroupGuard() {
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of());
+        given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
+
+        sut.createForPrescription(new CreatePrescriptionSchedulesCommand(
+                null, 2L, 99L, 2L, List.of(new SlotSpec("MORNING", null)), START, END));
+
+        verify(patientAccessGuard).requireAccess(2L, 2L);
+        verify(careGroupGuard, never()).requireAccessible(any());
+    }
+
+    @Test
     @DisplayName("시작일이 종료일보다 늦으면 SCHEDULE_INVALID_PERIOD (P1, 400)")
     void create_whenStartAfterEnd_throwsInvalidPeriod() {
         assertThatThrownBy(() -> sut.createForPrescription(new CreatePrescriptionSchedulesCommand(

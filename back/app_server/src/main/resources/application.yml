@@ -22,6 +22,10 @@ spring:
         format_sql: false
     open-in-view: false
 
+  mvc:
+    async:
+      request-timeout: 90s
+
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -71,7 +75,7 @@ ai-server:
   base-url: ${AI_SERVER_BASE_URL:http://ai-server:8001}
   timeout:
     connect-ms: 5000
-    read-ms: 30000
+    read-ms: 90000
 
 pillmate:
   notification:

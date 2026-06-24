@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { PrescriptionSummary } from '@/types/prescription';
 import { scale, colors, space, radius, shadows, typography } from '@/styles/tokens';
-
-const PILL_COLORS = ['#5B9EF5', '#FF6B7A', '#7ECB7A', '#FFB84D', '#B57BF5'] as const;
+import { PILL_COLORS } from '@/lib/pillColors';
 const MAX_DOTS = 5;
 
 interface Props {

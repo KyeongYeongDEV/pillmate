@@ -18,24 +18,28 @@ import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.presentation.dto.OcrExtractRequest;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
+import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
+import com.pillmate.prescription.presentation.dto.UpdatePrescriptionMemoRequest;
 import com.pillmate.common.security.UserContext;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/prescriptions")
-@RequiredArgsConstructor
 public class PrescriptionController {
 
     private final GetUploadUrlUseCase getUploadUrlUseCase;
@@ -46,6 +50,31 @@ public class PrescriptionController {
     private final ResolveCandidateUseCase resolveCandidateUseCase;
     private final GetPrescriptionsUseCase getPrescriptionsUseCase;
     private final GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
+    private final UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
+    private final Executor ocrExecutor;
+
+    public PrescriptionController(
+            GetUploadUrlUseCase getUploadUrlUseCase,
+            RegisterPrescriptionService registerPrescriptionService,
+            OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase,
+            ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase,
+            GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase,
+            ResolveCandidateUseCase resolveCandidateUseCase,
+            GetPrescriptionsUseCase getPrescriptionsUseCase,
+            GetPrescriptionDetailUseCase getPrescriptionDetailUseCase,
+            UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase,
+            @Qualifier("ocrExecutor") Executor ocrExecutor) {
+        this.getUploadUrlUseCase = getUploadUrlUseCase;
+        this.registerPrescriptionService = registerPrescriptionService;
+        this.ocrAndRegisterPrescriptionUseCase = ocrAndRegisterPrescriptionUseCase;
+        this.extractPrescriptionOcrUseCase = extractPrescriptionOcrUseCase;
+        this.getUnresolvedCandidatesUseCase = getUnresolvedCandidatesUseCase;
+        this.resolveCandidateUseCase = resolveCandidateUseCase;
+        this.getPrescriptionsUseCase = getPrescriptionsUseCase;
+        this.getPrescriptionDetailUseCase = getPrescriptionDetailUseCase;
+        this.updatePrescriptionMemoUseCase = updatePrescriptionMemoUseCase;
+        this.ocrExecutor = ocrExecutor;
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<PrescriptionSummary>>> list() {
@@ -72,18 +101,22 @@ public class PrescriptionController {
     }
 
     @PostMapping("/ocr")
-    public ResponseEntity<ApiResponse<RegisterPrescriptionResponse>> ocrRegister(
+    public CompletableFuture<ResponseEntity<ApiResponse<RegisterPrescriptionResponse>>> ocrRegister(
             @Valid @RequestBody OcrRegisterRequest request) {
-        RegisterPrescriptionResponse response = ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
-                request.prescribedAt(), request.imageKey());
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return CompletableFuture.supplyAsync(
+                () -> ResponseEntity.ok(ApiResponse.success(
+                        ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
+                                request.prescribedAt(), request.imageKey()))),
+                ocrExecutor);
     }
 
     @PostMapping("/ocr/extract")
-    public ResponseEntity<ApiResponse<OcrExtractResponse>> ocrExtract(
+    public CompletableFuture<ResponseEntity<ApiResponse<OcrExtractResponse>>> ocrExtract(
             @Valid @RequestBody OcrExtractRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(
-                extractPrescriptionOcrUseCase.extract(request.imageKey())));
+        return CompletableFuture.supplyAsync(
+                () -> ResponseEntity.ok(ApiResponse.success(
+                        extractPrescriptionOcrUseCase.extract(request.imageKey()))),
+                ocrExecutor);
     }
 
     @GetMapping("/{id}/candidates")
@@ -91,6 +124,14 @@ public class PrescriptionController {
             @PathVariable Long id) {
         List<UnresolvedCandidateDto> candidates = getUnresolvedCandidatesUseCase.getUnresolved(id);
         return ResponseEntity.ok(ApiResponse.success(candidates));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> updateMemo(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdatePrescriptionMemoRequest request) {
+        updatePrescriptionMemoUseCase.update(id, request.label(), request.memo());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @PutMapping("/{id}/candidates/{itemIndex}/resolve")

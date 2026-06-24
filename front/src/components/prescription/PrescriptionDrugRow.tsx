@@ -1,11 +1,14 @@
-import React, { memo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import type { PrescriptionDetailDrug } from '@/types/prescription';
+import PillVisual from '@/components/common/PillVisual';
+import { getPillColors } from '@/lib/pillColors';
 import { scale, colors, space, radius } from '@/styles/tokens';
 
 const CONFIDENCE_PERCENT = 100;
+const VISUAL_SIZE = 28;
 
 function PrescriptionDrugRow({ drug }: { drug: PrescriptionDetailDrug }) {
   const displayName = drug.matchedDrugName ?? drug.nameRaw;
@@ -26,19 +29,42 @@ function PrescriptionDrugRow({ drug }: { drug: PrescriptionDetailDrug }) {
       accessibilityLabel={`${displayName} 약 정보 보기`}
       accessibilityRole="button"
     >
-      <View style={styles.headRow}>
-        <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
-        <View style={styles.headRight}>
-          {confidenceLabel(drug.confidence) && (
-            <Text style={styles.confidence}>{confidenceLabel(drug.confidence)}</Text>
-          )}
-          <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} />
+      <View style={styles.rowBody}>
+        <DrugVisual drug={drug} />
+        <View style={styles.rowContent}>
+          <View style={styles.headRow}>
+            <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+            <View style={styles.headRight}>
+              {confidenceLabel(drug.confidence) && (
+                <Text style={styles.confidence}>{confidenceLabel(drug.confidence)}</Text>
+              )}
+              <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} />
+            </View>
+          </View>
+          {subtitle ? <Text style={styles.rawName}>{subtitle}</Text> : null}
+          <Text style={styles.dosage}>{dosageLine(drug)}</Text>
         </View>
       </View>
-      {subtitle ? <Text style={styles.rawName}>{subtitle}</Text> : null}
-      <Text style={styles.dosage}>{dosageLine(drug)}</Text>
     </Pressable>
   );
+}
+
+function DrugVisual({ drug }: { drug: PrescriptionDetailDrug }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const { colorA, colorB } = getPillColors(drug.matchedKdCode ?? drug.nameRaw);
+
+  if (drug.imageUrl && !imgFailed) {
+    return (
+      <Image
+        source={{ uri: drug.imageUrl }}
+        style={styles.drugImg}
+        accessibilityLabel="약 이미지"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  return <PillVisual size={VISUAL_SIZE} colorA={colorA} colorB={colorB} />;
 }
 
 function dosageLine(drug: PrescriptionDetailDrug): string {
@@ -56,15 +82,21 @@ function confidenceLabel(confidence: number | null): string | null {
 const styles = StyleSheet.create({
   row: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r12,
-    borderWidth: 1, borderColor: colors.line, padding: space.s14, gap: space.s4,
+    borderWidth: 1, borderColor: colors.line, padding: space.s14,
   },
   rowPressed: { backgroundColor: colors.fillNormal },
+  rowBody: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
+  rowContent: { flex: 1, gap: space.s4 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
   headRight: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
   name: { flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
   confidence: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
   rawName: { fontSize: scale(12), color: colors.labelAssistive },
   dosage: { fontSize: scale(13), color: colors.labelNeutral, marginTop: space.s4 },
+  drugImg: {
+    width: VISUAL_SIZE, height: VISUAL_SIZE,
+    borderRadius: radius.r8, backgroundColor: colors.fillNormal,
+  },
 });
 
 export default memo(PrescriptionDrugRow);

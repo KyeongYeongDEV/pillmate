@@ -1,12 +1,15 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image,
-  Alert, Animated, Modal,
+  Alert, Animated, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useGetPrescriptionDetailQuery } from '@/store/slices/prescriptionApi';
+import {
+  useGetPrescriptionDetailQuery,
+  useUpdatePrescriptionMutation,
+} from '@/store/slices/prescriptionApi';
 import {
   useGetPrescriptionSlotsQuery,
   useUpdateScheduleTimeMutation,
@@ -16,9 +19,9 @@ import {
 import OcrStatusChip from '@/components/prescription/OcrStatusChip';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
-import { formatMonthDay } from '@/utils/calendarUtils';
 import { safeBack } from '@/lib/router/safeBack';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
+import type { PrescriptionDetailView } from '@/types/prescription';
 import type { SlotEditView, TimeOfDay } from '@/types/schedule';
 
 const PERIOD_ENDED_CODE = 'PILL_032';
@@ -48,13 +51,17 @@ export default function PrescriptionDetailScreen() {
     isLoading: slotsLoading,
     refetch: refetchSlots,
   } = useGetPrescriptionSlotsQuery(prescriptionId);
-  const [updateTime] = useUpdateScheduleTimeMutation();
-  const [addSlot]    = useAddPrescriptionSlotMutation();
-  const [removeSlot] = useRemovePrescriptionSlotMutation();
+  const [updateTime]       = useUpdateScheduleTimeMutation();
+  const [addSlot]          = useAddPrescriptionSlotMutation();
+  const [removeSlot]       = useRemovePrescriptionSlotMutation();
+  const [updatePresc]      = useUpdatePrescriptionMutation();
 
   const [pickerSlot,    setPickerSlot]    = useState<SlotEditView | null>(null);
   const [addTodVisible, setAddTodVisible] = useState(false);
   const [addPickerTod,  setAddPickerTod]  = useState<TimeOfDay | null>(null);
+  const [memoEditing,   setMemoEditing]   = useState(false);
+  const [memoText,      setMemoText]      = useState('');
+  const [memoSaving,    setMemoSaving]    = useState(false);
   const [toastMsg,      setToastMsg]      = useState('');
   const [toastVisible,  setToastVisible]  = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -123,6 +130,25 @@ export default function PrescriptionDetailScreen() {
     }
   }, [removeSlot, prescriptionId, showToast]);
 
+  const startMemoEdit = useCallback(() => {
+    setMemoText(data?.memo ?? '');
+    setMemoEditing(true);
+  }, [data?.memo]);
+
+  const handleMemoSave = useCallback(async () => {
+    setMemoSaving(true);
+    try {
+      await updatePresc({ id: prescriptionId, memo: memoText || null }).unwrap();
+      setMemoEditing(false);
+    } catch {
+      Alert.alert('오류', '메모 저장에 실패했습니다.');
+    } finally {
+      setMemoSaving(false);
+    }
+  }, [memoText, updatePresc, prescriptionId]);
+
+  const handleMemoCancel = useCallback(() => setMemoEditing(false), []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <Header />
@@ -182,10 +208,24 @@ export default function PrescriptionDetailScreen() {
     return (
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.metaRow}>
-          <Text style={styles.date}>{formatMonthDay(data.prescribedAt)}</Text>
+          <Text style={styles.date}>{formatPrescribedAt(data.prescribedAt)}</Text>
           <OcrStatusChip status={data.ocrStatus} />
         </View>
+
+        <DetailInfoCard data={data} />
+
         <PrescriptionImage url={data.imageUrl} onRefresh={refetch} />
+
+        <MemoSection
+          memo={data.memo}
+          editing={memoEditing}
+          text={memoText}
+          saving={memoSaving}
+          onChangeText={setMemoText}
+          onEdit={startMemoEdit}
+          onSave={handleMemoSave}
+          onCancel={handleMemoCancel}
+        />
 
         <Text style={styles.sectionLabel}>알림 시간</Text>
         <SlotSection
@@ -207,6 +247,162 @@ export default function PrescriptionDetailScreen() {
     );
   }
 }
+
+// ── Detail info card (optional fields from BE) ─────────────────────────────
+
+function DetailInfoCard({ data }: { data: PrescriptionDetailView }) {
+  const hasInfo = !!(data.label || data.status || data.periodStart || data.progressRate != null);
+  if (!hasInfo) return null;
+
+  const status = data.status ?? 'ONGOING';
+
+  return (
+    <View style={styles.infoCard}>
+      <View style={styles.infoTopRow}>
+        <StatusChip status={status} />
+        {data.label ? <Text style={styles.infoLabel} numberOfLines={1}>{data.label}</Text> : null}
+      </View>
+      {(data.periodStart || data.daysRemaining != null || data.adherenceRate != null) && (
+        <View style={styles.infoPeriodRow}>
+          <Text style={styles.infoPeriodTxt} numberOfLines={1}>{buildPeriodText(data)}</Text>
+          <DayBadge data={data} />
+        </View>
+      )}
+      {data.progressRate != null && <ProgressBar rate={data.progressRate} />}
+    </View>
+  );
+}
+
+function StatusChip({ status }: { status: 'ONGOING' | 'COMPLETED' }) {
+  const isOngoing = status === 'ONGOING';
+  return (
+    <View style={[styles.chip, isOngoing ? styles.chipOngoing : styles.chipCompleted]}>
+      <Text style={[styles.chipTxt, isOngoing ? styles.chipTxtOngoing : styles.chipTxtCompleted]}>
+        {isOngoing ? '복용중' : '복용완료'}
+      </Text>
+    </View>
+  );
+}
+
+function DayBadge({ data }: { data: PrescriptionDetailView }) {
+  const status = data.status ?? 'ONGOING';
+  if (status === 'COMPLETED') {
+    const pct = data.adherenceRate != null ? `${Math.round(data.adherenceRate * 100)}%` : '—';
+    return <Text style={styles.adherenceTxt}>복약률 {pct}</Text>;
+  }
+  const d = data.daysRemaining ?? null;
+  if (d == null) return null;
+  if (d === 0) return <Text style={[styles.dDayTxt, styles.dDayUrgent]}>오늘 마지막</Text>;
+  if (d === 1) return <Text style={[styles.dDayTxt, styles.dDayCautionary]}>내일 마지막</Text>;
+  return <Text style={styles.dDayTxt}>D-{d}</Text>;
+}
+
+function ProgressBar({ rate }: { rate: number }) {
+  const clamped = Math.min(1, Math.max(0, rate));
+  return (
+    <View style={styles.progressTrack}>
+      {clamped > 0 && <View style={[styles.progressFill, { flex: clamped }]} />}
+      <View style={{ flex: Math.max(0.001, 1 - clamped) }} />
+    </View>
+  );
+}
+
+function buildPeriodText(data: PrescriptionDetailView): string {
+  const start = data.periodStart ?? null;
+  const end   = data.periodEnd   ?? null;
+  if (!start || !end) return '기간 미지정';
+  const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1;
+  return `${days}일분 · ${shortDate(start)} → ${shortDate(end)}`;
+}
+
+function shortDate(dateStr: string): string {
+  const [, m, d] = dateStr.slice(0, 10).split('-');
+  return `${parseInt(m, 10)}.${parseInt(d, 10)}`;
+}
+
+function formatPrescribedAt(dateStr: string): string {
+  const [y, m, d] = dateStr.slice(0, 10).split('-');
+  return `${y}.${m}.${d}`;
+}
+
+// ── Memo section ────────────────────────────────────────────────────────────
+
+interface MemoSectionProps {
+  memo: string | null | undefined;
+  editing: boolean;
+  text: string;
+  saving: boolean;
+  onChangeText: (t: string) => void;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function MemoSection({ memo, editing, text, saving, onChangeText, onEdit, onSave, onCancel }: MemoSectionProps) {
+  if (editing) {
+    return (
+      <View style={styles.memoEditCard}>
+        <TextInput
+          style={styles.memoInput}
+          value={text}
+          onChangeText={onChangeText}
+          placeholder="메모를 입력하세요"
+          placeholderTextColor={colors.labelAssistive}
+          multiline
+          textAlignVertical="top"
+          maxLength={500}
+          autoFocus
+          accessibilityLabel="메모 입력"
+        />
+        <View style={styles.memoActions}>
+          <Pressable style={styles.memoCancelBtn} onPress={onCancel} accessibilityRole="button">
+            <Text style={styles.memoCancelTxt}>취소</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.memoSaveBtn, saving && styles.memoSaveBtnDisabled]}
+            onPress={onSave}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="메모 저장"
+          >
+            <Text style={styles.memoSaveTxt}>{saving ? '저장 중…' : '저장'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (memo) {
+    return (
+      <Pressable
+        style={styles.memoBox}
+        onPress={onEdit}
+        accessibilityLabel="메모 편집"
+        accessibilityRole="button"
+      >
+        <View style={styles.memoBoxRow}>
+          <Feather name="edit-2" size={scale(11)} color={colors.yellow40} />
+          <Text style={styles.memoTxt} numberOfLines={4}>{memo}</Text>
+        </View>
+        <Text style={styles.memoEditHint}>탭하여 편집</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable
+      style={styles.memoPlaceholder}
+      onPress={onEdit}
+      accessibilityLabel="메모 추가"
+      accessibilityRole="button"
+    >
+      <Feather name="plus" size={scale(14)} color={colors.labelAssistive} />
+      <Text style={styles.memoPlaceholderTxt}>메모 추가</Text>
+    </Pressable>
+  );
+}
+
+// ── Slot section ────────────────────────────────────────────────────────────
 
 interface SlotSectionProps {
   slots: SlotEditView[];
@@ -314,6 +510,8 @@ function AddSlotButton({ onPress, hasBorderTop }: { onPress: () => void; hasBord
   );
 }
 
+// ── Image ───────────────────────────────────────────────────────────────────
+
 function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: () => void }) {
   const [failed, setFailed] = useState(false);
   if (!url || failed) {
@@ -336,6 +534,8 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
     />
   );
 }
+
+// ── Header / Error ──────────────────────────────────────────────────────────
 
 function Header() {
   return (
@@ -365,6 +565,8 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+// ── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgAlt },
   header: {
@@ -391,6 +593,70 @@ const styles = StyleSheet.create({
   errorText: { fontSize: scale(14), color: colors.labelAlternative },
   retryBtn: { paddingHorizontal: space.s20, paddingVertical: space.s12, borderRadius: radius.r12, backgroundColor: colors.primaryNormal },
   retryText: { fontSize: scale(14), fontWeight: '600', color: colors.staticWhite },
+
+  // Detail info card
+  infoCard: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, padding: space.s16,
+    gap: space.s10, ...shadows.small,
+  },
+  infoTopRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
+  infoLabel: { flex: 1, fontSize: scale(15), fontWeight: '600', color: colors.labelNormal },
+  infoPeriodRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8,
+  },
+  infoPeriodTxt: { flex: 1, fontSize: scale(12), color: colors.labelAlternative },
+  chip: { paddingHorizontal: space.s10, paddingVertical: scale(3), borderRadius: radius.r8, borderWidth: 1 },
+  chipOngoing:   { borderColor: colors.statusPositive, backgroundColor: 'transparent' },
+  chipCompleted: { borderColor: colors.line, backgroundColor: colors.bgAlt },
+  chipTxt: { fontSize: scale(11), fontWeight: '700' },
+  chipTxtOngoing:   { color: colors.statusPositive },
+  chipTxtCompleted: { color: colors.labelAlternative },
+  adherenceTxt: { fontSize: scale(12), color: colors.labelAlternative },
+  dDayTxt: { fontSize: scale(12), fontWeight: '700', color: colors.labelNormal },
+  dDayUrgent:    { color: colors.statusCautionary },
+  dDayCautionary:{ color: colors.statusCautionary },
+  progressTrack: {
+    height: scale(4), backgroundColor: colors.bgAlt, borderRadius: radius.r4,
+    overflow: 'hidden', flexDirection: 'row',
+  },
+  progressFill: { height: '100%', backgroundColor: colors.primaryNormal },
+
+  // Memo section
+  memoBox: {
+    backgroundColor: colors.yellow95, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: '#FDE68A', padding: space.s14, gap: space.s6,
+  },
+  memoBoxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s6 },
+  memoTxt: { flex: 1, fontSize: scale(13), color: colors.yellow40, lineHeight: scale(18) },
+  memoEditHint: { fontSize: scale(11), color: colors.yellow40, opacity: 0.6, textAlign: 'right' },
+  memoPlaceholder: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s8,
+    paddingVertical: space.s12, paddingHorizontal: space.s14,
+    borderRadius: radius.r12, borderWidth: 1, borderColor: colors.line,
+    borderStyle: 'dashed',
+  },
+  memoPlaceholderTxt: { fontSize: scale(13), color: colors.labelAssistive },
+  memoEditCard: {
+    backgroundColor: colors.yellow95, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: '#FDE68A', overflow: 'hidden',
+  },
+  memoInput: {
+    fontSize: scale(13), color: colors.labelNormal, padding: space.s14,
+    minHeight: scale(80), textAlignVertical: 'top',
+  },
+  memoActions: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: space.s8,
+    borderTopWidth: 1, borderTopColor: '#FDE68A', padding: space.s10,
+  },
+  memoCancelBtn: { paddingVertical: space.s8, paddingHorizontal: space.s16, borderRadius: radius.r10 },
+  memoCancelTxt: { fontSize: scale(13), color: colors.labelAlternative },
+  memoSaveBtn: {
+    paddingVertical: space.s8, paddingHorizontal: space.s16,
+    borderRadius: radius.r10, backgroundColor: colors.primaryNormal,
+  },
+  memoSaveBtnDisabled: { opacity: 0.5 },
+  memoSaveTxt: { fontSize: scale(13), fontWeight: '600', color: colors.staticWhite },
 
   // Slot section
   slotCard: {
