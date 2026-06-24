@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Icon from '@/components/common/Icon';
 import PillVisual from '@/components/common/PillVisual';
+import { getPillColors } from '@/lib/pillColors';
 import { scale, colors, space, radius, shadows } from '@/styles/tokens';
 
 export type SlotState = 'done' | 'now' | 'wait';
@@ -65,6 +66,11 @@ function SlotItem({ slot, onCheckPress, onPrescriptionPress }: SlotItemProps) {
   const isDone = slot.state === 'done';
   const canNavigate = !!slot.prescriptionId && !!onPrescriptionPress;
 
+  const pillKey = slot.prescriptionName ?? slot.label ?? slot.id;
+  const { colorA: fallbackA, colorB: fallbackB } = getPillColors(pillKey);
+  const pillColorA = slot.pillColors[0] ?? fallbackA;
+  const pillColorB = slot.pillColors[1] ?? fallbackB;
+
   return (
     <View style={[styles.card, CARD_STYLE[slot.state]]}>
       <Pressable
@@ -99,8 +105,8 @@ function SlotItem({ slot, onCheckPress, onPrescriptionPress }: SlotItemProps) {
 
       <PillVisual
         size={scale(32)}
-        colorA={slot.pillColors[0] ?? '#aaa'}
-        colorB={slot.pillColors[1]}
+        colorA={pillColorA}
+        colorB={pillColorB}
         dimmed={!isDone}
       />
     </View>

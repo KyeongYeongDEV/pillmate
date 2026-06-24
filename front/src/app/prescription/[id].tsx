@@ -16,7 +16,6 @@ import {
   useAddPrescriptionSlotMutation,
   useRemovePrescriptionSlotMutation,
 } from '@/store/slices/scheduleApi';
-import OcrStatusChip from '@/components/prescription/OcrStatusChip';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
 import { safeBack } from '@/lib/router/safeBack';
@@ -24,7 +23,7 @@ import { scale, colors, space, radius, typography, shadows } from '@/styles/toke
 import type { PrescriptionDetailView } from '@/types/prescription';
 import type { SlotEditView, TimeOfDay } from '@/types/schedule';
 
-const PERIOD_ENDED_CODE = 'PILL_032';
+const PERIOD_ENDED_CODES = ['PILL_032', 'PILL_035'];
 const TOAST_DURATION_MS = 2500;
 
 const TIME_OF_DAY_LABEL: Record<string, string> = {
@@ -62,6 +61,9 @@ export default function PrescriptionDetailScreen() {
   const [memoEditing,   setMemoEditing]   = useState(false);
   const [memoText,      setMemoText]      = useState('');
   const [memoSaving,    setMemoSaving]    = useState(false);
+  const [labelEditing,  setLabelEditing]  = useState(false);
+  const [labelText,     setLabelText]     = useState('');
+  const [labelSaving,   setLabelSaving]   = useState(false);
   const [toastMsg,      setToastMsg]      = useState('');
   const [toastVisible,  setToastVisible]  = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -88,8 +90,8 @@ export default function PrescriptionDetailScreen() {
       refetchSlots();
     } catch (err: any) {
       const code = err?.data?.error?.code ?? err?.code ?? '';
-      if (code === PERIOD_ENDED_CODE) {
-        showToast(err?.data?.error?.message ?? '복약 기간이 종료되어 시간을 수정할 수 없습니다.');
+      if (PERIOD_ENDED_CODES.includes(code)) {
+        showToast('기간이 지난 처방전이라 수정할 수 없어요');
       } else {
         Alert.alert('오류', '시간 변경 중 문제가 발생했습니다.');
       }
@@ -109,8 +111,8 @@ export default function PrescriptionDetailScreen() {
       await addSlot({ prescriptionId, timeOfDay: tod, customTime }).unwrap();
     } catch (err: any) {
       const code = err?.data?.error?.code ?? err?.code ?? '';
-      if (code === PERIOD_ENDED_CODE) {
-        showToast(err?.data?.error?.message ?? '복약 기간이 종료되어 알림을 추가할 수 없습니다.');
+      if (PERIOD_ENDED_CODES.includes(code)) {
+        showToast('기간이 지난 처방전이라 수정할 수 없어요');
       } else {
         Alert.alert('오류', '알림 추가 중 문제가 발생했습니다.');
       }
@@ -122,8 +124,8 @@ export default function PrescriptionDetailScreen() {
       await removeSlot({ prescriptionId, timeOfDay: slot.timeOfDay }).unwrap();
     } catch (err: any) {
       const code = err?.data?.error?.code ?? err?.code ?? '';
-      if (code === PERIOD_ENDED_CODE) {
-        showToast(err?.data?.error?.message ?? '복약 기간이 종료되어 알림을 삭제할 수 없습니다.');
+      if (PERIOD_ENDED_CODES.includes(code)) {
+        showToast('기간이 지난 처방전이라 수정할 수 없어요');
       } else {
         Alert.alert('오류', '알림 삭제 중 문제가 발생했습니다.');
       }
@@ -148,6 +150,25 @@ export default function PrescriptionDetailScreen() {
   }, [memoText, updatePresc, prescriptionId]);
 
   const handleMemoCancel = useCallback(() => setMemoEditing(false), []);
+
+  const startLabelEdit = useCallback(() => {
+    setLabelText(data?.label ?? '');
+    setLabelEditing(true);
+  }, [data?.label]);
+
+  const handleLabelSave = useCallback(async () => {
+    setLabelSaving(true);
+    try {
+      await updatePresc({ id: prescriptionId, label: labelText || null }).unwrap();
+      setLabelEditing(false);
+    } catch {
+      Alert.alert('오류', '이름 저장에 실패했습니다.');
+    } finally {
+      setLabelSaving(false);
+    }
+  }, [labelText, updatePresc, prescriptionId]);
+
+  const handleLabelCancel = useCallback(() => setLabelEditing(false), []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -207,10 +228,17 @@ export default function PrescriptionDetailScreen() {
     if (isError || !data) return <ErrorState onRetry={refetch} />;
     return (
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.metaRow}>
-          <Text style={styles.date}>{formatPrescribedAt(data.prescribedAt)}</Text>
-          <OcrStatusChip status={data.ocrStatus} />
-        </View>
+        <LabelHeader
+          label={data.label}
+          prescribedAt={data.prescribedAt}
+          editing={labelEditing}
+          text={labelText}
+          saving={labelSaving}
+          onChangeText={setLabelText}
+          onEdit={startLabelEdit}
+          onSave={handleLabelSave}
+          onCancel={handleLabelCancel}
+        />
 
         <DetailInfoCard data={data} />
 
@@ -251,7 +279,7 @@ export default function PrescriptionDetailScreen() {
 // ── Detail info card (optional fields from BE) ─────────────────────────────
 
 function DetailInfoCard({ data }: { data: PrescriptionDetailView }) {
-  const hasInfo = !!(data.label || data.status || data.periodStart || data.progressRate != null);
+  const hasInfo = !!(data.status || data.periodStart || data.progressRate != null);
   if (!hasInfo) return null;
 
   const status = data.status ?? 'ONGOING';
@@ -260,7 +288,6 @@ function DetailInfoCard({ data }: { data: PrescriptionDetailView }) {
     <View style={styles.infoCard}>
       <View style={styles.infoTopRow}>
         <StatusChip status={status} />
-        {data.label ? <Text style={styles.infoLabel} numberOfLines={1}>{data.label}</Text> : null}
       </View>
       {(data.periodStart || data.daysRemaining != null || data.adherenceRate != null) && (
         <View style={styles.infoPeriodRow}>
@@ -323,6 +350,74 @@ function shortDate(dateStr: string): string {
 function formatPrescribedAt(dateStr: string): string {
   const [y, m, d] = dateStr.slice(0, 10).split('-');
   return `${y}.${m}.${d}`;
+}
+
+// ── Label header ────────────────────────────────────────────────────────────
+
+interface LabelHeaderProps {
+  label?: string | null;
+  prescribedAt: string;
+  editing: boolean;
+  text: string;
+  saving: boolean;
+  onChangeText: (t: string) => void;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function LabelHeader({ label, prescribedAt, editing, text, saving, onChangeText, onEdit, onSave, onCancel }: LabelHeaderProps) {
+  if (editing) {
+    return (
+      <View style={styles.labelEditCard}>
+        <TextInput
+          style={styles.labelInput}
+          value={text}
+          onChangeText={onChangeText}
+          placeholder="약봉투 이름 입력"
+          placeholderTextColor={colors.labelAssistive}
+          maxLength={50}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={onSave}
+          accessibilityLabel="약봉투 이름 입력"
+        />
+        <View style={styles.labelEditActions}>
+          <Pressable style={styles.labelCancelBtn} onPress={onCancel} accessibilityRole="button">
+            <Text style={styles.labelCancelTxt}>취소</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.labelSaveBtn, saving && styles.labelSaveBtnDisabled]}
+            onPress={onSave}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="이름 저장"
+          >
+            <Text style={styles.labelSaveTxt}>{saving ? '저장 중…' : '저장'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      style={styles.labelHeader}
+      onPress={onEdit}
+      accessibilityLabel={label ? '약봉투 이름 편집' : '약봉투 이름 추가'}
+      accessibilityRole="button"
+    >
+      <Text style={styles.labelHeaderDate}>{formatPrescribedAt(prescribedAt)}</Text>
+      <View style={styles.labelRow}>
+        {label ? (
+          <Text style={styles.labelHeaderText} numberOfLines={2}>{label}</Text>
+        ) : (
+          <Text style={styles.labelHeaderPlaceholder}>약봉투 이름 추가</Text>
+        )}
+        <Feather name="edit-2" size={scale(16)} color={colors.labelAssistive} />
+      </View>
+    </Pressable>
+  );
 }
 
 // ── Memo section ────────────────────────────────────────────────────────────
@@ -578,8 +673,38 @@ const styles = StyleSheet.create({
   headerSpacer: { width: scale(24) },
   loader: { flex: 1, marginTop: space.s40 },
   content: { padding: space.s16, gap: space.s16, paddingBottom: 40 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  date: { fontSize: scale(18), fontWeight: '700', color: colors.labelNormal },
+
+  // Label header
+  labelHeader: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, padding: space.s16,
+    gap: space.s4, ...shadows.small,
+  },
+  labelHeaderDate: { ...typography.caption1, color: colors.labelAlternative },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  labelHeaderText: { flex: 1, fontSize: scale(20), fontWeight: '700', color: colors.labelNormal },
+  labelHeaderPlaceholder: { flex: 1, fontSize: scale(16), color: colors.labelAssistive },
+  labelEditCard: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.primaryNormal, overflow: 'hidden', ...shadows.small,
+  },
+  labelInput: {
+    fontSize: scale(16), fontWeight: '600', color: colors.labelNormal,
+    padding: space.s16, minHeight: scale(60),
+  },
+  labelEditActions: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: space.s8,
+    borderTopWidth: 1, borderTopColor: colors.line, padding: space.s10,
+  },
+  labelCancelBtn: { paddingVertical: space.s8, paddingHorizontal: space.s16, borderRadius: radius.r10 },
+  labelCancelTxt: { fontSize: scale(13), color: colors.labelAlternative },
+  labelSaveBtn: {
+    paddingVertical: space.s8, paddingHorizontal: space.s16,
+    borderRadius: radius.r10, backgroundColor: colors.primaryNormal,
+  },
+  labelSaveBtnDisabled: { opacity: 0.5 },
+  labelSaveTxt: { fontSize: scale(13), fontWeight: '600', color: colors.staticWhite },
+
   image: { width: '100%', height: scale(220), borderRadius: radius.r16, backgroundColor: colors.fillNormal },
   imagePlaceholder: {
     width: '100%', height: scale(160), borderRadius: radius.r16, gap: space.s8,
@@ -601,7 +726,6 @@ const styles = StyleSheet.create({
     gap: space.s10, ...shadows.small,
   },
   infoTopRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
-  infoLabel: { flex: 1, fontSize: scale(15), fontWeight: '600', color: colors.labelNormal },
   infoPeriodRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8,
   },

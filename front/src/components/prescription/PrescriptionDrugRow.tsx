@@ -7,7 +7,6 @@ import PillVisual from '@/components/common/PillVisual';
 import { getPillColors } from '@/lib/pillColors';
 import { scale, colors, space, radius } from '@/styles/tokens';
 
-const CONFIDENCE_PERCENT = 100;
 const VISUAL_SIZE = 28;
 
 function PrescriptionDrugRow({ drug }: { drug: PrescriptionDetailDrug }) {
@@ -35,9 +34,6 @@ function PrescriptionDrugRow({ drug }: { drug: PrescriptionDetailDrug }) {
           <View style={styles.headRow}>
             <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
             <View style={styles.headRight}>
-              {confidenceLabel(drug.confidence) && (
-                <Text style={styles.confidence}>{confidenceLabel(drug.confidence)}</Text>
-              )}
               <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} />
             </View>
           </View>
@@ -74,11 +70,6 @@ function dosageLine(drug: PrescriptionDetailDrug): string {
   return `${dose} · ${freq} · ${days}`;
 }
 
-function confidenceLabel(confidence: number | null): string | null {
-  if (confidence == null) return null;
-  return `${Math.round(confidence * CONFIDENCE_PERCENT)}%`;
-}
-
 const styles = StyleSheet.create({
   row: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r12,
@@ -90,7 +81,6 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
   headRight: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
   name: { flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
-  confidence: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
   rawName: { fontSize: scale(12), color: colors.labelAssistive },
   dosage: { fontSize: scale(13), color: colors.labelNeutral, marginTop: space.s4 },
   drugImg: {

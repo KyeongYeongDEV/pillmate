@@ -20,7 +20,6 @@ function PrescriptionListCard({ item, onPress }: Props) {
       accessibilityLabel={`${formatDate(item.prescribedAt)} 약봉투, 약 ${item.drugCount}종`}
     >
       <TopRow item={item} />
-      <LabelRow item={item} />
       <PeriodRow item={item} />
       <ProgressBar rate={item.progressRate ?? 0} />
       {item.memo ? <MemoBox memo={item.memo} /> : null}
@@ -31,9 +30,14 @@ function PrescriptionListCard({ item, onPress }: Props) {
 
 function TopRow({ item }: { item: PrescriptionSummary }) {
   const status = item.status ?? 'ONGOING';
+  const name = item.label ?? buildFallbackLabel(item);
+  const hasLabel = !!item.label;
   return (
     <View style={styles.topRow}>
       <StatusChip status={status} />
+      <Text style={[styles.topName, !hasLabel && styles.topNameFallback]} numberOfLines={1}>
+        {name}
+      </Text>
       <Text style={styles.prescribedAt}>{formatDate(item.prescribedAt)}</Text>
     </View>
   );
@@ -47,16 +51,6 @@ function StatusChip({ status }: { status: 'ONGOING' | 'COMPLETED' }) {
         {isOngoing ? '복용중' : '복용완료'}
       </Text>
     </View>
-  );
-}
-
-function LabelRow({ item }: { item: PrescriptionSummary }) {
-  const hasLabel = !!item.label;
-  const text = item.label ?? buildFallbackLabel(item);
-  return (
-    <Text style={[styles.labelTxt, !hasLabel && styles.labelFallbackTxt]} numberOfLines={1}>
-      {text}
-    </Text>
   );
 }
 
@@ -153,8 +147,10 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: space.s8,
   },
+  topName: { ...typography.body1n, color: colors.labelNormal, flex: 1 },
+  topNameFallback: { color: colors.labelAlternative },
   chip: {
     paddingHorizontal: space.s10,
     paddingVertical: scale(3),
@@ -167,8 +163,6 @@ const styles = StyleSheet.create({
   chipTxtOngoing: { color: colors.statusPositive },
   chipTxtCompleted: { color: colors.labelAlternative },
   prescribedAt: { ...typography.caption1, color: colors.labelAlternative },
-  labelTxt: { ...typography.headline1, color: colors.labelNormal },
-  labelFallbackTxt: { ...typography.body2r, color: colors.labelAlternative },
   periodRow: {
     flexDirection: 'row',
     alignItems: 'center',
