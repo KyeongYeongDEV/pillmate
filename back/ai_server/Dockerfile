@@ -24,7 +24,11 @@ RUN pip install \
     "python-Levenshtein>=0.25.1" \
     "opencv-python-headless>=4.9" \
     "numpy>=1.26" \
-    "Pillow>=10.0"
+    "Pillow>=10.0" \
+    "transformers>=4.44.2" \
+    "FlagEmbedding>=1.2" \
+    "prometheus-fastapi-instrumentator>=0.11" \
+    "sentry-sdk>=2.0"
 
 COPY app ./app
 

@@ -1,6 +1,7 @@
 package com.pillmate.common.exception;
 
 import com.pillmate.common.response.ApiResponse;
+import io.sentry.Sentry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * 도메인 비즈니스 예외 — 예상된 흐름이므로 Sentry 전송 제외.
+     */
     @ExceptionHandler(PillmateException.class)
     public ResponseEntity<ApiResponse<Void>> handlePillmateException(PillmateException e) {
         HttpStatus status = resolveStatus(e.getErrorCode());
@@ -20,22 +24,35 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(e.getErrorCode()));
     }
 
+    /**
+     * 입력값 검증 실패 — 클라이언트 문제이므로 Sentry 전송 제외.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ErrorCode.INVALID_REQUEST));
     }
 
+    /**
+     * Redis 연결 실패 — 인프라 이상이므로 Sentry 캡처.
+     * 환자정보·처방내용은 로그/이벤트에 포함하지 않음.
+     */
     @ExceptionHandler(RedisConnectionFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleRedisDown(RedisConnectionFailureException e) {
         log.error("Redis connection failure: {}", e.getMessage());
+        Sentry.captureException(e);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error(ErrorCode.INVITE_CACHE_UNAVAILABLE));
     }
 
+    /**
+     * 예상외 예외 — 5xx, Sentry 캡처.
+     * ★ 메시지에 환자정보·처방내용 포함 금지 (medical-safety 룰).
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unhandled exception {}: {}", e.getClass().getName(), e.getMessage(), e);
+        Sentry.captureException(e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR));
     }

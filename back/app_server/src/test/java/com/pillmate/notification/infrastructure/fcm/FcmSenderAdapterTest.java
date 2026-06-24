@@ -4,6 +4,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +29,7 @@ class FcmSenderAdapterTest {
     @Mock FirebaseMessaging firebaseMessaging;
 
     private FcmSenderAdapter adapter() {
-        return new FcmSenderAdapter(messagingProvider);
+        return new FcmSenderAdapter(messagingProvider, new SimpleMeterRegistry());
     }
 
     private NotificationCommand command(String token) {

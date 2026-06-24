@@ -1,10 +1,14 @@
 package com.pillmate.notification.infrastructure.expo;
 
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -23,6 +27,14 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 })
 @DisplayName("ExpoPushSenderAdapter — MockRestServiceServer 단위")
 class ExpoPushSenderAdapterTest {
+
+    @TestConfiguration
+    static class MetricsConfig {
+        @Bean
+        MeterRegistry meterRegistry() {
+            return new SimpleMeterRegistry();
+        }
+    }
 
     @Autowired ExpoPushSenderAdapter adapter;
     @Autowired MockRestServiceServer server;

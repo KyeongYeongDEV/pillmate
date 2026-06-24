@@ -1,0 +1,29 @@
+# Grafana Alloy 에이전트 — 앱 박스(또는 별도 micro)에서 실행
+# 사용: cp .env.example .env  → 값 채우고  → docker compose up -d
+# 앱과 같은 네트워크면 APP_TARGET=app:8080 처럼 서비스명 사용 가능.
+# 다른 박스면 사설 IP(Tailscale 등) 사용.
+
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: pillmate-alloy
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    env_file: .env
+    mem_limit: 256m
+    # 같은 compose 네트워크의 app/ai-server를 긁으려면 해당 네트워크에 연결:
+    # networks: [pillmate_default]
+    # networks 사용 시 아래 networks 블록 주석 해제 + 실제 네트워크명 확인(docker network ls)
+
+volumes:
+  alloy_data:
+
+# networks:
+#   pillmate_default:
+#     external: true

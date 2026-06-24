@@ -4,11 +4,13 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import analyze as analyze_api
 from app.api import chat as chat_api
 from app.api import ocr as ocr_api
 from app.core.config import get_settings
+from app.core.sentry import init_sentry
 from app.core.db import build_pool
 from app.core.llm import GeminiInvoker
 from app.rag.chain import ChatService
@@ -30,6 +32,7 @@ logger = logging.getLogger("ai_server")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    init_sentry(dsn=settings.sentry_dsn, environment=settings.environment)
     dsn = (
         f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
@@ -103,6 +106,10 @@ def create_app() -> FastAPI:
     app.include_router(chat_api.router)
     app.include_router(ocr_api.router)
     app.include_router(analyze_api.router)
+    Instrumentator(
+        should_group_status_codes=True,
+        excluded_handlers=["/healthz", "/api/v1/health"],
+    ).instrument(app).expose(app, endpoint="/metrics")
     return app
 
 

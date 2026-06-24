@@ -57,7 +57,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 cloud:
   aws:
@@ -76,6 +79,18 @@ ai-server:
   timeout:
     connect-ms: 5000
     read-ms: 90000
+
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL:}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SPRING_PROFILES_ACTIVE:local}
+  traces-sample-rate: 0.1
+  send-default-pii: false
+  # SentryExceptionResolver 를 최저 우선순위로 — @ControllerAdvice가 먼저 처리하고
+  # GlobalExceptionHandler에서 5xx만 명시적 captureException 호출
+  exception-resolver-order: 2147483647
 
 pillmate:
   notification:

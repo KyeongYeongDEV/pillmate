@@ -1,0 +1,43 @@
+// Grafana Alloy 설정 — PillMate 메트릭을 Grafana Cloud로 remote_write
+// 실행: docker compose up -d (alloy/docker-compose.yml)
+// 필요한 env: .env (.env.example 참고)
+
+// ── 1) Spring Boot (app) 메트릭 scrape ──
+prometheus.scrape "spring_app" {
+  targets = [{
+    __address__      = sys.env("APP_TARGET"),          // 예: "app:8080" 또는 "10.0.0.5:8080"
+    __metrics_path__ = "/api/v1/actuator/prometheus",  // micrometer-registry-prometheus 노출 경로
+    service          = "app-server",
+  }]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+// ── 2) FastAPI (ai-server) 메트릭 scrape ──
+prometheus.scrape "fastapi_ai" {
+  targets = [{
+    __address__      = sys.env("AI_TARGET"),  // 예: "ai-server:8001"
+    __metrics_path__ = "/metrics",            // prometheus-fastapi-instrumentator 노출 경로
+    service          = "ai-server",
+  }]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+// ── 3) (선택) 호스트 자원 — node metrics ──
+prometheus.exporter.unix "host" { }
+prometheus.scrape "host" {
+  targets    = prometheus.exporter.unix.host.targets
+  forward_to = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+// ── 4) Grafana Cloud 로 전송 ──
+prometheus.remote_write "grafanacloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROM_URL")  // Grafana Cloud > Prometheus > Remote Write Endpoint
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROM_USER")  // 숫자 instance ID
+      password = sys.env("GRAFANA_CLOUD_API_KEY")    // Access Policy Token (write)
+    }
+  }
+}

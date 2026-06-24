@@ -5,7 +5,8 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import com.pillmate.notification.application.port.NotificationSenderPort;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -19,11 +20,24 @@ import java.util.Optional;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "pillmate.notification.provider", havingValue = "fcm")
 public class FcmSenderAdapter implements NotificationSenderPort {
 
     private final FirebaseMessagingProvider messagingProvider;
+    private final Counter sentCounter;
+    private final Counter failedCounter;
+
+    public FcmSenderAdapter(FirebaseMessagingProvider messagingProvider, MeterRegistry registry) {
+        this.messagingProvider = messagingProvider;
+        this.sentCounter = Counter.builder("pillmate.notifications.sent")
+                .tag("provider", "fcm")
+                .description("FCM push notifications successfully sent")
+                .register(registry);
+        this.failedCounter = Counter.builder("pillmate.notifications.failed")
+                .tag("provider", "fcm")
+                .description("FCM push notifications failed to send")
+                .register(registry);
+    }
 
     @Override
     public void send(NotificationCommand command) {
@@ -44,8 +58,10 @@ public class FcmSenderAdapter implements NotificationSenderPort {
     private void dispatch(FirebaseMessaging messaging, NotificationCommand command) {
         try {
             String messageId = messaging.send(toMessage(command));
+            sentCounter.increment();
             log.info("[FCM] sent recipient={} messageId={}", command.recipientUserId(), messageId);
         } catch (FirebaseMessagingException e) {
+            failedCounter.increment();
             log.warn("[FCM] send 실패 recipient={} errorCode={} reason={}",
                     command.recipientUserId(), e.getMessagingErrorCode(), e.getMessage());
         }

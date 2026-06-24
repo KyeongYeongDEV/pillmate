@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Phase C-1: 매처 구현 선택 (rrf | legacy)
     drug_matcher_impl: str = Field(default="rrf", alias="DRUG_MATCHER_IMPL")
 
+    # 에러 추적 — DSN 빈값이면 Sentry 비활성 (로컬 OFF)
+    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+    environment: str = Field(default="local", alias="SPRING_PROFILES_ACTIVE")
+
 
 def get_settings() -> Settings:
     return Settings()
