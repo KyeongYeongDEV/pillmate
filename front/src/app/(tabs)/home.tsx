@@ -91,7 +91,18 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.dateLabel}>{formatFullDate(today)}</Text>
+          <Text style={styles.greeting}>{buildDoseHeadline(slots, now)}</Text>
+          <DoseStatusRow
+            dots={dots}
+            doneCount={doneCount}
+            totalCount={slots.length}
+            streak={streak}
+            showStreak={showStreak}
+          />
+        </View>
+        <View style={styles.headerRight}>
           <NotificationBell />
           <Pressable
             onPress={handleSettingsPress}
@@ -101,17 +112,6 @@ export default function HomeScreen() {
             <Feather name="settings" size={scale(22)} color={colors.labelNormal} />
           </Pressable>
         </View>
-
-        <Text style={styles.dateLabel}>{formatFullDate(today)}</Text>
-        <Text style={styles.greeting}>{buildDoseHeadline(slots, now)}</Text>
-
-        <DoseStatusRow
-          dots={dots}
-          doneCount={doneCount}
-          totalCount={slots.length}
-          streak={streak}
-          showStreak={showStreak}
-        />
       </View>
 
       {/* ── Body ── */}
@@ -182,20 +182,17 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgAlt },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: colors.bgNormal,
     paddingHorizontal: space.s20,
-    paddingTop: space.s6,
+    paddingTop: space.s12,
     paddingBottom: space.s10,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: space.s16,
-    marginBottom: space.s6,
-  },
+  headerLeft: { flex: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.s16, paddingTop: space.s2 },
   dateLabel: { ...typography.label1n, color: colors.labelAlternative },
   greeting: { ...typography.heading2, lineHeight: scale(25), color: colors.labelNormal, letterSpacing: -0.6, marginTop: scale(1) },
   scroll: { flex: 1 },

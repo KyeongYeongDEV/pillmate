@@ -7,6 +7,7 @@ import CalendarGrid from '@/components/schedule/CalendarGrid';
 import MonthPicker from '@/components/schedule/MonthPicker';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
+import TabHeader from '@/components/navigation/TabHeader';
 import { useGetDayScheduleQuery, useGetMonthAdherenceQuery } from '@/store/slices/scheduleApi';
 import { useAppSelector } from '@/store/hooks';
 import { useSlotPress } from '@/hooks/useSlotPress';
@@ -115,9 +116,7 @@ export default function ScheduleScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>복약 스케줄</Text>
-      </View>
+      <TabHeader title="복약 스케줄" />
 
       <ScrollView
         style={styles.scroll}
@@ -204,11 +203,6 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgNormal },
-  header: {
-    paddingHorizontal: space.s16, paddingVertical: space.s12,
-    borderBottomWidth: 1, borderBottomColor: colors.line,
-  },
-  headerTitle: { ...typography.headline1, color: colors.labelNormal },
   scroll: { flex: 1 },
   content: { paddingBottom: 80 },
   monthRow: {

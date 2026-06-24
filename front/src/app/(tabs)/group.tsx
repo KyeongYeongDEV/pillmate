@@ -6,12 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
+import { scale, colors, space, radius, shadows } from '@/styles/tokens';
+import TabHeader from '@/components/navigation/TabHeader';
 import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
 import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
 import GroupCard from '@/components/group/GroupCard';
 import { applyGroupFilter } from '@/lib/groupFilter';
-import { safeBack } from '@/lib/router/safeBack';
 
 export default function GroupScreen() {
   const [filter, setFilter] = useState<GroupFilter>('전체');
@@ -50,28 +50,20 @@ export default function GroupScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => safeBack('/(tabs)/home')}
-          accessibilityLabel="뒤로가기"
-          accessibilityRole="button"
-          hitSlop={8}
-        >
-          <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>그룹</Text>
-          <Text style={styles.headerSub}>{groups.length}개 · 안 읽음 {totalUnread}</Text>
-        </View>
-        <Pressable
-          onPress={() => router.push('/group/scan' as any)}
-          accessibilityLabel="QR 스캔으로 가입"
-          accessibilityRole="button"
-          hitSlop={8}
-        >
-          <Feather name="maximize" size={scale(22)} color={colors.labelNormal} />
-        </Pressable>
-      </View>
+      <TabHeader
+        title="그룹"
+        subtitle={`${groups.length}개 · 안 읽음 ${totalUnread}`}
+        right={
+          <Pressable
+            onPress={() => router.push('/group/scan' as any)}
+            accessibilityLabel="QR 스캔으로 가입"
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Feather name="maximize" size={scale(22)} color={colors.labelNormal} />
+          </Pressable>
+        }
+      />
 
       <FilterChips selected={filter} onSelect={setFilter} />
 
@@ -134,14 +126,6 @@ function ErrorPlaceholder() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgAlt },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: space.s16, paddingVertical: space.s12,
-    backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-  headerTitle: { ...typography.headline1, color: colors.labelNormal },
-  headerSub: { fontSize: scale(11), color: colors.labelAlternative, fontWeight: '500' },
   scroll: { flex: 1 },
   content: { paddingVertical: space.s16, gap: space.s8, paddingBottom: 100 },
   loader: { marginTop: space.s40 },

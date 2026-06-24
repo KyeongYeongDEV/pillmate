@@ -9,6 +9,7 @@ import AiBubble from '@/components/chat/AiBubble';
 import UserBubble from '@/components/chat/UserBubble';
 import { useSendMessageMutation } from '@/store/slices/chatApi';
 import { scale, colors, space, radius } from '@/styles/tokens';
+import TabHeader from '@/components/navigation/TabHeader';
 import type { ChatMessage } from '@/types/chat';
 
 // 비용 정책: AI 채팅은 출시 시점 비활성 (2026-06-11 사용자 명시). true 로 바꾸면 즉시 활성.
@@ -80,17 +81,15 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>복약 상담</Text>
-          <Text style={[styles.headerSub, !CHAT_ENABLED && styles.headerSubLocked]}>
-            {CHAT_ENABLED ? '● Gemini · RAG 검증' : '곧 오픈 예정'}
-          </Text>
-        </View>
-        <Pressable accessibilityLabel="더 보기" accessibilityRole="button">
-          <Feather name="more-horizontal" size={scale(22)} color={colors.labelNormal} />
-        </Pressable>
-      </View>
+      <TabHeader
+        title="복약 상담"
+        subtitle={CHAT_ENABLED ? '● Gemini · RAG 검증' : '곧 오픈 예정'}
+        right={
+          <Pressable accessibilityLabel="더 보기" accessibilityRole="button">
+            <Feather name="more-horizontal" size={scale(22)} color={colors.labelNormal} />
+          </Pressable>
+        }
+      />
 
       <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -146,14 +145,6 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgAlt },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: space.s16, paddingVertical: space.s12,
-    backgroundColor: colors.bgNormal, borderBottomWidth: 1, borderBottomColor: colors.line,
-  },
-  headerTitle: { fontSize: scale(17), fontWeight: '600', color: colors.labelNormal },
-  headerSub: { fontSize: scale(11), color: colors.statusPositive, fontWeight: '600', marginTop: 1 },
-  headerSubLocked: { color: colors.labelAlternative },
   kav: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { padding: space.s16, gap: space.s14, paddingBottom: space.s8 },

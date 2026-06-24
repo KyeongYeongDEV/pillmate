@@ -34,7 +34,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   }, [navigation]);
 
   const isFocused = (routeName: string) => state.routes[state.index]?.name === routeName;
-  const visibleRoutes = state.routes.filter(r => r.name !== 'register-fab');
+  const visibleRoutes = state.routes.filter(r => TAB_ICONS[r.name]);
   const leftRoutes = visibleRoutes.slice(0, 2);
   const rightRoutes = visibleRoutes.slice(2);
 

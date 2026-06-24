@@ -8,6 +8,7 @@ export default function TabsLayout() {
     <View style={{ flex: 1 }}>
       <Tabs tabBar={(props) => <CustomTabBar {...props} />}>
         <Tabs.Screen name="home"         options={{ title: '홈',   headerShown: false }} />
+        <Tabs.Screen name="prescriptions" options={{ title: '약봉투', headerShown: false }} />
         <Tabs.Screen name="schedule"     options={{ title: '복약', headerShown: false }} />
         <Tabs.Screen
           name="register-fab"
