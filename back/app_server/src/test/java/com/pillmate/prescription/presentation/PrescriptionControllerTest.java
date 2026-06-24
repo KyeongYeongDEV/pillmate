@@ -19,6 +19,7 @@ import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.domain.model.CandidateDecisionType;
 import com.pillmate.prescription.domain.model.OcrStatus;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
@@ -230,7 +231,8 @@ class PrescriptionControllerTest {
     void getList_returns200() throws Exception {
         given(getPrescriptionsUseCase.list()).willReturn(List.of(
                 new PrescriptionSummary(42L, LocalDate.of(2026, 6, 10), OcrStatus.DONE,
-                        2, "타이레놀, 아스피린", Instant.parse("2026-06-10T01:00:00Z"))));
+                        2, "타이레놀, 아스피린", Instant.parse("2026-06-10T01:00:00Z"),
+                        null, null, PrescriptionStatus.ONGOING, null, null, null, null, null)));
 
         mockMvc.perform(get("/prescriptions").header("X-User-Id", "7"))
                 .andExpect(status().isOk())

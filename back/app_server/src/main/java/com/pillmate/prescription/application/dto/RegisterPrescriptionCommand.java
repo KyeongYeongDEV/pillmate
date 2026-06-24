@@ -8,10 +8,18 @@ public record RegisterPrescriptionCommand(
         LocalDate prescribedAt,
         String imageKey,
         List<DrugItem> items,
-        ScheduleSpec scheduleSpec
+        ScheduleSpec scheduleSpec,
+        String label,
+        String memo
 ) {
     public RegisterPrescriptionCommand(Long patientId, LocalDate prescribedAt,
                                        String imageKey, List<DrugItem> items) {
-        this(patientId, prescribedAt, imageKey, items, null);
+        this(patientId, prescribedAt, imageKey, items, null, null, null);
+    }
+
+    public RegisterPrescriptionCommand(Long patientId, LocalDate prescribedAt,
+                                       String imageKey, List<DrugItem> items,
+                                       ScheduleSpec scheduleSpec) {
+        this(patientId, prescribedAt, imageKey, items, scheduleSpec, null, null);
     }
 }

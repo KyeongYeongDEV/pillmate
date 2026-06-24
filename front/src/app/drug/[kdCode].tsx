@@ -11,10 +11,18 @@ import DrugInfoSection from '@/components/drug/DrugInfoSection';
 import SourceCard from '@/components/drug/SourceCard';
 import { scale, colors, space, typography } from '@/styles/tokens';
 import { safeBack } from '@/lib/router/safeBack';
+import { MFDS_SOURCE } from '@/lib/constants';
 
 export default function DrugDetailScreen() {
-  const { kdCode } = useLocalSearchParams<{ kdCode: string }>();
-  const { data: drug, isLoading, isError } = useGetDrugDetailQuery(kdCode ?? '', { skip: !kdCode });
+  const { kdCode, name } = useLocalSearchParams<{ kdCode: string; name?: string }>();
+  const isUnknown = kdCode === '__unknown';
+  const { data: drug, isLoading, isError } = useGetDrugDetailQuery(kdCode ?? '', {
+    skip: !kdCode || isUnknown,
+  });
+
+  if (isUnknown) {
+    return <UnknownDrugScreen name={name ?? '알 수 없는 약'} />;
+  }
 
   if (isLoading) {
     return (
@@ -69,6 +77,32 @@ export default function DrugDetailScreen() {
   );
 }
 
+function UnknownDrugScreen({ name }: { name: string }) {
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => safeBack()}
+          style={styles.backBtn}
+          accessibilityLabel="뒤로 가기"
+          accessibilityRole="button"
+        >
+          <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
+        </Pressable>
+        <Text style={styles.headerTitle}>약 정보</Text>
+        <View style={styles.backBtn} />
+      </View>
+      <View style={styles.unknownContent}>
+        <Text style={styles.unknownName}>{name}</Text>
+        <Text style={styles.unknownNotice}>상세 정보는 추후 업데이트 예정입니다.</Text>
+        <Text style={styles.unknownConsult}>
+          정확한 정보는 약사·의사와 상담해 주세요.{'\n'}출처: {MFDS_SOURCE}
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgNormal },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgNormal },
@@ -83,4 +117,14 @@ const styles = StyleSheet.create({
   errorText: { ...typography.body2n, color: colors.labelAlternative, marginBottom: space.s16 },
   errorBack: { paddingHorizontal: space.s24, paddingVertical: space.s10 },
   errorBackTxt: { ...typography.label1n, color: colors.primaryBase },
+  unknownContent: {
+    flex: 1, padding: space.s24,
+    alignItems: 'center', justifyContent: 'center', gap: space.s16,
+  },
+  unknownName: { ...typography.heading2, color: colors.labelNormal, textAlign: 'center' },
+  unknownNotice: { ...typography.body1n, color: colors.labelAlternative, textAlign: 'center' },
+  unknownConsult: {
+    ...typography.caption1, color: colors.labelAssistive,
+    textAlign: 'center', lineHeight: scale(20),
+  },
 });

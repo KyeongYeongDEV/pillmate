@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -8,44 +8,37 @@ import { scale, colors, space, radius } from '@/styles/tokens';
 const CONFIDENCE_PERCENT = 100;
 
 function PrescriptionDrugRow({ drug }: { drug: PrescriptionDetailDrug }) {
-  const navigable = drug.matchedKdCode != null;
+  const displayName = drug.matchedDrugName ?? drug.nameRaw;
+  const subtitle = drug.matchedDrugName ? drug.nameRaw : null;
 
-  const inner = (
-    <>
+  const handlePress = useCallback(() => {
+    if (drug.matchedKdCode) {
+      router.push(`/drug/${drug.matchedKdCode}` as any);
+    } else {
+      router.push(`/drug/__unknown?name=${encodeURIComponent(drug.nameRaw)}` as any);
+    }
+  }, [drug.matchedKdCode, drug.nameRaw]);
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      onPress={handlePress}
+      accessibilityLabel={`${displayName} 약 정보 보기`}
+      accessibilityRole="button"
+    >
       <View style={styles.headRow}>
-        <Text style={[styles.name, !navigable && styles.nameMuted]} numberOfLines={1}>
-          {drug.matchedDrugName ?? drug.nameRaw}
-        </Text>
+        <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
         <View style={styles.headRight}>
           {confidenceLabel(drug.confidence) && (
             <Text style={styles.confidence}>{confidenceLabel(drug.confidence)}</Text>
           )}
-          {navigable && (
-            <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} />
-          )}
+          <Feather name="chevron-right" size={scale(16)} color={colors.labelAlternative} />
         </View>
       </View>
-      <Text style={styles.matched}>
-        {drug.matchedDrugName ? `원문: ${drug.nameRaw}` : '미매칭'}
-      </Text>
+      {subtitle ? <Text style={styles.rawName}>{subtitle}</Text> : null}
       <Text style={styles.dosage}>{dosageLine(drug)}</Text>
-    </>
+    </Pressable>
   );
-
-  if (navigable) {
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-        onPress={() => router.push(`/drug/${drug.matchedKdCode}`)}
-        accessibilityLabel={`${drug.matchedDrugName ?? drug.nameRaw} 약 정보 보기`}
-        accessibilityRole="button"
-      >
-        {inner}
-      </Pressable>
-    );
-  }
-
-  return <View style={styles.row}>{inner}</View>;
 }
 
 function dosageLine(drug: PrescriptionDetailDrug): string {
@@ -69,9 +62,8 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
   headRight: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
   name: { flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal },
-  nameMuted: { color: colors.labelAlternative },
   confidence: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
-  matched: { fontSize: scale(12), color: colors.labelAssistive },
+  rawName: { fontSize: scale(12), color: colors.labelAssistive },
   dosage: { fontSize: scale(13), color: colors.labelNeutral, marginTop: space.s4 },
 });
 

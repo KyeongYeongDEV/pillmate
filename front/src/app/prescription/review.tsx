@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, ScrollView, StyleSheet, Alert, Modal, BackHandler,
+  View, Text, Pressable, ScrollView, StyleSheet, Alert, Modal, BackHandler, TextInput,
 } from 'react-native';
 import { usePreventRemove } from '@react-navigation/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import {
   addFromSearch, removeItem, updateDoseAmount,
   addSlot, removeSlot, setSlotTime,
   setStartDate, setEndDate,
-  reset,
+  setMemo, reset,
 } from '@/store/slices/prescriptionFlowSlice';
 import { useRegisterPrescriptionMutation } from '@/store/slices/prescriptionApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
@@ -40,11 +40,14 @@ function buildRegisterPayload(
   prescribedAt: string, imageKey: string | null,
   items: DrugListItem[], prescriptionSlots: PrescriptionSlotDraft[],
   startDate: string, endDate: string, careGroupId: number,
+  label: string | null, memo: string | null,
 ): RegisterPrescriptionInput {
   const today = new Date().toISOString().slice(0, 10);
   return {
     prescribedAt: prescribedAt || today,
     imageKey: imageKey ?? null,
+    label: label || null,
+    memo: memo || null,
     items: items.map(item => ({
       kdCode: item.kdCode, nameRaw: item.nameRaw, doseAmount: item.doseAmount,
       doseUnit: item.doseUnit, frequency: item.frequency, durationDays: item.durationDays,
@@ -81,8 +84,9 @@ const TOD_OPTIONS: PrescriptionTimeOfDay[] = ['MORNING', 'NOON', 'EVENING'];
 
 export default function PrescriptionReviewScreen() {
   const dispatch = useAppDispatch();
-  const { items, prescriptionSlots, prescribedAt, startDate, endDate, imageKey } =
+  const { items, prescriptionSlots, prescribedAt, startDate, endDate, imageKey, memo } =
     useAppSelector((s: RootState) => s.prescriptionFlow);
+  const [label, setLabel] = useState('');
 
   const { data: groups = [] } = useGetMyGroupsQuery();
   const careGroupId = useMemo(() => {
@@ -174,7 +178,7 @@ export default function PrescriptionReviewScreen() {
     }
     try {
       const result = await registerPrescription(
-        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!),
+        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!, label || null, memo || null),
       ).unwrap();
       const warnings = result.warnings ?? [];
       if (warnings.length > 0) {
@@ -223,6 +227,33 @@ export default function PrescriptionReviewScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── 처방 이름 / 메모 ──────────────────────── */}
+        <SectionHeader title="처방 이름 (선택)" />
+        <View style={styles.labelCard}>
+          <TextInput
+            style={styles.labelInput}
+            placeholder="예: 내과 진료 처방"
+            placeholderTextColor={colors.labelAssistive}
+            value={label}
+            onChangeText={setLabel}
+            maxLength={100}
+            returnKeyType="done"
+            accessibilityLabel="처방 이름 입력"
+          />
+          <View style={styles.inputDivider} />
+          <TextInput
+            style={styles.memoInput}
+            placeholder="간단 메모 (선택)"
+            placeholderTextColor={colors.labelAssistive}
+            value={memo}
+            onChangeText={(t) => dispatch(setMemo(t))}
+            maxLength={500}
+            multiline
+            textAlignVertical="top"
+            accessibilityLabel="메모 입력"
+          />
+        </View>
+
         {/* ── A: 약 목록 ─────────────────────────────── */}
         <SectionHeader title={`약 목록 · ${items.length}종`} />
 
@@ -621,4 +652,17 @@ const styles = StyleSheet.create({
     paddingVertical: space.s16, alignItems: 'center', ...shadows.small,
   },
   ddiAckTxt: { fontSize: scale(16), fontWeight: '700', color: '#fff' },
+  labelCard: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, ...shadows.small, overflow: 'hidden',
+  },
+  labelInput: {
+    ...typography.body1n, color: colors.labelNormal,
+    paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(44),
+  },
+  inputDivider: { height: 1, backgroundColor: colors.line, marginHorizontal: space.s16 },
+  memoInput: {
+    ...typography.body2r, color: colors.labelNormal,
+    paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(64),
+  },
 });

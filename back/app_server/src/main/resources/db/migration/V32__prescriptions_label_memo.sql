@@ -1,0 +1,2 @@
+ALTER TABLE prescriptions ADD COLUMN label VARCHAR(100);
+ALTER TABLE prescriptions ADD COLUMN memo  VARCHAR(500);

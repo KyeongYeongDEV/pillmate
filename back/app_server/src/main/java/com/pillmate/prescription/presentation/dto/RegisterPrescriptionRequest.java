@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,17 +18,21 @@ public record RegisterPrescriptionRequest(
         @NotNull LocalDate prescribedAt,
         String imageKey,
         @NotEmpty @Valid List<Item> items,
-        @Valid ScheduleSpecRequest schedule
+        @Valid ScheduleSpecRequest schedule,
+        @Size(max = 100) String label,
+        @Size(max = 500) String memo
 ) {
     public RegisterPrescriptionRequest(LocalDate prescribedAt, String imageKey, List<Item> items) {
-        this(prescribedAt, imageKey, items, null);
+        this(prescribedAt, imageKey, items, null, null, null);
     }
 
     public RegisterPrescriptionCommand toCommand(Long patientId) {
         return new RegisterPrescriptionCommand(
                 patientId, prescribedAt, imageKey,
                 items.stream().map(Item::toDrugItem).toList(),
-                schedule != null ? schedule.toSpec() : null);
+                schedule != null ? schedule.toSpec() : null,
+                label,
+                memo);
     }
 
     public record Item(

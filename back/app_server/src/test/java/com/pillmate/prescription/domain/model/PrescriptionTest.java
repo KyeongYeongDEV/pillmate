@@ -12,7 +12,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PrescriptionTest {
 
     private Prescription newPrescription() {
-        return Prescription.create(1L, 2L, "prescriptions/uuid.jpg", LocalDate.now());
+        return Prescription.create(2L, "prescriptions/uuid.jpg", LocalDate.now());
+    }
+
+    @Test
+    @DisplayName("create with label/memo → 필드 영속화")
+    void create_withLabelAndMemo_persistsFields() {
+        Prescription p = Prescription.create(1L, "img.jpg", LocalDate.now(), "내과 처방", "감기 처방전");
+        assertThat(p.getLabel()).isEqualTo("내과 처방");
+        assertThat(p.getMemo()).isEqualTo("감기 처방전");
+    }
+
+    @Test
+    @DisplayName("create without label/memo → null")
+    void create_withoutLabelMemo_fieldsAreNull() {
+        Prescription p = Prescription.create(1L, "img.jpg", LocalDate.now());
+        assertThat(p.getLabel()).isNull();
+        assertThat(p.getMemo()).isNull();
     }
 
     @Test

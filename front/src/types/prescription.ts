@@ -45,6 +45,14 @@ export interface PrescriptionSummary {
   drugCount: number;
   drugNames: string;
   createdAt: string;
+  label?: string | null;
+  memo?: string | null;
+  status?: 'ONGOING' | 'COMPLETED';
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  daysRemaining?: number | null;
+  progressRate?: number;
+  adherenceRate?: number | null;
 }
 
 export interface PrescriptionDetailDrug {
@@ -190,6 +198,8 @@ export interface PrescriptionScheduleInput {
 export interface RegisterPrescriptionInput {
   prescribedAt: string;
   imageKey: string | null;
+  label?: string | null;
+  memo?: string | null;
   items: RegisterPrescriptionItem[];
   schedule: PrescriptionScheduleInput;
 }

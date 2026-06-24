@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import type { ScheduleDay, SlotEditView } from '@/types/schedule';
+import type { ScheduleDay, SlotEditView, TimeOfDay } from '@/types/schedule';
 import type { AdherenceLevel } from '@/utils/calendarUtils';
 
 export interface MonthAdherenceDay {
@@ -74,6 +74,29 @@ export const scheduleApiSlice = createApi({
         { type: 'Schedule', id: `presc-${scheduleId}` },
       ],
     }),
+
+    addPrescriptionSlot: build.mutation<void, { prescriptionId: number; timeOfDay: TimeOfDay; customTime: string }>({
+      query: ({ prescriptionId, timeOfDay, customTime }) => ({
+        url: `/schedules/prescriptions/${prescriptionId}/slots`,
+        method: 'POST',
+        body: { timeOfDay, customTime },
+      }),
+      invalidatesTags: (_r, _e, { prescriptionId }) => [
+        'Schedule',
+        { type: 'Schedule', id: `presc-${prescriptionId}` },
+      ],
+    }),
+
+    removePrescriptionSlot: build.mutation<void, { prescriptionId: number; timeOfDay: TimeOfDay }>({
+      query: ({ prescriptionId, timeOfDay }) => ({
+        url: `/schedules/prescriptions/${prescriptionId}/slots/${timeOfDay}/deactivate`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (_r, _e, { prescriptionId }) => [
+        'Schedule',
+        { type: 'Schedule', id: `presc-${prescriptionId}` },
+      ],
+    }),
   }),
 });
 
@@ -82,4 +105,6 @@ export const {
   useGetMonthAdherenceQuery,
   useGetPrescriptionSlotsQuery,
   useUpdateScheduleTimeMutation,
+  useAddPrescriptionSlotMutation,
+  useRemovePrescriptionSlotMutation,
 } = scheduleApiSlice;

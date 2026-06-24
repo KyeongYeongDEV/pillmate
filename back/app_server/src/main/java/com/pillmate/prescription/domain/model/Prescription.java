@@ -51,6 +51,12 @@ public class Prescription {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(length = 100)
+    private String label;
+
+    @Column(length = 500)
+    private String memo;
+
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescribedDrug> drugs = new ArrayList<>();
 
@@ -64,6 +70,14 @@ public class Prescription {
         p.prescribedAt = prescribedAt;
         p.ocrStatus = OcrStatus.PENDING;
         p.createdAt = Instant.now();
+        return p;
+    }
+
+    public static Prescription create(Long patientId, String imageKey, LocalDate prescribedAt,
+                                      String label, String memo) {
+        Prescription p = create(patientId, imageKey, prescribedAt);
+        p.label = label;
+        p.memo = memo;
         return p;
     }
 
