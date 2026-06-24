@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
 } from 'react-native';
@@ -9,22 +9,18 @@ import * as Haptics from 'expo-haptics';
 import { scale, colors, space, radius, shadows } from '@/styles/tokens';
 import TabHeader from '@/components/navigation/TabHeader';
 import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
-import FilterChips, { GroupFilter } from '@/components/group/FilterChips';
 import GroupCard from '@/components/group/GroupCard';
-import { applyGroupFilter } from '@/lib/groupFilter';
 
 export default function GroupScreen() {
-  const [filter, setFilter] = useState<GroupFilter>('전체');
   const { data: groups = [], isLoading, isError } = useGetMyGroupsQuery();
   const [pinGroup] = usePinGroupMutation();
   const [unpinGroup] = useUnpinGroupMutation();
 
-  const filteredGroups = useMemo(() => applyGroupFilter(groups, filter), [groups, filter]);
   // BE PinGroupUseCase 단일 핀 — 새 핀 시 기존 해제
   const pinnedGroup = useMemo(() => groups.find(g => g.pinned) ?? null, [groups]);
   const unpinnedGroups = useMemo(
-    () => filteredGroups.filter(g => g.groupId !== pinnedGroup?.groupId),
-    [filteredGroups, pinnedGroup],
+    () => groups.filter(g => g.groupId !== pinnedGroup?.groupId),
+    [groups, pinnedGroup],
   );
   const totalUnread = useMemo(
     () => groups.reduce((sum, g) => sum + g.unreadCount, 0),
@@ -65,8 +61,6 @@ export default function GroupScreen() {
         }
       />
 
-      <FilterChips selected={filter} onSelect={setFilter} />
-
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* 새 그룹 CTA */}
         <Pressable
@@ -98,7 +92,7 @@ export default function GroupScreen() {
 
         {/* 모든 그룹 */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>모든 그룹 · {filteredGroups.length}</Text>
+          <Text style={styles.sectionLabel}>모든 그룹 · {groups.length}</Text>
           {unpinnedGroups.map((g) => (
             <GroupCard
               key={g.groupId}
