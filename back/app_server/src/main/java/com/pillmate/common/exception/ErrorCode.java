@@ -28,6 +28,7 @@ public enum ErrorCode {
     SCHEDULE_PERIOD_ENDED("PILL_032", "복약 기간이 종료되어 시간을 수정할 수 없습니다."),
     SCHEDULE_INVALID_TIME_OF_DAY("PILL_033", "유효하지 않은 복약 시간대입니다."),
     SCHEDULE_INVALID_PERIOD("PILL_034", "복약 시작일이 종료일보다 늦을 수 없습니다."),
+    PRESCRIPTION_PERIOD_ENDED("PILL_035", "복약 기간이 종료된 처방입니다."),
     INVALID_REQUEST("PILL_040", "잘못된 요청입니다."),
     DOSE_LOG_DATE_LOCKED("PILL_041", "지난 날짜의 복약 기록은 수정할 수 없습니다."),
     OCR_UPSTREAM_TIMEOUT("PILL_050", "OCR 서비스 응답 시간이 초과되었습니다."),
@@ -44,6 +45,8 @@ public enum ErrorCode {
     INVALID_NOTIFICATION_DOSE_LOG("PILL_082", "알림 발송 대상 복약 기록을 찾을 수 없습니다."),
     INVITE_CODE_EXPIRED_OR_INVALID("PILL_096", "유효하지 않거나 만료된 초대 코드입니다."),
     INVITE_CACHE_UNAVAILABLE("PILL_097", "초대 코드 검증 서비스에 일시적으로 연결할 수 없습니다."),
+    KAKAO_AUTH_FAILED("PILL_083", "카카오 인증에 실패했습니다."),
+    INVALID_AUTH_TOKEN("PILL_084", "인증 토큰이 유효하지 않습니다."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;

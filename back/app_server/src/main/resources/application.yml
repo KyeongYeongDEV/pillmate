@@ -38,7 +38,6 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:db/migration-dev
-
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -81,3 +80,14 @@ pillmate:
       base-url: https://exp.host
       connect-ms: 3000
       read-ms: 5000
+  auth:
+    dev-fallback-enabled: ${PILLMATE_DEV_FALLBACK:false}
+    jwt:
+      secret: ${PILLMATE_JWT_SECRET:}
+      access-ttl-days: ${PILLMATE_JWT_ACCESS_TTL_DAYS:14}
+
+kakao:
+  client-id: ${KAKAO_REST_API_KEY:}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+  token-url: https://kauth.kakao.com/oauth/token
+  user-info-url: https://kapi.kakao.com/v2/user/me

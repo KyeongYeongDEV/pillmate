@@ -11,6 +11,7 @@ import { doseLogApiSlice } from './slices/doseLogApi';
 import { caregroupApiSlice } from './slices/caregroupApi';
 import { userApiSlice } from './slices/userApi';
 import { notificationApiSlice } from './slices/notificationApi';
+import { authApiSlice } from './slices/authApi';
 
 export const store = configureStore({
   reducer: {
@@ -25,6 +26,7 @@ export const store = configureStore({
     [caregroupApiSlice.reducerPath]: caregroupApiSlice.reducer,
     [userApiSlice.reducerPath]: userApiSlice.reducer,
     [notificationApiSlice.reducerPath]: notificationApiSlice.reducer,
+    [authApiSlice.reducerPath]: authApiSlice.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
@@ -37,6 +39,7 @@ export const store = configureStore({
       caregroupApiSlice.middleware,
       userApiSlice.middleware,
       notificationApiSlice.middleware,
+      authApiSlice.middleware,
     ),
 });
 

@@ -59,6 +59,7 @@ public class GlobalExceptionHandler {
             case REPORT_REFRESH_RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
             case REPORT_GENERATION_FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
             case INVITE_CACHE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case KAKAO_AUTH_FAILED, INVALID_AUTH_TOKEN -> HttpStatus.UNAUTHORIZED;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }

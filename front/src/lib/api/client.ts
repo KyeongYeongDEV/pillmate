@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-import { getToken } from "@/lib/auth/storage";
+import { getToken, getCurrentUserId } from "@/lib/auth/storage";
 
 // Android 에뮬레이터는 호스트 머신의 localhost 가 10.0.2.2.
 function resolveBaseUrl(): string {
@@ -53,11 +53,11 @@ async function buildHeaders(
   base: HeadersInit | undefined,
   withAuth: boolean,
 ): Promise<HeadersInit> {
+  const userId = await getCurrentUserId();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    // Phase 1 dummy user header — replaced by real JWT extraction in auth integration
-    "X-User-Id": "1",
+    "X-User-Id": String(userId ?? 1),
     ...(base as Record<string, string> | undefined),
   };
   if (withAuth) {

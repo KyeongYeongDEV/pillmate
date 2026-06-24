@@ -29,6 +29,8 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <NotificationsBootstrap />
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="prescription" />
           <Stack.Screen name="notifications" />

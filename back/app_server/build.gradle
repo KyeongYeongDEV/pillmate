@@ -78,4 +78,7 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // 테스트 환경: JWT 시크릿 + dev-fallback 활성화 (운영 PILLMATE_JWT_SECRET은 .env.prod 에서 별도 주입)
+    environment 'PILLMATE_JWT_SECRET', System.getenv('PILLMATE_JWT_SECRET') ?: 'test-jwt-secret-for-automated-testing-min32ch'
+    environment 'PILLMATE_DEV_FALLBACK', System.getenv('PILLMATE_DEV_FALLBACK') ?: 'true'
 }

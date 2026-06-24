@@ -94,6 +94,9 @@ services:
       AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8001}
       PILLMATE_NOTIFICATION_PROVIDER: ${PILLMATE_NOTIFICATION_PROVIDER:-log}
       FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
+      # dev-only: local compose에서만 주입. compose.prod.yml + .env.prod 는 이 값 미포함 → prod fail-closed 유지
+      PILLMATE_JWT_SECRET: ${PILLMATE_JWT_SECRET:-dev-local-only-secret-not-for-production-use}
+      PILLMATE_DEV_FALLBACK: ${PILLMATE_DEV_FALLBACK:-true}
     volumes:
       - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     ports:
