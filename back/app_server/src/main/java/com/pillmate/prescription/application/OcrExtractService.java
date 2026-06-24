@@ -21,7 +21,7 @@ public class OcrExtractService {
 
     public OcrResult extractAndValidate(String imageKey) {
         String downloadUrl = fileStoragePort.issueDownloadUrl(imageKey, OCR_DOWNLOAD_TTL);
-        OcrResult result = ocrPort.extractFromImage(downloadUrl);
+        OcrResult result = ocrPort.extractFromImage(downloadUrl, imageKey);
         requireNonEmpty(result);
         return result;
     }

@@ -43,7 +43,7 @@ class OcrExtractServiceTest {
                 .willReturn(DOWNLOAD_URL);
         OcrItem item = new OcrItem("KD-001", "타이레놀", "타이레놀정500mg",
                 BigDecimal.ONE, "정", 3, 7, new BigDecimal("0.95"), null);
-        given(ocrPort.extractFromImage(DOWNLOAD_URL))
+        given(ocrPort.extractFromImage(DOWNLOAD_URL, IMAGE_KEY))
                 .willReturn(new OcrResult(List.of(item), "식약처"));
 
         // when
@@ -54,7 +54,7 @@ class OcrExtractServiceTest {
         assertThat(result.items().get(0).kdCode()).isEqualTo("KD-001");
         assertThat(result.items().get(0).durationDays()).isEqualTo(7);
         verify(fileStoragePort).issueDownloadUrl(IMAGE_KEY, Duration.ofMinutes(10));
-        verify(ocrPort).extractFromImage(DOWNLOAD_URL);
+        verify(ocrPort).extractFromImage(DOWNLOAD_URL, IMAGE_KEY);
     }
 
     @Test
@@ -62,7 +62,7 @@ class OcrExtractServiceTest {
     void extractAndValidate_whenOcrReturnsEmpty_throwsOcrEmpty() {
         // given
         given(fileStoragePort.issueDownloadUrl(any(), any())).willReturn(DOWNLOAD_URL);
-        given(ocrPort.extractFromImage(any())).willReturn(new OcrResult(List.of(), "unknown"));
+        given(ocrPort.extractFromImage(any(), any())).willReturn(new OcrResult(List.of(), "unknown"));
 
         // when / then
         assertThatThrownBy(() -> sut.extractAndValidate(IMAGE_KEY))

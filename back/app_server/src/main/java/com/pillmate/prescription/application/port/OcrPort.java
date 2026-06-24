@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface OcrPort {
-    OcrResult extractFromImage(String imageUrl);
+    OcrResult extractFromImage(String imageUrl, String imageKey);
 
     record OcrResult(List<OcrItem> items, String source) {}
 

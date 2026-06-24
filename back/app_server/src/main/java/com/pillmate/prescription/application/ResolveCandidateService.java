@@ -6,16 +6,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.prescription.application.port.DrugLookupPort;
+import com.pillmate.prescription.application.port.OcrMatchLogPort;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ResolveCandidateService implements ResolveCandidateUseCase {
@@ -23,6 +27,8 @@ public class ResolveCandidateService implements ResolveCandidateUseCase {
     private final PrescriptionRepository prescriptionRepository;
     private final CareGroupGuard careGroupGuard;
     private final ObjectMapper objectMapper;
+    private final DrugLookupPort drugLookupPort;
+    private final OcrMatchLogPort ocrMatchLogPort;
 
     @Transactional
     @Override
@@ -35,6 +41,22 @@ public class ResolveCandidateService implements ResolveCandidateUseCase {
         validateOptionExists(candidate.getOptionsJson(), selectedDrugId);
         candidate.resolve(selectedDrugId, resolverId);
         prescriptionRepository.save(prescription);
+        updateMatchLog(prescription, candidate.getItemIndex(), selectedDrugId);
+    }
+
+    private void updateMatchLog(Prescription prescription, int itemIndex, Long selectedDrugId) {
+        try {
+            String imageKey = prescription.getImageKey();
+            if (imageKey == null) return;
+            String rawOcrText = prescription.getDrugs().get(itemIndex).getNameRaw();
+            String kdCode = drugLookupPort.findById(selectedDrugId)
+                    .map(DrugLookupPort.DrugSummary::kdCode)
+                    .orElse(null);
+            if (kdCode == null) return;
+            ocrMatchLogPort.updateUserCorrection(imageKey, rawOcrText, kdCode);
+        } catch (Exception e) {
+            log.warn("match log update skipped (best-effort): {}", e.getMessage());
+        }
     }
 
     private PrescribedDrugCandidate findCandidate(Prescription prescription, int itemIndex) {

@@ -62,7 +62,7 @@ class AiServerOcrClientTest {
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
 
         // when
-        OcrResult result = client.extractFromImage(imageUrl);
+        OcrResult result = client.extractFromImage(imageUrl, "prescriptions/uuid.jpg");
 
         // then
         assertThat(result.items()).hasSize(1);
@@ -77,7 +77,7 @@ class AiServerOcrClientTest {
         server.expect(requestTo("http://ai-server:8001/api/v1/ocr/prescription"))
                 .andRespond(withStatus(HttpStatus.GATEWAY_TIMEOUT));
 
-        assertThatThrownBy(() -> client.extractFromImage("http://url"))
+        assertThatThrownBy(() -> client.extractFromImage("http://url", null))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_UPSTREAM_TIMEOUT);
     }
@@ -88,7 +88,7 @@ class AiServerOcrClientTest {
         server.expect(requestTo("http://ai-server:8001/api/v1/ocr/prescription"))
                 .andRespond(withBadRequest());
 
-        assertThatThrownBy(() -> client.extractFromImage("http://url"))
+        assertThatThrownBy(() -> client.extractFromImage("http://url", null))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_REQUEST_INVALID);
     }
@@ -99,7 +99,7 @@ class AiServerOcrClientTest {
         server.expect(requestTo("http://ai-server:8001/api/v1/ocr/prescription"))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> client.extractFromImage("http://url"))
+        assertThatThrownBy(() -> client.extractFromImage("http://url", null))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_UPSTREAM_FAILED);
     }

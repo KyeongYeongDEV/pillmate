@@ -32,12 +32,12 @@ public class AiServerOcrClient implements OcrPort {
     }
 
     @Override
-    public OcrResult extractFromImage(String imageUrl) {
+    public OcrResult extractFromImage(String imageUrl, String imageKey) {
         try {
             return restClient.post()
                     .uri("/api/v1/ocr/prescription")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new AiServerOcrRequest(imageUrl))
+                    .body(new AiServerOcrRequest(imageUrl, imageKey))
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         throw new PillmateException(ErrorCode.OCR_REQUEST_INVALID);
@@ -56,7 +56,7 @@ public class AiServerOcrClient implements OcrPort {
         }
     }
 
-    private record AiServerOcrRequest(String image_url) {}
+    private record AiServerOcrRequest(String image_url, String image_key) {}
 
     private record AiServerOcrResponse(List<AiServerOcrItem> items, String source) {
         public OcrResult toOcrResult(ObjectMapper mapper) {

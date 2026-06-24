@@ -64,6 +64,7 @@ class PrescriptionOcrRequest(BaseModel):
 
     image_url: HttpUrl
     request_id: UUID | None = None
+    image_key: str | None = None
 
 
 class PrescriptionOcrResponse(BaseModel):

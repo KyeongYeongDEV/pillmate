@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Protocol
 
 from app.domain.ocr import (
@@ -17,17 +19,22 @@ from app.rag.ocr.cache import (
     image_hash,
 )
 from app.rag.ocr.correction import OcrCorrectionAdapter
+from app.rag.ocr.match_logger import OcrMatchLogEntry, OcrMatchLogger
 from app.rag.ocr.matcher import MatchCandidate, MatchResult, MatchStage
 from app.rag.ocr.pill_identify import PillIdentifyAdapter
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
-from app.rag.ocr.rrf import MatchDecisionType
+from app.rag.ocr.rrf import Candidate, MatchDecision, MatchDecisionType
 
 if TYPE_CHECKING:
     from app.rag.ocr.preprocess import ImagePreprocessor
 
 logger = logging.getLogger(__name__)
 _stage_logger = logging.getLogger(__name__ + ".stage")
+
+_SURFACED_RANK_ATTRS = ("exact_rank", "trgm_rank", "jamo_rank", "vector_rank")
+_SURFACED_NAMES = ("exact", "trigram", "jamo", "vector")
+_LOG_CANDIDATES_TOP_N = 5
 
 
 class ImageFetcher(Protocol):
@@ -52,6 +59,7 @@ class OcrPrescriptionService:
         correction: OcrCorrectionAdapter | None = None,
         preprocessor: ImagePreprocessor | None = None,
         pill_identifier: PillIdentifyAdapter | None = None,
+        match_logger: OcrMatchLogger | None = None,
     ):
         self._fetcher = fetcher
         self._vision = vision
@@ -60,6 +68,7 @@ class OcrPrescriptionService:
         self._correction = correction
         self._preprocessor = preprocessor
         self._pill_identifier = pill_identifier
+        self._match_logger = match_logger
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
         image_bytes = await self._fetcher.fetch(str(request.image_url))
@@ -70,7 +79,9 @@ class OcrPrescriptionService:
             return cached
         if self._preprocessor is not None:
             image_bytes = self._apply_preprocess(image_bytes)
-        response, stages = await self._build_response(image_bytes)
+        response, stages = await self._build_response(
+            image_bytes, hash_hex=hash_hex, image_key=request.image_key
+        )
         await self._cache.set(hash_hex, response)
         self._log_done(request, response.items, stages=stages, cache_hit=False)
         return response
@@ -83,10 +94,13 @@ class OcrPrescriptionService:
             return image_bytes
 
     async def _build_response(
-        self, image_bytes: bytes
+        self,
+        image_bytes: bytes,
+        hash_hex: str | None = None,
+        image_key: str | None = None,
     ) -> tuple[PrescriptionOcrResponse, list[MatchStage]]:
         raw_items = await self._vision.extract(image_bytes)
-        results = await self._match_all(raw_items)
+        results = await self._match_all(raw_items, hash_hex=hash_hex, image_key=image_key)
         items = [self._to_decision_item(result, raw) for result, raw in zip(results, raw_items)]
         stages = [result.stage for result in results]
         self._log_stage_decisions(raw_items, results)
@@ -122,12 +136,85 @@ class OcrPrescriptionService:
             ],
         )
 
-    async def _match_all(self, raw_items: list[RawOcrItem]) -> list[MatchResult]:
+    async def _match_all(
+        self,
+        raw_items: list[RawOcrItem],
+        hash_hex: str | None = None,
+        image_key: str | None = None,
+    ) -> list[MatchResult]:
         results = []
         for raw in raw_items:
+            t0 = int(time.monotonic() * 1000)
             result = await self._match_with_fallback(raw)
+            latency_ms = int(time.monotonic() * 1000) - t0
             results.append(result)
+            if self._match_logger is not None:
+                entry = self._build_log_entry(raw, result, hash_hex, image_key, latency_ms)
+                asyncio.ensure_future(self._safe_log(entry))
         return results
+
+    def _build_log_entry(
+        self,
+        raw: RawOcrItem,
+        result: MatchResult,
+        hash_hex: str | None,
+        image_key: str | None,
+        latency_ms: int,
+    ) -> OcrMatchLogEntry:
+        decision = result.decision
+        primary = decision.primary if decision is not None else None
+
+        matched_kd_code = primary.item_seq if primary is not None else None
+        matched_drug_name = primary.name if primary is not None else None
+        rrf_score = primary.rrf_score if primary is not None else None
+        reranker_score = primary.final_score if primary is not None else None
+        decision_str = decision.type.value if decision is not None else None
+
+        surfaced_by = self._surfaced_by(primary) if primary is not None else None
+        candidates_json = self._candidates_json(decision)
+        gemini_raw_json = raw.model_dump_json()
+
+        return OcrMatchLogEntry(
+            image_hash=hash_hex,
+            image_key=image_key,
+            raw_ocr_text=raw.name_raw,
+            matched_kd_code=matched_kd_code,
+            matched_drug_name=matched_drug_name,
+            decision=decision_str,
+            final_score=result.final_score,
+            rrf_score=rrf_score,
+            reranker_score=reranker_score,
+            surfaced_by=surfaced_by,
+            candidates_json=candidates_json,
+            gemini_raw_json=gemini_raw_json,
+            latency_ms=latency_ms,
+        )
+
+    @staticmethod
+    def _surfaced_by(primary: Candidate) -> str | None:
+        names = [
+            label
+            for attr, label in zip(_SURFACED_RANK_ATTRS, _SURFACED_NAMES)
+            if getattr(primary, attr, None) is not None
+        ]
+        return ",".join(names) if names else None
+
+    @staticmethod
+    def _candidates_json(decision: MatchDecision | None) -> str | None:
+        if decision is None or not decision.options:
+            return None
+        top = decision.options[:_LOG_CANDIDATES_TOP_N]
+        payload = [
+            {"kdCode": c.item_seq, "name": c.name, "score": c.final_score, "rank": idx + 1}
+            for idx, c in enumerate(top)
+        ]
+        return json.dumps(payload, ensure_ascii=False)
+
+    async def _safe_log(self, entry: OcrMatchLogEntry) -> None:
+        try:
+            await self._match_logger.insert(entry)
+        except Exception as exc:
+            logger.warning("match log fire failed: %s", exc)
 
     async def _match_with_fallback(self, raw: RawOcrItem) -> MatchResult:
         # Tier 0: preprocessed name (manufacturer strip + normalize)
