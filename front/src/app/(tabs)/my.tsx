@@ -165,11 +165,11 @@ const styles = StyleSheet.create({
   },
   profileInfo: { gap: space.s2 },
   profileName: { ...typography.headline1, color: colors.labelNormal },
-  profileSub: { ...typography.caption1, color: colors.labelAlternative },
+  profileSub: { ...typography.label2, color: colors.labelAlternative },
 
   section: { gap: space.s6 },
   sectionLabel: {
-    fontSize: scale(12), fontWeight: '700', color: colors.labelAlternative,
+    fontSize: scale(13), fontWeight: '700', color: colors.labelAlternative,
     paddingHorizontal: space.s4,
   },
   menuCard: {
@@ -182,10 +182,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s16,
   },
   rowPressed: { backgroundColor: colors.fillNormal },
-  rowLabel: { ...typography.body2n, color: colors.labelNormal },
+  rowLabel: { ...typography.body1n, color: colors.labelNormal, flex: 1 },
   rowDanger: { color: colors.statusNegative },
-  rowRight: { flexDirection: 'row', alignItems: 'center' },
+  rowRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
 
   divider: { height: 1, backgroundColor: colors.line, marginHorizontal: space.s16 },
-  versionTxt: { fontSize: scale(13), color: colors.labelAssistive },
+  versionTxt: { ...typography.label1n, color: colors.labelAssistive },
 });

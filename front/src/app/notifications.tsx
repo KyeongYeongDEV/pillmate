@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { scale, colors, typography, space, radius } from "@/styles/tokens";
-import { useGetNotificationsQuery, useMarkReadMutation } from "@/store/slices/notificationApi";
+import { useGetNotificationsQuery, useMarkReadMutation, useMarkReadAllMutation } from "@/store/slices/notificationApi";
 import { notificationRoute } from "@/lib/notificationMeta";
 import NotificationRow from "@/components/notification/NotificationRow";
 import type { NotificationItem } from "@/types/notification";
@@ -12,6 +12,8 @@ import { safeBack } from "@/lib/router/safeBack";
 export default function NotificationsScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useGetNotificationsQuery();
   const [markRead] = useMarkReadMutation();
+  const [markReadAll, { isLoading: readAllLoading }] = useMarkReadAllMutation();
+  const hasUnread = (data ?? []).some(n => n.status !== 'READ');
 
   const onPress = (item: NotificationItem) => {
     if (item.status !== 'READ') markRead(item.id);
@@ -26,7 +28,19 @@ export default function NotificationsScreen() {
           <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
         </Pressable>
         <Text style={styles.title}>알림</Text>
-        <View style={styles.headerSpacer} />
+        {hasUnread ? (
+          <Pressable
+            onPress={() => markReadAll()}
+            disabled={readAllLoading}
+            accessibilityLabel="모두 읽음"
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Text style={styles.readAllTxt}>모두 읽음</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
       {renderBody()}
     </SafeAreaView>
@@ -74,6 +88,7 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.headline1, color: colors.labelNormal },
   headerSpacer: { width: scale(24) },
+  readAllTxt: { ...typography.label2, color: colors.primaryNormal, fontWeight: '600' },
   content: { flex: 1, padding: space.s16, gap: space.s12, alignItems: 'center', justifyContent: 'center' },
   loader: { flex: 1 },
   sub: { ...typography.body2r, color: colors.labelAlternative },

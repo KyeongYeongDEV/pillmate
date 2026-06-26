@@ -69,6 +69,11 @@ export const prescriptionApiSlice = createApi({
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Prescription', id }, 'Prescription'],
     }),
+    deletePrescription: build.mutation<void, number>({
+      query: (id) => ({ url: `/prescriptions/${id}`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, id) => [{ type: 'Prescription', id }, 'Prescription'],
+    }),
+
     // MVP: 로깅만 — admin review 후 prod 반영 (Phase 2 학습)
     logAlias: build.mutation<void, AliasLog>({
       query: (body) => ({
@@ -90,5 +95,6 @@ export const {
   useGetCandidatesQuery,
   useResolveCandidateMutation,
   useUpdatePrescriptionMutation,
+  useDeletePrescriptionMutation,
   useLogAliasMutation,
 } = prescriptionApiSlice;

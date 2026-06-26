@@ -16,6 +16,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="chat"         options={{ title: '상담', headerShown: false }} />
         <Tabs.Screen name="group"        options={{ title: '그룹', headerShown: false }} />
+        <Tabs.Screen name="my"           options={{ title: '설정', headerShown: false }} />
       </Tabs>
 
       {/* FAB rendered outside the Tabs navigator so it's never clipped by the bar container */}

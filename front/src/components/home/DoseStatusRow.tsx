@@ -46,9 +46,8 @@ function Dot({ label, status }: DoseDot) {
       accessibilityLabel={`${label} ${STATUS_A11Y[status]}`}
       style={[styles.dotBase, dotStyles[status]]}
     >
-      {status === 'done'
-        ? <Feather name="check" size={scale(10)} color={colors.bgNormal} />
-        : <Text style={styles.mark}>!</Text>}
+      {status === 'done' && <Feather name="check" size={scale(10)} color={colors.bgNormal} />}
+      {status === 'missed' && <Text style={styles.mark}>!</Text>}
     </View>
   );
 }

@@ -117,7 +117,7 @@ function PrescriptionVisual() {
       </View>
       {/* AI 인식 결과 카드 */}
       <View style={styles.aiCard}>
-        <Text style={styles.aiCardTitle}>✨ AI · 1.4초 만에 인식</Text>
+        <Text style={styles.aiCardTitle}>✨ 보통 20~30초, 최대 1분</Text>
         <Text style={styles.aiCardSub}>4개 약 자동 등록됨</Text>
       </View>
     </View>

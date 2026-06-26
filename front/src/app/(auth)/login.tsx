@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ActivityIndicator,
   Animated, SafeAreaView, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
-// type-only import: JS 생성 없음 → 모듈 평가 안 됨 → ExpoCrypto 미호출
-import type * as AuthSessionTypes from 'expo-auth-session';
-import { useKakaoLoginMutation } from '@/store/slices/authApi';
+import { useKakaoLoginMutation, useExchangeKakaoCodeMutation } from '@/store/slices/authApi';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '';
-// 키 미설정(dev)에서는 OAuth/PKCE/crypto 경로에 절대 진입하지 않음
-const HAS_KAKAO_KEY = Boolean(KAKAO_REST_API_KEY);
+const KAKAO_REDIRECT_URI = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI  ?? '';
+// 프로덕션: REST 키 + https 콜백 URI 모두 설정된 경우. 미설정 → dev-fallback.
+const IS_PROD_KAKAO  = Boolean(KAKAO_REST_API_KEY && KAKAO_REDIRECT_URI);
 const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
+const RETURN_URL     = 'pillmate://oauth/kakao';
 const TERMS_URL = 'https://pillmate.app/terms';
 const PRIVACY_URL = 'https://pillmate.app/privacy';
 const TOAST_DURATION_MS = 3000;
@@ -21,17 +21,11 @@ const KAKAO_YELLOW = '#FEE500';
 const KAKAO_TEXT = '#191600';
 
 export default function LoginScreen() {
-  const [kakaoLogin, { isLoading }] = useKakaoLoginMutation();
+  const [kakaoLogin, { isLoading: kakaoLoading }] = useKakaoLoginMutation();
+  const [exchangeKakaoCode, { isLoading: exchangeLoading }] = useExchangeKakaoCodeMutation();
+  const isLoading = kakaoLoading || exchangeLoading;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const toastOpacity = useState(() => new Animated.Value(0))[0];
-
-  useEffect(() => {
-    // OAuth 세션 복귀 처리 — 키 있을 때만 동적 require (네이티브 모듈 부하 방지)
-    if (HAS_KAKAO_KEY) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('expo-web-browser').maybeCompleteAuthSession();
-    }
-  }, []);
 
   async function loginWithCode(code: string, uri: string) {
     try {
@@ -52,27 +46,39 @@ export default function LoginScreen() {
   }
 
   async function handleKakaoPress() {
-    if (!HAS_KAKAO_KEY) {
-      // 키 미설정 → crypto/PKCE 완전 비실행 → BE dev fallback(seed userId=1)
+    if (!IS_PROD_KAKAO) {
+      // dev-fallback: 빈 code → BE seed userId 반환
       await loginWithCode('', '');
       return;
     }
 
-    // 키 있을 때만 OAuth 실행 (dev-client 재빌드 후 autolinking 완료 전제)
     try {
-      // 동적 require: HAS_KAKAO_KEY false 분기에선 절대 평가 안 됨 → ExpoCrypto 미로드
-      const AuthSession = require('expo-auth-session') as typeof AuthSessionTypes;
-      const redirectUri = AuthSession.makeRedirectUri();
-      const request = new AuthSession.AuthRequest({
-        clientId: KAKAO_REST_API_KEY,
-        responseType: AuthSession.ResponseType.Code,
-        scopes: ['profile_nickname', 'account_email'],
-        redirectUri,
-      });
-      const result = await request.promptAsync({ authorizationEndpoint: KAKAO_AUTH_URL });
-      if (result.type === 'success') {
-        await loginWithCode(result.params.code ?? '', redirectUri);
+      // 동적 require: IS_PROD_KAKAO false 분기에선 절대 평가 안 됨
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { openAuthSessionAsync } = require('expo-web-browser') as typeof import('expo-web-browser');
+      const authorizeUrl =
+        `${KAKAO_AUTH_URL}?client_id=${KAKAO_REST_API_KEY}` +
+        `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
+        `&response_type=code`;
+
+      const result = await openAuthSessionAsync(authorizeUrl, RETURN_URL);
+      if (result.type !== 'success') return;
+
+      const qs = result.url.split('?')[1] ?? '';
+      const params = new URLSearchParams(qs);
+
+      if (params.get('error')) {
+        showError('카카오 로그인을 취소했거나 오류가 발생했어요.');
+        return;
       }
+
+      const loginCode = params.get('loginCode') ?? '';
+      if (!loginCode) {
+        showError('로그인 정보를 받아오지 못했어요. 다시 시도해 주세요.');
+        return;
+      }
+      await exchangeKakaoCode({ loginCode }).unwrap();
+      router.replace('/(tabs)/home');
     } catch {
       showError('로그인에 실패했어요. 다시 시도해 주세요.');
     }

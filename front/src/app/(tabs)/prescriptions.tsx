@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { safePush } from '@/lib/router/safePush';
 import { colors, typography, space, radius, scale, shadows } from '@/styles/tokens';
 import { useGetPrescriptionsQuery } from "@/store/slices/prescriptionApi";
 import PrescriptionListCard from "@/components/prescription/PrescriptionListCard";
@@ -11,7 +12,7 @@ import type { PrescriptionSummary } from "@/types/prescription";
 
 export default function PrescriptionsScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useGetPrescriptionsQuery();
-  const openDetail = (id: number) => router.push(`/prescription/${id}` as any);
+  const openDetail = (id: number) => safePush(`/prescription/${id}`);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>

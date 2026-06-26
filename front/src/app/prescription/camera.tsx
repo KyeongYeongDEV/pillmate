@@ -22,6 +22,10 @@ export default function CameraScreen() {
   const [flash, setFlash] = useState<'on' | 'off'>('off');
   const [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [msgIdx, setMsgIdx] = useState(0);
+  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const toggleIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const [autoShutter, setAutoShutter] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const cameraRef = useRef<CameraView>(null);
@@ -71,6 +75,22 @@ export default function CameraScreen() {
   }, []);
 
   useEffect(() => {
+    if (loading) {
+      setElapsed(0);
+      setMsgIdx(0);
+      elapsedIntervalRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+      toggleIntervalRef.current  = setInterval(() => setMsgIdx(m => 1 - m), 3500);
+    } else {
+      if (elapsedIntervalRef.current) { clearInterval(elapsedIntervalRef.current); elapsedIntervalRef.current = null; }
+      if (toggleIntervalRef.current)  { clearInterval(toggleIntervalRef.current);  toggleIntervalRef.current  = null; }
+    }
+    return () => {
+      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
+      if (toggleIntervalRef.current)  clearInterval(toggleIntervalRef.current);
+    };
+  }, [loading]);
+
+  useEffect(() => {
     if (!autoShutter || !allOk) { stopCountdown(); return; }
     let remaining = AUTO_SHUTTER_DELAY;
     setCountdown(remaining);
@@ -108,10 +128,17 @@ export default function CameraScreen() {
     return (
       <View style={styles.loadingRoot}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.loadingTxt}>약을 인식하고 있어요</Text>
-        <Text style={styles.loadingSub}>
-          {`보통 ${OCR_TYPICAL_LOW_SEC}~${OCR_TYPICAL_HIGH_SEC}초, 최대 ${OCR_MAX_MIN}분 정도 걸릴 수 있어요`}
-        </Text>
+        {msgIdx === 0 ? (
+          <>
+            <Text style={styles.loadingTxt}>{`약을 인식하고 있어요 · ${elapsed}초`}</Text>
+            <Text style={styles.loadingSub}>{`보통 ${OCR_TYPICAL_LOW_SEC}~${OCR_TYPICAL_HIGH_SEC}초, 최대 ${OCR_MAX_MIN}분 소요`}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.loadingTxt}>인식 결과를 꼭 확인해 주세요</Text>
+            <Text style={styles.loadingSub}>{`인식 결과가 정확하지 않을 수 있어요.\n등록 후 약 정보를 꼭 확인해 주세요.`}</Text>
+          </>
+        )}
       </View>
     );
   }

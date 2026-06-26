@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
   Alert, Animated, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import {
   useGetPrescriptionDetailQuery,
   useUpdatePrescriptionMutation,
+  useDeletePrescriptionMutation,
 } from '@/store/slices/prescriptionApi';
 import {
   useGetPrescriptionSlotsQuery,
@@ -18,6 +19,7 @@ import {
 } from '@/store/slices/scheduleApi';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
+import { Image as ExpoImage } from 'expo-image';
 import { safeBack } from '@/lib/router/safeBack';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import type { PrescriptionDetailView } from '@/types/prescription';
@@ -54,6 +56,7 @@ export default function PrescriptionDetailScreen() {
   const [addSlot]          = useAddPrescriptionSlotMutation();
   const [removeSlot]       = useRemovePrescriptionSlotMutation();
   const [updatePresc]      = useUpdatePrescriptionMutation();
+  const [deletePresc, { isLoading: deleteLoading }] = useDeletePrescriptionMutation();
 
   const [pickerSlot,    setPickerSlot]    = useState<SlotEditView | null>(null);
   const [addTodVisible, setAddTodVisible] = useState(false);
@@ -170,8 +173,31 @@ export default function PrescriptionDetailScreen() {
 
   const handleLabelCancel = useCallback(() => setLabelEditing(false), []);
 
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      '약봉투 삭제',
+      '이 약봉투를 삭제할까요?\n연결된 복약 알림도 함께 삭제됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePresc(prescriptionId).unwrap();
+              safeBack('/(tabs)/prescriptions');
+            } catch {
+              Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해 주세요.');
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }, [deletePresc, prescriptionId]);
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header />
       {renderBody()}
 
@@ -271,6 +297,18 @@ export default function PrescriptionDetailScreen() {
           ))}
           {data.drugs.length === 0 && <Text style={styles.empty}>등록된 약이 없습니다.</Text>}
         </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.rxDeleteBtn, pressed && styles.rxDeleteBtnPressed]}
+          onPress={handleDelete}
+          disabled={deleteLoading}
+          accessibilityLabel="약봉투 삭제"
+          accessibilityRole="button"
+        >
+          {deleteLoading
+            ? <ActivityIndicator size="small" color={colors.statusNegative} />
+            : <Text style={styles.rxDeleteBtnTxt}>약봉투 삭제</Text>}
+        </Pressable>
       </ScrollView>
     );
   }
@@ -620,10 +658,12 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
     );
   }
   return (
-    <Image
+    <ExpoImage
       source={{ uri: url }}
       style={styles.image}
-      resizeMode="cover"
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      placeholder={{ blurhash: 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4' }}
       accessibilityLabel="약봉투 이미지"
       onError={() => setFailed(true)}
     />
@@ -714,6 +754,13 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: scale(13), fontWeight: '700', color: colors.labelAlternative },
   drugList: { gap: space.s8 },
   empty: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
+  rxDeleteBtn: {
+    marginTop: space.s8, paddingVertical: space.s14, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: colors.statusNegative,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  rxDeleteBtnPressed: { backgroundColor: 'rgba(255,59,48,0.06)' },
+  rxDeleteBtnTxt: { ...typography.label1n, color: colors.statusNegative, fontWeight: '600' },
   errorBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s12, padding: space.s16 },
   errorText: { fontSize: scale(14), color: colors.labelAlternative },
   retryBtn: { paddingHorizontal: space.s20, paddingVertical: space.s12, borderRadius: radius.r12, backgroundColor: colors.primaryNormal },

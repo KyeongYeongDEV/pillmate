@@ -68,17 +68,6 @@ export default function HomeScreen() {
     [],
   );
 
-  const handleViewAllActivity = useMemo(
-    () => () => {
-      if (pinnedGroupId != null) {
-        router.push(`/group/${pinnedGroupId}/activity` as any);
-      } else {
-        router.push('/(tabs)/group' as any);
-      }
-    },
-    [pinnedGroupId],
-  );
-
   const now = new Date();
   const doneCount = slots.filter(s => s.state === 'done').length;
   const todayComplete = slots.length > 0 && doneCount === slots.length;
@@ -151,13 +140,6 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>고정 그룹 알림</Text>
-            <Pressable
-              accessibilityLabel="전체보기"
-              accessibilityRole="button"
-              onPress={handleViewAllActivity}
-            >
-              <Text style={styles.viewAll}>전체보기</Text>
-            </Pressable>
           </View>
 
           <FamilyActivityFeed

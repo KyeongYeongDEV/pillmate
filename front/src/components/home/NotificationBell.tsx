@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useGetNotificationsQuery } from '@/store/slices/notificationApi';
 import { unreadCount } from '@/lib/notificationMeta';
+import { safePush } from '@/lib/router/safePush';
 import { scale, colors, radius, space } from '@/styles/tokens';
 
 const BADGE_MAX = 9;
@@ -13,7 +13,7 @@ export default function NotificationBell() {
   const count = unreadCount(data);
   return (
     <Pressable
-      onPress={() => router.push('/notifications' as any)}
+      onPress={() => safePush('/notifications')}
       accessibilityLabel={count > 0 ? `알림 ${count}건` : '알림'}
       accessibilityRole="button"
       hitSlop={8}

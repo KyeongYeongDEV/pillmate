@@ -44,7 +44,22 @@ export const authApiSlice = createApi({
         }
       },
     }),
+
+    exchangeKakaoCode: build.mutation<AuthResult, { loginCode: string }>({
+      query: (body) => ({ url: '/auth/kakao/exchange', method: 'POST', body }),
+      transformResponse: (response: ApiEnvelope<AuthResult>) =>
+        response?.data ?? EMPTY_RESULT,
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data.token) await saveToken(data.token);
+          if (data.userId) await setCurrentUserId(data.userId);
+        } catch {
+          // 교환 실패 — 컴포넌트에서 처리
+        }
+      },
+    }),
   }),
 });
 
-export const { useKakaoLoginMutation } = authApiSlice;
+export const { useKakaoLoginMutation, useExchangeKakaoCodeMutation } = authApiSlice;

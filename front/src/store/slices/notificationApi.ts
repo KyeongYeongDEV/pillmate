@@ -17,10 +17,15 @@ export const notificationApiSlice = createApi({
       query: (id) => ({ url: `/notifications/${id}/read`, method: 'PATCH' }),
       invalidatesTags: ['Notification'],
     }),
+    markReadAll: build.mutation<void, void>({
+      query: () => ({ url: '/notifications/read-all', method: 'PATCH' }),
+      invalidatesTags: ['Notification'],
+    }),
   }),
 });
 
 export const {
   useGetNotificationsQuery,
   useMarkReadMutation,
+  useMarkReadAllMutation,
 } = notificationApiSlice;
