@@ -1,0 +1,98 @@
+# 프로덕션 전용 — base + 이 파일을 함께 사용
+# 실행: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# 무중단 배포: back/scripts/deploy.sh 사용 (blue-green 자동 전환)
+# 사전조건: back/.env.prod (gitignored) 에 실 시크릿 기입. .env.prod.example 참고.
+
+# YAML anchor — app-blue / app-green 공통 정의
+x-app-prod: &app-prod
+  build:
+    context: ./app_server
+    dockerfile: Dockerfile
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    ai-server:
+      condition: service_healthy
+  env_file:
+    - .env.prod
+  environment:
+    SPRING_PROFILES_ACTIVE: production
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: pillmate
+    POSTGRES_USER: pillmate
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    AI_SERVER_BASE_URL: http://ai-server:8001
+    PILLMATE_NOTIFICATION_PROVIDER: ${PILLMATE_NOTIFICATION_PROVIDER:-expo}
+    FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
+    AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+    S3_BUCKET_NAME: ${S3_BUCKET_NAME:-pillmate-prescriptions}
+  volumes:
+    - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/v1/actuator/health"]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 60s
+  restart: unless-stopped
+  mem_limit: 2g
+
+services:
+  # base의 app 서비스는 prod에서 사용하지 않음 — app-blue / app-green 사용
+  app:
+    profiles: [local]
+
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: unless-stopped
+    mem_limit: 2g
+
+  redis:
+    restart: unless-stopped
+    mem_limit: 512m
+
+  ai-server:
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SENTRY_DSN: ${SENTRY_DSN_AI}
+    restart: unless-stopped
+    mem_limit: 3g
+
+  # ── Blue-Green App 인스턴스 ─────────────────────────────────────────
+  # 평상시 한쪽만 up. deploy.sh 가 활성 컬러를 자동 전환.
+  app-blue:
+    <<: *app-prod
+    container_name: pillmate-app-blue
+
+  app-green:
+    <<: *app-prod
+    container_name: pillmate-app-green
+
+  # ── Caddy 리버스 프록시 (자동 HTTPS) ──────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: pillmate-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    mem_limit: 256m
+
+volumes:
+  caddy_data:
+  caddy_config:

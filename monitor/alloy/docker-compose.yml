@@ -17,13 +17,12 @@ services:
       - alloy_data:/var/lib/alloy/data
     env_file: .env
     mem_limit: 256m
-    # 같은 compose 네트워크의 app/ai-server를 긁으려면 해당 네트워크에 연결:
-    # networks: [pillmate_default]
-    # networks 사용 시 아래 networks 블록 주석 해제 + 실제 네트워크명 확인(docker network ls)
+    # app/ai-server(pillmate_default)를 서비스명으로 긁기 위해 같은 네트워크 연결
+    networks: [pillmate_default]
 
 volumes:
   alloy_data:
 
-# networks:
-#   pillmate_default:
-#     external: true
+networks:
+  pillmate_default:
+    external: true

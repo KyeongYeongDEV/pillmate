@@ -1,0 +1,11 @@
+# PillMate — Caddy 리버스 프록시
+# 초기 활성 컬러: blue. deploy.sh 가 배포 시 자동으로 업스트림을 전환하고 reload.
+# DOMAIN / ACME_EMAIL 은 .env.prod 에서 주입 (docker-compose.prod.yml caddy 서비스 env).
+
+{
+    email {env.ACME_EMAIL}
+}
+
+{env.DOMAIN} {
+    reverse_proxy pillmate-app-blue:8080
+}
