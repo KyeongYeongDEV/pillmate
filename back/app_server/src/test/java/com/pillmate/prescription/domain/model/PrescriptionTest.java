@@ -131,6 +131,25 @@ class PrescriptionTest {
                 .build();
     }
 
+    @Test
+    @DisplayName("softDelete() 호출 전에는 isDeleted() = false")
+    void isDeleted_beforeSoftDelete_returnsFalse() {
+        Prescription p = newPrescription();
+
+        assertThat(p.isDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("softDelete() 호출 후 isDeleted() = true, deletedAt != null")
+    void softDelete_setsDeletedAtAndIsDeletedTrue() {
+        Prescription p = newPrescription();
+
+        p.softDelete();
+
+        assertThat(p.isDeleted()).isTrue();
+        assertThat(p.getDeletedAt()).isNotNull();
+    }
+
     private PrescribedDrug unmatchedDrug(BigDecimal confidence) {
         return PrescribedDrug.builder()
                 .drugId(null)

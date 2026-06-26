@@ -57,6 +57,9 @@ public class Prescription {
     @Column(length = 500)
     private String memo;
 
+    @Column
+    private Instant deletedAt;
+
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescribedDrug> drugs = new ArrayList<>();
 
@@ -132,6 +135,14 @@ public class Prescription {
     public void updateMemo(String label, String memo) {
         this.label = label;
         this.memo = memo;
+    }
+
+    public void softDelete() {
+        this.deletedAt = Instant.now();
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
     private boolean hasLowConfidenceDrug() {

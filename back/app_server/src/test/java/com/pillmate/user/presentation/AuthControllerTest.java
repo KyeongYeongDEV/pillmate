@@ -3,6 +3,7 @@ package com.pillmate.user.presentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.security.JwtTokenProvider;
 import com.pillmate.user.application.KakaoLoginService;
+import com.pillmate.user.application.LoginCodeService;
 import com.pillmate.user.application.dto.AuthResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ class AuthControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockBean KakaoLoginService kakaoLoginService;
+    @MockBean LoginCodeService loginCodeService;
     @MockBean JwtTokenProvider jwtTokenProvider;
 
     @Test

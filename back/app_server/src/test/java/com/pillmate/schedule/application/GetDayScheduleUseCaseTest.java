@@ -265,6 +265,63 @@ class GetDayScheduleUseCaseTest {
         assertThat(legacySlots).isEqualTo(1);
     }
 
+    // ─── label 매핑 (TimeOfDay → 한국어) ──────────────────────────────────────
+
+    @Test
+    @DisplayName("08:00(아침 시각) → label='아침'")
+    void execute_morningTime_labelIsAchim() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN")));
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.label()).isEqualTo("아침");
+    }
+
+    @Test
+    @DisplayName("12:30(점심 시각) → label='점심'")
+    void execute_noonTime_labelIsJeomsim() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(12, 30), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN")));
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.label()).isEqualTo("점심");
+    }
+
+    @Test
+    @DisplayName("19:00(저녁 시각) → label='저녁'")
+    void execute_eveningTime_labelIsJonyeok() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(19, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN")));
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.label()).isEqualTo("저녁");
+    }
+
+    @Test
+    @DisplayName("22:00(취침 전 시각) → label='취침 전'")
+    void execute_bedtime_labelIsBedtime() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(22, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN")));
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.label()).isEqualTo("취침 전");
+    }
+
+    @Test
+    @DisplayName("커스텀 시각(09:30) → label='09:30' (시간 문자열)")
+    void execute_customTime_labelIsTimeString() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(9, 30), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN")));
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.label()).isEqualTo("09:30");
+    }
+
     // ─── Fixtures ────────────────────────────────────────────────────────────
 
     private DayScheduleProjection row(Long scheduleId, LocalTime customTime, Long prescriptionId,

@@ -36,4 +36,11 @@ public class MyNotificationsController {
         markNotificationReadService.markRead(notificationId, userId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
+
+    @PatchMapping("/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllRead() {
+        Long userId = UserContext.get();
+        markNotificationReadService.markAllRead(userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

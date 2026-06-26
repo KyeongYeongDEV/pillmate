@@ -3,6 +3,7 @@ package com.pillmate.notification.application;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.notification.domain.model.Notification;
+import com.pillmate.notification.domain.model.NotificationStatus;
 import com.pillmate.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,5 +27,11 @@ public class MarkNotificationReadService {
         }
 
         notification.markRead(Instant.now());
+    }
+
+    @Transactional
+    public void markAllRead(Long userId) {
+        notificationRepository.markAllReadByUser(
+                userId, Instant.now(), NotificationStatus.READ, NotificationStatus.SENT);
     }
 }

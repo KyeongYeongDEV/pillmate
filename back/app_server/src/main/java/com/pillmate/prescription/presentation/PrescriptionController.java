@@ -18,6 +18,7 @@ import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.presentation.dto.OcrExtractRequest;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
+import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
 import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
 import com.pillmate.prescription.presentation.dto.UpdatePrescriptionMemoRequest;
@@ -25,6 +26,7 @@ import com.pillmate.common.security.UserContext;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +53,7 @@ public class PrescriptionController {
     private final GetPrescriptionsUseCase getPrescriptionsUseCase;
     private final GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
     private final UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
+    private final SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
     private final Executor ocrExecutor;
 
     public PrescriptionController(
@@ -63,6 +66,7 @@ public class PrescriptionController {
             GetPrescriptionsUseCase getPrescriptionsUseCase,
             GetPrescriptionDetailUseCase getPrescriptionDetailUseCase,
             UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase,
+            SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase,
             @Qualifier("ocrExecutor") Executor ocrExecutor) {
         this.getUploadUrlUseCase = getUploadUrlUseCase;
         this.registerPrescriptionService = registerPrescriptionService;
@@ -73,6 +77,7 @@ public class PrescriptionController {
         this.getPrescriptionsUseCase = getPrescriptionsUseCase;
         this.getPrescriptionDetailUseCase = getPrescriptionDetailUseCase;
         this.updatePrescriptionMemoUseCase = updatePrescriptionMemoUseCase;
+        this.softDeletePrescriptionUseCase = softDeletePrescriptionUseCase;
         this.ocrExecutor = ocrExecutor;
     }
 
@@ -131,6 +136,12 @@ public class PrescriptionController {
             @PathVariable Long id,
             @Valid @RequestBody UpdatePrescriptionMemoRequest request) {
         updatePrescriptionMemoUseCase.update(id, request.label(), request.memo());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+        softDeletePrescriptionUseCase.delete(id);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 

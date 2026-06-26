@@ -6,11 +6,13 @@ import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotView;
 import com.pillmate.schedule.application.port.ScheduleDayQueryPort;
 import com.pillmate.schedule.application.port.ScheduleDayQueryPort.DayScheduleProjection;
+import com.pillmate.schedule.domain.model.TimeOfDay;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,6 +26,12 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
     private static final String DEFAULT_COLOR = "#999999";
+    private static final Map<LocalTime, String> TIME_OF_DAY_LABELS = Map.of(
+            TimeOfDay.MORNING.defaultTime(), "아침",
+            TimeOfDay.NOON.defaultTime(), "점심",
+            TimeOfDay.EVENING.defaultTime(), "저녁",
+            TimeOfDay.BEDTIME.defaultTime(), "취침 전"
+    );
 
     private final ScheduleDayQueryPort scheduleDayQueryPort;
 
@@ -72,10 +80,11 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
             colors = List.of();
         }
 
+        String label = resolveLabel(first.customTime());
         return new SlotView(
                 slotId(time, first.prescriptionId(), first.scheduleId()),
                 time,
-                time,
+                label,
                 state,
                 items,
                 primaryDoseLogId,
@@ -90,6 +99,12 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
 
     private String formatTime(java.time.LocalTime customTime) {
         return customTime != null ? customTime.format(HH_MM) : "";
+    }
+
+    private String resolveLabel(LocalTime customTime) {
+        if (customTime == null) return "";
+        String label = TIME_OF_DAY_LABELS.get(customTime);
+        return label != null ? label : customTime.format(HH_MM);
     }
 
     private String slotId(String time, Long prescriptionId, Long scheduleId) {

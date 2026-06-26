@@ -122,4 +122,14 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
         return new SchedulingPort.ScheduledSlot(
                 s.scheduleId(), s.timeOfDay(), s.customTime(), s.startDate(), s.endDate());
     }
+
+    @Override
+    @Transactional
+    public void deactivateByPrescriptionId(Long prescriptionId) {
+        scheduleRepository.findActiveByPrescriptionId(prescriptionId)
+                .forEach(schedule -> {
+                    schedule.deactivate();
+                    scheduleRepository.save(schedule);
+                });
+    }
 }

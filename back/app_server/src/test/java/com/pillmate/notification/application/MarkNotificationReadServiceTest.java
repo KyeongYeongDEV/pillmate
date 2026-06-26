@@ -17,7 +17,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("MarkNotificationReadService — 단위 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -61,5 +64,17 @@ class MarkNotificationReadServiceTest {
         assertThatThrownBy(() -> sut.markRead(NOTIF_ID, 99L))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOT_NOTIFICATION_OWNER);
+    }
+
+    @Test
+    @DisplayName("모두읽음: SENT 알림 bulk READ 전환 위해 repository.markAllReadByUser 호출")
+    void markAllRead_delegatesToRepository() {
+        sut.markAllRead(RECIPIENT);
+
+        verify(notificationRepository).markAllReadByUser(
+                eq(RECIPIENT),
+                any(Instant.class),
+                eq(NotificationStatus.READ),
+                eq(NotificationStatus.SENT));
     }
 }

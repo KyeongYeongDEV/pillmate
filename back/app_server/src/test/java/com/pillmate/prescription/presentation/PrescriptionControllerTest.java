@@ -11,6 +11,7 @@ import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
 import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
+import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
 import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
 import com.pillmate.prescription.application.dto.PrescriptionSummary;
@@ -48,6 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -81,6 +83,7 @@ class PrescriptionControllerTest {
     @MockitoBean GetPrescriptionsUseCase getPrescriptionsUseCase;
     @MockitoBean GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
     @MockitoBean UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
+    @MockitoBean SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
 
     @Test
     @DisplayName("POST /prescriptions/upload-url → 200 + uploadUrl/objectKey/expiresAt")
@@ -361,6 +364,28 @@ class PrescriptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-User-Id", "99")
                         .content("{\"label\":\"X\",\"memo\":\"Y\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
+    }
+
+    @Test
+    @DisplayName("DELETE /prescriptions/{id} → 200 OK (소프트 삭제)")
+    void delete_ownPrescription_returns200() throws Exception {
+        doNothing().when(softDeletePrescriptionUseCase).delete(42L);
+
+        mockMvc.perform(delete("/prescriptions/42")
+                        .header("X-User-Id", "7"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("DELETE /prescriptions/{id} 타인 처방전 → 403 PATIENT_ACCESS_DENIED")
+    void delete_otherPatient_returns403() throws Exception {
+        org.mockito.Mockito.doThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
+                .when(softDeletePrescriptionUseCase).delete(42L);
+
+        mockMvc.perform(delete("/prescriptions/42")
+                        .header("X-User-Id", "99"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("PILL_016"));
     }

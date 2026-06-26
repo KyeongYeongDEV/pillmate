@@ -8,6 +8,8 @@ public interface SchedulingPort {
 
     List<ScheduledSlot> createForPrescription(CreateScheduleCommand command);
 
+    void deactivateByPrescriptionId(Long prescriptionId);
+
     record CreateScheduleCommand(
             Long careGroupId,
             Long patientId,
