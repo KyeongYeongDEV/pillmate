@@ -20,6 +20,7 @@ import {
 } from '@/store/slices/scheduleApi';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
 import InsightCard from '@/components/home/InsightCard';
+import { useInsightPolling } from '@/hooks/useInsightPolling';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { safeBack } from '@/lib/router/safeBack';
@@ -64,6 +65,11 @@ export default function PrescriptionDetailScreen() {
   const prescriptionId = Number(id);
 
   const { data, isLoading, isError, refetch } = useGetPrescriptionDetailQuery(prescriptionId);
+  const insightWaiting = useInsightPolling({
+    hasData: !!data,
+    hasInsights: !!(data?.insights && data.insights.length > 0),
+    refetch,
+  });
   const {
     data: slots = [],
     isLoading: slotsLoading,
@@ -336,7 +342,7 @@ export default function PrescriptionDetailScreen() {
           </View>
         ) : null}
 
-        {data.insights && data.insights.length > 0 && (
+        {data.insights && data.insights.length > 0 ? (
           <View style={styles.insightWrap}>
             <Text style={styles.sectionLabel}>AI 인사이트</Text>
             {data.insights.map(item => (
@@ -347,8 +353,19 @@ export default function PrescriptionDetailScreen() {
                 detail={item.description}
               />
             ))}
+            <Text style={styles.insightDisclaimer}>
+              참고용입니다. 정확한 정보는 약사·의사와 상담하세요
+            </Text>
           </View>
-        )}
+        ) : insightWaiting ? (
+          <View style={styles.insightWrap}>
+            <Text style={styles.sectionLabel}>AI 인사이트</Text>
+            <View style={styles.insightPending}>
+              <ActivityIndicator size="small" color={colors.primaryBase} />
+              <Text style={styles.insightPendingTxt}>✨ AI 인사이트 생성 중…</Text>
+            </View>
+          </View>
+        ) : null}
 
         <PrescriptionImage url={data.imageUrl} onRefresh={refetch} />
 
@@ -1021,6 +1038,16 @@ const styles = StyleSheet.create({
 
   // AI insight
   insightWrap: { gap: space.s8 },
+  insightDisclaimer: {
+    ...typography.caption1, color: colors.labelAlternative,
+    textAlign: 'center', marginTop: space.s8,
+  },
+  insightPending: {
+    flexDirection: 'row', alignItems: 'center', gap: space.s8,
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, padding: space.s18,
+  },
+  insightPendingTxt: { ...typography.body2n, color: colors.labelAlternative },
 
   // Nutrient section
   nutrientCard: {

@@ -78,7 +78,7 @@ ai-server:
   base-url: ${AI_SERVER_BASE_URL:http://ai-server:8001}
   timeout:
     connect-ms: 5000
-    read-ms: 90000
+    read-ms: 60000
 
 slack:
   webhook-url: ${SLACK_WEBHOOK_URL:}

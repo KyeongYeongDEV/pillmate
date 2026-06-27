@@ -103,4 +103,15 @@ class AiServerOcrClientTest {
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_UPSTREAM_FAILED);
     }
+
+    @Test
+    @DisplayName("소켓 read timeout 발생 시 OCR_UPSTREAM_TIMEOUT 예외를 던진다")
+    void extractFromImage_whenSocketTimeout_throwsTimeout() {
+        server.expect(requestTo("http://ai-server:8001/api/v1/ocr/prescription"))
+                .andRespond(withException(new java.net.SocketTimeoutException("read timed out")));
+
+        assertThatThrownBy(() -> client.extractFromImage("http://url", null))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OCR_UPSTREAM_TIMEOUT);
+    }
 }

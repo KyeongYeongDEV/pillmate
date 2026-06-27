@@ -10,6 +10,7 @@ import com.pillmate.prescription.domain.model.PrescriptionInsight;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -25,6 +26,7 @@ public class PrescriptionRecommendationListener {
     private final PrescriptionRecommendationPort recommendationPort;
     private final PrescriptionInsightPersistenceService persistenceService;
 
+    @Async("insightTaskExecutor")
     @Order(20)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(PrescriptionRegistered event) {

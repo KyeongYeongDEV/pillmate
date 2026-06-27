@@ -12,7 +12,7 @@ class AiServerClientConfig {
     @Value("${ai-server.timeout.connect-ms:5000}")
     private int connectTimeout;
 
-    @Value("${ai-server.timeout.read-ms:30000}")
+    @Value("${ai-server.timeout.read-ms:60000}")
     private int readTimeout;
 
     @Bean
