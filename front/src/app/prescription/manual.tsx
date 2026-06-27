@@ -10,8 +10,10 @@ import { useAppDispatch } from '@/store/hooks';
 import { addManual } from '@/store/slices/prescriptionFlowSlice';
 import DrugSearchAutocomplete from '@/components/prescription/DrugSearchAutocomplete';
 import DoseStepper from '@/components/prescription/DoseStepper';
+import DurationField from '@/components/prescription/DurationField';
 import type { DrugSearchResult } from '@/types/prescription';
 import { safeBack } from '@/lib/router/safeBack';
+import { MAX_DURATION_DAYS } from '@/lib/constants';
 
 const SHAPES = ['원형', '타원형', '캡슐', '기타'] as const;
 const COLORS = [
@@ -25,7 +27,6 @@ const COLORS = [
   { id: 'lime',      hex: '#ACFCC7', label: '연두' },
   { id: 'black',     hex: '#1A1A1A', label: '기타' },
 ] as const;
-const DURATION_PRESETS = ['7일', '14일', '30일', '90일', '장기'] as const;
 const DOSE_UNITS = ['정', '캡슐', 'mL', 'mg'] as const;
 
 export default function ManualScreen() {
@@ -35,7 +36,7 @@ export default function ManualScreen() {
   const [selectedColor, setSelectedColor] = useState<string>('white');
   const [doseAmount, setDoseAmount] = useState(1);
   const [doseUnit, setDoseUnit] = useState<string>('정');
-  const [durationPreset, setDurationPreset] = useState<string>('7일');
+  const [durationDays, setDurationDays] = useState<number | null>(7);
   const [memo, setMemo] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [matched, setMatched] = useState<DrugSearchResult | null>(null);
@@ -48,18 +49,16 @@ export default function ManualScreen() {
 
   const handleAdd = useCallback(async () => {
     if (!nameRaw.trim()) return;
-    const durationDays = durationPreset === '장기' ? 365
-      : parseInt(durationPreset, 10);
     dispatch(addManual({
       nameRaw: nameRaw.trim(),
       doseAmount,
       doseUnit,
       frequency: 1,
-      durationDays,
+      durationDays: durationDays ?? MAX_DURATION_DAYS,
     }));
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     safeBack('/prescription/review');
-  }, [nameRaw, doseAmount, doseUnit, durationPreset, dispatch]);
+  }, [nameRaw, doseAmount, doseUnit, durationDays, dispatch]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -177,19 +176,7 @@ export default function ManualScreen() {
 
           {/* Section: 복용 기간 */}
           <Section title="복용 기간">
-            <View style={styles.durationRow}>
-              {DURATION_PRESETS.map((p) => (
-                <Pressable
-                  key={p}
-                  style={[styles.durationChip, durationPreset === p && styles.durationChipOn]}
-                  onPress={() => setDurationPreset(p)}
-                  accessibilityLabel={p}
-                  accessibilityRole="radio"
-                >
-                  <Text style={[styles.durationTxt, durationPreset === p && styles.durationTxtOn]}>{p}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <DurationField valueDays={durationDays} onChange={setDurationDays} />
           </Section>
 
           {/* Section: 메모 */}
@@ -299,14 +286,6 @@ const styles = StyleSheet.create({
   unitChipOn: { backgroundColor: colors.primaryNormal, borderColor: colors.primaryNormal },
   unitTxt: { ...typography.label2, color: colors.labelAlternative },
   unitTxtOn: { color: '#fff', fontWeight: '700' },
-  durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
-  durationChip: {
-    paddingHorizontal: space.s12, paddingVertical: space.s8,
-    borderRadius: radius.r8, backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.line,
-  },
-  durationChipOn: { backgroundColor: colors.labelNormal, borderColor: colors.labelNormal },
-  durationTxt: { ...typography.label2, color: colors.labelNeutral },
-  durationTxtOn: { color: '#fff', fontWeight: '700' },
   memoInput: {
     ...typography.body2r, color: colors.labelNormal,
     backgroundColor: colors.bgNormal, borderRadius: radius.r12,

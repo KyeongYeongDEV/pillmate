@@ -21,14 +21,14 @@ const baseItem: DrugListItem = {
 describe('DrugCard', () => {
   it('renders matched drug name', () => {
     const { getByText } = render(
-      <DrugCard item={baseItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={baseItem} onRemove={jest.fn()} />
     );
     expect(getByText('암로디핀정 5mg')).toBeTruthy();
   });
 
   it('renders MFDS source for OCR_AUTO item', () => {
     const { getByText } = render(
-      <DrugCard item={baseItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={baseItem} onRemove={jest.fn()} />
     );
     expect(getByText(/식품의약품안전처/)).toBeTruthy();
   });
@@ -43,7 +43,7 @@ describe('DrugCard', () => {
       confidence: null,
     };
     const { getByText } = render(
-      <DrugCard item={manualItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={manualItem} onRemove={jest.fn()} />
     );
     expect(getByText(/사용자 입력/)).toBeTruthy();
   });
@@ -51,7 +51,7 @@ describe('DrugCard', () => {
   it('shows warning badge for low confidence', () => {
     const lowConfItem: DrugListItem = { ...baseItem, id: 'low-1', confidence: 0.5 };
     const { getByLabelText } = render(
-      <DrugCard item={lowConfItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={lowConfItem} onRemove={jest.fn()} />
     );
     expect(getByLabelText('신뢰도 낮음')).toBeTruthy();
   });
@@ -65,7 +65,7 @@ describe('DrugCard', () => {
       source: 'OCR_AUTO',
     };
     const { getByText } = render(
-      <DrugCard item={unmatchedItem} onDoseChange={jest.fn()} onRemove={jest.fn()} />
+      <DrugCard item={unmatchedItem} onRemove={jest.fn()} />
     );
     expect(getByText(/자동 확인되지 않았어요/)).toBeTruthy();
   });

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateDoseAmount, removeItem, setMemo } from '@/store/slices/prescriptionFlowSlice';
+import { removeItem, setMemo } from '@/store/slices/prescriptionFlowSlice';
 import { createSelector } from 'reselect';
 import type { RootState } from '@/store';
 import DrugCard from '@/components/prescription/DrugCard';
@@ -26,10 +26,6 @@ export default function ResultScreen() {
   const { items, ocrStatus, memo, warnings } = useAppSelector(selectFlow);
   const criticalCount = useMemo(() => warnings.filter(w => w.severity === 'CRITICAL').length, [warnings]);
 
-  const handleDoseChange = useCallback(
-    (id: string, amount: number) => dispatch(updateDoseAmount({ id, amount })),
-    [dispatch],
-  );
   const handleRemove = useCallback(
     (id: string) => dispatch(removeItem(id)),
     [dispatch],
@@ -50,11 +46,10 @@ export default function ResultScreen() {
     ({ item }: { item: typeof items[0] }) => (
       <DrugCard
         item={item}
-        onDoseChange={handleDoseChange}
         onRemove={handleRemove}
       />
     ),
-    [handleDoseChange, handleRemove],
+    [handleRemove],
   );
 
   return (

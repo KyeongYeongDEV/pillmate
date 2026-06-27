@@ -4,19 +4,13 @@ import { Image } from 'expo-image';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { OCR_MIN_CONFIDENCE, MFDS_SOURCE } from '@/lib/constants';
 import type { DrugListItem } from '@/types/prescription';
-import DoseStepper from './DoseStepper';
 
 interface Props {
   item: DrugListItem;
-  onDoseChange: (id: string, amount: number) => void;
   onRemove: (id: string) => void;
 }
 
-function DrugCard({ item, onDoseChange, onRemove }: Props) {
-  const handleDoseChange = useCallback(
-    (amount: number) => onDoseChange(item.id, amount),
-    [item.id, onDoseChange],
-  );
+function DrugCard({ item, onRemove }: Props) {
   const handleRemove = useCallback(() => onRemove(item.id), [item.id, onRemove]);
 
   const { borderColor, isLowConf, isUnmatched } = useMemo(() => {
@@ -88,16 +82,6 @@ function DrugCard({ item, onDoseChange, onRemove }: Props) {
         </View>
       )}
 
-      {/* 복용량 */}
-      <View style={styles.doseRow}>
-        <Text style={styles.sectionLabel}>1회 복용량</Text>
-        <DoseStepper
-          value={item.doseAmount}
-          unit={item.doseUnit}
-          onChange={handleDoseChange}
-        />
-      </View>
-
       {/* 삭제 */}
       <Pressable onPress={handleRemove} style={styles.removeBtn} accessibilityLabel="약 삭제" accessibilityRole="button">
         <Text style={styles.removeTxt}>삭제</Text>
@@ -137,8 +121,6 @@ const styles = StyleSheet.create({
     padding: space.s8,
   },
   unmatchedText: { ...typography.caption1, color: colors.labelNeutral },
-  doseRow: { gap: space.s6 },
-  sectionLabel: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600' },
   removeBtn: { alignSelf: 'flex-end' },
   removeTxt: { ...typography.label2, color: colors.statusNegative },
 });

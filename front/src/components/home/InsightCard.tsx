@@ -5,6 +5,13 @@ import { scale, colors, typography, space, radius } from '@/styles/tokens';
 
 export type InsightSeverity = 'INFO' | 'WARN' | 'CRITICAL';
 
+// 카드마다 반복되던 면책 문구 제거 — 상세 화면은 섹션 footer로 1회만 노출
+const DISCLAIMER_RE = /\s*참고용입니다\.\s*약사[·.]?의사와\s*상담하세요\.?\s*$/g;
+
+export function stripInsightDisclaimer(text: string): string {
+  return text.replace(DISCLAIMER_RE, '').trimEnd();
+}
+
 interface InsightCardProps {
   severity: InsightSeverity;
   message: string;
@@ -30,7 +37,7 @@ function InsightCard({ message, detail, subtitle, onClose, onDetail }: InsightCa
       <View style={styles.content}>
         <Text style={styles.message}>{message}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        <Text style={styles.detail}>{detail}</Text>
+        <Text style={styles.detail}>{stripInsightDisclaimer(detail)}</Text>
 
         <View style={styles.actions}>
           {onDetail && (

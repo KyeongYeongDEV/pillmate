@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  addFromSearch, removeItem, updateDoseAmount,
+  addFromSearch, removeItem,
   addSlot, removeSlot, setSlotTime,
   setStartDate, setEndDate,
   setMemo, setSymptom, reset,
@@ -20,6 +20,7 @@ import TimePicker from '@/components/schedule/TimePicker';
 import DrugCard from '@/components/prescription/DrugCard';
 import DrugSearchModal from '@/components/prescription/DrugSearchModal';
 import DDIWarningCard from '@/components/prescription/DDIWarningCard';
+import DurationField from '@/components/prescription/DurationField';
 import type { RootState } from '@/store';
 import type {
   PrescriptionTimeOfDay, DrugSearchResult,
@@ -68,6 +69,13 @@ function addDays(dateStr: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+function diffDaysInclusive(start: string, end: string): number {
+  const [ys, ms, ds] = start.split('-').map(Number);
+  const [ye, me, de] = end.split('-').map(Number);
+  const diff = Date.UTC(ye, me - 1, de) - Date.UTC(ys, ms - 1, ds);
+  return Math.round(diff / 86_400_000) + 1;
+}
+
 const TOD_LABEL: Record<PrescriptionTimeOfDay, string> = {
   MORNING: '아침',
   NOON: '점심',
@@ -80,7 +88,6 @@ const TOD_DEFAULT_TIME: Record<PrescriptionTimeOfDay, string> = {
   EVENING: '19:00:00',
 };
 
-const DURATION_PRESETS = ['7일', '14일', '30일', '90일', '무기한'] as const;
 const TOD_OPTIONS: PrescriptionTimeOfDay[] = ['MORNING', 'NOON', 'EVENING'];
 
 export default function PrescriptionReviewScreen() {
@@ -128,10 +135,6 @@ export default function PrescriptionReviewScreen() {
     }));
   }, [dispatch]);
 
-  const handleDoseChange = useCallback((id: string, amount: number) => {
-    dispatch(updateDoseAmount({ id, amount }));
-  }, [dispatch]);
-
   const handleRemoveItem = useCallback((id: string) => {
     dispatch(removeItem(id));
   }, [dispatch]);
@@ -161,15 +164,16 @@ export default function PrescriptionReviewScreen() {
     setPendingTod(null);
   }, [dispatch, pendingTod]);
 
-  const handleDurationPreset = useCallback((preset: string) => {
-    const base = startDate || prescribedAt || new Date().toISOString().slice(0, 10);
-    if (preset === '무기한') {
+  const durationBase = startDate || prescribedAt || new Date().toISOString().slice(0, 10);
+  const durationDays = endDate ? diffDaysInclusive(durationBase, endDate) : null;
+
+  const handleDurationChange = useCallback((days: number | null) => {
+    if (days === null) {
       dispatch(setEndDate(''));
       return;
     }
-    const days = parseInt(preset, 10);
-    dispatch(setEndDate(addDays(base, days - 1)));
-  }, [dispatch, startDate, prescribedAt]);
+    dispatch(setEndDate(addDays(durationBase, days - 1)));
+  }, [dispatch, durationBase]);
 
   const handleRegister = useCallback(async () => {
     const validationErr = validateRegisterInput(items, careGroupId);
@@ -279,7 +283,6 @@ export default function PrescriptionReviewScreen() {
               <DrugCard
                 key={item.id}
                 item={item}
-                onDoseChange={handleDoseChange}
                 onRemove={handleRemoveItem}
               />
             ))}
@@ -357,19 +360,7 @@ export default function PrescriptionReviewScreen() {
             <Text style={styles.dateRangeLabel}>종료</Text>
             <Text style={styles.dateRangeValue}>{endDate || '무기한'}</Text>
           </View>
-          <View style={styles.presetRow}>
-            {DURATION_PRESETS.map(p => (
-              <Pressable
-                key={p}
-                style={styles.presetChip}
-                onPress={() => handleDurationPreset(p)}
-                accessibilityLabel={p}
-                accessibilityRole="button"
-              >
-                <Text style={styles.presetChipTxt}>{p}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <DurationField valueDays={durationDays} onChange={handleDurationChange} />
         </View>
 
         {/* ── D: 의료 안전 안내 ──────────────────────── */}
@@ -582,13 +573,6 @@ const styles = StyleSheet.create({
   dateRangeLabel: { ...typography.caption1, color: colors.labelAlternative },
   dateRangeValue: { ...typography.body1n, color: colors.labelNormal, fontWeight: '700' },
   dateRangeSep: { ...typography.caption1, color: colors.labelAssistive },
-  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
-  presetChip: {
-    paddingHorizontal: space.s12, paddingVertical: space.s8,
-    borderRadius: radius.r8, backgroundColor: colors.bgAlt,
-    borderWidth: 1, borderColor: colors.line,
-  },
-  presetChipTxt: { ...typography.label2, color: colors.labelNeutral },
   safetyFooter: {
     marginTop: space.s20,
     padding: space.s12, borderRadius: radius.r12,
