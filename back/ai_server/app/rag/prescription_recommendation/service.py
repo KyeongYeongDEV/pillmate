@@ -27,7 +27,6 @@ SYSTEM_PROMPT = (
     "   type(WARNING/RECOMMENDATION/TREND), severity(INFO/WARN/CRITICAL),\n"
     "   title(<=30자), description(<=200자), source, confidence(0.0~1.0).\n"
     "6. 확실하지 않으면 인사이트를 만들지 마세요. 근거 없는 정보는 금지입니다.\n"
-    "7. description 마지막에 '참고용입니다. 약사·의사와 상담하세요.' 의미를 포함합니다.\n"
 )
 
 

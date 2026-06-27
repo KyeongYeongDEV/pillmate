@@ -9,14 +9,21 @@ from app.domain.prescription_recommendation import (
     DrugContext,
     PrescriptionRecommendationRequest,
 )
-from app.rag.prescription_recommendation.service import PrescriptionRecommendationService
+from app.rag.prescription_recommendation.service import (
+    SYSTEM_PROMPT,
+    PrescriptionRecommendationService,
+)
+
+DISCLAIMER_FRAGMENTS = ["참고용입니다", "약사", "상담하세요"]
 
 
 class StubLlm:
     def __init__(self, response: str | Exception):
         self._response = response
+        self.captured_system: str | None = None
 
     async def invoke(self, system: str, user: str) -> str:
+        self.captured_system = system
         if isinstance(self._response, BaseException):
             raise self._response
         return self._response
@@ -120,3 +127,35 @@ async def test_analyze_returns_empty_on_malformed_json():
     response = await service.analyze(_request())
 
     assert response.insights == []
+
+
+def test_system_prompt_has_no_disclaimer_instruction():
+    for fragment in DISCLAIMER_FRAGMENTS:
+        assert fragment not in SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_analyze_sends_prompt_without_disclaimer_and_keeps_source():
+    payload = {
+        "insights": [
+            {
+                "type": "RECOMMENDATION",
+                "severity": "INFO",
+                "title": "복용 시간 팁",
+                "description": "식사 직후에 드시면 위장 부담을 줄일 수 있어요.",
+                "source": "식약처",
+                "confidence": 0.9,
+            }
+        ]
+    }
+    stub = StubLlm(json.dumps(payload, ensure_ascii=False))
+    service = PrescriptionRecommendationService(llm=stub)
+
+    response = await service.analyze(_request())
+
+    for fragment in DISCLAIMER_FRAGMENTS:
+        assert fragment not in stub.captured_system
+    insight = response.insights[0]
+    for fragment in DISCLAIMER_FRAGMENTS:
+        assert fragment not in insight.description
+    assert insight.source == "식약처"
