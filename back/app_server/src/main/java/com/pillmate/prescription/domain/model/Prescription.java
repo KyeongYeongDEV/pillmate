@@ -57,6 +57,9 @@ public class Prescription {
     @Column(length = 500)
     private String memo;
 
+    @Column(length = 200)
+    private String symptom;
+
     @Column
     private Instant deletedAt;
 
@@ -78,9 +81,15 @@ public class Prescription {
 
     public static Prescription create(Long patientId, String imageKey, LocalDate prescribedAt,
                                       String label, String memo) {
+        return create(patientId, imageKey, prescribedAt, label, memo, null);
+    }
+
+    public static Prescription create(Long patientId, String imageKey, LocalDate prescribedAt,
+                                      String label, String memo, String symptom) {
         Prescription p = create(patientId, imageKey, prescribedAt);
         p.label = label;
         p.memo = memo;
+        p.symptom = symptom;
         return p;
     }
 
@@ -132,9 +141,10 @@ public class Prescription {
         this.ocrStatus = OcrStatus.MANUAL;
     }
 
-    public void updateMemo(String label, String memo) {
+    public void updateMemo(String label, String memo, String symptom) {
         this.label = label;
         this.memo = memo;
+        this.symptom = symptom;
     }
 
     public void softDelete() {

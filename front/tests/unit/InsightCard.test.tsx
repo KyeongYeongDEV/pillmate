@@ -39,4 +39,21 @@ describe('InsightCard', () => {
     fireEvent.press(screen.getByLabelText('자세히 보기'));
     expect(onDetail).toHaveBeenCalledTimes(1);
   });
+
+  it('subtitle 전달 시 렌더', () => {
+    render(
+      <InsightCard
+        severity="INFO"
+        message="msg"
+        detail="d"
+        subtitle="9월 12일 등록 약봉투 (약 3개) 기준"
+      />,
+    );
+    expect(screen.getByText('9월 12일 등록 약봉투 (약 3개) 기준')).toBeTruthy();
+  });
+
+  it('subtitle 없으면 렌더 안 함', () => {
+    render(<InsightCard severity="INFO" message="msg" detail="d" />);
+    expect(screen.queryByText(/기준/)).toBeNull();
+  });
 });

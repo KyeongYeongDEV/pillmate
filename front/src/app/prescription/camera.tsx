@@ -4,6 +4,7 @@ import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
 import { addFromOcr, setImageKey } from '@/store/slices/prescriptionFlowSlice';
@@ -18,6 +19,7 @@ const OCR_TYPICAL_HIGH_SEC = 30;
 const OCR_MAX_MIN          = 1;  // p95 실측 ~65초 기준 → 1분으로 안내
 
 export default function CameraScreen() {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [flash, setFlash] = useState<'on' | 'off'>('off');
   const [loading, setLoading] = useState(false);
@@ -182,7 +184,7 @@ export default function CameraScreen() {
 
       <CameraGuideOverlay hints={hints} allOk={allOk} autoShutterCountdown={countdown} />
 
-      <View style={styles.top}>
+      <View style={[styles.top, { top: insets.top + 16 }]}>
         <Pressable onPress={() => safeBack('/prescription')} style={styles.circle} accessibilityLabel="닫기" accessibilityRole="button">
           <Text style={styles.circleIcon}>✕</Text>
         </Pressable>
@@ -194,7 +196,7 @@ export default function CameraScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.autoShutterRow}>
+      <View style={[styles.autoShutterRow, { top: insets.top + 72 }]}>
         <Text style={styles.autoShutterLabel}>자동 촬영</Text>
         <Switch
           value={autoShutter}
@@ -205,7 +207,7 @@ export default function CameraScreen() {
         />
       </View>
 
-      <View style={styles.bottom}>
+      <View style={[styles.bottom, { bottom: insets.bottom + 24 }]}>
         <Pressable onPress={handleGallery} style={styles.galleryBtn} accessibilityLabel="갤러리" accessibilityRole="button">
           <Text style={styles.galleryIcon}>🖼</Text>
         </Pressable>

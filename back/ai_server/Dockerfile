@@ -1,12 +1,13 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1.6
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN pip install \
+# 의존성 먼저 — 소스 변경과 무관한 레이어. cache mount 로 wheel 재사용
+RUN --mount=type=cache,target=/root/.cache/pip pip install --user \
     "fastapi>=0.110" \
     "uvicorn[standard]>=0.30" \
     "pydantic>=2.0" \
@@ -30,6 +31,18 @@ RUN pip install \
     "prometheus-fastapi-instrumentator>=0.11" \
     "sentry-sdk>=2.0"
 
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PATH=/root/.local/bin:$PATH
+
+# builder 에서 설치한 site-packages 만 복사 — 빌드 툴/캐시 제외로 이미지 축소
+COPY --from=builder /root/.local /root/.local
+
+# 소스는 마지막 — 코드 변경 시 의존성 레이어 재사용
 COPY app ./app
 
 EXPOSE 8001

@@ -3,6 +3,7 @@ package com.pillmate.prescription.presentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.prescription.application.GetLatestPrescriptionWithInsightUseCase;
 import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
@@ -13,7 +14,9 @@ import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
 import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
 import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
+import com.pillmate.prescription.application.dto.LatestPrescriptionWithInsightResponse;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
+import com.pillmate.prescription.application.dto.PrescriptionInsightView;
 import com.pillmate.prescription.application.dto.PrescriptionSummary;
 import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
@@ -21,6 +24,8 @@ import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.domain.model.CandidateDecisionType;
 import com.pillmate.prescription.domain.model.OcrStatus;
+import com.pillmate.prescription.domain.model.PrescriptionInsightSeverity;
+import com.pillmate.prescription.domain.model.PrescriptionInsightType;
 import com.pillmate.prescription.domain.model.PrescriptionStatus;
 import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
@@ -82,6 +87,7 @@ class PrescriptionControllerTest {
     @MockitoBean ResolveCandidateUseCase resolveCandidateUseCase;
     @MockitoBean GetPrescriptionsUseCase getPrescriptionsUseCase;
     @MockitoBean GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
+    @MockitoBean GetLatestPrescriptionWithInsightUseCase getLatestPrescriptionWithInsightUseCase;
     @MockitoBean UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
     @MockitoBean SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
 
@@ -279,14 +285,52 @@ class PrescriptionControllerTest {
                         "https://s3.test/presigned?sig=x",
                         List.of(new PrescriptionDetailResponse.DrugDetail(
                                 "타이레놀", "타이레놀정500밀리그램", "KD-001",
-                                new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95"), null)),
-                        null, null, PrescriptionStatus.ONGOING, null, null, null, null, null));
+                                new BigDecimal("1.00"), "정", 3, 7, new BigDecimal("0.95"), null, null)),
+                        null, null, null, PrescriptionStatus.ONGOING, null, null, null, null, null, null));
 
         mockMvc.perform(get("/prescriptions/42").header("X-User-Id", "7"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(42))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://s3.test/presigned?sig=x"))
                 .andExpect(jsonPath("$.data.drugs[0].matchedDrugName").value("타이레놀정500밀리그램"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/latest-with-insight → 200 + 최신 처방전 + insight")
+    void getLatestWithInsight_returns200() throws Exception {
+        given(getLatestPrescriptionWithInsightUseCase.loadLatestForPatient(7L)).willReturn(
+                new LatestPrescriptionWithInsightResponse(42L, LocalDate.of(2026, 6, 10), 3, "메트포르민정",
+                        List.of(new PrescriptionInsightView(1L, PrescriptionInsightType.RECOMMENDATION,
+                                PrescriptionInsightSeverity.INFO, "비타민 B12 영향 가능",
+                                "장기 복용 시 흡수에 영향을 줄 수 있어요.", "식약처", new BigDecimal("0.90")))));
+
+        mockMvc.perform(get("/prescriptions/latest-with-insight").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.prescriptionId").value(42))
+                .andExpect(jsonPath("$.data.drugCount").value(3))
+                .andExpect(jsonPath("$.data.primaryDrugName").value("메트포르민정"))
+                .andExpect(jsonPath("$.data.insights[0].source").value("식약처"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/latest-with-insight insight 없음 → 200 + null data")
+    void getLatestWithInsight_noData_returns200() throws Exception {
+        given(getLatestPrescriptionWithInsightUseCase.loadLatestForPatient(7L)).willReturn(null);
+
+        mockMvc.perform(get("/prescriptions/latest-with-insight").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/latest-with-insight 타인 → 403 PATIENT_ACCESS_DENIED")
+    void getLatestWithInsight_otherPatient_returns403() throws Exception {
+        given(getLatestPrescriptionWithInsightUseCase.loadLatestForPatient(anyLong()))
+                .willThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED));
+
+        mockMvc.perform(get("/prescriptions/latest-with-insight").header("X-User-Id", "99"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
     }
 
     @Test
@@ -345,7 +389,7 @@ class PrescriptionControllerTest {
     @Test
     @DisplayName("PATCH /prescriptions/{id} → 200 OK")
     void patchMemo_returns200() throws Exception {
-        doNothing().when(updatePrescriptionMemoUseCase).update(anyLong(), any(), any());
+        doNothing().when(updatePrescriptionMemoUseCase).update(anyLong(), any(), any(), any());
 
         mockMvc.perform(patch("/prescriptions/42")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -358,7 +402,7 @@ class PrescriptionControllerTest {
     @DisplayName("PATCH /prescriptions/{id} 타인 처방전 → 403")
     void patchMemo_otherPatient_returns403() throws Exception {
         org.mockito.Mockito.doThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
-                .when(updatePrescriptionMemoUseCase).update(anyLong(), any(), any());
+                .when(updatePrescriptionMemoUseCase).update(anyLong(), any(), any(), any());
 
         mockMvc.perform(patch("/prescriptions/42")
                         .contentType(MediaType.APPLICATION_JSON)

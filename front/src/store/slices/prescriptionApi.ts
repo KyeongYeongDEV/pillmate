@@ -3,6 +3,7 @@ import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type {
   Candidate,
+  LatestPrescriptionWithInsight,
   OcrInput,
   OcrExtractResponse,
   PrescriptionDetailView,
@@ -28,6 +29,11 @@ export const prescriptionApiSlice = createApi({
       query: (id) => `/prescriptions/${id}`,
       transformResponse: (response: ApiEnvelope<PrescriptionDetailView>) => response?.data ?? null,
       providesTags: (_r, _e, id) => [{ type: 'Prescription', id }],
+    }),
+    getLatestWithInsight: build.query<LatestPrescriptionWithInsight | null, void>({
+      query: () => '/prescriptions/latest-with-insight',
+      transformResponse: (response: ApiEnvelope<LatestPrescriptionWithInsight>) => response?.data ?? null,
+      providesTags: ['Prescription'],
     }),
     issueUploadUrl: build.mutation<UploadUrlResponse, UploadUrlInput>({
       query: (body) => ({ url: '/prescriptions/upload-url', method: 'POST', body }),
@@ -88,6 +94,7 @@ export const prescriptionApiSlice = createApi({
 export const {
   useGetPrescriptionsQuery,
   useGetPrescriptionDetailQuery,
+  useGetLatestWithInsightQuery,
   useIssueUploadUrlMutation,
   useOcrMutation,
   useOcrExtractMutation,

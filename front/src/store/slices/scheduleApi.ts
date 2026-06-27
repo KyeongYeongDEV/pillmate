@@ -97,6 +97,18 @@ export const scheduleApiSlice = createApi({
         { type: 'Schedule', id: `presc-${prescriptionId}` },
       ],
     }),
+
+    updatePrescriptionPeriod: build.mutation<void, { prescriptionId: number; endDate: string }>({
+      query: ({ prescriptionId, endDate }) => ({
+        url: `/schedules/prescriptions/${prescriptionId}/period`,
+        method: 'PATCH',
+        body: { endDate },
+      }),
+      invalidatesTags: (_r, _e, { prescriptionId }) => [
+        'Schedule',
+        { type: 'Schedule', id: `presc-${prescriptionId}` },
+      ],
+    }),
   }),
 });
 
@@ -107,4 +119,5 @@ export const {
   useUpdateScheduleTimeMutation,
   useAddPrescriptionSlotMutation,
   useRemovePrescriptionSlotMutation,
+  useUpdatePrescriptionPeriodMutation,
 } = scheduleApiSlice;

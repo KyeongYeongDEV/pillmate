@@ -67,6 +67,33 @@ export interface PrescriptionDetailDrug {
   confidence: number | null;
 }
 
+export interface NutrientNote {
+  nutrientName: string;
+  advice: string;
+  source: string;
+}
+
+export type PrescriptionInsightType = 'WARNING' | 'RECOMMENDATION' | 'TREND';
+export type PrescriptionInsightSeverity = 'INFO' | 'WARN' | 'CRITICAL';
+
+export interface PrescriptionInsight {
+  id: number;
+  type: PrescriptionInsightType;
+  severity: PrescriptionInsightSeverity;
+  title: string;
+  description: string;
+  source: string;
+  confidence: number;
+}
+
+export interface LatestPrescriptionWithInsight {
+  prescriptionId: number;
+  prescribedAt: string;
+  drugCount: number;
+  primaryDrugName: string | null;
+  insights: PrescriptionInsight[];
+}
+
 export interface PrescriptionDetailView {
   id: number;
   prescribedAt: string;
@@ -76,12 +103,15 @@ export interface PrescriptionDetailView {
   // Optional — added progressively as BE implements T-BE-PRESC-MEMO and detail enrich
   label?: string | null;
   memo?: string | null;
+  symptom?: string | null;
   status?: 'ONGOING' | 'COMPLETED';
   periodStart?: string | null;
   periodEnd?: string | null;
   daysRemaining?: number | null;
   progressRate?: number | null;
   adherenceRate?: number | null;
+  nutrientNotes?: NutrientNote[];
+  insights?: PrescriptionInsight[];
 }
 
 export interface Drug {
@@ -210,6 +240,7 @@ export interface RegisterPrescriptionInput {
   imageKey: string | null;
   label?: string | null;
   memo?: string | null;
+  symptom?: string | null;
   items: RegisterPrescriptionItem[];
   schedule: PrescriptionScheduleInput;
 }

@@ -18,9 +18,9 @@ public class UpdatePrescriptionMemoUseCase {
     private final PatientAccessGuard patientAccessGuard;
 
     @Transactional
-    public void update(Long prescriptionId, String label, String memo) {
+    public void update(Long prescriptionId, String label, String memo, String symptom) {
         Prescription prescription = findOwnPrescription(prescriptionId);
-        prescription.updateMemo(label, memo);
+        prescription.updateMemo(label, memo, symptom);
     }
 
     private Prescription findOwnPrescription(Long prescriptionId) {

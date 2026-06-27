@@ -1,20 +1,36 @@
 {
-  "latency_measurement": "PENDING — RPD 소진으로 재측정 시 자동 기록 예정",
-  "latency_stats": null,
+  "latency_stats": {
+    "count": 8,
+    "avg": 26.243,
+    "min": 11.886,
+    "max": 65.483,
+    "p50": 21.077,
+    "p95": 65.483
+  },
   "images": [
     {
       "image": "IMG_0007.PNG",
-      "error": "vision_error: ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+      "error": null,
       "rate_limited": false,
-      "drug_count": 0,
-      "matched_count": 0,
-      "drugs": [],
-      "elapsed_seconds": null
+      "elapsed_seconds": 33.329,
+      "drug_count": 1,
+      "matched_count": 1,
+      "drugs": [
+        {
+          "name_raw": "메트포르민",
+          "confidence": 0.95,
+          "candidates": [],
+          "db_match": "메포정(염산메트포르민)",
+          "stage": "ilike",
+          "is_b3_miss": false
+        }
+      ]
     },
     {
       "image": "IMG_0008.JPG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 65.483,
       "drug_count": 4,
       "matched_count": 4,
       "drugs": [
@@ -28,7 +44,7 @@
         },
         {
           "name_raw": "뮤테란캡슐200밀리그램",
-          "confidence": 0.94,
+          "confidence": 0.95,
           "candidates": [],
           "db_match": "뮤테란캡슐200밀리그램(아세틸시스테인)",
           "stage": "ilike",
@@ -36,33 +52,41 @@
         },
         {
           "name_raw": "종근당아목시실린캡슐500밀",
-          "confidence": 0.88,
-          "candidates": [],
+          "confidence": 0.65,
+          "candidates": [
+            "종근당아목시실린캡슐500밀리그램",
+            "아목시실린캡슐500밀리그램",
+            "아목시실린캡슐250밀리그램"
+          ],
           "db_match": "종근당아목시실린캡슐500밀리그램",
           "stage": "ilike",
           "is_b3_miss": false
         },
         {
           "name_raw": "코푸시럽_(0.2g,3mg",
-          "confidence": 0.9,
-          "candidates": [],
+          "confidence": 0.55,
+          "candidates": [
+            "코푸시럽",
+            "코푸시럽에스",
+            "코푸시럽500밀리리터"
+          ],
           "db_match": "코푸시럽",
           "stage": "token",
           "is_b3_miss": false
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0009.JPG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 20.179,
       "drug_count": 7,
-      "matched_count": 5,
+      "matched_count": 6,
       "drugs": [
         {
           "name_raw": "레티라진정",
-          "confidence": 0.9,
+          "confidence": 0.95,
           "candidates": [],
           "db_match": "레티라진정(레보세티리진염산염)",
           "stage": "ilike",
@@ -70,7 +94,7 @@
         },
         {
           "name_raw": "베포탄정",
-          "confidence": 0.9,
+          "confidence": 0.95,
           "candidates": [],
           "db_match": "베포탄정(베포타스틴살리실산염)",
           "stage": "ilike",
@@ -81,60 +105,55 @@
           "confidence": 0.65,
           "candidates": [
             "쎌박타민정500밀리그램",
-            "썰박타민정500밀리그램",
-            "셀박타민정500밀리그램"
+            "셀박타민정500밀리그램",
+            "쎄박타민정500밀리그램"
           ],
           "db_match": "쎌레타민정",
           "stage": "fuzzy",
           "is_b3_miss": true
         },
         {
-          "name_raw": "워더스낙정",
-          "confidence": 0.55,
+          "name_raw": "위더스낙정",
+          "confidence": 0.6,
           "candidates": [
-            "워더스낙정",
-            "워더스낵정",
-            "워더스락정"
+            "위더스락정",
+            "위더스낙정"
           ],
-          "db_match": null,
-          "stage": "none",
+          "db_match": "위더스염산암브록솔정",
+          "stage": "prefix_relaxed",
           "is_b3_miss": false
         },
         {
           "name_raw": "안티피라세미정",
-          "confidence": 0.85,
+          "confidence": 0.9,
           "candidates": [],
           "db_match": "안티피라세미정",
           "stage": "ilike",
           "is_b3_miss": false
         },
         {
-          "name_raw": "액시티단캡슐",
-          "confidence": 0.6,
-          "candidates": [
-            "액시티단캡슐",
-            "액시티딘캡슐",
-            "액시티드캡슐"
-          ],
-          "db_match": "액시티딘캡슐(니자티딘)",
+          "name_raw": "엑시티단캡슐",
+          "confidence": 0.9,
+          "candidates": [],
+          "db_match": "엑시티딘캡슐150mg(니자티딘)",
           "stage": "prefix_relaxed",
           "is_b3_miss": false
         },
         {
           "name_raw": "에치콘정",
-          "confidence": 0.88,
+          "confidence": 0.9,
           "candidates": [],
           "db_match": null,
           "stage": "none",
           "is_b3_miss": true
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0010.JPG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 23.712,
       "drug_count": 8,
       "matched_count": 8,
       "drugs": [
@@ -148,24 +167,16 @@
         },
         {
           "name_raw": "슈가메트서방정5/100… 에보글립틴타르타르산염 6.869mg 메트포르민염산염 1000mg",
-          "confidence": 0.65,
-          "candidates": [
-            "슈가메트서방정5/1000밀리그램",
-            "슈가메트서방정5/500밀리그램",
-            "슈가메트서방정2.5/500밀리그램"
-          ],
+          "confidence": 0.95,
+          "candidates": [],
           "db_match": "슈가메트서방정5/1000밀리그램",
           "stage": "token",
           "is_b3_miss": false
         },
         {
           "name_raw": "듀비메트서방정0.5/10… 로베글리타존황산염 0.5mg 메트포르민염산염 1000mg",
-          "confidence": 0.65,
-          "candidates": [
-            "듀비메트서방정0.5/1000밀리그램",
-            "듀비메트서방정0.25/500밀리그램",
-            "듀비메트서방정0.5/500밀리그램"
-          ],
+          "confidence": 0.95,
+          "candidates": [],
           "db_match": "듀비메트서방정0.5/1000밀리그램",
           "stage": "token",
           "is_b3_miss": false
@@ -180,7 +191,7 @@
         },
         {
           "name_raw": "리피토정10mg 아토르바스타틴칼슘삼수화물 10.8…",
-          "confidence": 0.85,
+          "confidence": 0.95,
           "candidates": [],
           "db_match": "리피토정10밀리그램(아토르바스타틴칼슘삼수화물)",
           "stage": "token",
@@ -195,7 +206,7 @@
           "is_b3_miss": false
         },
         {
-          "name_raw": "다이크로짓정 히드로클로로티아지드 25mg",
+          "name_raw": "다이크로징정 히드로클로로티아지드 25mg",
           "confidence": 0.95,
           "candidates": [],
           "db_match": "다이크로짇정(히드로클로로티아지드)",
@@ -210,19 +221,19 @@
           "stage": "token",
           "is_b3_miss": false
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0011.JPG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 14.14,
       "drug_count": 4,
       "matched_count": 4,
       "drugs": [
         {
           "name_raw": "카두라엑스엘서방정",
-          "confidence": 0.85,
+          "confidence": 0.8,
           "candidates": [],
           "db_match": "카두라엑스엘서방정4mg(독사조신메실산염)",
           "stage": "ilike",
@@ -230,7 +241,7 @@
         },
         {
           "name_raw": "비유피-4정20mg",
-          "confidence": 0.95,
+          "confidence": 0.85,
           "candidates": [],
           "db_match": "비유피-4정10밀리그램(프로피베린염산염)",
           "stage": "ilike",
@@ -238,33 +249,29 @@
         },
         {
           "name_raw": "울트라셋이알세미",
-          "confidence": 0.65,
-          "candidates": [
-            "울트라셋이알세미서방정",
-            "울트라셋이알서방정",
-            "울트라셋세미정"
-          ],
+          "confidence": 0.8,
+          "candidates": [],
           "db_match": "울트라셋이알세미서방정",
           "stage": "ilike",
           "is_b3_miss": false
         },
         {
           "name_raw": "가스트렉스과립",
-          "confidence": 0.9,
+          "confidence": 0.85,
           "candidates": [],
           "db_match": "가스트로그라핀",
           "stage": "prefix_relaxed",
           "is_b3_miss": false
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0012.JPG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 11.886,
       "drug_count": 5,
-      "matched_count": 5,
+      "matched_count": 4,
       "drugs": [
         {
           "name_raw": "알비스정",
@@ -275,16 +282,16 @@
           "is_b3_miss": false
         },
         {
-          "name_raw": "모티리톤정",
+          "name_raw": "오티리돈정",
           "confidence": 0.94,
           "candidates": [],
-          "db_match": "모티리톤정",
-          "stage": "ilike",
+          "db_match": null,
+          "stage": "none",
           "is_b3_miss": false
         },
         {
           "name_raw": "포리부틴정",
-          "confidence": 0.93,
+          "confidence": 0.96,
           "candidates": [],
           "db_match": "포리부틴정(트리메부틴말레산염)",
           "stage": "ilike",
@@ -292,7 +299,7 @@
         },
         {
           "name_raw": "메디락디에스장용캡슐",
-          "confidence": 0.92,
+          "confidence": 0.93,
           "candidates": [],
           "db_match": "메디락디에스장용캡슐",
           "stage": "ilike",
@@ -300,24 +307,24 @@
         },
         {
           "name_raw": "세토펜이알서방정",
-          "confidence": 0.91,
+          "confidence": 0.94,
           "candidates": [],
           "db_match": "세토펜정(아세트아미노펜)",
           "stage": "prefix_relaxed",
           "is_b3_miss": false
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0013.JPEG",
       "error": null,
       "rate_limited": false,
+      "elapsed_seconds": 21.077,
       "drug_count": 2,
       "matched_count": 2,
       "drugs": [
         {
-          "name_raw": "알러비드점안액(올로파타딘염산염)(1회용) (0.333mg/0.3mL)",
+          "name_raw": "알러비드점안액(올로파타딘염산염) (1회용) (0.333mg/0.3mL)",
           "confidence": 0.95,
           "candidates": [],
           "db_match": "알러비드점안액0.2%(올로파타딘염산염)(1회용)",
@@ -325,24 +332,56 @@
           "is_b3_miss": false
         },
         {
-          "name_raw": "브로이아점안액(브롬페낙나트륨수화물)(1회용) (0.4mg/0.4mL)",
+          "name_raw": "브로이아이점안액(브롬페낙나트륨수화물) (1회용) (0.4mg/0.4mL)",
           "confidence": 0.95,
           "candidates": [],
           "db_match": "브로이신에스주(블레오마이신황산염)(수출용)(수출명:BLEONCOforInj.,Bleonco-S15I.U.forInj.,BLEOCINforinj.)",
           "stage": "prefix_relaxed",
           "is_b3_miss": false
         }
-      ],
-      "elapsed_seconds": null
+      ]
     },
     {
       "image": "IMG_0014.JPEG",
-      "error": "429_RATE_LIMITED",
-      "rate_limited": true,
-      "drug_count": 0,
-      "matched_count": 0,
-      "drugs": [],
-      "elapsed_seconds": null
+      "error": null,
+      "rate_limited": false,
+      "elapsed_seconds": 20.138,
+      "drug_count": 4,
+      "matched_count": 4,
+      "drugs": [
+        {
+          "name_raw": "이세틴정",
+          "confidence": 0.95,
+          "candidates": [],
+          "db_match": "아이세틴캡슐20밀리그램(플루옥세틴염산염)",
+          "stage": "prefix_relaxed",
+          "is_b3_miss": false
+        },
+        {
+          "name_raw": "오페나딘정50밀리그램",
+          "confidence": 0.95,
+          "candidates": [],
+          "db_match": "오페나딘서방정50밀리그램(오르페나드린시트르산염)",
+          "stage": "prefix_relaxed",
+          "is_b3_miss": false
+        },
+        {
+          "name_raw": "동광나시티딘캡슐150mg",
+          "confidence": 0.95,
+          "candidates": [],
+          "db_match": "동광니자티딘캡슐150mg",
+          "stage": "fuzzy",
+          "is_b3_miss": false
+        },
+        {
+          "name_raw": "엔테론정150밀리그램",
+          "confidence": 0.95,
+          "candidates": [],
+          "db_match": "엔테론정50밀리그램(포도씨건조엑스)",
+          "stage": "ilike",
+          "is_b3_miss": false
+        }
+      ]
     }
   ]
 }

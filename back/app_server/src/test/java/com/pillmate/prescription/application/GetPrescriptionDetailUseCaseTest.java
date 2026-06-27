@@ -5,14 +5,20 @@ import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.PatientAccessGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
+import com.pillmate.prescription.application.dto.NutrientNote;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
 import com.pillmate.prescription.application.port.FileStoragePort;
+import com.pillmate.prescription.application.port.NutrientDepletionPort;
 import com.pillmate.prescription.application.port.PrescriptionPeriodPort;
 import com.pillmate.prescription.application.port.PrescriptionPeriodPort.PeriodStats;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.Prescription;
+import com.pillmate.prescription.domain.model.PrescriptionInsight;
+import com.pillmate.prescription.domain.model.PrescriptionInsightSeverity;
+import com.pillmate.prescription.domain.model.PrescriptionInsightType;
 import com.pillmate.prescription.domain.model.PrescriptionStatus;
+import com.pillmate.prescription.domain.repository.PrescriptionInsightRepository;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +60,8 @@ class GetPrescriptionDetailUseCaseTest {
     @Mock DrugLookupPort drugLookupPort;
     @Mock FileStoragePort fileStoragePort;
     @Mock PrescriptionPeriodPort prescriptionPeriodPort;
+    @Mock NutrientDepletionPort nutrientDepletionPort;
+    @Mock PrescriptionInsightRepository prescriptionInsightRepository;
 
     private GetPrescriptionDetailUseCase sut;
 
@@ -63,9 +71,14 @@ class GetPrescriptionDetailUseCaseTest {
                 .thenReturn(Map.of());
         lenient().when(drugLookupPort.findByIds(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(Map.of());
+        lenient().when(nutrientDepletionPort.findByDrugIds(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(Map.of());
+        lenient().when(prescriptionInsightRepository.findByPrescriptionId(org.mockito.ArgumentMatchers.anyLong()))
+                .thenReturn(List.of());
         sut = new GetPrescriptionDetailUseCase(
                 prescriptionRepository, drugLookupPort, fileStoragePort,
-                new PatientAccessGuard(), prescriptionPeriodPort, FIXED_CLOCK);
+                new PatientAccessGuard(), prescriptionPeriodPort, nutrientDepletionPort,
+                prescriptionInsightRepository, FIXED_CLOCK);
     }
 
     @AfterEach void tearDown() { UserContext.clear(); }
@@ -195,6 +208,86 @@ class GetPrescriptionDetailUseCaseTest {
         assertThat(detail.adherenceRate()).isEqualTo(63.0 / 90.0);
         assertThat(detail.periodStart()).isEqualTo(start);
         assertThat(detail.periodEnd()).isEqualTo(end);
+    }
+
+    @Test
+    @DisplayName("symptom 필드 — 상세 응답에 포함")
+    void detail_withSymptom_returnedInResponse() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        ReflectionTestUtils.setField(p, "symptom", "고혈압");
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.symptom()).isEqualTo("고혈압");
+    }
+
+    @Test
+    @DisplayName("매칭 약품에 DIND 있으면 DrugDetail.nutrientNotes 포함")
+    void detail_withNutrientNotes_populatesInDrugDetail() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        p.addDrug(matchedDrug(101L, "메트포르민정"));
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-999", "메트포르민정", null)));
+        given(nutrientDepletionPort.findByDrugIds(List.of(101L)))
+                .willReturn(Map.of(101L, List.of(
+                        new NutrientNote("비타민 B12",
+                                "장기 복용 시 비타민 B12 흡수에 영향을 줄 수 있어요.",
+                                "식품의약품안전처 의약품정보"))));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.drugs().get(0).nutrientNotes()).hasSize(1);
+        assertThat(detail.drugs().get(0).nutrientNotes().get(0).nutrient()).isEqualTo("비타민 B12");
+    }
+
+    @Test
+    @DisplayName("DIND 없는 약품 — DrugDetail.nutrientNotes null")
+    void detail_withoutNutrientNotes_nullInDrugDetail() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        p.addDrug(matchedDrug(101L, "타이레놀정"));
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-001", "타이레놀정", null)));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.drugs().get(0).nutrientNotes()).isNull();
+    }
+
+    @Test
+    @DisplayName("insight 있으면 상세 응답에 inline 포함")
+    void detail_withInsights_inlinedInResponse() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(prescriptionInsightRepository.findByPrescriptionId(PRESCRIPTION_ID))
+                .willReturn(List.of(PrescriptionInsight.create(
+                        PRESCRIPTION_ID, PrescriptionInsightType.RECOMMENDATION,
+                        PrescriptionInsightSeverity.INFO, "비타민 B12 영향 가능",
+                        "장기 복용 시 흡수에 영향을 줄 수 있어요.", "식약처", new BigDecimal("0.90"))));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.insights()).hasSize(1);
+        assertThat(detail.insights().get(0).title()).isEqualTo("비타민 B12 영향 가능");
+        assertThat(detail.insights().get(0).source()).isEqualTo("식약처");
+    }
+
+    @Test
+    @DisplayName("insight 없으면 상세 응답 insights null")
+    void detail_withoutInsights_nullInResponse() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.insights()).isNull();
     }
 
     private Prescription prescription(Long patientId, String imageKey) {

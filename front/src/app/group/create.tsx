@@ -30,7 +30,7 @@ export default function CreateGroupScreen() {
   }, [name, canSubmit, createGroup]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={() => safeBack('/(tabs)/group')} accessibilityLabel="뒤로가기" accessibilityRole="button" hitSlop={8}>
           <Feather name="x" size={scale(22)} color={colors.labelNormal} />

@@ -15,12 +15,14 @@ public record PrescriptionDetailResponse(
         List<DrugDetail> drugs,
         String label,
         String memo,
+        String symptom,
         PrescriptionStatus status,
         LocalDate periodStart,
         LocalDate periodEnd,
         Integer daysRemaining,
         Double progressRate,
-        Double adherenceRate
+        Double adherenceRate,
+        List<PrescriptionInsightView> insights
 ) {
     public record DrugDetail(
             String nameRaw,
@@ -31,6 +33,7 @@ public record PrescriptionDetailResponse(
             Integer frequency,
             Integer durationDays,
             BigDecimal confidence,
-            String imageUrl
+            String imageUrl,
+            List<NutrientNote> nutrientNotes
     ) {}
 }

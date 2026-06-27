@@ -1,0 +1,64 @@
+############################################################
+## [BEFORE] 인덱스 도입 전 재현 — Seq Scan (enable_bitmapscan=off)
+############################################################
+psql (16.14 (Debian 16.14-1.pgdg12+1))
+Type "help" for help.
+
+pillmate=# SET jit = off;
+SET
+pillmate=# SET enable_bitmapscan = off;
+SET
+pillmate=# SET enable_indexscan = off;
+SET
+pillmate=# EXPLAIN (ANALYZE, BUFFERS)
+pillmate-# SELECT kd_code, name
+pillmate-# FROM drugs
+pillmate-# WHERE name ILIKE '%타이레놀%'
+pillmate-# LIMIT 5;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..5327.76 rows=5 width=55) (actual time=0.061..73.188 rows=5 loops=1)
+   Buffers: shared hit=1693
+   ->  Seq Scan on drugs  (cost=0.00..5327.76 rows=5 width=55) (actual time=0.056..73.175 rows=5 loops=1)
+         Filter: ((name)::text ~~* '%타이레놀%'::text)
+         Rows Removed by Filter: 18483
+         Buffers: shared hit=1693
+ Planning:
+   Buffers: shared hit=263
+ Planning Time: 4.157 ms
+ Execution Time: 73.251 ms
+(10 rows)
+
+pillmate=# \q
+
+############################################################
+## [AFTER] pg_trgm GIN 적용 — Bitmap Index Scan (현재 상태)
+############################################################
+psql (16.14 (Debian 16.14-1.pgdg12+1))
+Type "help" for help.
+
+pillmate=# SET jit = off;
+SET
+pillmate=# EXPLAIN (ANALYZE, BUFFERS)
+pillmate-# SELECT kd_code, name
+pillmate-# FROM drugs
+pillmate-# WHERE name ILIKE '%타이레놀%'
+pillmate-# LIMIT 5;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=76.82..96.40 rows=5 width=55) (actual time=2.021..2.037 rows=5 loops=1)
+   Buffers: shared hit=23
+   ->  Bitmap Heap Scan on drugs  (cost=76.82..96.40 rows=5 width=55) (actual time=2.020..2.036 rows=5 loops=1)
+         Recheck Cond: ((name)::text ~~* '%타이레놀%'::text)
+         Heap Blocks: exact=5
+         Buffers: shared hit=23
+         ->  Bitmap Index Scan on idx_drugs_name_trgm  (cost=0.00..76.82 rows=5 width=0) (actual time=2.002..2.002 rows=12 loops=1)
+               Index Cond: ((name)::text ~~* '%타이레놀%'::text)
+               Buffers: shared hit=18
+ Planning:
+   Buffers: shared hit=263
+ Planning Time: 1.402 ms
+ Execution Time: 2.087 ms
+(13 rows)
+
+pillmate=# \q

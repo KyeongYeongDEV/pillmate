@@ -11,6 +11,12 @@ OUTBOX="$MSG_DIR/qa-gemini/outbox"
 PENDING="$MSG_DIR/reconcile/pending"
 SYSTEM_PROMPT="$(cat "$PROMPTS/qa-gemini.md")"
 
+# gemini CLI 인증: OAuth(Code Assist) 는 IneligibleTier 차단(2026-06-19) → API 키 모드 사용.
+# settings.json selectedType=gemini-api-key + 아래 키로 generativelanguage API 직접 호출.
+if [[ -z "${GEMINI_API_KEY:-}" && -f "$WORKSPACE/back/.env" ]]; then
+  export GEMINI_API_KEY="$(grep -E '^GEMINI_API_KEY1=' "$WORKSPACE/back/.env" | head -1 | cut -d= -f2- | tr -d "\"' ")"
+fi
+
 color gemini "════════════════════════════════════════════"
 color gemini "  QA-GEMINI panel — watching $INBOX"
 color gemini "════════════════════════════════════════════"

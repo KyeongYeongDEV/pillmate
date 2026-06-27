@@ -49,10 +49,18 @@ function extractItemToListItem(item: OcrExtractItem): DrugListItem {
   };
 }
 
+// 슬롯별 표준 알림 시간 (HH:mm) — BEDTIME 포함 (FE 4슬롯 대비)
+export const DEFAULT_CUSTOM_TIME: Record<string, string> = {
+  MORNING: '08:00',
+  NOON:    '12:30',
+  EVENING: '19:00',
+  BEDTIME: '22:00',
+};
+
 const DEFAULT_PRESCRIPTION_SLOTS: PrescriptionSlotDraft[] = [
-  { uid: 'morning', timeOfDay: 'MORNING', customTime: '08:00:00' },
-  { uid: 'noon',    timeOfDay: 'NOON',    customTime: '12:30:00' },
-  { uid: 'evening', timeOfDay: 'EVENING', customTime: '19:00:00' },
+  { uid: 'morning', timeOfDay: 'MORNING', customTime: `${DEFAULT_CUSTOM_TIME.MORNING}:00` },
+  { uid: 'noon',    timeOfDay: 'NOON',    customTime: `${DEFAULT_CUSTOM_TIME.NOON}:00` },
+  { uid: 'evening', timeOfDay: 'EVENING', customTime: `${DEFAULT_CUSTOM_TIME.EVENING}:00` },
 ];
 
 interface PrescriptionFlowState {
@@ -63,6 +71,7 @@ interface PrescriptionFlowState {
   endDate: string;
   imageKey: string | null;
   memo: string;
+  symptom: string;
   prescriptionId: number | null;
   ocrStatus: OcrStatus | null;
   warnings: InteractionWarning[];
@@ -76,6 +85,7 @@ const initialState: PrescriptionFlowState = {
   endDate: '',
   imageKey: null,
   memo: '',
+  symptom: '',
   prescriptionId: null,
   ocrStatus: null,
   warnings: [],
@@ -166,6 +176,11 @@ const prescriptionFlowSlice = createSlice({
       const slot = state.prescriptionSlots.find(s => s.uid === action.payload.uid);
       if (slot) slot.customTime = action.payload.customTime;
     },
+    updateSlotCustomTime(state, action: PayloadAction<{ timeOfDay: PrescriptionTimeOfDay; customTime: string }>) {
+      for (const slot of state.prescriptionSlots) {
+        if (slot.timeOfDay === action.payload.timeOfDay) slot.customTime = action.payload.customTime;
+      }
+    },
     updateDoseAmount(state, action: PayloadAction<{ id: string; amount: number }>) {
       const item = state.items.find(i => i.id === action.payload.id);
       if (item) item.doseAmount = action.payload.amount;
@@ -187,6 +202,9 @@ const prescriptionFlowSlice = createSlice({
     setMemo(state, action: PayloadAction<string>) {
       state.memo = action.payload;
     },
+    setSymptom(state, action: PayloadAction<string>) {
+      state.symptom = action.payload;
+    },
     reset: () => initialState,
   },
 });
@@ -195,9 +213,9 @@ export const {
   setImageKey, setOcrStatus, setPrescriptionId, setPrescribedAt,
   setStartDate, setEndDate,
   addFromOcr, addFromExtract, addFromSearch, addManual,
-  addSlot, removeSlot, setSlotTime,
+  addSlot, removeSlot, setSlotTime, updateSlotCustomTime,
   updateDoseAmount, replaceItem, removeItem,
-  setMemo, reset,
+  setMemo, setSymptom, reset,
 } = prescriptionFlowSlice.actions;
 
 export default prescriptionFlowSlice.reducer;

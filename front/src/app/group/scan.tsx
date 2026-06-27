@@ -42,7 +42,7 @@ export default function ScanGroupQrScreen() {
 
   if (!permission) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <Header />
         <ActivityIndicator color={colors.primaryBase} style={styles.loader} />
       </SafeAreaView>
@@ -51,7 +51,7 @@ export default function ScanGroupQrScreen() {
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <Header />
         <View style={styles.permBody}>
           <Feather name="camera-off" size={scale(40)} color={colors.labelAssistive} />
@@ -79,7 +79,7 @@ export default function ScanGroupQrScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header />
       <View style={styles.cameraWrap}>
         <CameraView

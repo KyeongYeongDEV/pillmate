@@ -11,6 +11,7 @@ import java.util.Optional;
 interface PrescriptionJpaRepository extends JpaRepository<Prescription, Long> {
     Optional<Prescription> findByIdAndDeletedAtIsNull(Long id);
     List<Prescription> findAllByPatientIdAndDeletedAtIsNull(Long patientId);
+    Optional<Prescription> findFirstByPatientIdAndDeletedAtIsNullOrderByPrescribedAtDescIdDesc(Long patientId);
 
     @Query("SELECT COALESCE(MAX(d.durationDays), 0) FROM PrescribedDrug d WHERE d.prescription.id = :id")
     int findMaxDurationDays(@Param("id") Long prescriptionId);

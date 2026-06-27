@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# auto-approve — controller (start/stop/status/tail)
+# 실제 monitor 는 auto-approve-daemon 이 담당
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME_DIR="$SCRIPT_DIR/../.runtime"
+LOG="$RUNTIME_DIR/auto-approve.log"
+PID_FILE="$RUNTIME_DIR/auto-approve.pid"
+DAEMON="$SCRIPT_DIR/auto-approve-daemon"
+
+mkdir -p "$RUNTIME_DIR"
+chmod +x "$DAEMON" 2>/dev/null
+
+cmd="${1:-status}"
+
+case "$cmd" in
+  start)
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "✗ already running (PID $(cat "$PID_FILE"))"
+      exit 1
+    fi
+    nohup "$DAEMON" >> "$LOG" 2>&1 &
+    echo $! > "$PID_FILE"
+    sleep 1
+    if kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "✓ auto-approve started (PID $(cat "$PID_FILE"))"
+      echo "  log: $LOG"
+    else
+      echo "✗ daemon died — check $LOG"
+      rm -f "$PID_FILE"
+      tail -5 "$LOG"
+      exit 1
+    fi
+    ;;
+  stop)
+    if [[ -f "$PID_FILE" ]]; then
+      pid="$(cat "$PID_FILE")"
+      if kill "$pid" 2>/dev/null; then
+        echo "✓ stopped (PID $pid)"
+      else
+        echo "✗ process not running"
+      fi
+      rm -f "$PID_FILE"
+    else
+      echo "✗ not running"
+    fi
+    ;;
+  status)
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "✓ running (PID $(cat "$PID_FILE"))"
+      echo "  log: $LOG"
+      tail -8 "$LOG" 2>/dev/null | sed 's/^/  /'
+    else
+      echo "✗ not running"
+    fi
+    ;;
+  tail)
+    tail -f "$LOG"
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|status|tail}"
+    exit 1
+    ;;
+esac

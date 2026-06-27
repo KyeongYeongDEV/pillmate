@@ -48,7 +48,7 @@ class UpdatePrescriptionMemoUseCaseTest {
         Prescription p = prescription(OWNER_ID);
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
 
-        sut.update(PRESCRIPTION_ID, "아침약", "식후 30분");
+        sut.update(PRESCRIPTION_ID, "아침약", "식후 30분", null);
 
         assertThat(p.getLabel()).isEqualTo("아침약");
         assertThat(p.getMemo()).isEqualTo("식후 30분");
@@ -61,7 +61,7 @@ class UpdatePrescriptionMemoUseCaseTest {
         Prescription p = prescription(OWNER_ID);
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
 
-        assertThatThrownBy(() -> sut.update(PRESCRIPTION_ID, "라벨", "메모"))
+        assertThatThrownBy(() -> sut.update(PRESCRIPTION_ID, "라벨", "메모", null))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
     }
@@ -72,9 +72,21 @@ class UpdatePrescriptionMemoUseCaseTest {
         UserContext.set(OWNER_ID);
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sut.update(PRESCRIPTION_ID, "라벨", "메모"))
+        assertThatThrownBy(() -> sut.update(PRESCRIPTION_ID, "라벨", "메모", null))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRESCRIPTION_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("symptom 포함 수정 — symptom 영속화")
+    void update_withSymptom_persistsSymptom() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+
+        sut.update(PRESCRIPTION_ID, "당뇨 처방", "식전 복용", "제2형 당뇨");
+
+        assertThat(p.getSymptom()).isEqualTo("제2형 당뇨");
     }
 
     private Prescription prescription(Long patientId) {

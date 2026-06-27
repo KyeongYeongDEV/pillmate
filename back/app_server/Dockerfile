@@ -1,12 +1,17 @@
+# syntax=docker/dockerfile:1.6
 FROM gradle:8.10-jdk17 AS build
 WORKDIR /workspace
 
+# 의존성 메타데이터 먼저 — 소스 변경과 무관한 레이어로 분리 (cache hit 극대화)
 COPY settings.gradle build.gradle ./
 COPY gradle ./gradle
-RUN gradle --no-daemon dependencies --refresh-dependencies > /dev/null 2>&1 || true
+RUN --mount=type=cache,target=/root/.gradle \
+    gradle --no-daemon dependencies --refresh-dependencies > /dev/null 2>&1 || true
 
+# 소스는 마지막 — 코드 변경 시 위 의존성 레이어는 재사용, cache mount 로 재다운로드 없음
 COPY src ./src
-RUN gradle --no-daemon clean bootJar -x test
+RUN --mount=type=cache,target=/root/.gradle \
+    gradle --no-daemon clean bootJar -x test
 
 FROM eclipse-temurin:17-jre-jammy AS runtime
 RUN apt-get update \

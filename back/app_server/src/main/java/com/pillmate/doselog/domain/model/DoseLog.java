@@ -103,6 +103,13 @@ public class DoseLog {
         this.groupNotifiedAt = null;
     }
 
+    public void cancelForPeriodChange() {
+        if (status == DoseStatus.PENDING) {
+            this.status = DoseStatus.SKIPPED;
+            this.skipReason = "기간 변경";
+        }
+    }
+
     public void markGroupNotified(Instant now) {
         this.groupNotifiedAt = now;
     }

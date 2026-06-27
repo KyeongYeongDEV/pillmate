@@ -1,0 +1,104 @@
+================================================================
+ PillMate — ILIKE Seq Scan vs pg_trgm GIN 성능 실측 증거 자료
+ 측정일: 2026-06-11 / PostgreSQL 16 (Docker) / drugs 47,021행
+================================================================
+
+## 0. 테이블 규모 + 인덱스 정의 (실측 환경 증명)
+ drugs_rows 
+------------
+      47021
+(1 row)
+
+         indexname         |                                                         indexdef                                                          
+---------------------------+---------------------------------------------------------------------------------------------------------------------------
+ idx_drugs_name_trgm       | CREATE INDEX idx_drugs_name_trgm ON public.drugs USING gin (name gin_trgm_ops)
+ idx_drugs_name_jamo_trgm  | CREATE INDEX idx_drugs_name_jamo_trgm ON public.drugs USING gin (name_jamo gin_trgm_ops)
+ idx_drugs_ingredient_trgm | CREATE INDEX idx_drugs_ingredient_trgm ON public.drugs USING gin (ingredient gin_trgm_ops) WHERE (ingredient IS NOT NULL)
+(3 rows)
+
+
+================================================================
+## 1. EXPLAIN (ANALYZE, BUFFERS) — GIN Bitmap Index Scan (전체 플랜)
+================================================================
+SET
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=76.82..96.40 rows=5 width=55) (actual time=0.176..0.186 rows=5 loops=1)
+   Buffers: shared hit=23
+   ->  Bitmap Heap Scan on drugs  (cost=76.82..96.40 rows=5 width=55) (actual time=0.175..0.184 rows=5 loops=1)
+         Recheck Cond: ((name)::text ~~* '%타이레놀%'::text)
+         Heap Blocks: exact=5
+         Buffers: shared hit=23
+         ->  Bitmap Index Scan on idx_drugs_name_trgm  (cost=0.00..76.82 rows=5 width=0) (actual time=0.169..0.169 rows=12 loops=1)
+               Index Cond: ((name)::text ~~* '%타이레놀%'::text)
+               Buffers: shared hit=18
+ Planning:
+   Buffers: shared hit=263
+ Planning Time: 1.618 ms
+ Execution Time: 0.250 ms
+(13 rows)
+
+
+================================================================
+## 2. EXPLAIN (ANALYZE, BUFFERS) — Seq Scan 강제 (전체 플랜)
+================================================================
+SET
+SET
+SET
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..5327.76 rows=5 width=55) (actual time=0.095..21.773 rows=5 loops=1)
+   Buffers: shared hit=3057
+   ->  Seq Scan on drugs  (cost=0.00..5327.76 rows=5 width=55) (actual time=0.094..21.770 rows=5 loops=1)
+         Filter: ((name)::text ~~* '%타이레놀%'::text)
+         Rows Removed by Filter: 28595
+         Buffers: shared hit=3057
+ Planning:
+   Buffers: shared hit=263
+ Planning Time: 0.815 ms
+ Execution Time: 21.795 ms
+(10 rows)
+
+
+================================================================
+## 3. pgbench 동시 부하 K=20, 30초 — GIN (전체 출력)
+================================================================
+pgbench (16.14 (Debian 16.14-1.pgdg12+1))
+transaction type: /tmp/like_gin.sql
+scaling factor: 1
+query mode: simple
+number of clients: 20
+number of threads: 4
+maximum number of tries: 1
+duration: 30 s
+number of transactions actually processed: 1345437
+number of failed transactions: 0 (0.000%)
+latency average = 0.446 ms
+initial connection time = 9.205 ms
+tps = 44850.905011 (without initial connection time)
+
+================================================================
+## 4. pgbench 동시 부하 K=20, 30초 — Seq Scan 강제 (전체 출력)
+================================================================
+pgbench (16.14 (Debian 16.14-1.pgdg12+1))
+transaction type: /tmp/like_seq.sql
+scaling factor: 1
+query mode: simple
+number of clients: 20
+number of threads: 4
+maximum number of tries: 1
+duration: 30 s
+number of transactions actually processed: 11548
+number of failed transactions: 0 (0.000%)
+latency average = 51.993 ms
+initial connection time = 14.970 ms
+tps = 384.663992 (without initial connection time)
+
+================================================================
+## 5. 누적 운영 통계 — pg_stat_user_tables
+================================================================
+ relname | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch 
+---------+----------+--------------+----------+---------------
+ drugs   |    24561 |    696038965 |  2637669 |      13188345
+(1 row)
+

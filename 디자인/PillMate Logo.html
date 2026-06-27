@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PillMate — 로고 시스템</title>
+<link rel="stylesheet" href="styles/tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: var(--font-sans); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="logo.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { LogoMark, LogoMarkHeart, LogoMarkPlus, LogoMarkChat, Wordmark } = window;
+
+const BLUE = '#0066FF';
+const INK  = '#171717';
+
+// ─── card wrappers ─────────────────────────────────────────────
+const Tile = ({ bg, children, w = 320, h = 320 }) => (
+  <div style={{
+    width: w, height: h, background: bg,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 0, overflow: 'hidden',
+  }}>{children}</div>
+);
+
+const Label = ({ children, sub }) => (
+  <div style={{
+    position: 'absolute', left: 12, bottom: 12, color: 'inherit',
+    fontFamily: 'var(--font-sans)', letterSpacing: '-0.005em',
+  }}>
+    <div style={{ fontSize: 11, fontWeight: 700 }}>{children}</div>
+    {sub && <div style={{ fontSize: 10, opacity: 0.7, marginTop: 1 }}>{sub}</div>}
+  </div>
+);
+
+// ─── App ───────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas
+      title="PillMate · 로고 시스템"
+      subtitle="알약 캡슐 + 두 사람의 연결을 결합한 마크. 케어 그룹·복약 관리의 핵심을 한 형태로."
+    >
+      {/* ──────────────────── Section 1: Primary Mark ──────────────────── */}
+      <DCSection
+        id="primary"
+        title="프라이머리 마크"
+        subtitle="iOS·Android 앱 아이콘 후보 4종 · 마크 + 그라운드 컬러 조합"
+      >
+        <DCArtboard id="icon-blue" label="앱 아이콘 · 블루 (메인)" width={320} height={320}>
+          <Tile bg={BLUE}><LogoMark size={200} stroke="#fff" /></Tile>
+        </DCArtboard>
+
+        <DCArtboard id="icon-ink" label="앱 아이콘 · 잉크" width={320} height={320}>
+          <Tile bg={INK}><LogoMark size={200} stroke="#fff" /></Tile>
+        </DCArtboard>
+
+        <DCArtboard id="icon-cream" label="앱 아이콘 · 크림" width={320} height={320}>
+          <Tile bg="#F0EEE9"><LogoMark size={200} stroke={INK} /></Tile>
+        </DCArtboard>
+
+        <DCArtboard id="icon-grad" label="앱 아이콘 · 그라데이션" width={320} height={320}>
+          <Tile bg="linear-gradient(140deg, #2D7FFF 0%, #0066FF 60%, #003FCC 100%)">
+            <LogoMark size={200} stroke="#fff" />
+          </Tile>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ──────────────────── Section 2: Mark Construction ──────────────────── */}
+      <DCSection
+        id="construct"
+        title="마크 구조"
+        subtitle="알약 캡슐의 분할선이 두 사람을 잇는 다리가 됩니다."
+      >
+        <DCArtboard id="mark-large" label="마크 단독" width={400} height={400}>
+          <Tile bg="#fff" w={400} h={400}>
+            <LogoMark size={260} stroke={INK} />
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="grid" label="그리드 위 마크" width={400} height={400}>
+          <Tile bg="#fff" w={400} h={400}>
+            <div style={{ position: 'relative', width: 320, height: 320 }}>
+              {/* grid */}
+              <svg width="320" height="320" style={{ position: 'absolute', inset: 0 }}>
+                {[40, 80, 120, 160, 200, 240, 280].map(v => (
+                  <g key={v}>
+                    <line x1={v} y1={0} x2={v} y2={320} stroke="#E7E7EA" strokeWidth={1} />
+                    <line x1={0} y1={v} x2={320} y2={v} stroke="#E7E7EA" strokeWidth={1} />
+                  </g>
+                ))}
+                <circle cx={160} cy={160} r={130} fill="none" stroke="#E7E7EA" strokeWidth={1} strokeDasharray="3 4" />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <LogoMark size={240} stroke={INK} />
+              </div>
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="anatomy" label="해부도" width={400} height={400}>
+          <Tile bg="#fff" w={400} h={400}>
+            <svg width="320" height="320" viewBox="0 0 320 320" fill="none">
+              {/* faint mark */}
+              <g transform="translate(60 60) scale(0.625)" stroke="#D6D6DA" strokeWidth={20} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M62 158a96 96 0 01136 0l40 40a96 96 0 01-136 136l-40-40a96 96 0 010-136z" fill="#F4F4F6" />
+                <path d="M90 186l136 136" />
+              </g>
+              {/* annotations */}
+              <g fontFamily="var(--font-sans)" fontSize="11" fill="#878A93" fontWeight={600}>
+                <line x1="60" y1="60" x2="40" y2="40" stroke="#0066FF" strokeWidth={1} />
+                <circle cx="40" cy="40" r="3" fill="#0066FF" />
+                <text x="20" y="32" fill="#0066FF" fontWeight={700}>① 캡슐 셸</text>
+
+                <line x1="160" y1="160" x2="280" y2="100" stroke="#0066FF" strokeWidth={1} />
+                <circle cx="280" cy="100" r="3" fill="#0066FF" />
+                <text x="230" y="92" fill="#0066FF" fontWeight={700}>② 연결선</text>
+
+                <line x1="220" y1="260" x2="280" y2="290" stroke="#0066FF" strokeWidth={1} />
+                <circle cx="280" cy="290" r="3" fill="#0066FF" />
+                <text x="220" y="305" fill="#0066FF" fontWeight={700}>③ 케어 ←→ 받는 이</text>
+              </g>
+            </svg>
+          </Tile>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ──────────────────── Section 3: Wordmark ──────────────────── */}
+      <DCSection
+        id="wordmark"
+        title="워드마크"
+        subtitle="Pretendard JP Bold · 마크와 1:1 비율로 정렬"
+      >
+        <DCArtboard id="wm-horizontal" label="가로 조합" width={480} height={180}>
+          <Tile bg="#fff" w={480} h={180}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <LogoMark size={64} stroke={INK} />
+              <Wordmark color={INK} size={42} />
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="wm-stacked" label="세로 조합" width={300} height={300}>
+          <Tile bg="#fff" w={300} h={300}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+              <LogoMark size={88} stroke={INK} />
+              <Wordmark color={INK} size={32} />
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="wm-tagline" label="태그라인 포함" width={480} height={240}>
+          <Tile bg="#fff" w={480} h={240}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+              <LogoMark size={88} stroke={BLUE} />
+              <div>
+                <Wordmark color={INK} size={48} />
+                <div style={{ fontSize: 14, color: '#46484E', marginTop: 6, fontWeight: 500, letterSpacing: '-0.005em' }}>
+                  스마트 복약 케어 그룹
+                </div>
+              </div>
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="wm-blue" label="블루 백그라운드" width={480} height={180}>
+          <Tile bg={BLUE} w={480} h={180}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <LogoMark size={64} stroke="#fff" />
+              <Wordmark color="#fff" size={42} />
+            </div>
+          </Tile>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ──────────────────── Section 4: Variants ──────────────────── */}
+      <DCSection
+        id="variants"
+        title="변형 (탐색)"
+        subtitle="알약 + 다른 서브 모티프 — 사용처에 따라 골라 쓸 수 있는 마크"
+      >
+        <DCArtboard id="v-heart" label="알약 + 하트 (케어)" width={280} height={280}>
+          <Tile bg={BLUE} w={280} h={280}><LogoMarkHeart size={180} stroke="#fff" /></Tile>
+        </DCArtboard>
+        <DCArtboard id="v-plus" label="알약 + 플러스 (의료)" width={280} height={280}>
+          <Tile bg={BLUE} w={280} h={280}><LogoMarkPlus size={180} stroke="#fff" /></Tile>
+        </DCArtboard>
+        <DCArtboard id="v-chat" label="알약 + 말풍선 (상담)" width={280} height={280}>
+          <Tile bg={BLUE} w={280} h={280}><LogoMarkChat size={180} stroke="#fff" /></Tile>
+        </DCArtboard>
+        <DCArtboard id="v-mono" label="모노크롬 음각" width={280} height={280}>
+          <Tile bg="#F0EEE9" w={280} h={280}><LogoMark size={180} stroke={INK} /></Tile>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ──────────────────── Section 5: In Context ──────────────────── */}
+      <DCSection
+        id="context"
+        title="사용 예시"
+        subtitle="홈 스크린 · 스플래시 · 페이버"
+      >
+        <DCArtboard id="ctx-springboard" label="iOS 홈 스크린" width={320} height={400}>
+          <Tile bg="linear-gradient(180deg, #C8D8F0 0%, #8FA4C2 100%)" w={320} h={400}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 60px)', gap: 18 }}>
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#FA73E3' }} />
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#26C76C' }} />
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#FF7B2E' }} />
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#6541F2' }} />
+
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#F2F0EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 30, height: 30, background: '#171717', borderRadius: '50%' }} />
+              </div>
+              {/* PillMate icon */}
+              <div style={{
+                width: 60, height: 60, borderRadius: 14, background: BLUE,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 6px 14px rgba(0,102,255,0.45), 0 0 0 2px rgba(255,255,255,0.4)',
+                transform: 'scale(1.08)',
+              }}>
+                <LogoMark size={38} stroke="#fff" />
+              </div>
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#fff' }} />
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: '#0066FF' }} />
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="ctx-splash" label="스플래시 스크린" width={300} height={480}>
+          <Tile bg="#fff" w={300} h={480}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+              <LogoMark size={120} stroke={BLUE} />
+              <Wordmark color={INK} size={36} />
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                border: `2.5px solid ${BLUE}`,
+                borderTopColor: 'transparent',
+                animation: 'spin 0.9s linear infinite',
+              }} />
+            </div>
+          </Tile>
+        </DCArtboard>
+
+        <DCArtboard id="ctx-fav" label="파비콘 (16/32/64)" width={300} height={280}>
+          <Tile bg="#F0EEE9" w={300} h={280}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 28 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 16, height: 16, background: BLUE, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LogoMark size={11} stroke="#fff" simple />
+                </div>
+                <div style={{ fontSize: 10, color: '#878A93', fontWeight: 600 }}>16px</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, background: BLUE, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LogoMark size={22} stroke="#fff" simple />
+                </div>
+                <div style={{ fontSize: 10, color: '#878A93', fontWeight: 600 }}>32px</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 64, height: 64, background: BLUE, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LogoMark size={42} stroke="#fff" />
+                </div>
+                <div style={{ fontSize: 10, color: '#878A93', fontWeight: 600 }}>64px</div>
+              </div>
+            </div>
+          </Tile>
+        </DCArtboard>
+      </DCSection>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

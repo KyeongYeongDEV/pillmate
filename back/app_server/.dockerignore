@@ -5,6 +5,7 @@
 .gradle
 build
 out
+bin
 *.iml
 .env
 .env.*
@@ -15,7 +16,9 @@ node_modules
 docs
 infra/postgres/data
 *.log
+*.tmp
 .DS_Store
+.claude
 .claude/.runtime
 .cmux
 .pdca-status.json
@@ -23,3 +26,4 @@ infra/postgres/data
 docs/.pdca-snapshots
 scripts/__pycache__
 tests/__pycache__
+*.md

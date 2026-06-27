@@ -119,6 +119,25 @@ back/docker-compose.override.yml
 .mfds_bulk_checkpoint.json
 back/.mfds_bulk_checkpoint.json
 back/.drug_embed_checkpoint.json
+.drug_embed_checkpoint.json
+back/.drug_image_cache_checkpoint.json
+back/.drug_image_cache_failures.jsonl
+
+# ==============================
+# 하네스 / 에이전트 런타임 (자동 생성)
+# ==============================
+.bkit/
+back/.bkit/
+.agents/
+.codex/
+.cmux/.last-backup-path
+
+# ==============================
+# 기타 빌드/런타임 산물
+# ==============================
+back/app_server/bin/
+back/.interactions_checkpoint.json
+/package-lock.json
 
 # ==============================
 # 임시 파일

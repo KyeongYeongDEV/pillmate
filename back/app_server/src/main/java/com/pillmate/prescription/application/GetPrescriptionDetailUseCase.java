@@ -4,15 +4,19 @@ import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.PatientAccessGuard;
 import com.pillmate.common.security.UserContext;
+import com.pillmate.prescription.application.dto.NutrientNote;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse.DrugDetail;
+import com.pillmate.prescription.application.dto.PrescriptionInsightView;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.FileStoragePort;
+import com.pillmate.prescription.application.port.NutrientDepletionPort;
 import com.pillmate.prescription.application.port.PrescriptionPeriodPort;
 import com.pillmate.prescription.application.port.PrescriptionPeriodPort.PeriodStats;
 import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.model.PrescriptionStatus;
+import com.pillmate.prescription.domain.repository.PrescriptionInsightRepository;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,8 @@ public class GetPrescriptionDetailUseCase {
     private final FileStoragePort fileStoragePort;
     private final PatientAccessGuard patientAccessGuard;
     private final PrescriptionPeriodPort prescriptionPeriodPort;
+    private final NutrientDepletionPort nutrientDepletionPort;
+    private final PrescriptionInsightRepository prescriptionInsightRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -49,11 +55,18 @@ public class GetPrescriptionDetailUseCase {
         return new PrescriptionDetailResponse(
                 prescription.getId(), prescription.getPrescribedAt(), prescription.getOcrStatus(),
                 resolveImageUrl(prescription.getImageKey()), toDrugDetails(prescription.getDrugs()),
-                prescription.getLabel(), prescription.getMemo(), status,
+                prescription.getLabel(), prescription.getMemo(), prescription.getSymptom(), status,
                 period[0], period[1],
                 resolveDaysRemaining(status, today, period[1]),
                 resolveProgressRate(status, today, period[0], period[1]),
-                resolveAdherenceRate(stats));
+                resolveAdherenceRate(stats),
+                resolveInsights(prescriptionId));
+    }
+
+    private List<PrescriptionInsightView> resolveInsights(Long prescriptionId) {
+        List<PrescriptionInsightView> views = prescriptionInsightRepository.findByPrescriptionId(prescriptionId)
+                .stream().map(PrescriptionInsightView::from).toList();
+        return views.isEmpty() ? null : views;
     }
 
     private Prescription findOwnPrescription(Long prescriptionId) {
@@ -101,17 +114,26 @@ public class GetPrescriptionDetailUseCase {
                 .filter(Objects::nonNull)
                 .toList();
         Map<Long, DrugLookupPort.DrugSummary> summaries = drugLookupPort.findByIds(matchedIds);
-        return drugs.stream().map(d -> toDrugDetail(d, summaries)).toList();
+        Map<Long, List<NutrientNote>> nutrientMap = matchedIds.isEmpty()
+                ? Map.of()
+                : nutrientDepletionPort.findByDrugIds(matchedIds);
+        return drugs.stream().map(d -> toDrugDetail(d, summaries, nutrientMap)).toList();
     }
 
-    private DrugDetail toDrugDetail(PrescribedDrug drug, Map<Long, DrugLookupPort.DrugSummary> summaries) {
+    private DrugDetail toDrugDetail(PrescribedDrug drug,
+                                    Map<Long, DrugLookupPort.DrugSummary> summaries,
+                                    Map<Long, List<NutrientNote>> nutrientMap) {
         DrugLookupPort.DrugSummary summary = drug.getDrugId() != null ? summaries.get(drug.getDrugId()) : null;
+        List<NutrientNote> notes = drug.getDrugId() != null
+                ? nutrientMap.getOrDefault(drug.getDrugId(), List.of())
+                : List.of();
         return new DrugDetail(
                 drug.getNameRaw(),
                 summary != null ? summary.name() : null,
                 summary != null ? summary.kdCode() : null,
                 drug.getDoseAmount(), drug.getDoseUnit(),
                 drug.getFrequency(), drug.getDurationDays(), drug.getConfidence(),
-                summary != null ? summary.imageUrl() : null);
+                summary != null ? summary.imageUrl() : null,
+                notes.isEmpty() ? null : notes);
     }
 }

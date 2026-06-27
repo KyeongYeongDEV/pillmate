@@ -20,10 +20,11 @@ public record RegisterPrescriptionRequest(
         @NotEmpty @Valid List<Item> items,
         @Valid ScheduleSpecRequest schedule,
         @Size(max = 100) String label,
-        @Size(max = 500) String memo
+        @Size(max = 500) String memo,
+        @Size(max = 200) String symptom
 ) {
     public RegisterPrescriptionRequest(LocalDate prescribedAt, String imageKey, List<Item> items) {
-        this(prescribedAt, imageKey, items, null, null, null);
+        this(prescribedAt, imageKey, items, null, null, null, null);
     }
 
     public RegisterPrescriptionCommand toCommand(Long patientId) {
@@ -32,7 +33,8 @@ public record RegisterPrescriptionRequest(
                 items.stream().map(Item::toDrugItem).toList(),
                 schedule != null ? schedule.toSpec() : null,
                 label,
-                memo);
+                memo,
+                symptom);
     }
 
     public record Item(

@@ -150,6 +150,38 @@ class PrescriptionTest {
         assertThat(p.getDeletedAt()).isNotNull();
     }
 
+    @Test
+    @DisplayName("create_withSymptom — symptom 필드 저장")
+    void create_withSymptom_setsField() {
+        Prescription p = Prescription.create(1L, "img.jpg", LocalDate.now(), "감기", "식후 30분", "상기도 감염");
+        assertThat(p.getSymptom()).isEqualTo("상기도 감염");
+    }
+
+    @Test
+    @DisplayName("create_withoutSymptom — symptom null")
+    void create_withoutSymptom_isNull() {
+        Prescription p = Prescription.create(1L, "img.jpg", LocalDate.now(), "감기", "식후 30분");
+        assertThat(p.getSymptom()).isNull();
+    }
+
+    @Test
+    @DisplayName("updateMemo_withSymptom — 모든 메타 필드 갱신")
+    void updateMemo_withSymptom_updatesAllFields() {
+        Prescription p = newPrescription();
+        p.updateMemo("새 라벨", "새 메모", "고혈압");
+        assertThat(p.getLabel()).isEqualTo("새 라벨");
+        assertThat(p.getMemo()).isEqualTo("새 메모");
+        assertThat(p.getSymptom()).isEqualTo("고혈압");
+    }
+
+    @Test
+    @DisplayName("updateMemo_withNullSymptom — symptom null 로 초기화")
+    void updateMemo_withNullSymptom_clearsSymptom() {
+        Prescription p = Prescription.create(1L, null, LocalDate.now(), "라벨", "메모", "당뇨");
+        p.updateMemo("라벨2", "메모2", null);
+        assertThat(p.getSymptom()).isNull();
+    }
+
     private PrescribedDrug unmatchedDrug(BigDecimal confidence) {
         return PrescribedDrug.builder()
                 .drugId(null)

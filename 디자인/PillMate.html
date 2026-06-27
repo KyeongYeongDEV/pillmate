@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PillMate — 앱 디자인</title>
+<link rel="stylesheet" href="styles/tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: var(--font-sans); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+<script type="text/babel" src="screens-1.jsx"></script>
+<script type="text/babel" src="screens-2.jsx"></script>
+<script type="text/babel" src="screens-3.jsx"></script>
+<script type="text/babel" src="screens-4.jsx"></script>
+<script type="text/babel" src="screens-5.jsx"></script>
+<script type="text/babel" src="screens-6.jsx"></script>
+<script type="text/babel" src="screens-7.jsx"></script>
+<script type="text/babel" src="screens-8.jsx"></script>
+<script type="text/babel" src="screens-9.jsx"></script>
+<script type="text/babel" src="screen-memos.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useRef, useEffect } = React;
+
+// Each screen wrapped in an iPhone device frame.
+const Phone = ({ children }) => (
+  <IOSDevice width={390} height={844}>{children}</IOSDevice>
+);
+
+// Scrolled variant — finds the inner overflow:auto region and jumps it
+// to the bottom (or to a given px offset) so we can show the lower part
+// of a long screen in a second artboard.
+const ScrolledPhone = ({ children, to = 'bottom' }) => {
+  const wrap = useRef(null);
+  useEffect(() => {
+    if (!wrap.current) return;
+    // Look for the first scrollable child.
+    const all = wrap.current.querySelectorAll('*');
+    for (const el of all) {
+      const s = getComputedStyle(el);
+      if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+        el.scrollTop = to === 'bottom' ? el.scrollHeight : (typeof to === 'number' ? to : 0);
+        break;
+      }
+    }
+  });
+  return (
+    <IOSDevice width={390} height={844}>
+      <div ref={wrap} style={{ width: '100%', height: '100%' }}>{children}</div>
+    </IOSDevice>
+  );
+};
+
+const screens = [
+  { id: 'onboarding', label: '01 · 첫 실행 (온보딩)',  Comp: ScreenOnboarding },
+  { id: 'login',      label: '02 · 로그인',           Comp: ScreenLogin },
+  { id: 'home',       label: '03 · 메인 (홈)',         Comp: ScreenHome,         scrolls: true },
+  { id: 'notifs',     label: '04 · 알림 목록',       Comp: ScreenNotifications, scrolls: true },
+  { id: 'register',   label: '05 · 처방전 등록 허브', Comp: ScreenRegister, scrolls: true },
+  { id: 'scan',       label: '06 · 처방전 촬영',     Comp: ScreenScan },
+  { id: 'result',     label: '07 · AI 인식 결과',    Comp: ScreenResult,       scrolls: true },
+  { id: 'manual',     label: '08 · 약 직접 추가',     Comp: ScreenManualAdd,    scrolls: true },
+  { id: 'detail',     label: '09 · 약 상세',         Comp: ScreenDetail,       scrolls: true },
+  { id: 'search',     label: '10 · 약 검색',         Comp: ScreenSearch,       scrolls: true },
+  { id: 'rxlist',     label: '11 · 처방전 목록',     Comp: ScreenPrescriptions, scrolls: true },
+  { id: 'schedule',   label: '12 · 복약 스케줄',     Comp: ScreenSchedule,     scrolls: true },
+  { id: 'chat',       label: '13 · 복약 상담 AI',    Comp: ScreenChat },
+  { id: 'report',     label: '14 · 건강 리포트',     Comp: ScreenReport,       scrolls: true },
+  { id: 'groups',     label: '15 · 그룹 목록',       Comp: ScreenGroups,       scrolls: true },
+  { id: 'group',      label: '16 · 그룹 상세',       Comp: ScreenGroup, scrolls: true },
+  { id: 'activity',   label: '17 · 그룹 활동',       Comp: ScreenActivity,     scrolls: true },
+];
+
+// Render a screen + its scrolled-down counterpart inline. Returns a flat
+// array (NOT a custom component) so DCSection's child-walker can see each
+// DCArtboard. Wrapping these in another component would hide them.
+const PHONE_W = 390, MEMO_W = 230, GAP = 18;
+const BOARD_W = PHONE_W + GAP + MEMO_W;
+const renderPair = (s) => {
+  const PhoneAndMemo = ({ scrolled }) => (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: GAP, height: '100%' }}>
+      {scrolled
+        ? <ScrolledPhone><s.Comp /></ScrolledPhone>
+        : <Phone><s.Comp /></Phone>}
+      <MemoCard memoKey={s.id} />
+    </div>
+  );
+  const arr = [
+    <DCArtboard key={s.id} id={s.id} label={s.label} width={BOARD_W} height={844}>
+      <PhoneAndMemo />
+    </DCArtboard>
+  ];
+  if (s.scrolls) {
+    arr.push(
+      <DCArtboard key={`${s.id}-down`} id={`${s.id}-down`} label={`${s.label} · ↓ 스크롤`} width={BOARD_W} height={844}>
+        <PhoneAndMemo scrolled />
+      </DCArtboard>
+    );
+  }
+  return arr;
+};
+
+function App() {
+  return (
+    <DesignCanvas
+      title="PillMate"
+      subtitle="보호자 ↔ 환자 그룹 기반 스마트 복약 관리 · 긴 화면은 아래에 스크롤 상태 추가"
+    >
+      <DCSection
+        id="core"
+        title="핵심 플로우 · 등록"
+        subtitle="첫 실행 → 로그인 → 메인 (+ 알림 개설로 진입) → 처방전 등록 → 차방전 촬영 → AI 인식 → 수동 추가 → 상세/검색 → 처방전 목록"
+      >
+        {screens.slice(0, 11).flatMap(renderPair)}
+      </DCSection>
+
+      <DCSection
+        id="daily"
+        title="일상 사용"
+        subtitle="복약 스케줄 · AI 상담 챗봇 · 월간 건강 리포트"
+      >
+        {screens.slice(11, 14).flatMap(renderPair)}
+      </DCSection>
+
+      <DCSection
+        id="group"
+        title="그룹"
+        subtitle="여러 그룹 관리 (채팅방 방식) · 그룹 상세 · 그룹 활동 타임라인"
+      >
+        {screens.slice(14).flatMap(renderPair)}
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

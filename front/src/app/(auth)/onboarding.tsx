@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, SafeAreaView,
+  View, Text, Pressable, StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { ONBOARDING_SEEN_KEY } from '@/lib/auth/storage';
@@ -11,6 +12,7 @@ interface PageData {
   visual: React.ReactNode;
   heading: string;
   body: string;
+  evidence?: { stats: string; source: string };
 }
 
 const PAGES: PageData[] = [
@@ -18,6 +20,13 @@ const PAGES: PageData[] = [
     visual: <PrescriptionVisual />,
     heading: '처방전 한 장으로\n온 가족 복약 관리',
     body: '사진만 찍으면 약을 자동으로 인식해 등록합니다.\n식약처 데이터로 검증된 복약 정보를 받아보세요.',
+    evidence: {
+      stats:
+        '국내 10개 이상 약을 복용하는 분이 95만 명을 넘어요.\n' +
+        '여러 약을 함께 드시면 중복·약물 상호작용 위험이 커져요.\n' +
+        'PillMate가 중복·상호작용을 한눈에 확인할 수 있도록 도와드려요.',
+      source: '출처: 국민건강보험공단(2018), 질병관리청 국가건강정보포털',
+    },
   },
   {
     visual: <GroupVisual />,
@@ -51,7 +60,7 @@ export default function OnboardingScreen() {
   const current = PAGES[page];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.logo}>💊 PillMate</Text>
@@ -72,6 +81,12 @@ export default function OnboardingScreen() {
       <View style={styles.textArea}>
         <Text style={styles.heading}>{current.heading}</Text>
         <Text style={styles.body}>{current.body}</Text>
+        {current.evidence && (
+          <View style={styles.evidenceWrap}>
+            <Text style={styles.evidenceStats}>{current.evidence.stats}</Text>
+            <Text style={styles.evidenceSrc}>{current.evidence.source}</Text>
+          </View>
+        )}
       </View>
 
       {/* Dots */}
@@ -198,6 +213,25 @@ const styles = StyleSheet.create({
 
   loginLink: { alignItems: 'center', paddingVertical: space.s16 },
   loginLinkTxt: { fontSize: scale(13), color: colors.labelAlternative, textDecorationLine: 'underline' },
+
+  evidenceWrap: {
+    marginTop: space.s6,
+    backgroundColor: colors.fillNormal,
+    borderRadius: radius.r10,
+    padding: space.s12,
+    gap: space.s6,
+  },
+  evidenceStats: {
+    ...typography.caption1,
+    color: colors.labelAlternative,
+    lineHeight: scale(18),
+    textAlign: 'center',
+  },
+  evidenceSrc: {
+    fontSize: scale(10),
+    color: colors.labelAssistive,
+    textAlign: 'center',
+  },
 
   // PrescriptionVisual
   prescriptionWrap: { width: '100%', alignItems: 'center', position: 'relative', height: scale(220) },

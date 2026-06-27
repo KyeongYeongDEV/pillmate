@@ -1,0 +1,460 @@
+/* ============================================================
+   Wanted Design System — Core Tokens
+   ------------------------------------------------------------
+   Reconstructed from "Wanted Design System (Community)" Figma.
+   Source of truth for all colors, type, spacing, shadow.
+   ============================================================ */
+
+/* ---------- Fonts ----------
+   Pretendard JP is the primary face (Korean, English, Japanese).
+   We load Pretendard Variable from jsDelivr CDN. Pretendard JP
+   uses the same metrics. Wanted Sans is the brand display face,
+   used very sparingly (mostly in the logo).
+*/
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css");
+@import url("https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/complete/WantedSansVariable.min.css");
+
+:root {
+  /* ---------- Font families ---------- */
+  --font-sans: "Pretendard JP", "Pretendard Variable", "Pretendard",
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Wanted Sans Variable", "Wanted Sans",
+    "Pretendard JP", "Pretendard Variable", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Menlo", "Monaco",
+    Consolas, "Liberation Mono", monospace;
+
+  /* ============================================================
+     ATOMIC COLOR PALETTE
+     -------------------------------------------------------------
+     Naming = color-atomic-<role>-<step>
+     Step counts down from 100 (light) → 0 (black).
+     Mirrors Figma tokens 1:1.
+     ============================================================ */
+
+  /* Common */
+  --c-common-100: #ffffff;
+  --c-common-0:   #000000;
+
+  /* Neutral (warm-ish grayscale) */
+  --c-neutral-99: #f7f7f7;
+  --c-neutral-95: #dcdcdc;
+  --c-neutral-90: #c4c4c4;
+  --c-neutral-80: #b0b0b0;
+  --c-neutral-70: #9b9b9b;
+  --c-neutral-60: #8a8a8a;
+  --c-neutral-50: #737373;
+  --c-neutral-40: #5c5c5c;
+  --c-neutral-30: #474747;
+  --c-neutral-22: #303030;
+  --c-neutral-20: #2a2a2a;
+  --c-neutral-15: #1c1c1c;
+  --c-neutral-10: #171717;
+  --c-neutral-5:  #0f0f0f;
+  --c-neutral-0:  #000000;
+
+  /* Cool Neutral — the workhorse grayscale used for text + UI */
+  --c-coolNeutral-99: #f7f7f8;
+  --c-coolNeutral-98: #f4f4f5;
+  --c-coolNeutral-97: #eaebec;
+  --c-coolNeutral-96: #e1e2e4;
+  --c-coolNeutral-95: #dbdcdf;
+  --c-coolNeutral-90: #c2c4c8;
+  --c-coolNeutral-80: #aeb0b6;
+  --c-coolNeutral-70: #989ba2;
+  --c-coolNeutral-60: #878a93;
+  --c-coolNeutral-50: #70737c;
+  --c-coolNeutral-40: #5a5c63;
+  --c-coolNeutral-30: #46474c;
+  --c-coolNeutral-25: #37383c;
+  --c-coolNeutral-23: #333438;
+  --c-coolNeutral-22: #2e2f33;
+  --c-coolNeutral-20: #292a2d;
+  --c-coolNeutral-17: #212225;
+  --c-coolNeutral-15: #1b1c1e;
+  --c-coolNeutral-10: #171719;
+  --c-coolNeutral-7:  #141415;
+  --c-coolNeutral-5:  #0f0f10;
+  --c-coolNeutral-0:  #000000;
+
+  /* Blue — primary brand accent */
+  --c-blue-99: #f7fbff;
+  --c-blue-95: #eaf2fe;
+  --c-blue-90: #c9defe;
+  --c-blue-80: #9ec5ff;
+  --c-blue-70: #69a5ff;
+  --c-blue-65: #4f95ff;
+  --c-blue-60: #3385ff;
+  --c-blue-55: #1a75ff;
+  --c-blue-50: #0066ff;   /* primary blue */
+  --c-blue-45: #005eeb;
+  --c-blue-40: #0054d1;
+  --c-blue-30: #003e9c;
+  --c-blue-20: #002966;
+  --c-blue-10: #001536;
+  --c-blue-0:  #000000;
+
+  /* Red — negative / destructive */
+  --c-red-99: #fffafa;
+  --c-red-95: #feecec;
+  --c-red-90: #fed5d5;
+  --c-red-80: #ffb5b5;
+  --c-red-70: #ff8c8c;
+  --c-red-60: #ff6363;
+  --c-red-50: #ff4242;
+  --c-red-40: #e52222;
+  --c-red-30: #b20c0c;
+  --c-red-20: #750404;
+  --c-red-10: #3b0101;
+  --c-red-0:  #000000;
+
+  /* Green — positive / success */
+  --c-green-99: #f2fff6;
+  --c-green-95: #d9ffe6;
+  --c-green-90: #acfcc7;
+  --c-green-80: #7df5a5;
+  --c-green-70: #49e57d;
+  --c-green-60: #1ed45a;
+  --c-green-50: #00bf40;
+  --c-green-40: #009632;
+  --c-green-30: #006e25;
+  --c-green-20: #004517;
+  --c-green-10: #00240c;
+  --c-green-0:  #000000;
+
+  /* Orange — cautionary / paid */
+  --c-orange-99: #fffcf7;
+  --c-orange-95: #fef4e6;
+  --c-orange-90: #fee6c6;
+  --c-orange-80: #ffd49c;
+  --c-orange-70: #ffc06e;
+  --c-orange-60: #ffa938;
+  --c-orange-50: #ff9200;
+  --c-orange-40: #d47800;
+  --c-orange-39: #d17600;
+  --c-orange-30: #9c5800;
+  --c-orange-20: #663a00;
+  --c-orange-10: #361e00;
+  --c-orange-0:  #000000;
+
+  /* Red Orange */
+  --c-redOrange-99: #fffaf7;
+  --c-redOrange-95: #feeee5;
+  --c-redOrange-90: #fedbc6;
+  --c-redOrange-80: #ffc09c;
+  --c-redOrange-70: #ff9c63;
+  --c-redOrange-60: #ff7b2e;
+  --c-redOrange-50: #ff5e00;
+  --c-redOrange-48: #f55a00;
+  --c-redOrange-40: #cc4b00;
+  --c-redOrange-30: #943600;
+  --c-redOrange-20: #5c2200;
+  --c-redOrange-10: #2e1100;
+  --c-redOrange-0:  #000000;
+
+  /* Lime */
+  --c-lime-99: #f8fff2;
+  --c-lime-95: #e6ffd4;
+  --c-lime-90: #ccfca9;
+  --c-lime-80: #aef779;
+  --c-lime-70: #88f03e;
+  --c-lime-60: #6be016;
+  --c-lime-50: #58cf04;
+  --c-lime-40: #48ad00;
+  --c-lime-37: #429e00;
+  --c-lime-30: #347d00;
+  --c-lime-20: #225200;
+  --c-lime-10: #112900;
+  --c-lime-0:  #000000;
+
+  /* Cyan */
+  --c-cyan-99: #f7feff;
+  --c-cyan-95: #defaff;
+  --c-cyan-90: #b5f4ff;
+  --c-cyan-80: #8aedff;
+  --c-cyan-70: #57dff7;
+  --c-cyan-60: #28d0ed;
+  --c-cyan-50: #00bdde;
+  --c-cyan-40: #0098b2;
+  --c-cyan-30: #006f82;
+  --c-cyan-20: #004854;
+  --c-cyan-10: #00252b;
+  --c-cyan-0:  #000000;
+
+  /* Light Blue */
+  --c-lightBlue-99: #f7fdff;
+  --c-lightBlue-95: #e5f6fe;
+  --c-lightBlue-90: #c4ecfe;
+  --c-lightBlue-80: #a1e1ff;
+  --c-lightBlue-70: #70d2ff;
+  --c-lightBlue-60: #3dc2ff;
+  --c-lightBlue-50: #00aeff;
+  --c-lightBlue-40: #008dcf;
+  --c-lightBlue-30: #006796;
+  --c-lightBlue-20: #004261;
+  --c-lightBlue-10: #002130;
+  --c-lightBlue-0:  #000000;
+
+  /* Violet */
+  --c-violet-99: #fbfaff;
+  --c-violet-95: #f0ecfe;
+  --c-violet-90: #dbd3fe;
+  --c-violet-80: #c0b0ff;
+  --c-violet-70: #9e86fc;
+  --c-violet-60: #7d5ef7;
+  --c-violet-50: #6541f2;
+  --c-violet-45: #5b37ed;
+  --c-violet-40: #4f29e5;
+  --c-violet-30: #3a16c9;
+  --c-violet-20: #23098f;
+  --c-violet-10: #11024d;
+  --c-violet-0:  #000000;
+
+  /* Purple */
+  --c-purple-99: #fefbff;
+  --c-purple-95: #f9edff;
+  --c-purple-90: #f2d6ff;
+  --c-purple-80: #e9baff;
+  --c-purple-70: #de96ff;
+  --c-purple-60: #d478ff;
+  --c-purple-50: #cb59ff;
+  --c-purple-40: #ad36e3;
+  --c-purple-30: #861cb8;
+  --c-purple-20: #580a7d;
+  --c-purple-10: #290247;
+  --c-purple-0:  #000000;
+
+  /* Pink */
+  --c-pink-99: #fffafe;
+  --c-pink-95: #feecfb;
+  --c-pink-90: #fed3f7;
+  --c-pink-80: #ffb8f3;
+  --c-pink-70: #ff94ed;
+  --c-pink-60: #fa73e3;
+  --c-pink-50: #f553da;
+  --c-pink-46: #e846cd;
+  --c-pink-40: #d331b8;
+  --c-pink-30: #a81690;
+  --c-pink-20: #730560;
+  --c-pink-10: #3d0133;
+  --c-pink-0:  #000000;
+
+  /* Opacity scale (alpha tokens) */
+  --opacity-5:   0.05;
+  --opacity-8:   0.08;
+  --opacity-12:  0.12;
+  --opacity-16:  0.16;
+  --opacity-22:  0.22;
+  --opacity-28:  0.28;
+  --opacity-35:  0.35;
+  --opacity-43:  0.43;
+  --opacity-52:  0.52;
+  --opacity-61:  0.61;
+  --opacity-74:  0.74;
+  --opacity-88:  0.88;
+  --opacity-97:  0.97;
+  --opacity-100: 1;
+
+  /* ============================================================
+     SEMANTIC TOKENS — Light theme
+     -------------------------------------------------------------
+     Use these in product UI. They reference atomic tokens above.
+     ============================================================ */
+
+  /* Primary — brand-blue accent (links, focus, key CTAs) */
+  --primary-normal: var(--c-blue-45);
+  --primary-strong: var(--c-blue-40);
+  --primary-heavy:  var(--c-blue-30);
+
+  /* Label — text colors */
+  --label-normal:    var(--c-coolNeutral-10);                /* primary text */
+  --label-strong:    var(--c-common-0);
+  --label-neutral:   rgba(46, 47, 51, 0.88);                  /* coolNeutral-22 @ 88 */
+  --label-alternative: rgba(55, 56, 60, 0.61);                /* coolNeutral-25 @ 61 */
+  --label-assistive: rgba(55, 56, 60, 0.28);
+  --label-disable:   rgba(55, 56, 60, 0.16);
+
+  /* Background */
+  --bg-normal:   var(--c-common-100);
+  --bg-alt:      var(--c-coolNeutral-99);
+  --bg-elevated: var(--c-common-100);
+  --bg-dim:      rgba(0, 0, 0, 0.08);
+  --bg-strong:   rgba(0, 0, 0, 0.28);
+
+  /* Line / divider */
+  --line-normal: rgba(112, 115, 124, 0.22);
+  --line-neutral: rgba(112, 115, 124, 0.16);
+  --line-strong: rgba(112, 115, 124, 0.52);
+  --line-solid-normal: var(--c-coolNeutral-90);
+
+  /* Fill — surface treatments inside cards/inputs */
+  --fill-normal:   rgba(112, 115, 124, 0.08);
+  --fill-alt:      rgba(112, 115, 124, 0.05);
+  --fill-strong:   var(--c-coolNeutral-96);
+  --fill-stronger: var(--c-coolNeutral-97);
+  --fill-strongest:var(--c-coolNeutral-98);
+
+  /* Status */
+  --status-positive: var(--c-green-50);
+  --status-cautionary: var(--c-orange-50);
+  --status-negative: var(--c-red-50);
+
+  /* Accent — saturated colored backgrounds for badges/tags */
+  --accent-blue:      var(--c-blue-50);
+  --accent-cyan:      var(--c-cyan-50);
+  --accent-lightBlue: var(--c-lightBlue-50);
+  --accent-violet:    var(--c-violet-50);
+  --accent-purple:    var(--c-purple-50);
+  --accent-pink:      var(--c-pink-50);
+  --accent-red:       var(--c-red-50);
+  --accent-redOrange: var(--c-redOrange-50);
+  --accent-orange:    var(--c-orange-50);
+  --accent-lime:      var(--c-lime-50);
+  --accent-green:     var(--c-green-50);
+
+  /* Inverse — dark surfaces */
+  --inverse-bg:       var(--c-coolNeutral-15);
+  --inverse-label:    var(--c-coolNeutral-99);
+  --inverse-primary:  var(--c-blue-60);
+
+  /* Interaction */
+  --interaction-inactive: var(--c-coolNeutral-70);
+
+  /* Static — colors that don't flip in dark mode */
+  --static-black: var(--c-common-0);
+  --static-white: var(--c-common-100);
+
+  /* ============================================================
+     SHADOW SYSTEM
+     -------------------------------------------------------------
+     Four elevation steps. Two-layer drop shadows.
+     ============================================================ */
+  --shadow-xsmall:  0 1px 2px -1px rgba(23,23,23,0.10);
+  --shadow-small:   0 4px 6px -1px rgba(23,23,23,0.06),
+                    0 2px 4px -2px rgba(23,23,23,0.06);
+  --shadow-medium:  0 10px 15px -3px rgba(23,23,23,0.07),
+                    0 4px 6px -2px rgba(0,0,0,0.07);
+  --shadow-large:   0 16px 24px -6px rgba(23,23,23,0.08),
+                    0 6px 10px -4px rgba(23,23,23,0.08);
+  --shadow-xlarge:  0 24px 38px -10px rgba(23,23,23,0.12),
+                    0 10px 15px -5px rgba(23,23,23,0.10);
+
+  /* ============================================================
+     SPACING + RADIUS
+     -------------------------------------------------------------
+     Wanted leans on 4-px grid with strong 8/12/16/24/32 cadence.
+     ============================================================ */
+  --space-2:  2px;
+  --space-4:  4px;
+  --space-6:  6px;
+  --space-8:  8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-96: 96px;
+  --space-128: 128px;
+
+  --radius-2:  2px;
+  --radius-4:  4px;
+  --radius-6:  6px;
+  --radius-8:  8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-20: 20px;
+  --radius-24: 24px;
+  --radius-32: 32px;
+  --radius-full: 9999px;
+
+  /* ============================================================
+     TYPE SCALE — 18 named styles in 7 tiers
+     Values straight from the Typography page.
+     ============================================================ */
+  --type-display1-size: 56px; --type-display1-lh: 72px; --type-display1-ls: -0.0319em; --type-display1-weight: 700;
+  --type-display2-size: 40px; --type-display2-lh: 52px; --type-display2-ls: -0.0282em; --type-display2-weight: 700;
+  --type-display3-size: 36px; --type-display3-lh: 48px; --type-display3-ls: -0.0270em; --type-display3-weight: 700;
+
+  --type-title1-size:   32px; --type-title1-lh:   44px; --type-title1-ls:   -0.0253em; --type-title1-weight:   700;
+  --type-title2-size:   28px; --type-title2-lh:   38px; --type-title2-ls:   -0.0236em; --type-title2-weight:   700;
+  --type-title3-size:   24px; --type-title3-lh:   32px; --type-title3-ls:   -0.0230em; --type-title3-weight:   700;
+
+  --type-heading1-size: 22px; --type-heading1-lh: 30px; --type-heading1-ls: -0.0194em; --type-heading1-weight: 700;
+  --type-heading2-size: 20px; --type-heading2-lh: 28px; --type-heading2-ls: -0.0120em; --type-heading2-weight: 700;
+
+  --type-headline1-size:18px; --type-headline1-lh:26px; --type-headline1-ls:-0.0020em; --type-headline1-weight:600;
+  --type-headline2-size:17px; --type-headline2-lh:24px; --type-headline2-ls:0em;        --type-headline2-weight:600;
+
+  --type-body1n-size:   16px; --type-body1n-lh:   24px; --type-body1n-ls:   0.0057em;  --type-body1n-weight:   500;
+  --type-body1r-size:   16px; --type-body1r-lh:   26px; --type-body1r-ls:   0.0057em;  --type-body1r-weight:   500;
+  --type-body2n-size:   15px; --type-body2n-lh:   22px; --type-body2n-ls:   0.0096em;  --type-body2n-weight:   500;
+  --type-body2r-size:   15px; --type-body2r-lh:   24px; --type-body2r-ls:   0.0096em;  --type-body2r-weight:   500;
+
+  --type-label1n-size:  14px; --type-label1n-lh:  20px; --type-label1n-ls:  0.0145em;  --type-label1n-weight:  500;
+  --type-label1r-size:  14px; --type-label1r-lh:  22px; --type-label1r-ls:  0.0145em;  --type-label1r-weight:  500;
+  --type-label2-size:   13px; --type-label2-lh:   18px; --type-label2-ls:   0.0194em;  --type-label2-weight:   500;
+
+  --type-caption1-size: 12px; --type-caption1-lh: 16px; --type-caption1-ls: 0.0252em;  --type-caption1-weight: 500;
+  --type-caption2-size: 11px; --type-caption2-lh: 14px; --type-caption2-ls: 0.0311em;  --type-caption2-weight: 500;
+}
+
+/* ============================================================
+   TYPE CLASS HELPERS
+   Apply directly: <h1 class="t-display1">...</h1>
+   ============================================================ */
+.t-display1, .t-display2, .t-display3,
+.t-title1,   .t-title2,   .t-title3,
+.t-heading1, .t-heading2,
+.t-headline1,.t-headline2,
+.t-body1n,   .t-body1r,   .t-body2n, .t-body2r,
+.t-label1n,  .t-label1r,  .t-label2,
+.t-caption1, .t-caption2 {
+  font-family: var(--font-sans);
+  margin: 0;
+  color: var(--label-normal);
+  font-feature-settings: "ss06", "calt";
+}
+
+.t-display1 { font-size: var(--type-display1-size); line-height: var(--type-display1-lh); letter-spacing: var(--type-display1-ls); font-weight: var(--type-display1-weight); }
+.t-display2 { font-size: var(--type-display2-size); line-height: var(--type-display2-lh); letter-spacing: var(--type-display2-ls); font-weight: var(--type-display2-weight); }
+.t-display3 { font-size: var(--type-display3-size); line-height: var(--type-display3-lh); letter-spacing: var(--type-display3-ls); font-weight: var(--type-display3-weight); }
+.t-title1   { font-size: var(--type-title1-size);   line-height: var(--type-title1-lh);   letter-spacing: var(--type-title1-ls);   font-weight: var(--type-title1-weight);   }
+.t-title2   { font-size: var(--type-title2-size);   line-height: var(--type-title2-lh);   letter-spacing: var(--type-title2-ls);   font-weight: var(--type-title2-weight);   }
+.t-title3   { font-size: var(--type-title3-size);   line-height: var(--type-title3-lh);   letter-spacing: var(--type-title3-ls);   font-weight: var(--type-title3-weight);   }
+.t-heading1 { font-size: var(--type-heading1-size); line-height: var(--type-heading1-lh); letter-spacing: var(--type-heading1-ls); font-weight: var(--type-heading1-weight); }
+.t-heading2 { font-size: var(--type-heading2-size); line-height: var(--type-heading2-lh); letter-spacing: var(--type-heading2-ls); font-weight: var(--type-heading2-weight); }
+.t-headline1{ font-size: var(--type-headline1-size);line-height: var(--type-headline1-lh);letter-spacing: var(--type-headline1-ls);font-weight: var(--type-headline1-weight); }
+.t-headline2{ font-size: var(--type-headline2-size);line-height: var(--type-headline2-lh);letter-spacing: var(--type-headline2-ls);font-weight: var(--type-headline2-weight); }
+.t-body1n   { font-size: var(--type-body1n-size);   line-height: var(--type-body1n-lh);   letter-spacing: var(--type-body1n-ls);   font-weight: var(--type-body1n-weight);   }
+.t-body1r   { font-size: var(--type-body1r-size);   line-height: var(--type-body1r-lh);   letter-spacing: var(--type-body1r-ls);   font-weight: var(--type-body1r-weight);   }
+.t-body2n   { font-size: var(--type-body2n-size);   line-height: var(--type-body2n-lh);   letter-spacing: var(--type-body2n-ls);   font-weight: var(--type-body2n-weight);   }
+.t-body2r   { font-size: var(--type-body2r-size);   line-height: var(--type-body2r-lh);   letter-spacing: var(--type-body2r-ls);   font-weight: var(--type-body2r-weight);   }
+.t-label1n  { font-size: var(--type-label1n-size);  line-height: var(--type-label1n-lh);  letter-spacing: var(--type-label1n-ls);  font-weight: var(--type-label1n-weight);  }
+.t-label1r  { font-size: var(--type-label1r-size);  line-height: var(--type-label1r-lh);  letter-spacing: var(--type-label1r-ls);  font-weight: var(--type-label1r-weight);  }
+.t-label2   { font-size: var(--type-label2-size);   line-height: var(--type-label2-lh);   letter-spacing: var(--type-label2-ls);   font-weight: var(--type-label2-weight);   }
+.t-caption1 { font-size: var(--type-caption1-size); line-height: var(--type-caption1-lh); letter-spacing: var(--type-caption1-ls); font-weight: var(--type-caption1-weight); }
+.t-caption2 { font-size: var(--type-caption2-size); line-height: var(--type-caption2-lh); letter-spacing: var(--type-caption2-ls); font-weight: var(--type-caption2-weight); }
+
+/* ============================================================
+   ELEMENT DEFAULTS
+   ============================================================ */
+html, body {
+  font-family: var(--font-sans);
+  color: var(--label-normal);
+  background: var(--bg-normal);
+  -webkit-font-smoothing: antialiased;
+}
+h1 { font-size: var(--type-title1-size); line-height: var(--type-title1-lh); letter-spacing: var(--type-title1-ls); font-weight: 700; margin: 0; }
+h2 { font-size: var(--type-title3-size); line-height: var(--type-title3-lh); letter-spacing: var(--type-title3-ls); font-weight: 700; margin: 0; }
+h3 { font-size: var(--type-heading1-size); line-height: var(--type-heading1-lh); letter-spacing: var(--type-heading1-ls); font-weight: 700; margin: 0; }
+h4 { font-size: var(--type-headline1-size); line-height: var(--type-headline1-lh); letter-spacing: var(--type-headline1-ls); font-weight: 600; margin: 0; }
+p  { font-size: var(--type-body1n-size); line-height: var(--type-body1n-lh); letter-spacing: var(--type-body1n-ls); font-weight: 500; margin: 0; color: var(--label-neutral); }
+small { font-size: var(--type-label2-size); line-height: var(--type-label2-lh); letter-spacing: var(--type-label2-ls); }
+code, pre { font-family: var(--font-mono); }
+a { color: var(--primary-normal); text-decoration: none; }
+a:hover { text-decoration: underline; }

@@ -12,7 +12,7 @@ import {
   addFromSearch, removeItem, updateDoseAmount,
   addSlot, removeSlot, setSlotTime,
   setStartDate, setEndDate,
-  setMemo, reset,
+  setMemo, setSymptom, reset,
 } from '@/store/slices/prescriptionFlowSlice';
 import { useRegisterPrescriptionMutation } from '@/store/slices/prescriptionApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
@@ -40,7 +40,7 @@ function buildRegisterPayload(
   prescribedAt: string, imageKey: string | null,
   items: DrugListItem[], prescriptionSlots: PrescriptionSlotDraft[],
   startDate: string, endDate: string, careGroupId: number,
-  label: string | null, memo: string | null,
+  label: string | null, memo: string | null, symptom: string | null,
 ): RegisterPrescriptionInput {
   const today = new Date().toISOString().slice(0, 10);
   return {
@@ -48,6 +48,7 @@ function buildRegisterPayload(
     imageKey: imageKey ?? null,
     label: label || null,
     memo: memo || null,
+    symptom: symptom || null,
     items: items.map(item => ({
       kdCode: item.kdCode, nameRaw: item.nameRaw, doseAmount: item.doseAmount,
       doseUnit: item.doseUnit, frequency: item.frequency, durationDays: item.durationDays,
@@ -84,7 +85,7 @@ const TOD_OPTIONS: PrescriptionTimeOfDay[] = ['MORNING', 'NOON', 'EVENING'];
 
 export default function PrescriptionReviewScreen() {
   const dispatch = useAppDispatch();
-  const { items, prescriptionSlots, prescribedAt, startDate, endDate, imageKey, memo } =
+  const { items, prescriptionSlots, prescribedAt, startDate, endDate, imageKey, memo, symptom } =
     useAppSelector((s: RootState) => s.prescriptionFlow);
   const [label, setLabel] = useState('');
 
@@ -178,7 +179,7 @@ export default function PrescriptionReviewScreen() {
     }
     try {
       const result = await registerPrescription(
-        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!, label || null, memo || null),
+        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!, label || null, memo || null, symptom || null),
       ).unwrap();
       const warnings = result.warnings ?? [];
       if (warnings.length > 0) {
@@ -251,6 +252,17 @@ export default function PrescriptionReviewScreen() {
             multiline
             textAlignVertical="top"
             accessibilityLabel="메모 입력"
+          />
+          <View style={styles.inputDivider} />
+          <TextInput
+            style={styles.symptomInput}
+            placeholder="진단·증상·병명 (선택)"
+            placeholderTextColor={colors.labelAssistive}
+            value={symptom}
+            onChangeText={(t) => dispatch(setSymptom(t))}
+            maxLength={200}
+            returnKeyType="done"
+            accessibilityLabel="증상·병명 입력"
           />
         </View>
 
@@ -664,5 +676,9 @@ const styles = StyleSheet.create({
   memoInput: {
     ...typography.body2r, color: colors.labelNormal,
     paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(64),
+  },
+  symptomInput: {
+    ...typography.body2r, color: colors.labelNormal,
+    paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(44),
   },
 });

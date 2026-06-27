@@ -20,6 +20,7 @@ from app.rag.ocr.drug_search import (
     PgVectorDrugSearch,
 )
 from app.rag.health_report.service import HealthReportService
+from app.rag.prescription_recommendation.service import PrescriptionRecommendationService
 from app.rag.ocr.image_fetcher import HttpxImageFetcher
 from app.rag.ocr.matcher import DrugMatcher
 from app.rag.ocr.service import OcrPrescriptionService
@@ -49,10 +50,14 @@ async def lifespan(app: FastAPI):
 
     ocr_service = _build_ocr_service(pool=pool, retriever=retriever, settings=settings)
     health_report_service = HealthReportService(llm=_GeminiLlmRunner(llm=llm))
+    recommendation_service = PrescriptionRecommendationService(llm=_GeminiLlmRunner(llm=llm))
 
     app.dependency_overrides[chat_api.get_chat_service] = lambda: service
     app.dependency_overrides[ocr_api.get_ocr_service] = lambda: ocr_service
     app.dependency_overrides[analyze_api.get_health_report_service] = lambda: health_report_service
+    app.dependency_overrides[analyze_api.get_prescription_recommendation_service] = (
+        lambda: recommendation_service
+    )
     try:
         yield
     finally:

@@ -12,12 +12,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { reset, removeItem } from '@/store/slices/prescriptionFlowSlice';
 import { safeBack } from '@/lib/router/safeBack';
 
-const RECENT = [
-  { date: '11.10', title: '정형외과 처방', drugCount: 2 },
-  { date: '11.05', title: '안과 점안액',   drugCount: 1 },
-  { date: '10.18', title: '감기 증상 처방', drugCount: 3 },
-];
-
 export default function PrescriptionRegisterHub() {
   const dispatch = useAppDispatch();
   const selectedItems = useAppSelector(s => s.prescriptionFlow.items);
@@ -159,16 +153,6 @@ export default function PrescriptionRegisterHub() {
             <Text key={tip} style={styles.tipItem}>· {tip}</Text>
           ))}
         </View>
-
-        {/* 최근 등록 */}
-        <Text style={styles.recentTitle}>최근 등록</Text>
-        {RECENT.map((r) => (
-          <View key={r.date} style={styles.recentItem}>
-            <Text style={styles.recentDate}>{r.date}</Text>
-            <Text style={styles.recentName}>{r.title}</Text>
-            <Text style={styles.recentCount}>약 {r.drugCount}개</Text>
-          </View>
-        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -220,15 +204,6 @@ const styles = StyleSheet.create({
   tipCard: { backgroundColor: colors.bgAlt, borderRadius: radius.r12, padding: space.s16, gap: space.s8, borderWidth: 1, borderColor: colors.line },
   tipTitle: { ...typography.label1n, color: colors.labelNeutral, fontWeight: '700' },
   tipItem: { ...typography.body2r, color: colors.labelAlternative },
-  recentTitle: { ...typography.label2, color: colors.labelAlternative, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: space.s8 },
-  recentItem: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s12,
-    borderWidth: 1, borderColor: colors.line, gap: space.s8,
-  },
-  recentDate: { ...typography.caption1, color: colors.labelAlternative, width: scale(40) },
-  recentName: { ...typography.body2n, color: colors.labelNormal, flex: 1, fontWeight: '600' },
-  recentCount: { ...typography.caption1, color: colors.labelAlternative },
   searchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: space.s10,
     backgroundColor: colors.bgNormal, borderRadius: radius.r12, padding: space.s16,

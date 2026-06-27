@@ -1,0 +1,1 @@
+ALTER TABLE prescriptions ADD COLUMN symptom VARCHAR(200) NULL;

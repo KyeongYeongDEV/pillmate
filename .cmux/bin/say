@@ -9,7 +9,7 @@ RUNTIME="$SCRIPT_DIR/../.runtime/cmux.env"
 source "$RUNTIME"
 
 role="${1:-}"; message="${2:-}"
-[[ -z "$role" || -z "$message" ]] && { echo "Usage: say <be|fe|dev|qa-claude|qa-gemini> \"message\"" >&2; exit 1; }
+[[ -z "$role" || -z "$message" ]] && { echo "Usage: say <be|fe|dev|qa-claude|qa-gemini|reviewer|researcher> \"message\"" >&2; exit 1; }
 
 DB_SAFETY="[DB 데이터 삭제 절대 금지 — DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는) X. 사용자 명시 동의 + spec 명시 시만 예외. 룰: .claude/rules/common/db-safety.md] "
 prefix=""
@@ -24,6 +24,15 @@ case "$role" in
                 prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25 참조. .cmux/prompts/qa-claude.md 룰 따름.] " ;;
   qa-gemini)    target="$QA_GEMINI_SURFACE"
                 prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25(drug_embeddings 4736건 삭제)에서 정책 재확립. GEMINI.md + .cmux/prompts/qa-gemini.md 룰 절대 따름. 발견은 보고만, 수정 X.] " ;;
+  reviewer)     target="${REVIEWER_SURFACE:-}"
+                [[ -z "$target" ]] && { echo "✗ REVIEWER_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
+                prefix="${DB_SAFETY}[READ-ONLY Reviewer. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 도구 호출 X. .cmux/prompts/reviewer.md 룰 따름. SOLID/clean-code/db-safety/medical-safety/외부-비동기 9개 체크리스트 line 단위 P0/P1/P2 리포트.] " ;;
+  researcher)   target="${RESEARCHER_SURFACE:-}"
+                [[ -z "$target" ]] && { echo "✗ RESEARCHER_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
+                prefix="${DB_SAFETY}[READ-ONLY Researcher. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 도구 호출 X. .claude/agents/researcher.md 룰 따름. 출력: 4섹션 markdown(영향 파일/컨벤션/깨질 caller/선례). spec 작성·결정·구현 X.] " ;;
+  adv|adversarial) target="${ADVERSARIAL_SURFACE:-}"
+                [[ -z "$target" ]] && { echo "✗ ADVERSARIAL_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
+                prefix="${DB_SAFETY}[READ-ONLY Adversarial-QA. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 호출 X. .cmux/prompts/adversarial.md 룰 따름. '어떻게 깨지나/우회되나'를 구체 시나리오로 사냥, 의료안전 우선. P0/P1/P2 + 마지막줄 ADV_<TASK>_PASS|FAIL.] " ;;
   *)            echo "✗ unknown role: $role" >&2; exit 1 ;;
 esac
 

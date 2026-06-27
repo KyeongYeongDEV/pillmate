@@ -16,17 +16,34 @@ import {
   useUpdateScheduleTimeMutation,
   useAddPrescriptionSlotMutation,
   useRemovePrescriptionSlotMutation,
+  useUpdatePrescriptionPeriodMutation,
 } from '@/store/slices/scheduleApi';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
+import InsightCard from '@/components/home/InsightCard';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { safeBack } from '@/lib/router/safeBack';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
-import type { PrescriptionDetailView } from '@/types/prescription';
+import type { PrescriptionDetailView, NutrientNote } from '@/types/prescription';
 import type { SlotEditView, TimeOfDay } from '@/types/schedule';
 
 const PERIOD_ENDED_CODES = ['PILL_032', 'PILL_035'];
 const TOAST_DURATION_MS = 2500;
+
+const PERIOD_QUICK_OPTIONS = [
+  { label: '+7일',  days: 7  },
+  { label: '+30일', days: 30 },
+  { label: '+90일', days: 90 },
+];
+
+function addDaysToEndDate(currentEnd: string | null | undefined, days: number): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = currentEnd ? new Date(currentEnd + 'T00:00:00') : null;
+  const base = end && end >= today ? new Date(end) : new Date(today);
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
+}
 
 const TIME_OF_DAY_LABEL: Record<string, string> = {
   MORNING: '아침',
@@ -57,9 +74,11 @@ export default function PrescriptionDetailScreen() {
   const [removeSlot]       = useRemovePrescriptionSlotMutation();
   const [updatePresc]      = useUpdatePrescriptionMutation();
   const [deletePresc, { isLoading: deleteLoading }] = useDeletePrescriptionMutation();
+  const [updatePeriod]     = useUpdatePrescriptionPeriodMutation();
 
-  const [pickerSlot,    setPickerSlot]    = useState<SlotEditView | null>(null);
-  const [addTodVisible, setAddTodVisible] = useState(false);
+  const [pickerSlot,       setPickerSlot]       = useState<SlotEditView | null>(null);
+  const [addTodVisible,    setAddTodVisible]    = useState(false);
+  const [periodSheetVisible, setPeriodSheetVisible] = useState(false);
   const [addPickerTod,  setAddPickerTod]  = useState<TimeOfDay | null>(null);
   const [memoEditing,   setMemoEditing]   = useState(false);
   const [memoText,      setMemoText]      = useState('');
@@ -173,6 +192,19 @@ export default function PrescriptionDetailScreen() {
 
   const handleLabelCancel = useCallback(() => setLabelEditing(false), []);
 
+  const handlePeriodUpdate = useCallback(async (days: number) => {
+    setPeriodSheetVisible(false);
+    const endDate = addDaysToEndDate(data?.periodEnd, days);
+    try {
+      await updatePeriod({ prescriptionId, endDate }).unwrap();
+      refetch();
+      refetchSlots();
+      showToast('복약 기간이 수정됐어요');
+    } catch {
+      Alert.alert('오류', '기간 수정에 실패했습니다. 다시 시도해 주세요.');
+    }
+  }, [data?.periodEnd, updatePeriod, prescriptionId, refetch, refetchSlots, showToast]);
+
   const handleDelete = useCallback(() => {
     Alert.alert(
       '약봉투 삭제',
@@ -241,6 +273,35 @@ export default function PrescriptionDetailScreen() {
         onClose={() => setAddPickerTod(null)}
       />
 
+      <Modal
+        visible={periodSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPeriodSheetVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setPeriodSheetVisible(false)} accessibilityLabel="닫기" />
+        <View style={styles.periodSheet}>
+          <Text style={styles.periodSheetTitle}>복약 기간 수정</Text>
+          <Text style={styles.periodSheetHint}>
+            영양제처럼 계속 드시는 약은{'\n'}종료일을 길게 잡으세요
+          </Text>
+          {PERIOD_QUICK_OPTIONS.map(({ label, days }) => (
+            <Pressable
+              key={days}
+              style={styles.periodOption}
+              onPress={() => handlePeriodUpdate(days)}
+              accessibilityLabel={`${label} 연장`}
+              accessibilityRole="button"
+            >
+              <Text style={styles.periodOptionTxt}>{label} 연장</Text>
+            </Pressable>
+          ))}
+          <Pressable style={styles.todCancelBtn} onPress={() => setPeriodSheetVisible(false)} accessibilityRole="button">
+            <Text style={styles.todCancelTxt}>취소</Text>
+          </Pressable>
+        </View>
+      </Modal>
+
       {toastVisible && (
         <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
           <Text style={styles.toastTxt}>{toastMsg}</Text>
@@ -266,7 +327,28 @@ export default function PrescriptionDetailScreen() {
           onCancel={handleLabelCancel}
         />
 
-        <DetailInfoCard data={data} />
+        <DetailInfoCard data={data} onEditPeriod={() => setPeriodSheetVisible(true)} />
+
+        {data.symptom ? (
+          <View style={styles.symptomRow}>
+            <Text style={styles.symptomLabel}>진단·증상</Text>
+            <Text style={styles.symptomTxt}>{data.symptom}</Text>
+          </View>
+        ) : null}
+
+        {data.insights && data.insights.length > 0 && (
+          <View style={styles.insightWrap}>
+            <Text style={styles.sectionLabel}>AI 인사이트</Text>
+            {data.insights.map(item => (
+              <InsightCard
+                key={item.id}
+                severity={item.severity}
+                message={item.title}
+                detail={item.description}
+              />
+            ))}
+          </View>
+        )}
 
         <PrescriptionImage url={data.imageUrl} onRefresh={refetch} />
 
@@ -298,6 +380,13 @@ export default function PrescriptionDetailScreen() {
           {data.drugs.length === 0 && <Text style={styles.empty}>등록된 약이 없습니다.</Text>}
         </View>
 
+        {data.nutrientNotes && data.nutrientNotes.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>영양소 · 주의</Text>
+            <NutrientSection notes={data.nutrientNotes} />
+          </>
+        )}
+
         <Pressable
           style={({ pressed }) => [styles.rxDeleteBtn, pressed && styles.rxDeleteBtnPressed]}
           onPress={handleDelete}
@@ -316,7 +405,7 @@ export default function PrescriptionDetailScreen() {
 
 // ── Detail info card (optional fields from BE) ─────────────────────────────
 
-function DetailInfoCard({ data }: { data: PrescriptionDetailView }) {
+function DetailInfoCard({ data, onEditPeriod }: { data: PrescriptionDetailView; onEditPeriod: () => void }) {
   const hasInfo = !!(data.status || data.periodStart || data.progressRate != null);
   if (!hasInfo) return null;
 
@@ -328,10 +417,16 @@ function DetailInfoCard({ data }: { data: PrescriptionDetailView }) {
         <StatusChip status={status} />
       </View>
       {(data.periodStart || data.daysRemaining != null || data.adherenceRate != null) && (
-        <View style={styles.infoPeriodRow}>
+        <Pressable
+          style={styles.infoPeriodRow}
+          onPress={onEditPeriod}
+          accessibilityLabel="복약 기간 수정"
+          accessibilityRole="button"
+        >
           <Text style={styles.infoPeriodTxt} numberOfLines={1}>{buildPeriodText(data)}</Text>
+          <Feather name="edit-2" size={scale(12)} color={colors.labelAssistive} />
           <DayBadge data={data} />
-        </View>
+        </Pressable>
       )}
       {data.progressRate != null && <ProgressBar rate={data.progressRate} />}
     </View>
@@ -670,6 +765,27 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
   );
 }
 
+// ── Nutrient section ────────────────────────────────────────────────────────
+
+function NutrientSection({ notes }: { notes: NutrientNote[] }) {
+  return (
+    <View style={styles.nutrientCard}>
+      {notes.map((note, i) => (
+        <View key={i} style={[styles.nutrientItem, i > 0 && styles.nutrientBorderTop]}>
+          <Text style={styles.nutrientName}>{note.nutrientName}</Text>
+          <Text style={styles.nutrientAdvice}>{note.advice}</Text>
+          <Text style={styles.nutrientSource}>출처: {note.source}</Text>
+        </View>
+      ))}
+      <View style={styles.nutrientDisclaimer}>
+        <Text style={styles.nutrientDisclaimerTxt}>
+          일반 정보예요. 보충 전 약사·의사와 상담하세요.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 // ── Header / Error ──────────────────────────────────────────────────────────
 
 function Header() {
@@ -892,4 +1008,55 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
   },
   toastTxt: { ...typography.label2, color: colors.bgNormal, fontWeight: '600', textAlign: 'center' },
+
+  // Symptom row
+  symptomRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: space.s8,
+    backgroundColor: colors.bgNormal, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: colors.line,
+    paddingHorizontal: space.s14, paddingVertical: space.s10,
+  },
+  symptomLabel: { fontSize: scale(12), fontWeight: '700', color: colors.labelAlternative, paddingTop: 1 },
+  symptomTxt: { flex: 1, fontSize: scale(13), color: colors.labelNormal, lineHeight: scale(18) },
+
+  // AI insight
+  insightWrap: { gap: space.s8 },
+
+  // Nutrient section
+  nutrientCard: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, overflow: 'hidden', ...shadows.small,
+  },
+  nutrientItem: { paddingHorizontal: space.s16, paddingVertical: space.s14, gap: space.s4 },
+  nutrientBorderTop: { borderTopWidth: 1, borderTopColor: colors.line },
+  nutrientName: { fontSize: scale(14), fontWeight: '700', color: colors.labelNormal },
+  nutrientAdvice: { fontSize: scale(13), color: colors.labelAlternative, lineHeight: scale(18) },
+  nutrientSource: { fontSize: scale(11), color: colors.labelAssistive },
+  nutrientDisclaimer: {
+    borderTopWidth: 1, borderTopColor: colors.line,
+    backgroundColor: '#F0F7FF', paddingHorizontal: space.s16, paddingVertical: space.s10,
+  },
+  nutrientDisclaimerTxt: {
+    fontSize: scale(11), color: colors.labelAlternative, textAlign: 'center', lineHeight: scale(16),
+  },
+
+  // Period sheet
+  periodSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: colors.bgNormal,
+    borderTopLeftRadius: radius.r20, borderTopRightRadius: radius.r20,
+    paddingTop: space.s24, paddingBottom: space.s40, paddingHorizontal: space.s24, gap: space.s4,
+  },
+  periodSheetTitle: {
+    fontSize: scale(17), fontWeight: '700', color: colors.labelNormal,
+    textAlign: 'center', marginBottom: space.s4,
+  },
+  periodSheetHint: {
+    fontSize: scale(12), color: colors.labelAlternative,
+    textAlign: 'center', lineHeight: scale(18), marginBottom: space.s8,
+  },
+  periodOption: {
+    paddingVertical: space.s16, borderBottomWidth: 1, borderBottomColor: colors.line, alignItems: 'center',
+  },
+  periodOptionTxt: { fontSize: scale(15), fontWeight: '600', color: colors.primaryNormal },
 });

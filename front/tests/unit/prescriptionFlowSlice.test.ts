@@ -10,6 +10,7 @@ import prescriptionFlowReducer, {
   setSlotTime,
   setStartDate,
   setEndDate,
+  updateSlotCustomTime,
   reset,
 } from '../../src/store/slices/prescriptionFlowSlice';
 import type { OcrItem, InteractionWarning, OcrExtractItem } from '../../src/types/prescription';
@@ -28,6 +29,7 @@ const initialState = {
   endDate: '',
   imageKey: null,
   memo: '',
+  symptom: '',
   prescriptionId: null,
   ocrStatus: null,
   warnings: [],
@@ -241,6 +243,16 @@ describe('prescriptionFlowSlice', () => {
         uid: 'nonexistent', customTime: '07:00:00',
       }));
       expect(state.prescriptionSlots).toHaveLength(3);
+    });
+
+    it('updateSlotCustomTime updates customTime by timeOfDay', () => {
+      const state = prescriptionFlowReducer(initialState, updateSlotCustomTime({
+        timeOfDay: 'EVENING', customTime: '20:30:00',
+      }));
+      const evening = state.prescriptionSlots.find(s => s.timeOfDay === 'EVENING');
+      expect(evening?.customTime).toBe('20:30:00');
+      const morning = state.prescriptionSlots.find(s => s.timeOfDay === 'MORNING');
+      expect(morning?.customTime).toBe('08:00:00');
     });
   });
 

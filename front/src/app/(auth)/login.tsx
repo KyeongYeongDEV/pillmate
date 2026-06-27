@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ActivityIndicator,
-  Animated, SafeAreaView, Linking,
+  Animated, Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useKakaoLoginMutation, useExchangeKakaoCodeMutation } from '@/store/slices/authApi';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
@@ -85,7 +86,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.content}>
         {/* Logo area */}
         <View style={styles.logoArea}>

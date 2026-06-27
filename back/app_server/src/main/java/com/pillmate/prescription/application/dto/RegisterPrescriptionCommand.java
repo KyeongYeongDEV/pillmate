@@ -10,16 +10,17 @@ public record RegisterPrescriptionCommand(
         List<DrugItem> items,
         ScheduleSpec scheduleSpec,
         String label,
-        String memo
+        String memo,
+        String symptom
 ) {
     public RegisterPrescriptionCommand(Long patientId, LocalDate prescribedAt,
                                        String imageKey, List<DrugItem> items) {
-        this(patientId, prescribedAt, imageKey, items, null, null, null);
+        this(patientId, prescribedAt, imageKey, items, null, null, null, null);
     }
 
     public RegisterPrescriptionCommand(Long patientId, LocalDate prescribedAt,
                                        String imageKey, List<DrugItem> items,
                                        ScheduleSpec scheduleSpec) {
-        this(patientId, prescribedAt, imageKey, items, scheduleSpec, null, null);
+        this(patientId, prescribedAt, imageKey, items, scheduleSpec, null, null, null);
     }
 }

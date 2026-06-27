@@ -10,6 +10,8 @@ import { colors, typography, space, radius, shadows, scale } from '@/styles/toke
 import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
+import { useGetLatestWithInsightQuery } from '@/store/slices/prescriptionApi';
+import { buildInsightSubtitle } from '@/lib/prescriptionInsight';
 import { useSlotPress } from '@/hooks/useSlotPress';
 import type { RootState } from '@/store';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
@@ -41,6 +43,9 @@ export default function HomeScreen() {
       pinnedGroupId != null ? { groupId: pinnedGroupId } : skipToken,
       { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
     );
+
+  const { data: latestInsight } = useGetLatestWithInsightQuery();
+  const insight = latestInsight?.insights?.[0] ?? null;
 
   const { data: scheduleDay } = useGetDayScheduleQuery(today);
   const rawSlots = scheduleDay?.slots ?? [];
@@ -122,16 +127,20 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* AI 인사이트 */}
-        {showInsight && (
+        {/* AI 인사이트 — BE insight 있을 때만 노출 (없거나 실패 시 숨김) */}
+        {showInsight && insight && latestInsight && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>AI 인사이트</Text>
             <InsightCard
-              severity="WARN"
-              message="저녁약을 3일째 빠뜨렸어요"
-              detail="메트포르민을 거르면 혈당 조절이 어려워질 수 있어요. 저녁 식사 후 바로 복용하는 습관을 들여보세요."
+              severity={insight.severity}
+              message={insight.title}
+              detail={insight.description}
+              subtitle={buildInsightSubtitle(latestInsight.prescribedAt, latestInsight.drugCount)}
               onClose={() => setShowInsight(false)}
-              onDetail={() => router.push('/report' as any)}
+              onDetail={() => router.push({
+                pathname: '/prescription/[id]',
+                params: { id: String(latestInsight.prescriptionId) },
+              } as any)}
             />
           </View>
         )}

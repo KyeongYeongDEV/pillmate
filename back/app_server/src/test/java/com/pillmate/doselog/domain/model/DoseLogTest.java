@@ -211,6 +211,28 @@ class DoseLogTest {
         assertThat(todayLog.isEditableOn(now)).isTrue();
     }
 
+    @Test
+    @DisplayName("cancelForPeriodChange() — PENDING → SKIPPED(기간 변경), skipReason 설정")
+    void cancelForPeriodChange_pending_becomesSkipped() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+
+        log.cancelForPeriodChange();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.SKIPPED);
+        assertThat(log.getSkipReason()).isEqualTo("기간 변경");
+    }
+
+    @Test
+    @DisplayName("cancelForPeriodChange() — TAKEN 은 no-op (복용 완료 기록 보존)")
+    void cancelForPeriodChange_taken_isNoOp() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+
+        log.cancelForPeriodChange();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.TAKEN);
+    }
+
     private Clock kstClock(String utcInstant) {
         return Clock.fixed(Instant.parse(utcInstant), ZoneId.of("Asia/Seoul"));
     }

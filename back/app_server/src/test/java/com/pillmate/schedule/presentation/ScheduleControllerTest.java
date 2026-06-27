@@ -10,21 +10,30 @@ import com.pillmate.schedule.application.GetMonthScheduleUseCase;
 import com.pillmate.schedule.application.GetPrescriptionSlotsUseCase;
 import com.pillmate.schedule.application.ListSchedulesUseCase;
 import com.pillmate.schedule.application.RemovePrescriptionSlotUseCase;
+import com.pillmate.schedule.application.UpdatePrescriptionPeriodUseCase;
 import com.pillmate.schedule.application.UpdateScheduleUseCase;
 import com.pillmate.schedule.application.dto.SlotEditView;
 import com.pillmate.schedule.domain.model.TimeOfDay;
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -43,6 +52,7 @@ class ScheduleControllerTest {
     @MockitoBean AddPrescriptionSlotUseCase addPrescriptionSlotUseCase;
     @MockitoBean RemovePrescriptionSlotUseCase removePrescriptionSlotUseCase;
     @MockitoBean GetPrescriptionSlotsUseCase getPrescriptionSlotsUseCase;
+    @MockitoBean UpdatePrescriptionPeriodUseCase updatePrescriptionPeriodUseCase;
 
     @Test
     @DisplayName("GET /schedules/prescriptions/{id}/slots → 200 + SlotEditView 목록")
@@ -87,5 +97,31 @@ class ScheduleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    @DisplayName("PATCH /schedules/prescriptions/{id}/period → 200")
+    void updatePrescriptionPeriod_validRequest_returns200() throws Exception {
+        willDoNothing().given(updatePrescriptionPeriodUseCase).update(eq(10L), any());
+
+        mockMvc.perform(patch("/schedules/prescriptions/10/period")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"endDate\":\"2026-08-01\"}")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /schedules/prescriptions/{id}/period 타인 처방전 → 403")
+    void updatePrescriptionPeriod_otherPatient_returns403() throws Exception {
+        willThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
+                .given(updatePrescriptionPeriodUseCase).update(eq(10L), any());
+
+        mockMvc.perform(patch("/schedules/prescriptions/10/period")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"endDate\":\"2026-08-01\"}")
+                        .header("X-User-Id", "99"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
     }
 }

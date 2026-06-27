@@ -1,0 +1,62 @@
+#!/usr/bin/env zsh
+# auto-approve-daemon — 실제 monitor loop (auto-approve start 가 nohup 으로 띄움)
+# 직접 실행 X (auto-approve start 사용). zsh 필요 (declare -A).
+
+set -uo pipefail
+typeset -A LAST_SEEN
+
+SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+RUNTIME_DIR="$SCRIPT_DIR/../.runtime"
+LOG="$RUNTIME_DIR/auto-approve.log"
+ENV_FILE="$RUNTIME_DIR/cmux.env"
+
+[[ -f "$ENV_FILE" ]] || { echo "$(date '+%F %T') ✗ ENV_FILE missing: $ENV_FILE" >> "$LOG"; exit 1; }
+source "$ENV_FILE"
+
+# 위험 패턴 (감지 시 자동 거절 + alert)
+DANGER='DELETE FROM|TRUNCATE TABLE|TRUNCATE [a-zA-Z_]+ *;|DROP TABLE|DROP DATABASE|DROP COLUMN|UPDATE [a-zA-Z_]+ SET [^W]*$|force-push|force push|--force|rm -rf|deleteAll\(\)|--no-verify'
+
+# CONFIRM 패턴 (Claude Code permission prompt + Bash/Edit/Write 등)
+CONFIRM='Do you want to|Do you trust|Allow this|Approve|May I run|Run command|Continue\?|Proceed\?|\(y/n\)|\(Y/n\)|\(yes/no\)|❯ 1\.'
+
+ts() { date '+%Y-%m-%d %H:%M:%S'; }
+
+panels=(
+  "BE-Dev:${BE_DEV_SURFACE:-}"
+  "FE-Dev:${FE_DEV_SURFACE:-}"
+  "QA-Claude:${QA_CLAUDE_SURFACE:-}"
+  "Reviewer:${REVIEWER_SURFACE:-}"
+  "Researcher:${RESEARCHER_SURFACE:-}"
+)
+
+echo "$(ts) ▶ daemon started (PID $$) — monitoring ${#panels[@]} panels @ 3s" >> "$LOG"
+
+while :; do
+  for entry in "${panels[@]}"; do
+    role="${entry%%:*}"
+    surface="${entry#*:}"
+    [[ -z "$surface" ]] && continue
+
+    screen="$(cmux read-screen --workspace "$CMUX_WORKSPACE" --surface "$surface" --lines 40 2>/dev/null || true)"
+    [[ -z "$screen" ]] && continue
+
+    # 동일 화면 반복 응답 방지 (마지막 8줄 hash)
+    hash="$(echo "$screen" | tail -8 | md5)"
+
+    if echo "$screen" | grep -qE "$CONFIRM"; then
+      [[ "${LAST_SEEN[$surface]:-}" == "$hash" ]] && continue
+
+      if echo "$screen" | grep -qE "$DANGER"; then
+        cmux send-panel --workspace "$CMUX_WORKSPACE" --panel "$surface" -- "2"$'\n' 2>/dev/null
+        echo "$(ts) ⛔ $role ($surface) DANGER → rejected (option 2)" >> "$LOG"
+        echo "$screen" | tail -8 | sed 's/^/      /' >> "$LOG"
+      else
+        cmux send-panel --workspace "$CMUX_WORKSPACE" --panel "$surface" -- "1"$'\n' 2>/dev/null
+        echo "$(ts) ✓ $role ($surface) confirm → approved (option 1)" >> "$LOG"
+      fi
+      LAST_SEEN[$surface]="$hash"
+      sleep 2
+    fi
+  done
+  sleep 3
+done

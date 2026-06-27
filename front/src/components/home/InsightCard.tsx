@@ -9,12 +9,13 @@ interface InsightCardProps {
   severity: InsightSeverity;
   message: string;
   detail: string;
+  subtitle?: string;
   onClose?: () => void;
   onDetail?: () => void;
 }
 
 // severity prop kept for API compatibility; visual is uniform per design
-function InsightCard({ message, detail, onClose, onDetail }: InsightCardProps) {
+function InsightCard({ message, detail, subtitle, onClose, onDetail }: InsightCardProps) {
   const handleClose = useCallback(() => onClose?.(), [onClose]);
   const handleDetail = useCallback(() => onDetail?.(), [onDetail]);
 
@@ -28,6 +29,7 @@ function InsightCard({ message, detail, onClose, onDetail }: InsightCardProps) {
       {/* Right: content */}
       <View style={styles.content}>
         <Text style={styles.message}>{message}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         <Text style={styles.detail}>{detail}</Text>
 
         <View style={styles.actions}>
@@ -87,6 +89,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.labelNormal,
     lineHeight: scale(22),
+  },
+  subtitle: {
+    ...typography.caption1,
+    color: colors.labelAlternative,
   },
   detail: {
     fontSize: scale(13),

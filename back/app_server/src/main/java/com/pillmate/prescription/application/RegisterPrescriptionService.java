@@ -54,7 +54,7 @@ public class RegisterPrescriptionService {
 
         Prescription prescription = Prescription.create(
                 command.patientId(), command.imageKey(), command.prescribedAt(),
-                command.label(), command.memo());
+                command.label(), command.memo(), command.symptom());
 
         List<RegisteredDrugItem> registered = appendDrugsAndCollect(prescription, command.items());
         List<PrescribedDrugCandidate> candidates = buildCandidates(command.items(), registered);
