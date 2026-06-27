@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from typing import Protocol
@@ -64,3 +65,37 @@ class RedisOcrResultCache:
             response.model_dump_json(),
             ex=self._ttl,
         )
+
+
+class InFlightRegistry:
+    """동일 image hash 의 동시 OCR 요청을 1회 처리로 합치는 in-process dedupe (cost-aware: Gemini 중복 호출 회피)."""
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self._futures: dict[str, asyncio.Future] = {}
+
+    async def get_or_create(self, key: str) -> tuple[asyncio.Future, bool]:
+        async with self._lock:
+            existing = self._futures.get(key)
+            if existing is not None:
+                return existing, False
+            future = asyncio.get_running_loop().create_future()
+            self._futures[key] = future
+            return future, True
+
+    async def complete(self, key: str, result: PrescriptionOcrResponse) -> None:
+        future = await self._pop(key)
+        if future is not None and not future.done():
+            future.set_result(result)
+
+    async def fail(self, key: str, exc: BaseException) -> None:
+        future = await self._pop(key)
+        if future is not None and not future.done():
+            future.set_exception(exc)
+
+    def in_flight_count(self) -> int:
+        return len(self._futures)
+
+    async def _pop(self, key: str) -> asyncio.Future | None:
+        async with self._lock:
+            return self._futures.pop(key, None)

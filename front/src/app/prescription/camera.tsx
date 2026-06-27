@@ -12,6 +12,8 @@ import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 import CameraGuideOverlay from '@/components/prescription/CameraGuideOverlay';
 import { useCameraGuide } from '@/hooks/useCameraGuide';
+import { useOcrInFlight } from '@/hooks/useOcrInFlight';
+import { downsizeForOcr } from '@/lib/imageProcessing';
 
 const AUTO_SHUTTER_DELAY = 3;
 const OCR_TYPICAL_LOW_SEC  = 20;
@@ -34,15 +36,23 @@ export default function CameraScreen() {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dispatch = useAppDispatch();
   const { hints, allOk, reset, warnShake } = useCameraGuide();
+  const { begin, end, hashImageUri } = useOcrInFlight();
 
   const processImage = useCallback(
     async (uri: string) => {
+      const hash = await hashImageUri(uri);
+      const { allowed, elapsedMs } = begin(hash);
+      if (!allowed) {
+        Alert.alert('이미 인식 중', `이미 인식 중입니다. ${Math.round(elapsedMs / 1000)}초 경과`);
+        return;
+      }
       setLoading(true);
       setOcrError(false);
       try {
+        const processed = await downsizeForOcr(uri);
         const uploadResp = await prescriptionApi.issueUploadUrl({ contentType: 'image/jpeg' });
         dispatch(setImageKey(uploadResp.objectKey));
-        await prescriptionApi.uploadToS3(uploadResp.uploadUrl, uri);
+        await prescriptionApi.uploadToS3(uploadResp.uploadUrl, processed.uri);
         const ocrResp = await prescriptionApi.ocr({
           prescribedAt: new Date().toISOString().slice(0, 10),
           imageKey: uploadResp.objectKey,
@@ -54,9 +64,11 @@ export default function CameraScreen() {
         setLoading(false);
         setOcrError(true);
         reset();
+      } finally {
+        end(hash);
       }
     },
-    [dispatch, reset],
+    [dispatch, reset, begin, end, hashImageUri],
   );
 
   const handleRetry = useCallback(() => {

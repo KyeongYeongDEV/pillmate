@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -9,6 +9,8 @@ import { useAppDispatch } from '@/store/hooks';
 import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
+import { useOcrInFlight } from '@/hooks/useOcrInFlight';
+import { downsizeForOcr } from '@/lib/imageProcessing';
 
 const OCR_TYPICAL_LOW_SEC  = 20;
 const OCR_TYPICAL_HIGH_SEC = 30;
@@ -22,18 +24,26 @@ export default function ScanScreen() {
   const [ocrError, setOcrError] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const dispatch = useAppDispatch();
+  const { begin, end, hashImageUri } = useOcrInFlight();
 
   const processImage = useCallback(
     async (uri: string) => {
+      const hash = await hashImageUri(uri);
+      const { allowed, elapsedMs } = begin(hash);
+      if (!allowed) {
+        Alert.alert('이미 인식 중', `이미 인식 중입니다. ${Math.round(elapsedMs / 1000)}초 경과`);
+        return;
+      }
       setLoading(true);
       setOcrError(false);
       try {
+        const processed = await downsizeForOcr(uri);
         const uploadResp = await prescriptionApi.issueUploadUrl({
           contentType: 'image/jpeg',
         });
         const prescribedAt = new Date().toISOString().slice(0, 10);
         dispatch(setImageKey(uploadResp.objectKey));
-        await prescriptionApi.uploadToS3(uploadResp.uploadUrl, uri);
+        await prescriptionApi.uploadToS3(uploadResp.uploadUrl, processed.uri);
         const extractResp = await prescriptionApi.ocrExtract({
           prescribedAt,
           imageKey: uploadResp.objectKey,
@@ -44,9 +54,11 @@ export default function ScanScreen() {
       } catch {
         setLoading(false);
         setOcrError(true);
+      } finally {
+        end(hash);
       }
     },
-    [dispatch],
+    [dispatch, begin, end, hashImageUri],
   );
 
   const handleRetry = useCallback(() => {

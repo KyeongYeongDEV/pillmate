@@ -14,6 +14,7 @@ from app.domain.ocr import (
     RawOcrItem,
 )
 from app.rag.ocr.cache import (
+    InFlightRegistry,
     NullOcrResultCache,
     OcrResultCache,
     image_hash,
@@ -60,6 +61,7 @@ class OcrPrescriptionService:
         preprocessor: ImagePreprocessor | None = None,
         pill_identifier: PillIdentifyAdapter | None = None,
         match_logger: OcrMatchLogger | None = None,
+        in_flight: InFlightRegistry | None = None,
     ):
         self._fetcher = fetcher
         self._vision = vision
@@ -69,6 +71,7 @@ class OcrPrescriptionService:
         self._preprocessor = preprocessor
         self._pill_identifier = pill_identifier
         self._match_logger = match_logger
+        self._in_flight = in_flight or InFlightRegistry()
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
         image_bytes = await self._fetcher.fetch(str(request.image_url))
@@ -77,6 +80,20 @@ class OcrPrescriptionService:
         if cached is not None:
             self._log_done(request, cached.items, stages=None, cache_hit=True)
             return cached
+        future, is_owner = await self._in_flight.get_or_create(hash_hex)
+        if not is_owner:
+            return await future
+        try:
+            response = await self._process_new(image_bytes, request, hash_hex)
+            await self._in_flight.complete(hash_hex, response)
+            return response
+        except BaseException as exc:
+            await self._in_flight.fail(hash_hex, exc)
+            raise
+
+    async def _process_new(
+        self, image_bytes: bytes, request: PrescriptionOcrRequest, hash_hex: str
+    ) -> PrescriptionOcrResponse:
         if self._preprocessor is not None:
             image_bytes = self._apply_preprocess(image_bytes)
         response, stages = await self._build_response(
