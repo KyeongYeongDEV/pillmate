@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Switch } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -11,14 +11,12 @@ import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlic
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 import CameraGuideOverlay from '@/components/prescription/CameraGuideOverlay';
+import OcrProgress from '@/components/prescription/OcrProgress';
 import { useCameraGuide } from '@/hooks/useCameraGuide';
 import { useOcrInFlight } from '@/hooks/useOcrInFlight';
 import { downsizeForOcr } from '@/lib/imageProcessing';
 
 const AUTO_SHUTTER_DELAY = 3;
-const OCR_TYPICAL_LOW_SEC  = 20;
-const OCR_TYPICAL_HIGH_SEC = 30;
-const OCR_MAX_MIN          = 1;  // p95 실측 ~65초 기준 → 1분으로 안내
 
 export default function CameraScreen() {
   const insets = useSafeAreaInsets();
@@ -26,10 +24,7 @@ export default function CameraScreen() {
   const [flash, setFlash] = useState<'on' | 'off'>('off');
   const [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [msgIdx, setMsgIdx] = useState(0);
-  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const toggleIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const attemptRef = useRef(0);
   const [autoShutter, setAutoShutter] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const cameraRef = useRef<CameraView>(null);
@@ -46,6 +41,7 @@ export default function CameraScreen() {
         Alert.alert('이미 인식 중', `이미 인식 중입니다. ${Math.round(elapsedMs / 1000)}초 경과`);
         return;
       }
+      const attempt = ++attemptRef.current;
       setLoading(true);
       setOcrError(false);
       try {
@@ -58,10 +54,12 @@ export default function CameraScreen() {
           prescribedAt,
           imageKey: uploadResp.objectKey,
         });
+        if (attemptRef.current !== attempt) return; // 사용자가 대기 중 취소
         dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey: uploadResp.objectKey }));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
+        if (attemptRef.current !== attempt) return;
         setLoading(false);
         setOcrError(true);
         reset();
@@ -76,6 +74,13 @@ export default function CameraScreen() {
     setOcrError(false);
   }, []);
 
+  const handleAbandon = useCallback(() => {
+    attemptRef.current += 1; // 진행 중 attempt 의 UI 효과 무효화
+    setLoading(false);
+    setOcrError(false);
+    reset();
+  }, [reset]);
+
   const capture = useCallback(async () => {
     if (!cameraRef.current) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -88,22 +93,6 @@ export default function CameraScreen() {
     countdownRef.current = null;
     setCountdown(null);
   }, []);
-
-  useEffect(() => {
-    if (loading) {
-      setElapsed(0);
-      setMsgIdx(0);
-      elapsedIntervalRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
-      toggleIntervalRef.current  = setInterval(() => setMsgIdx(m => 1 - m), 3500);
-    } else {
-      if (elapsedIntervalRef.current) { clearInterval(elapsedIntervalRef.current); elapsedIntervalRef.current = null; }
-      if (toggleIntervalRef.current)  { clearInterval(toggleIntervalRef.current);  toggleIntervalRef.current  = null; }
-    }
-    return () => {
-      if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
-      if (toggleIntervalRef.current)  clearInterval(toggleIntervalRef.current);
-    };
-  }, [loading]);
 
   useEffect(() => {
     if (!autoShutter || !allOk) { stopCountdown(); return; }
@@ -140,22 +129,7 @@ export default function CameraScreen() {
   }
 
   if (loading) {
-    return (
-      <View style={styles.loadingRoot}>
-        <ActivityIndicator size="large" color="#fff" />
-        {msgIdx === 0 ? (
-          <>
-            <Text style={styles.loadingTxt}>{`약을 인식하고 있어요 · ${elapsed}초`}</Text>
-            <Text style={styles.loadingSub}>{`보통 ${OCR_TYPICAL_LOW_SEC}~${OCR_TYPICAL_HIGH_SEC}초, 최대 ${OCR_MAX_MIN}분 소요`}</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.loadingTxt}>인식 결과를 꼭 확인해 주세요</Text>
-            <Text style={styles.loadingSub}>{`인식 결과가 정확하지 않을 수 있어요.\n등록 후 약 정보를 꼭 확인해 주세요.`}</Text>
-          </>
-        )}
-      </View>
-    );
+    return <OcrProgress onRetry={handleAbandon} />;
   }
 
   if (ocrError) {

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -9,12 +9,9 @@ import { useAppDispatch } from '@/store/hooks';
 import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlice';
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
+import OcrProgress from '@/components/prescription/OcrProgress';
 import { useOcrInFlight } from '@/hooks/useOcrInFlight';
 import { downsizeForOcr } from '@/lib/imageProcessing';
-
-const OCR_TYPICAL_LOW_SEC  = 20;
-const OCR_TYPICAL_HIGH_SEC = 30;
-const OCR_MAX_MIN          = 1;  // p95 실측 ~65초 기준 → 1분으로 안내
 
 export default function ScanScreen() {
   const { galleryUri } = useLocalSearchParams<{ galleryUri?: string }>();
@@ -23,6 +20,7 @@ export default function ScanScreen() {
   const [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const attemptRef = useRef(0);
   const dispatch = useAppDispatch();
   const { begin, end, hashImageUri } = useOcrInFlight();
 
@@ -34,6 +32,7 @@ export default function ScanScreen() {
         Alert.alert('이미 인식 중', `이미 인식 중입니다. ${Math.round(elapsedMs / 1000)}초 경과`);
         return;
       }
+      const attempt = ++attemptRef.current;
       setLoading(true);
       setOcrError(false);
       try {
@@ -48,10 +47,12 @@ export default function ScanScreen() {
           prescribedAt,
           imageKey: uploadResp.objectKey,
         });
+        if (attemptRef.current !== attempt) return; // 사용자가 대기 중 취소
         dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey: uploadResp.objectKey }));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
+        if (attemptRef.current !== attempt) return;
         setLoading(false);
         setOcrError(true);
       } finally {
@@ -62,6 +63,12 @@ export default function ScanScreen() {
   );
 
   const handleRetry = useCallback(() => {
+    setOcrError(false);
+  }, []);
+
+  const handleAbandon = useCallback(() => {
+    attemptRef.current += 1;
+    setLoading(false);
     setOcrError(false);
   }, []);
 
@@ -96,15 +103,7 @@ export default function ScanScreen() {
   }
 
   if (loading) {
-    return (
-      <View style={styles.loadingRoot}>
-        <ActivityIndicator size="large" color="#fff" />
-        <Text style={styles.loadingTxt}>약을 인식하고 있어요</Text>
-        <Text style={styles.loadingSub}>
-          {`보통 ${OCR_TYPICAL_LOW_SEC}~${OCR_TYPICAL_HIGH_SEC}초, 최대 ${OCR_MAX_MIN}분 정도 걸릴 수 있어요`}
-        </Text>
-      </View>
-    );
+    return <OcrProgress onRetry={handleAbandon} />;
   }
 
   if (ocrError) {
