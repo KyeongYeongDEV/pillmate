@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useKakaoLoginMutation, useExchangeKakaoCodeMutation } from '@/store/slices/authApi';
+import KakaoTalkIcon from '@/components/common/KakaoTalkIcon';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '';
@@ -118,10 +119,8 @@ export default function LoginScreen() {
                 <ActivityIndicator size="small" color={KAKAO_TEXT} />
               ) : (
                 <>
-                  <View style={styles.kakaoIcon}>
-                    <Text style={styles.kakaoIconTxt}>💬</Text>
-                  </View>
-                  <Text style={styles.kakaoBtnTxt}>카카오로 계속하기</Text>
+                  <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
+                  <Text style={styles.kakaoBtnTxt}>카카오톡으로 계속하기</Text>
                 </>
               )}
             </Pressable>
@@ -188,8 +187,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.s16, gap: space.s10,
   },
   kakaoBtnPressed: { opacity: 0.85 },
-  kakaoIcon: { width: scale(24), height: scale(24), alignItems: 'center', justifyContent: 'center' },
-  kakaoIconTxt: { fontSize: scale(18) },
   kakaoBtnTxt: { fontSize: scale(16), fontWeight: '700', color: KAKAO_TEXT },
 
   termsArea: { alignItems: 'center' },
