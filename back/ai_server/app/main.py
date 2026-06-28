@@ -64,11 +64,35 @@ async def lifespan(app: FastAPI):
         await pool.close()
 
 
+def _resolve_vision_variant(settings) -> str:
+    variant = settings.ocr_vision_variant
+    if variant == "auto":
+        return "lite" if "lite" in settings.gemini_model else "flash"
+    return variant
+
+
+def _build_vision(settings):
+    variant = _resolve_vision_variant(settings)
+    logger.info("OCR vision adapter=%s model=%s", variant, settings.gemini_model)
+    if variant == "lite":
+        from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
+        return GeminiVisionLiteAdapter(
+            api_keys=settings.gemini_keys,
+            model=settings.gemini_model,
+            fewshot_enabled=settings.ocr_fewshot_enabled,
+        )
+    from app.rag.ocr.vision import GeminiVisionAdapter
+    return GeminiVisionAdapter(
+        api_keys=settings.gemini_keys,
+        model=settings.gemini_model,
+        fewshot_enabled=settings.ocr_fewshot_enabled,
+    )
+
+
 def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
     from app.rag.ocr.correction import OcrCorrectionAdapter
     from app.rag.ocr.pill_identify import PillIdentifyAdapter
     from app.rag.ocr.preprocess import ImagePreprocessor
-    from app.rag.ocr.vision import GeminiVisionAdapter
 
     if settings.drug_matcher_impl == "rrf":
         from app.rag.ocr.rrf_factory import build_rrf_matcher
@@ -79,11 +103,7 @@ def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
             vector=PgVectorDrugSearch(retriever=retriever),
             ingredient=AsyncpgIngredientSearch(pool=pool),
         )
-    vision = GeminiVisionAdapter(
-        api_keys=settings.gemini_keys,
-        model=settings.gemini_model,
-        fewshot_enabled=settings.ocr_fewshot_enabled,
-    )
+    vision = _build_vision(settings)
     correction = OcrCorrectionAdapter(api_keys=settings.gemini_keys, model=settings.gemini_model)
     preprocessor = ImagePreprocessor() if settings.ocr_preprocess_enabled else None
     pill_identifier = PillIdentifyAdapter(pool=pool) if settings.pill_identify_enabled else None
