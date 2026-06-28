@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
 
   loginArea: { gap: space.s16 },
   loginPrompt: { ...typography.label1n, color: colors.labelAlternative, textAlign: 'center' },
-  kakaoWrap: { alignItems: 'center', gap: space.s8 },
+  kakaoWrap: { alignItems: 'center', gap: space.s8, alignSelf: 'stretch' },
   badgeWrap: { alignItems: 'center' },
   badge: {
     paddingHorizontal: space.s12, paddingVertical: space.s4,
