@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden', // ripple 영역 clip + 둥근 모서리
   },
   kakaoBtnInner: {
-    width: '100%', minHeight: scale(56),
-    paddingVertical: space.s16,
+    width: '100%', minHeight: scale(112),
+    paddingVertical: space.s32,
     alignItems: 'center', justifyContent: 'center',
   },
   kakaoBtnPressed: { opacity: 0.85 },
