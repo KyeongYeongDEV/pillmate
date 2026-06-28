@@ -19,10 +19,26 @@ export default function ScanScreen() {
   const [flash, setFlash] = useState<'on' | 'off'>('off');
   const [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState(false);
+  const [lastProcessed, setLastProcessed] = useState<{ uri: string; imageKey: string } | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const attemptRef = useRef(0);
   const dispatch = useAppDispatch();
   const { begin, end, hashImageUri } = useOcrInFlight();
+
+  const uploadImage = useCallback(async (uri: string): Promise<string> => {
+    const processed = await downsizeForOcr(uri);
+    const uploadResp = await prescriptionApi.issueUploadUrl({ contentType: 'image/jpeg' });
+    dispatch(setImageKey(uploadResp.objectKey));
+    await prescriptionApi.uploadToS3(uploadResp.uploadUrl, processed.uri);
+    setLastProcessed({ uri, imageKey: uploadResp.objectKey });
+    return uploadResp.objectKey;
+  }, [dispatch]);
+
+  const runOcrExtract = useCallback(async (imageKey: string) => {
+    const prescribedAt = new Date().toISOString().slice(0, 10);
+    const extractResp = await prescriptionApi.ocrExtract({ prescribedAt, imageKey });
+    dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey }));
+  }, [dispatch]);
 
   const processImage = useCallback(
     async (uri: string) => {
@@ -36,19 +52,9 @@ export default function ScanScreen() {
       setLoading(true);
       setOcrError(false);
       try {
-        const processed = await downsizeForOcr(uri);
-        const uploadResp = await prescriptionApi.issueUploadUrl({
-          contentType: 'image/jpeg',
-        });
-        const prescribedAt = new Date().toISOString().slice(0, 10);
-        dispatch(setImageKey(uploadResp.objectKey));
-        await prescriptionApi.uploadToS3(uploadResp.uploadUrl, processed.uri);
-        const extractResp = await prescriptionApi.ocrExtract({
-          prescribedAt,
-          imageKey: uploadResp.objectKey,
-        });
+        const imageKey = await uploadImage(uri);
+        await runOcrExtract(imageKey);
         if (attemptRef.current !== attempt) return; // 사용자가 대기 중 취소
-        dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey: uploadResp.objectKey }));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
@@ -59,12 +65,37 @@ export default function ScanScreen() {
         end(hash);
       }
     },
-    [dispatch, begin, end, hashImageUri],
+    [begin, end, hashImageUri, uploadImage, runOcrExtract],
   );
 
-  const handleRetry = useCallback(() => {
+  // 기존 이미지(이미 S3 업로드됨)로 ocrExtract 만 재호출 — 재촬영/재선택 없음
+  const handleRetry = useCallback(async () => {
+    if (!lastProcessed) {
+      setOcrError(false);
+      return;
+    }
+    const hash = await hashImageUri(lastProcessed.uri);
+    const { allowed, elapsedMs } = begin(hash);
+    if (!allowed) {
+      Alert.alert('이미 인식 중', `이미 인식 중입니다. ${Math.round(elapsedMs / 1000)}초 경과`);
+      return;
+    }
+    const attempt = ++attemptRef.current;
     setOcrError(false);
-  }, []);
+    setLoading(true);
+    try {
+      await runOcrExtract(lastProcessed.imageKey);
+      if (attemptRef.current !== attempt) return;
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/prescription/review' as any);
+    } catch {
+      if (attemptRef.current !== attempt) return;
+      setLoading(false);
+      setOcrError(true);
+    } finally {
+      end(hash);
+    }
+  }, [lastProcessed, hashImageUri, begin, end, runOcrExtract]);
 
   const handleAbandon = useCallback(() => {
     attemptRef.current += 1;
@@ -107,7 +138,7 @@ export default function ScanScreen() {
       <OcrProgress
         phase={ocrError ? 'failed' : 'progressing'}
         onRetry={ocrError ? handleRetry : handleAbandon}
-        onBack={() => safeBack('/prescription')}
+        onBack={handleAbandon}
       />
     );
   }

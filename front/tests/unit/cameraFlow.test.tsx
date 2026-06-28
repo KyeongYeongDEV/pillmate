@@ -100,4 +100,26 @@ describe('camera 등록 흐름 (B방식 통일)', () => {
     });
     expect(router.replace).not.toHaveBeenCalledWith('/prescription/confirm');
   });
+
+  it('실패 후 다시 시도 → 업로드 재호출 0, ocrExtract만 재호출', async () => {
+    (prescriptionApi.ocrExtract as jest.Mock)
+      .mockRejectedValueOnce(new Error('quota 429'))
+      .mockResolvedValueOnce({ items: [] });
+
+    render(<CameraScreen />);
+    fireEvent.press(screen.getByLabelText('갤러리'));
+
+    // 첫 시도 실패 → '다시 시도' 버튼 노출
+    await waitFor(() => expect(screen.getByLabelText('다시 시도')).toBeTruthy());
+    expect(prescriptionApi.issueUploadUrl).toHaveBeenCalledTimes(1);
+    expect(prescriptionApi.uploadToS3).toHaveBeenCalledTimes(1);
+    expect(prescriptionApi.ocrExtract).toHaveBeenCalledTimes(1);
+
+    // 다시 시도 → 같은 imageKey 로 extract만 재호출 (업로드 0)
+    fireEvent.press(screen.getByLabelText('다시 시도'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/prescription/review'));
+    expect(prescriptionApi.issueUploadUrl).toHaveBeenCalledTimes(1); // 증가 없음
+    expect(prescriptionApi.uploadToS3).toHaveBeenCalledTimes(1); // 증가 없음
+    expect(prescriptionApi.ocrExtract).toHaveBeenCalledTimes(2); // 재호출
+  });
 });
