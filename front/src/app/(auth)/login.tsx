@@ -111,26 +111,25 @@ export default function LoginScreen() {
               </View>
               <View style={styles.badgeTail} />
             </View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.kakaoBtn,
-                { backgroundColor: KAKAO_YELLOW, width: '100%' }, // 인라인 강제 (StyleSheet override 회피)
-                pressed && styles.kakaoBtnPressed,
-              ]}
-              onPress={handleKakaoPress}
-              disabled={isLoading}
-              accessibilityLabel="카카오로 시작"
-              accessibilityRole="button"
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color={KAKAO_TEXT} />
-              ) : (
-                <>
-                  <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
-                  <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
-                </>
-              )}
-            </Pressable>
+            {/* 외곽 View가 배경/모서리 담당 — Pressable 자체 배경 미렌더 회피 */}
+            <View style={styles.kakaoBtnBg}>
+              <Pressable
+                style={({ pressed }) => [styles.kakaoBtnInner, pressed && styles.kakaoBtnPressed]}
+                onPress={handleKakaoPress}
+                disabled={isLoading}
+                accessibilityLabel="카카오로 시작"
+                accessibilityRole="button"
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={KAKAO_TEXT} />
+                ) : (
+                  <>
+                    <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
+                    <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.divider}>
@@ -188,8 +187,8 @@ const styles = StyleSheet.create({
 
   loginArea: { gap: space.s16 },
   loginPrompt: { ...typography.label1n, color: colors.labelAlternative, textAlign: 'center' },
-  kakaoWrap: { alignItems: 'center', gap: space.s8, alignSelf: 'stretch' },
-  badgeWrap: { alignItems: 'center' },
+  kakaoWrap: { alignItems: 'stretch', gap: space.s8, alignSelf: 'stretch' },
+  badgeWrap: { alignItems: 'center', alignSelf: 'center' },
   badge: {
     paddingHorizontal: space.s12, paddingVertical: space.s4,
     backgroundColor: colors.statusNegative, borderRadius: radius.full,
@@ -204,11 +203,13 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center' },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.line },
   dividerTxt: { marginHorizontal: space.s12, fontSize: scale(12), color: colors.labelAssistive },
-  kakaoBtn: {
-    width: '100%', minHeight: scale(56),
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+  kakaoBtnBg: {
     backgroundColor: KAKAO_YELLOW, borderRadius: radius.r14,
-    paddingVertical: space.s16, gap: space.s10,
+    overflow: 'hidden', // ripple 영역 clip + 둥근 모서리
+  },
+  kakaoBtnInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: space.s16, gap: space.s10, minHeight: scale(56),
   },
   kakaoBtnPressed: { opacity: 0.85 },
   kakaoBtnTxt: { fontSize: scale(16), fontWeight: '700', color: KAKAO_TEXT },
