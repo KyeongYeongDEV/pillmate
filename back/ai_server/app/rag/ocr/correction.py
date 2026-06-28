@@ -38,7 +38,7 @@ class OcrCorrectionAdapter:
         self,
         llm: AsyncChatModel | None = None,
         api_keys: list[str] | None = None,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-2.5-flash-lite",
         _llms: list[AsyncChatModel] | None = None,
     ) -> None:
         if _llms is not None:

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     gemini_api_key1: str = Field(default="", alias="GEMINI_API_KEY1")
     gemini_api_key2: str = Field(default="", alias="GEMINI_API_KEY2")
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.5-flash")
+    gemini_model: str = Field(default="gemini-2.5-flash-lite")
 
     @property
     def gemini_keys(self) -> list[str]:

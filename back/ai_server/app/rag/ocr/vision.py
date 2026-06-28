@@ -51,7 +51,7 @@ class GeminiVisionAdapter:
         self,
         llm: AsyncChatModel | None = None,
         api_keys: list[str] | None = None,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-2.5-flash-lite",
         prompt: str | None = None,
         timeout_sec: float = VISION_TIMEOUT_SEC,
         fewshot_enabled: bool = False,
