@@ -168,6 +168,47 @@ class TestPillIdentifyAdapter:
 
         assert result == []
 
+    def test_sql_uses_explicit_type_casts_for_nullable_params(self):
+        """AmbiguousParameterError 회귀 방지 — $n IS NULL 파라미터에 ::text/::int 캐스트 강제."""
+        from app.rag.ocr.pill_identify import _SQL
+
+        assert "$2::text IS NULL" in _SQL
+        assert "$3::text IS NULL" in _SQL
+        assert "LIMIT $4::int" in _SQL
+        # 캐스트 없는 bare 'IS NULL' 패턴이 남아있지 않아야 함
+        assert "$2 IS NULL" not in _SQL
+        assert "$3 IS NULL" not in _SQL
+
+    @pytest.mark.asyncio
+    async def test_identify_repeated_calls_safe(self):
+        """동일 입력 반복 호출 안전 — 매 호출 정상 결과."""
+        from app.domain.pill_appearance import PillAppearance
+        from app.rag.ocr.pill_identify import PillIdentifyAdapter
+
+        pool, _ = _mock_pool_with_rows([{"kd_code": "200400001", "name": "타이레놀정"}])
+        adapter = PillIdentifyAdapter(pool=pool)
+        appearance = PillAppearance(shape="원형", color="하양", mark_front="T")
+
+        first = await adapter.identify(appearance)
+        second = await adapter.identify(appearance)
+
+        assert first[0].kd_code == second[0].kd_code == "200400001"
+
+    @pytest.mark.asyncio
+    async def test_identify_color_none_passes_null_param(self):
+        """color 없으면 color param=None (SQL $2 IS NULL 분기) — mark만으로 조회."""
+        from app.domain.pill_appearance import PillAppearance
+        from app.rag.ocr.pill_identify import PillIdentifyAdapter
+
+        pool, mock_conn = _mock_pool_with_rows([])
+        adapter = PillIdentifyAdapter(pool=pool)
+        await adapter.identify(PillAppearance(shape="원형"))
+
+        params = mock_conn.fetch.call_args[0][1:]  # (sql, shape, color, mark, limit)
+        assert params[0] == "원형"
+        assert params[1] is None  # color_param
+        assert params[2] is None  # mark_param
+
     @pytest.mark.asyncio
     async def test_identify_returns_match_candidates_with_score(self):
         """반환 타입이 MatchCandidate 이고 score 필드 존재."""

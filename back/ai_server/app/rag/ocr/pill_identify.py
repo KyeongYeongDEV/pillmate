@@ -12,21 +12,23 @@ logger = logging.getLogger(__name__)
 
 _PILL_IDENTIFY_SCORE = Decimal("0.55")
 
+# asyncpg positional 파라미터에 명시적 타입 캐스트 — `$n IS NULL` 컨텍스트는 타입 앵커가 없어
+# Postgres 가 데이터 타입을 추론하지 못해 AmbiguousParameterError(42P08) 발생. ::text/::int 로 해소.
 _SQL = """
 SELECT kd_code, name
 FROM drugs
 WHERE status = 'ACTIVE'
-  AND shape_class = $1
-  AND ($2 IS NULL OR color_class ILIKE $2)
-  AND ($3 IS NULL OR mark_code_front ILIKE $3 OR mark_code_back ILIKE $3)
+  AND shape_class = $1::text
+  AND ($2::text IS NULL OR color_class ILIKE $2::text)
+  AND ($3::text IS NULL OR mark_code_front ILIKE $3::text OR mark_code_back ILIKE $3::text)
 ORDER BY
   CASE
-    WHEN $3 IS NOT NULL AND (mark_code_front ILIKE $3 OR mark_code_back ILIKE $3) THEN 0
-    WHEN $2 IS NOT NULL AND color_class ILIKE $2 THEN 1
+    WHEN $3::text IS NOT NULL AND (mark_code_front ILIKE $3::text OR mark_code_back ILIKE $3::text) THEN 0
+    WHEN $2::text IS NOT NULL AND color_class ILIKE $2::text THEN 1
     ELSE 2
   END,
   length(name)
-LIMIT $4
+LIMIT $4::int
 """
 
 
