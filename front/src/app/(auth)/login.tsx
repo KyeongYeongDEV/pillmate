@@ -112,7 +112,11 @@ export default function LoginScreen() {
               <View style={styles.badgeTail} />
             </View>
             <Pressable
-              style={({ pressed }) => [styles.kakaoBtn, pressed && styles.kakaoBtnPressed]}
+              style={({ pressed }) => [
+                styles.kakaoBtn,
+                { backgroundColor: KAKAO_YELLOW, width: '100%' }, // 인라인 강제 (StyleSheet override 회피)
+                pressed && styles.kakaoBtnPressed,
+              ]}
               onPress={handleKakaoPress}
               disabled={isLoading}
               accessibilityLabel="카카오로 시작"
@@ -201,7 +205,8 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.line },
   dividerTxt: { marginHorizontal: space.s12, fontSize: scale(12), color: colors.labelAssistive },
   kakaoBtn: {
-    width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    width: '100%', minHeight: scale(56),
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: KAKAO_YELLOW, borderRadius: radius.r14,
     paddingVertical: space.s16, gap: space.s10,
   },
