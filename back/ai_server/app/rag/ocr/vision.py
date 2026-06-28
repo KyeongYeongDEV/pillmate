@@ -14,7 +14,7 @@ from app.exceptions import OcrParseError, VisionInvocationError
 
 logger = logging.getLogger(__name__)
 
-VISION_TIMEOUT_SEC = 30.0
+VISION_TIMEOUT_SEC = 60.0
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "ocr_system.txt"
 FEWSHOT_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "system_prompt.txt"
