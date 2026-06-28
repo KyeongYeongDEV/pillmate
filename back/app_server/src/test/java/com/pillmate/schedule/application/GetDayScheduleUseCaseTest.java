@@ -77,8 +77,8 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("같은 시각 처방전 2개 → 약을 합치지 않고 처방전 행 2개로 분리")
-    void execute_sameTime_keepsSeparatePrescriptionRows() {
+    @DisplayName("같은 시각 다른 처방전 2건 → 1슬롯 머지, prescriptionName 콤마 join, prescriptionId=첫 처방전")
+    void execute_sameTime_differentPrescriptions_mergedIntoOneSlot() {
         // given
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(
@@ -92,13 +92,78 @@ class GetDayScheduleUseCaseTest {
         // when
         DayScheduleResponse response = sut.execute(TODAY);
 
+        // then — 시간 단위 1슬롯
+        assertThat(response.slots()).hasSize(1);
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.time()).isEqualTo("08:00");
+        assertThat(slot.prescriptionName()).isEqualTo("6월21일·타이레놀, 6월21일·게보린");
+        assertThat(slot.prescriptionId()).isEqualTo(100L);
+        assertThat(slot.items()).containsExactly("타이레놀", "게보린");
+        assertThat(slot.drugCount()).isEqualTo(2);
+        assertThat(slot.doseLogIds()).containsExactlyInAnyOrder(9L, 10L);
+        assertThat(slot.state()).isEqualTo("done");
+    }
+
+    @Test
+    @DisplayName("같은 시각 처방전 6건 → prescriptionName 'A, B, C 외 3건' ellipsis")
+    void execute_sameTime_sixPrescriptions_ellipsisLabel() {
+        // given — 6개 서로 다른 단일약 처방전 (라벨 distinct)
+        List<DayScheduleProjection> rows = new java.util.ArrayList<>();
+        for (int i = 1; i <= 6; i++) {
+            rows.add(row((long) i, LocalTime.of(8, 0), 100L + i, TODAY,
+                    List.of("약" + i), List.of("#fff"), 10L + i, "PENDING"));
+        }
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(rows);
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
         // then
-        assertThat(response.slots()).hasSize(2);
-        assertThat(response.slots().get(0).prescriptionId()).isEqualTo(100L);
-        assertThat(response.slots().get(0).items()).containsExactly("타이레놀");
-        assertThat(response.slots().get(1).prescriptionId()).isEqualTo(200L);
-        assertThat(response.slots().get(1).items()).containsExactly("게보린");
-        assertThat(response.slots().get(0).id()).isNotEqualTo(response.slots().get(1).id());
+        assertThat(response.slots()).hasSize(1);
+        assertThat(response.slots().get(0).prescriptionName())
+                .isEqualTo("6월21일·약1, 6월21일·약2, 6월21일·약3 외 3건");
+    }
+
+    @Test
+    @DisplayName("같은 시각 머지 — drugCount 합산 + items 전체 약 이름")
+    void execute_sameTime_drugCountIsSum() {
+        // given
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(6L, LocalTime.of(8, 0), 100L, TODAY,
+                                List.of("타이레놀", "게보린"), java.util.Arrays.asList("#fff", "#000"), 9L, "TAKEN"),
+                        row(7L, LocalTime.of(8, 0), 200L, TODAY,
+                                List.of("아목시실린"), List.of("#0f0"), 10L, "TAKEN")
+                )
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // then
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.drugCount()).isEqualTo(3);
+        assertThat(slot.items()).containsExactly("타이레놀", "게보린", "아목시실린");
+        assertThat(slot.pillColors()).containsExactly("#fff", "#000", "#0f0");
+    }
+
+    @Test
+    @DisplayName("같은 시각 머지 — 일부 약 미완(PENDING) → state=wait")
+    void execute_sameTime_oneNotTaken_stateIsWait() {
+        // given
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(6L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"),
+                        row(7L, LocalTime.of(8, 0), 200L, TODAY, List.of("게보린"), List.of("#f00"), 10L, "PENDING")
+                )
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // then
+        assertThat(response.slots()).hasSize(1);
+        assertThat(response.slots().get(0).state()).isEqualTo("wait");
     }
 
     @Test
@@ -169,7 +234,7 @@ class GetDayScheduleUseCaseTest {
         // then — 슬롯 1개로 병합, slotId 중복 없음
         assertThat(response.slots()).hasSize(1);
         SlotView slot = response.slots().get(0);
-        assertThat(slot.id()).isEqualTo("09:00@100");
+        assertThat(slot.id()).isEqualTo("09:00");
         assertThat(slot.doseLogIds()).containsExactlyInAnyOrder(10L, 11L);
         assertThat(slot.state()).isEqualTo("done");
     }
@@ -231,8 +296,8 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("레거시 — 같은 시각 서로 다른 약 2개 → slotId 충돌 없이 2 슬롯")
-    void execute_twoLegacyAtSameTime_noSlotIdCollision() {
+    @DisplayName("레거시 — 같은 시각 서로 다른 약 2개 → 1슬롯 머지, 이름 콤마 join")
+    void execute_twoLegacyAtSameTime_mergedIntoOneSlot() {
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(
                         legacyRow(10L, LocalTime.of(8, 0), "타이레놀", 20L, "TAKEN"),
@@ -242,13 +307,17 @@ class GetDayScheduleUseCaseTest {
 
         DayScheduleResponse response = sut.execute(TODAY);
 
-        assertThat(response.slots()).hasSize(2);
-        assertThat(response.slots().get(0).id()).isNotEqualTo(response.slots().get(1).id());
+        assertThat(response.slots()).hasSize(1);
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.prescriptionName()).isEqualTo("타이레놀, 아스피린");
+        assertThat(slot.prescriptionId()).isNull();
+        assertThat(slot.doseLogIds()).containsExactlyInAnyOrder(20L, 21L);
+        assertThat(slot.state()).isEqualTo("wait");
     }
 
     @Test
-    @DisplayName("레거시·처방전 혼재 — 각각 별도 슬롯, 처방전 기반 슬롯 회귀 0")
-    void execute_mixedLegacyAndPrescription_separateSlots() {
+    @DisplayName("레거시·처방전 혼재 같은 시각 → 1슬롯 머지, prescriptionId=첫 처방전, 이름 합산")
+    void execute_mixedLegacyAndPrescription_mergedIntoOneSlot() {
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(
                         row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("게보린"), List.of("#fff"), 9L, "TAKEN"),
@@ -258,11 +327,12 @@ class GetDayScheduleUseCaseTest {
 
         DayScheduleResponse response = sut.execute(TODAY);
 
-        assertThat(response.slots()).hasSize(2);
-        long prescriptionSlots = response.slots().stream().filter(s -> s.prescriptionId() != null).count();
-        long legacySlots       = response.slots().stream().filter(s -> s.prescriptionId() == null).count();
-        assertThat(prescriptionSlots).isEqualTo(1);
-        assertThat(legacySlots).isEqualTo(1);
+        assertThat(response.slots()).hasSize(1);
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.prescriptionId()).isEqualTo(100L);
+        assertThat(slot.prescriptionName()).isEqualTo("6월21일·게보린, 타이레놀");
+        assertThat(slot.items()).containsExactly("게보린", "타이레놀");
+        assertThat(slot.doseLogIds()).containsExactlyInAnyOrder(9L, 20L);
     }
 
     // ─── label 매핑 (TimeOfDay → 한국어) ──────────────────────────────────────
