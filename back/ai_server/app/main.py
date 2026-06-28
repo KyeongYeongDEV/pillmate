@@ -73,6 +73,21 @@ def _resolve_vision_variant(settings) -> str:
 
 def _build_vision(settings):
     variant = _resolve_vision_variant(settings)
+    if variant == "cascade":
+        from app.rag.ocr.cascade_vision import CASCADE_PRIMARY_TIMEOUT_SEC, CascadeVisionAdapter
+        from app.rag.ocr.vision import GeminiVisionAdapter
+        from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
+        primary = GeminiVisionLiteAdapter(
+            api_keys=settings.gemini_keys, model="gemini-2.5-flash-lite",
+            fewshot_enabled=settings.ocr_fewshot_enabled,
+            timeout_sec=CASCADE_PRIMARY_TIMEOUT_SEC,
+        )
+        fallback = GeminiVisionAdapter(
+            api_keys=settings.gemini_keys, model="gemini-2.5-flash",
+            fewshot_enabled=settings.ocr_fewshot_enabled,
+        )
+        logger.info("OCR vision adapter=cascade primary=flash-lite fallback=flash")
+        return CascadeVisionAdapter(primary, fallback)
     logger.info("OCR vision adapter=%s model=%s", variant, settings.gemini_model)
     if variant == "lite":
         from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
