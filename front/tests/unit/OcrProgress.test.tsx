@@ -70,3 +70,36 @@ describe('OcrProgress 컴포넌트', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('OcrProgress phase=failed', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
+
+  it('실패 헤더 + ✗ 인식 실패 단계 + 두 버튼(다시시도/뒤로)', () => {
+    const onRetry = jest.fn();
+    const onBack = jest.fn();
+    render(<OcrProgress phase="failed" onRetry={onRetry} onBack={onBack} />);
+
+    expect(screen.getByText('약 인식에 실패했어요')).toBeTruthy();
+    expect(screen.getByText('잠시 후 다시 시도해 주세요')).toBeTruthy();
+    expect(screen.getByText('✗')).toBeTruthy();
+    expect(screen.getByText('AI 약 인식 실패')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByLabelText('뒤로'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('failed 에서 onBack 없으면 뒤로 버튼 미노출', () => {
+    render(<OcrProgress phase="failed" onRetry={jest.fn()} />);
+    expect(screen.getByLabelText('다시 시도')).toBeTruthy();
+    expect(screen.queryByLabelText('뒤로')).toBeNull();
+  });
+
+  it('progressing 기본값: 실패 헤더 없음(회귀)', () => {
+    render(<OcrProgress onRetry={jest.fn()} />);
+    expect(screen.queryByText('약 인식에 실패했어요')).toBeNull();
+    expect(screen.getByText('AI가 약을 분석하고 있어요')).toBeTruthy();
+  });
+});

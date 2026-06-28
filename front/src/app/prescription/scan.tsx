@@ -102,35 +102,13 @@ export default function ScanScreen() {
     );
   }
 
-  if (loading) {
-    return <OcrProgress onRetry={handleAbandon} />;
-  }
-
-  if (ocrError) {
+  if (loading || ocrError) {
     return (
-      <View style={styles.loadingRoot}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.loadingTxt}>약 인식에 시간이 오래 걸려요</Text>
-        <Text style={styles.loadingSub}>잠시 후 다시 시도해 주세요</Text>
-        <View style={styles.errorActions}>
-          <Pressable
-            style={styles.retryBtn}
-            onPress={handleRetry}
-            accessibilityLabel="다시 시도"
-            accessibilityRole="button"
-          >
-            <Text style={styles.retryBtnTxt}>다시 시도</Text>
-          </Pressable>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => safeBack('/prescription')}
-            accessibilityLabel="뒤로"
-            accessibilityRole="button"
-          >
-            <Text style={styles.backBtnTxt}>뒤로</Text>
-          </Pressable>
-        </View>
-      </View>
+      <OcrProgress
+        phase={ocrError ? 'failed' : 'progressing'}
+        onRetry={ocrError ? handleRetry : handleAbandon}
+        onBack={() => safeBack('/prescription')}
+      />
     );
   }
 
@@ -239,19 +217,4 @@ const styles = StyleSheet.create({
   permText: { ...typography.body1n, color: colors.labelNormal },
   permBtn: { backgroundColor: colors.primaryNormal, borderRadius: radius.r12, paddingHorizontal: space.s24, paddingVertical: space.s12 },
   permBtnTxt: { ...typography.body1n, color: '#fff', fontWeight: '700' },
-  loadingRoot: { flex: 1, backgroundColor: '#0F0F10', alignItems: 'center', justifyContent: 'center', gap: space.s16, paddingHorizontal: space.s32 },
-  loadingTxt: { ...typography.headline2, color: '#fff', textAlign: 'center' },
-  loadingSub: { ...typography.body2r, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
-  errorIcon: { fontSize: scale(40) },
-  errorActions: { flexDirection: 'row', gap: space.s12, marginTop: space.s8 },
-  retryBtn: {
-    paddingHorizontal: space.s24, paddingVertical: space.s12,
-    borderRadius: radius.r12, backgroundColor: colors.primaryNormal,
-  },
-  retryBtnTxt: { ...typography.body2n, color: '#fff', fontWeight: '700' },
-  backBtn: {
-    paddingHorizontal: space.s24, paddingVertical: space.s12,
-    borderRadius: radius.r12, backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  backBtnTxt: { ...typography.body2n, color: '#fff' },
 });
