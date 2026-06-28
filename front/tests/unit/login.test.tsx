@@ -23,9 +23,9 @@ jest.mock('react-native-svg', () => ({
 }));
 
 describe('LoginScreen 카카오 버튼', () => {
-  it('공식 카피 "카카오톡으로 계속하기" 노출', () => {
+  it('카피 "카카오로 시작" 노출', () => {
     render(<LoginScreen />);
-    expect(screen.getByText('카카오톡으로 계속하기')).toBeTruthy();
+    expect(screen.getByText('카카오로 시작')).toBeTruthy();
   });
 
   it('💬 이모지 제거 + 카카오톡 로고(KakaoTalkIcon) 노출', () => {
@@ -34,8 +34,13 @@ describe('LoginScreen 카카오 버튼', () => {
     expect(screen.getByLabelText('카카오톡')).toBeTruthy();
   });
 
-  it('빠른 시작 badge 유지', () => {
+  it('빨간 말풍선 badge "5초만에 빠른 회원가입"', () => {
     render(<LoginScreen />);
-    expect(screen.getByText('3초 만에 시작')).toBeTruthy();
+    expect(screen.getByText('5초만에 빠른 회원가입')).toBeTruthy();
+  });
+
+  it('"또는" 구분선 노출', () => {
+    render(<LoginScreen />);
+    expect(screen.getByText('또는')).toBeTruthy();
   });
 });

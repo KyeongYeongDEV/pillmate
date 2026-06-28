@@ -105,14 +105,17 @@ export default function LoginScreen() {
           <Text style={styles.loginPrompt}>간편 로그인으로 시작하세요</Text>
 
           <View style={styles.kakaoWrap}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeTxt}>3초 만에 시작</Text>
+            <View style={styles.badgeWrap}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeTxt}>5초만에 빠른 회원가입</Text>
+              </View>
+              <View style={styles.badgeTail} />
             </View>
             <Pressable
               style={({ pressed }) => [styles.kakaoBtn, pressed && styles.kakaoBtnPressed]}
               onPress={handleKakaoPress}
               disabled={isLoading}
-              accessibilityLabel="카카오로 계속하기"
+              accessibilityLabel="카카오로 시작"
               accessibilityRole="button"
             >
               {isLoading ? (
@@ -120,10 +123,16 @@ export default function LoginScreen() {
               ) : (
                 <>
                   <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
-                  <Text style={styles.kakaoBtnTxt}>카카오톡으로 계속하기</Text>
+                  <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
                 </>
               )}
             </Pressable>
+          </View>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerTxt}>또는</Text>
+            <View style={styles.dividerLine} />
           </View>
         </View>
 
@@ -176,11 +185,21 @@ const styles = StyleSheet.create({
   loginArea: { gap: space.s16 },
   loginPrompt: { ...typography.label1n, color: colors.labelAlternative, textAlign: 'center' },
   kakaoWrap: { alignItems: 'center', gap: space.s8 },
+  badgeWrap: { alignItems: 'center' },
   badge: {
-    paddingHorizontal: space.s10, paddingVertical: space.s4,
-    backgroundColor: colors.fillNormal, borderRadius: radius.full,
+    paddingHorizontal: space.s12, paddingVertical: space.s4,
+    backgroundColor: colors.statusNegative, borderRadius: radius.full,
   },
-  badgeTxt: { fontSize: scale(12), fontWeight: '600', color: colors.labelAlternative },
+  badgeTxt: { fontSize: scale(12), fontWeight: '700', color: colors.staticWhite },
+  badgeTail: {
+    width: 0, height: 0, marginTop: -1,
+    borderLeftWidth: scale(5), borderRightWidth: scale(5), borderTopWidth: scale(6),
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: colors.statusNegative,
+  },
+  divider: { flexDirection: 'row', alignItems: 'center' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  dividerTxt: { marginHorizontal: space.s12, fontSize: scale(12), color: colors.labelAssistive },
   kakaoBtn: {
     width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: KAKAO_YELLOW, borderRadius: radius.r14,
