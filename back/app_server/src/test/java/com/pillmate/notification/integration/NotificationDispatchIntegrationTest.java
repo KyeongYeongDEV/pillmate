@@ -26,16 +26,17 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @Tag("integration")
 @SpringBootTest(properties = {
@@ -44,7 +45,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "cloud.aws.credentials.secret-key=test"
 })
 @Testcontainers
-@Transactional
 @DisplayName("NotificationDispatcher 통합 — DDI/처방전/리포트 발송 시나리오")
 class NotificationDispatchIntegrationTest {
 
@@ -105,16 +105,18 @@ class NotificationDispatchIntegrationTest {
         // when
         notificationDispatcher.on(event);
 
-        // then — referenceId 필터: saveAll 이 REQUIRES_NEW 라 타 테스트 커밋 잔여와 격리 (#142 P1-B)
-        List<Notification> saved = notificationRepository.findAll().stream()
-                .filter(n -> n.getType() == NotificationType.DDI_CRITICAL)
-                .filter(n -> prescriptionId.equals(n.getReferenceId()))
-                .toList();
-        assertThat(saved).hasSize(1);
-        assertThat(saved.get(0).getRecipientUserId()).isEqualTo(actorUserId);
-        assertThat(saved.get(0).getBody()).contains("약사 또는 의사와 상담");
-        assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
-        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+        // then — @Async 비동기 발송 → Awaitility 로 대기. referenceId 필터: saveAll REQUIRES_NEW 격리 (#142 P1-B)
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Notification> saved = notificationRepository.findAll().stream()
+                    .filter(n -> n.getType() == NotificationType.DDI_CRITICAL)
+                    .filter(n -> prescriptionId.equals(n.getReferenceId()))
+                    .toList();
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getRecipientUserId()).isEqualTo(actorUserId);
+            assertThat(saved.get(0).getBody()).contains("약사 또는 의사와 상담");
+            assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
+            assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+        });
     }
 
     @Test
@@ -128,15 +130,17 @@ class NotificationDispatchIntegrationTest {
         notificationDispatcher.on(event);
 
         // then
-        List<Notification> saved = notificationRepository.findAll().stream()
-                .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
-                .filter(n -> prescriptionId.equals(n.getReferenceId()))
-                .toList();
-        assertThat(saved).hasSize(1);
-        assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
-        assertThat(saved.get(0).getActorUserId()).isEqualTo(actorUserId);
-        assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
-        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Notification> saved = notificationRepository.findAll().stream()
+                    .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
+                    .filter(n -> prescriptionId.equals(n.getReferenceId()))
+                    .toList();
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
+            assertThat(saved.get(0).getActorUserId()).isEqualTo(actorUserId);
+            assertThat(saved.get(0).getReferenceId()).isEqualTo(prescriptionId);
+            assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.PRESCRIPTION);
+        });
     }
 
     @Test
@@ -150,14 +154,16 @@ class NotificationDispatchIntegrationTest {
         notificationDispatcher.on(event);
 
         // then
-        List<Notification> saved = notificationRepository.findAll().stream()
-                .filter(n -> n.getType() == NotificationType.WEEKLY_REPORT)
-                .filter(n -> reportId.equals(n.getReferenceId()))
-                .toList();
-        assertThat(saved).hasSize(1);
-        assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
-        assertThat(saved.get(0).getReferenceId()).isEqualTo(reportId);
-        assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Notification> saved = notificationRepository.findAll().stream()
+                    .filter(n -> n.getType() == NotificationType.WEEKLY_REPORT)
+                    .filter(n -> reportId.equals(n.getReferenceId()))
+                    .toList();
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getRecipientUserId()).isEqualTo(memberUserId);
+            assertThat(saved.get(0).getReferenceId()).isEqualTo(reportId);
+            assertThat(saved.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.REPORT);
+        });
     }
 
     @Test
@@ -180,15 +186,17 @@ class NotificationDispatchIntegrationTest {
         notificationDispatcher.on(event);
 
         // then — 그룹A 멤버 1건 + 그룹B 멤버 1건 = 2건
-        List<Notification> saved = notificationRepository.findAll().stream()
-                .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
-                .filter(n -> prescriptionId.equals(n.getReferenceId()))
-                .toList();
-        assertThat(saved).hasSize(2);
-        assertThat(saved.stream().map(Notification::getCareGroupId).toList())
-                .containsExactlyInAnyOrder(careGroupId, groupBId);
-        assertThat(saved.stream().map(Notification::getRecipientUserId).toList())
-                .containsExactlyInAnyOrder(memberUserId, memberBId);
-        assertThat(saved).allMatch(n -> n.getReferenceId().equals(prescriptionId));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Notification> saved = notificationRepository.findAll().stream()
+                    .filter(n -> n.getType() == NotificationType.PRESCRIPTION_NEW)
+                    .filter(n -> prescriptionId.equals(n.getReferenceId()))
+                    .toList();
+            assertThat(saved).hasSize(2);
+            assertThat(saved.stream().map(Notification::getCareGroupId).toList())
+                    .containsExactlyInAnyOrder(careGroupId, groupBId);
+            assertThat(saved.stream().map(Notification::getRecipientUserId).toList())
+                    .containsExactlyInAnyOrder(memberUserId, memberBId);
+            assertThat(saved).allMatch(n -> n.getReferenceId().equals(prescriptionId));
+        });
     }
 }

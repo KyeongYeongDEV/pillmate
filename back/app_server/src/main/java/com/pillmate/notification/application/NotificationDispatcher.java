@@ -17,6 +17,7 @@ import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -41,6 +42,7 @@ public class NotificationDispatcher {
     private final NotificationSenderPort notificationSenderPort;
     private final CareGroupLookupPort careGroupLookupPort;
 
+    @Async("insightTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(DdiCriticalDetected event) {
         String warningDetail = event.warnings().isEmpty() ? "" : event.warnings().get(0);
@@ -55,6 +57,7 @@ public class NotificationDispatcher {
         dispatchOne(saved, route);
     }
 
+    @Async("insightTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(PrescriptionRegistered event) {
         List<MembershipPair> pairs = membershipRepository.findGroupMemberPairs(event.actorUserId());
@@ -74,6 +77,7 @@ public class NotificationDispatcher {
         saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId()));
     }
 
+    @Async("insightTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(WeeklyReportGenerated event) {
         List<MembershipPair> pairs = membershipRepository.findGroupMemberPairs(event.actorUserId());
@@ -91,6 +95,7 @@ public class NotificationDispatcher {
         saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId() + "/report/weekly"));
     }
 
+    @Async("insightTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(DoseCheckCanceled event) {
         Schedule schedule = scheduleRepository.findById(event.scheduleId()).orElse(null);

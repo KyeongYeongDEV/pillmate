@@ -20,10 +20,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 /**
  * #142 P1-B / #120 — AFTER_COMMIT 리스너에서 REQUIRES_NEW 저장 검증.
@@ -84,15 +86,17 @@ class NotificationAfterCommitIntegrationTest {
         // when — check() 의 @Transactional 커밋 → AFTER_COMMIT 발화
         checkDoseUseCase.check(new CheckDoseRequest(f.doseLogId, "CANCEL", null), f.patientId);
 
-        // then — REQUIRES_NEW 신규 트랜잭션으로 INSERT 가 실제 영속되어야 함
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id, recipient_user_id, type, body FROM notifications WHERE dose_log_id = ?",
-                f.doseLogId);
-        assertThat(rows).hasSize(1);
-        assertThat(rows.get(0).get("id")).isNotNull();
-        assertThat(rows.get(0).get("type")).isEqualTo("DOSE_CANCELED");
-        assertThat(((Number) rows.get(0).get("recipient_user_id")).longValue()).isEqualTo(f.guardianId);
-        assertThat((String) rows.get(0).get("body")).contains("취소했습니다");
+        // then — @Async + REQUIRES_NEW 신규 트랜잭션으로 INSERT 가 비동기 영속 → Awaitility 대기
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "SELECT id, recipient_user_id, type, body FROM notifications WHERE dose_log_id = ?",
+                    f.doseLogId);
+            assertThat(rows).hasSize(1);
+            assertThat(rows.get(0).get("id")).isNotNull();
+            assertThat(rows.get(0).get("type")).isEqualTo("DOSE_CANCELED");
+            assertThat(((Number) rows.get(0).get("recipient_user_id")).longValue()).isEqualTo(f.guardianId);
+            assertThat((String) rows.get(0).get("body")).contains("취소했습니다");
+        });
     }
 
     private record Fixture(Long patientId, Long guardianId, Long doseLogId) {}
