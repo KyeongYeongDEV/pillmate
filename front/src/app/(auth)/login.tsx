@@ -123,10 +123,15 @@ export default function LoginScreen() {
                 {isLoading ? (
                   <ActivityIndicator size="small" color={KAKAO_TEXT} />
                 ) : (
-                  <>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: space.s10,
+                  }}>
                     <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
                     <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
-                  </>
+                  </View>
                 )}
               </Pressable>
             </View>
@@ -208,8 +213,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden', // ripple 영역 clip + 둥근 모서리
   },
   kakaoBtnInner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: space.s16, gap: space.s10, minHeight: scale(56),
+    width: '100%', minHeight: scale(56),
+    paddingVertical: space.s16,
+    alignItems: 'center', justifyContent: 'center',
   },
   kakaoBtnPressed: { opacity: 0.85 },
   kakaoBtnTxt: { fontSize: scale(16), fontWeight: '700', color: KAKAO_TEXT },
