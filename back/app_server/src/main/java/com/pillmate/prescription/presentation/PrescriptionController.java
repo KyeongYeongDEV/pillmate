@@ -7,7 +7,6 @@ import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
 import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
-import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
 import com.pillmate.prescription.application.dto.LatestPrescriptionWithInsightResponse;
@@ -18,7 +17,6 @@ import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.presentation.dto.OcrExtractRequest;
-import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
 import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
@@ -48,7 +46,6 @@ public class PrescriptionController {
 
     private final GetUploadUrlUseCase getUploadUrlUseCase;
     private final RegisterPrescriptionService registerPrescriptionService;
-    private final OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
     private final ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase;
     private final GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     private final ResolveCandidateUseCase resolveCandidateUseCase;
@@ -62,7 +59,6 @@ public class PrescriptionController {
     public PrescriptionController(
             GetUploadUrlUseCase getUploadUrlUseCase,
             RegisterPrescriptionService registerPrescriptionService,
-            OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase,
             ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase,
             GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase,
             ResolveCandidateUseCase resolveCandidateUseCase,
@@ -74,7 +70,6 @@ public class PrescriptionController {
             @Qualifier("ocrExecutor") Executor ocrExecutor) {
         this.getUploadUrlUseCase = getUploadUrlUseCase;
         this.registerPrescriptionService = registerPrescriptionService;
-        this.ocrAndRegisterPrescriptionUseCase = ocrAndRegisterPrescriptionUseCase;
         this.extractPrescriptionOcrUseCase = extractPrescriptionOcrUseCase;
         this.getUnresolvedCandidatesUseCase = getUnresolvedCandidatesUseCase;
         this.resolveCandidateUseCase = resolveCandidateUseCase;
@@ -114,16 +109,6 @@ public class PrescriptionController {
         RegisterPrescriptionResponse response = registerPrescriptionService.register(
                 request.toCommand(UserContext.get()));
         return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @PostMapping("/ocr")
-    public CompletableFuture<ResponseEntity<ApiResponse<RegisterPrescriptionResponse>>> ocrRegister(
-            @Valid @RequestBody OcrRegisterRequest request) {
-        return CompletableFuture.supplyAsync(
-                () -> ResponseEntity.ok(ApiResponse.success(
-                        ocrAndRegisterPrescriptionUseCase.ocrAndRegister(
-                                request.prescribedAt(), request.imageKey()))),
-                ocrExecutor);
     }
 
     @PostMapping("/ocr/extract")

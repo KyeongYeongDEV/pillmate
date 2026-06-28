@@ -9,7 +9,6 @@ import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
 import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
-import com.pillmate.prescription.application.OcrAndRegisterPrescriptionUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
 import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
@@ -27,7 +26,6 @@ import com.pillmate.prescription.domain.model.OcrStatus;
 import com.pillmate.prescription.domain.model.PrescriptionInsightSeverity;
 import com.pillmate.prescription.domain.model.PrescriptionInsightType;
 import com.pillmate.prescription.domain.model.PrescriptionStatus;
-import com.pillmate.prescription.presentation.dto.OcrRegisterRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
 import org.junit.jupiter.api.DisplayName;
@@ -39,7 +37,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -50,17 +47,14 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.concurrent.Executor;
@@ -81,7 +75,6 @@ class PrescriptionControllerTest {
     @Autowired ObjectMapper objectMapper;
     @MockitoBean GetUploadUrlUseCase getUploadUrlUseCase;
     @MockitoBean RegisterPrescriptionService registerPrescriptionService;
-    @MockitoBean OcrAndRegisterPrescriptionUseCase ocrAndRegisterPrescriptionUseCase;
     @MockitoBean ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase;
     @MockitoBean GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase;
     @MockitoBean ResolveCandidateUseCase resolveCandidateUseCase;
@@ -126,50 +119,6 @@ class PrescriptionControllerTest {
                 .andExpect(jsonPath("$.data.prescriptionId").value(42))
                 .andExpect(jsonPath("$.data.ocrStatus").value("DONE"))
                 .andExpect(jsonPath("$.data.items[0].drugId").value(101));
-    }
-
-    @Test
-    @DisplayName("POST /prescriptions/ocr → 200 + prescriptionId 반환 (async)")
-    void postOcrRegister_returns200() throws Exception {
-        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(any(LocalDate.class), anyString()))
-                .willReturn(new RegisterPrescriptionResponse(
-                        42L, OcrStatus.DONE,
-                        List.of(new RegisteredDrugItem(
-                                101L, "KD-001", "타이레놀", "타이레놀500mg",
-                                new BigDecimal("0.95"), "https://nedrug/img1"))));
-
-        OcrRegisterRequest req = new OcrRegisterRequest(LocalDate.of(2026, 5, 23), "imageKey");
-
-        MvcResult mvcResult = mockMvc.perform(post("/prescriptions/ocr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-User-Id", "2")
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvcResult))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.prescriptionId").value(42));
-    }
-
-    @Test
-    @DisplayName("POST /prescriptions/ocr → 504 when upstream timeout (async)")
-    void postOcrRegister_returns504_whenUpstreamTimeout() throws Exception {
-        given(ocrAndRegisterPrescriptionUseCase.ocrAndRegister(any(LocalDate.class), anyString()))
-                .willThrow(new PillmateException(ErrorCode.OCR_UPSTREAM_TIMEOUT));
-
-        OcrRegisterRequest req = new OcrRegisterRequest(LocalDate.of(2026, 5, 23), "imageKey");
-
-        MvcResult mvcResult = mockMvc.perform(post("/prescriptions/ocr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-User-Id", "2")
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvcResult))
-                .andExpect(status().isGatewayTimeout())
-                .andExpect(jsonPath("$.error.code").value("PILL_050"));
     }
 
     @Test
