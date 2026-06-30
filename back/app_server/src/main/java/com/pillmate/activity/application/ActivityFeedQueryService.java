@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,27 +32,42 @@ public class ActivityFeedQueryService {
     }
 
     public List<ActivityFeedItem> query(Long viewerId, Long groupId, int limit) {
-        List<Long> memberIds = resolveMemberIds(viewerId, groupId);
+        if (groupId == null) {
+            return personalFeed(viewerId, limit);
+        }
+        return groupFeed(viewerId, groupId, limit);
+    }
+
+    // 개인 피드 — 기존 무필터 유지 (viewer 자신 + 그룹원 활동 전체)
+    private List<ActivityFeedItem> personalFeed(Long viewerId, int limit) {
+        List<Long> memberIds = membershipRepository.findGroupMemberUserIds(viewerId);
         if (memberIds.isEmpty()) {
             return Collections.emptyList();
         }
         List<ActivityFeed> feeds = activityFeedRepository.findByActorUserIdIn(memberIds, limit);
-        Map<Long, String> nameById = buildNameMap(memberIds);
-        return feeds.stream()
-                .map(f -> ActivityFeedItem.from(f, nameById.getOrDefault(f.getActorUserId(), "멤버")))
-                .toList();
+        return mapFeeds(feeds, buildNameMap(memberIds));
     }
 
-    private List<Long> resolveMemberIds(Long viewerId, Long groupId) {
-        if (groupId == null) {
-            return membershipRepository.findGroupMemberUserIds(viewerId);
-        }
+    // 그룹 피드 — 멤버별 가입(joinedAt) 시점 이후만 (새 그룹은 과거 활동 미노출). viewer 자신 제외(기존 동작 유지)
+    private List<ActivityFeedItem> groupFeed(Long viewerId, Long groupId, int limit) {
         if (!membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerId)) {
             throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
         }
-        return membershipRepository.findByCareGroupId(groupId).stream()
-                .map(Membership::getUserId)
-                .filter(id -> !id.equals(viewerId))
+        List<Membership> members = membershipRepository.findByCareGroupId(groupId).stream()
+                .filter(m -> !m.getUserId().equals(viewerId))
+                .toList();
+        List<ActivityFeed> feeds = members.stream()
+                .flatMap(m -> activityFeedRepository
+                        .findByActorSince(m.getUserId(), m.getJoinedAt(), limit).stream())
+                .sorted(Comparator.comparing(ActivityFeed::getOccurredAt).reversed())
+                .limit(limit)
+                .toList();
+        return mapFeeds(feeds, buildNameMap(members.stream().map(Membership::getUserId).toList()));
+    }
+
+    private List<ActivityFeedItem> mapFeeds(List<ActivityFeed> feeds, Map<Long, String> nameById) {
+        return feeds.stream()
+                .map(f -> ActivityFeedItem.from(f, nameById.getOrDefault(f.getActorUserId(), "멤버")))
                 .toList();
     }
 
