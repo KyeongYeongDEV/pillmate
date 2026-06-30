@@ -1,6 +1,22 @@
 // RED: doseLogApi.ts 미존재 → 전 항목 FAIL 예상
-import { doseLogApiSlice, useCheckDoseMutation } from '@/store/slices/doseLogApi';
+import {
+  doseLogApiSlice,
+  useCheckDoseMutation,
+  invalidateAfterDoseMutation,
+} from '@/store/slices/doseLogApi';
 import type { CheckDoseInput, DoseStatus } from '@/types/doseLog';
+
+describe('invalidateAfterDoseMutation — cross-slice 무효화', () => {
+  it('성공 후 scheduleApi(MonthSchedule) + caregroupApi(Group) 둘 다 invalidate dispatch', () => {
+    const dispatch = jest.fn();
+    invalidateAfterDoseMutation(dispatch);
+    const types = dispatch.mock.calls.map(c => c[0]?.type);
+    expect(types).toContain('scheduleApi/invalidateTags');
+    expect(types).toContain('caregroupApi/invalidateTags');
+    const groupCall = dispatch.mock.calls.find(c => c[0]?.type === 'caregroupApi/invalidateTags');
+    expect(groupCall?.[0]?.payload).toEqual(['Group']);
+  });
+});
 
 describe('doseLogApiSlice 구조', () => {
   it('reducerPath = doseLogApi', () => {

@@ -3,6 +3,13 @@ import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { BulkCheckDoseInput, CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
 import { markDone, markWait, markDoneNoLock } from './doseStateSlice';
 import { scheduleApiSlice } from './scheduleApi';
+import { caregroupApiSlice } from './caregroupApi';
+
+// 복약 체크 성공 후 cross-slice cache 무효화 (slice 별 namespace 독립이라 명시 필요)
+export function invalidateAfterDoseMutation(dispatch: (action: any) => void) {
+  dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
+  dispatch(caregroupApiSlice.util.invalidateTags(['Group']));
+}
 
 export const doseLogApiSlice = createApi({
   reducerPath: 'doseLogApi',
@@ -22,7 +29,7 @@ export const doseLogApiSlice = createApi({
         }
         try {
           await queryFulfilled;
-          dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
+          invalidateAfterDoseMutation(dispatch);
         } catch {
           // Revert on network failure; markDoneNoLock avoids restarting the 60s timer
           if (!skipOptimistic) {
@@ -46,7 +53,7 @@ export const doseLogApiSlice = createApi({
         );
         try {
           await queryFulfilled;
-          dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
+          invalidateAfterDoseMutation(dispatch);
         } catch {
           doseLogIds.forEach(doseLogId =>
             dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId })),
