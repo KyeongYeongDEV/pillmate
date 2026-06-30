@@ -1,6 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
-import type { CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
+import type { BulkCheckDoseInput, CheckDoseInput, DoseLogResponse } from '@/types/doseLog';
 import { markDone, markWait, markDoneNoLock } from './doseStateSlice';
 import { scheduleApiSlice } from './scheduleApi';
 
@@ -31,7 +31,30 @@ export const doseLogApiSlice = createApi({
         }
       },
     }),
+
+    // 슬롯 단위 일괄 체크 — 단일 트랜잭션 + ActivityFeed 1회 (BE 원자 처리)
+    bulkCheckDose: build.mutation<DoseLogResponse[], BulkCheckDoseInput>({
+      query: (body) => ({
+        url: '/dose-logs/bulk-check',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Schedule', 'DoseLog', 'Activity'],
+      async onQueryStarted({ doseLogIds, action }, { dispatch, queryFulfilled }) {
+        doseLogIds.forEach(doseLogId =>
+          dispatch(action === 'TAKE' ? markDone({ doseLogId }) : markWait({ doseLogId })),
+        );
+        try {
+          await queryFulfilled;
+          dispatch(scheduleApiSlice.util.invalidateTags(['MonthSchedule']));
+        } catch {
+          doseLogIds.forEach(doseLogId =>
+            dispatch(action === 'TAKE' ? markWait({ doseLogId }) : markDoneNoLock({ doseLogId })),
+          );
+        }
+      },
+    }),
   }),
 });
 
-export const { useCheckDoseMutation } = doseLogApiSlice;
+export const { useCheckDoseMutation, useBulkCheckDoseMutation } = doseLogApiSlice;

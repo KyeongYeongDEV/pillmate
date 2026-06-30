@@ -1,10 +1,18 @@
 export type DoseStatus = 'PENDING' | 'TAKEN' | 'SKIPPED' | 'MISSED' | 'DELAYED';
 
+export type DoseAction = 'TAKE' | 'SKIP' | 'CANCEL';
+
 export interface CheckDoseInput {
   doseLogId: number;
-  action: 'TAKE' | 'SKIP' | 'CANCEL';
+  action: DoseAction;
   skipReason?: string;
   skipOptimistic?: boolean;
+}
+
+export interface BulkCheckDoseInput {
+  doseLogIds: number[];
+  action: DoseAction;
+  skipReason?: string;
 }
 
 export interface DoseLogResponse {
