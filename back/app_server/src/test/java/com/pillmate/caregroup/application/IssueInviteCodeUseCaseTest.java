@@ -57,7 +57,7 @@ class IssueInviteCodeUseCaseTest {
     }
 
     @Test
-    @DisplayName("발급 성공 시 Redis 에도 코드→groupId 매핑 저장 (TTL 3분 — 수동 입력 충분 + OTP 수준 보안)")
+    @DisplayName("발급 성공 시 Redis 에도 코드→groupId 매핑 저장 (TTL 60초 — 수동 입력 충분 + OTP 수준 보안)")
     void issue_alsoStoresToRedisCache() {
         given(membershipRepository.existsByCareGroupIdAndUserId(7L, 1L)).willReturn(true);
         given(inviteCodeRepository.save(any(InviteCode.class)))
@@ -67,6 +67,6 @@ class IssueInviteCodeUseCaseTest {
 
         ArgumentCaptor<Duration> ttl = ArgumentCaptor.forClass(Duration.class);
         verify(inviteCodeCachePort).put(eq(response.code()), eq(7L), ttl.capture());
-        assertThat(ttl.getValue()).isEqualTo(Duration.ofMinutes(3));
+        assertThat(ttl.getValue()).isEqualTo(Duration.ofSeconds(60));
     }
 }

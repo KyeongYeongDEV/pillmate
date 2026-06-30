@@ -51,7 +51,7 @@ class CreateCareGroupUseCaseTest {
     }
 
     @Test
-    @DisplayName("그룹 생성 시 Redis SETEX 도 호출 (직후 가입 시 Redis hit 보장, TTL 3분)")
+    @DisplayName("그룹 생성 시 Redis SETEX 도 호출 (직후 가입 시 Redis hit 보장, TTL 60초)")
     void create_alsoPutsInviteCodeToRedis() {
         CareGroup saved = CareGroup.create("redis-smoke", 1L);
         InviteCode savedCode = InviteCode.generate(saved.getId(), 1L);
@@ -62,6 +62,6 @@ class CreateCareGroupUseCaseTest {
 
         ArgumentCaptor<Duration> ttl = ArgumentCaptor.forClass(Duration.class);
         verify(inviteCodeCachePort).put(eq(savedCode.getCode()), eq(saved.getId()), ttl.capture());
-        assertThat(ttl.getValue()).isEqualTo(Duration.ofMinutes(3));
+        assertThat(ttl.getValue()).isEqualTo(Duration.ofSeconds(60));
     }
 }

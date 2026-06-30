@@ -43,12 +43,12 @@ public class InviteCode {
         ic.createdBy = createdBy;
         ic.code = UUID.randomUUID().toString().replaceAll("[^A-Z0-9]", "")
                       .toUpperCase().substring(0, 6);
-        ic.expiresAt = Instant.now().plus(INVITE_CODE_TTL_MINUTES, ChronoUnit.MINUTES);
+        ic.expiresAt = Instant.now().plus(INVITE_CODE_TTL_SECONDS, ChronoUnit.SECONDS);
         ic.createdAt = Instant.now();
         return ic;
     }
 
-    public static final int INVITE_CODE_TTL_MINUTES = 3;
+    public static final int INVITE_CODE_TTL_SECONDS = 60;
 
     public static InviteCode ofExpired(String code, Long careGroupId, Long createdBy) {
         InviteCode ic = new InviteCode();
