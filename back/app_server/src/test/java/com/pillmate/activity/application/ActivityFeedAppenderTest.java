@@ -13,8 +13,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 @DisplayName("ActivityFeedAppender — 활동 피드 등록")
@@ -82,5 +88,54 @@ class ActivityFeedAppenderTest {
         ArgumentCaptor<ActivityFeed> captor = ArgumentCaptor.forClass(ActivityFeed.class);
         then(activityFeedRepository).should(times(1)).save(captor.capture());
         assertThat(captor.getValue().getActivityType()).isEqualTo(ActivityType.DOSE_CANCELED);
+    }
+
+    // T-DOSE-ACTIVITY-DEDUPE: 같은 슬롯 약 N개 일괄 체크 시 10초 내 동일 (actor,type,slot) 중복 skip
+    @Test
+    @DisplayName("DOSE_TAKEN — 10초 내 동일 슬롯 이미 적재됨(existsRecent true) → save skip")
+    void appendTaken_whenRecentExists_skipsSave() {
+        given(activityFeedRepository.existsRecent(
+                eq(1L), eq(ActivityType.DOSE_TAKEN), eq(TimeOfDay.MORNING), any(Instant.class)))
+                .willReturn(true);
+
+        sut.appendTaken(1L, TimeOfDay.MORNING, "할머니");
+
+        then(activityFeedRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("DOSE_CANCELED — 10초 내 동일 슬롯 중복 → save skip")
+    void appendCanceled_whenRecentExists_skipsSave() {
+        given(activityFeedRepository.existsRecent(
+                eq(2L), eq(ActivityType.DOSE_CANCELED), eq(TimeOfDay.EVENING), any(Instant.class)))
+                .willReturn(true);
+
+        sut.appendCanceled(2L, TimeOfDay.EVENING, "아버지");
+
+        then(activityFeedRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("DOSE_MISSED — 10초 내 동일 슬롯 중복 → save skip")
+    void appendMissed_whenRecentExists_skipsSave() {
+        given(activityFeedRepository.existsRecent(
+                eq(3L), eq(ActivityType.DOSE_MISSED), eq(TimeOfDay.NOON), any(Instant.class)))
+                .willReturn(true);
+
+        sut.appendMissed(3L, TimeOfDay.NOON, "어머니");
+
+        then(activityFeedRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("DOSE_TAKEN — existsRecent false(윈도우 밖/첫 적재) → 정상 save")
+    void appendTaken_whenNoRecent_saves() {
+        given(activityFeedRepository.existsRecent(
+                eq(1L), eq(ActivityType.DOSE_TAKEN), eq(TimeOfDay.MORNING), any(Instant.class)))
+                .willReturn(false);
+
+        sut.appendTaken(1L, TimeOfDay.MORNING, "할머니");
+
+        then(activityFeedRepository).should(times(1)).save(any());
     }
 }

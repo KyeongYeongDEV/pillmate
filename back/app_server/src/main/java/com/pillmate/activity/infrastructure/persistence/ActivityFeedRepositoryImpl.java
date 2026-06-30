@@ -1,11 +1,14 @@
 package com.pillmate.activity.infrastructure.persistence;
 
 import com.pillmate.activity.domain.model.ActivityFeed;
+import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.schedule.domain.model.TimeOfDay;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,5 +29,11 @@ class ActivityFeedRepositoryImpl implements ActivityFeedRepository {
             return Collections.emptyList();
         }
         return jpa.findByActorUserIdInOrderByOccurredAtDesc(actorUserIds, PageRequest.of(0, limit));
+    }
+
+    @Override
+    public boolean existsRecent(Long actorUserId, ActivityType type, TimeOfDay timeSlot, Instant since) {
+        return jpa.existsByActorUserIdAndActivityTypeAndTimeSlotAndOccurredAtGreaterThanEqual(
+                actorUserId, type, timeSlot, since);
     }
 }
