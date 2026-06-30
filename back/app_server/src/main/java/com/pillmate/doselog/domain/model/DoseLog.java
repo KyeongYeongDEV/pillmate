@@ -15,7 +15,6 @@ import lombok.NoArgsConstructor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 
 @Entity
@@ -92,15 +91,16 @@ public class DoseLog {
         this.scheduledAt = newScheduledAt;
     }
 
-    public void cancel() {
+    public boolean cancel() {
         if (status != DoseStatus.TAKEN) {
-            return;
+            return false;
         }
         this.status = DoseStatus.PENDING;
         this.checkedBy = null;
         this.checkedAt = null;
         this.skipReason = null;
         this.groupNotifiedAt = null;
+        return true;
     }
 
     public void cancelForPeriodChange() {
@@ -119,9 +119,7 @@ public class DoseLog {
     }
 
     public boolean isEditableOn(Clock clock) {
-        LocalDate scheduledDate = scheduledAt.atZone(KST).toLocalDate();
-        LocalDate today = Instant.now(clock).atZone(KST).toLocalDate();
-        return scheduledDate.equals(today);
+        return true;
     }
 
     public boolean isDelayed(Clock clock) {

@@ -36,7 +36,6 @@ public class CheckDoseUseCase {
         DoseLog doseLog = doseLogRepository.findById(req.doseLogId())
                 .orElseThrow(() -> new PillmateException(ErrorCode.INVALID_REQUEST));
         verifyOwnership(doseLog.getPatientId());
-        verifyEditableToday(doseLog);
 
         if ("TAKE".equalsIgnoreCase(req.action())) {
             doseLog.take(checkedBy);
@@ -53,18 +52,12 @@ public class CheckDoseUseCase {
     }
 
     private void cancelWithGroupNotice(DoseLog doseLog, Long actorUserId) {
-        boolean groupAlreadyNotified = doseLog.isGroupNotified();
-        doseLog.cancel();
-        if (groupAlreadyNotified) {
-            eventPublisher.publishEvent(
-                    new DoseCheckCanceled(doseLog.getId(), actorUserId, doseLog.getScheduleId()));
+        if (!doseLog.cancel()) {
+            return;
         }
-    }
-
-    private void verifyEditableToday(DoseLog doseLog) {
-        if (!doseLog.isEditableOn(clock)) {
-            throw new PillmateException(ErrorCode.DOSE_LOG_DATE_LOCKED);
-        }
+        eventPublisher.publishEvent(
+                new DoseCheckCanceled(doseLog.getId(), actorUserId, doseLog.getScheduleId()));
+        appendCanceledActivity(doseLog);
     }
 
     private void verifyOwnership(Long patientId) {
@@ -81,5 +74,14 @@ public class CheckDoseUseCase {
                 .map(User::getName)
                 .orElse("멤버");
         activityFeedAppender.appendTaken(doseLog.getPatientId(), schedule.getTimeOfDay(), actorName);
+    }
+
+    private void appendCanceledActivity(DoseLog doseLog) {
+        Schedule schedule = scheduleRepository.findById(doseLog.getScheduleId()).orElse(null);
+        if (schedule == null) return;
+        String actorName = userRepository.findById(doseLog.getPatientId())
+                .map(User::getName)
+                .orElse("멤버");
+        activityFeedAppender.appendCanceled(doseLog.getPatientId(), schedule.getTimeOfDay(), actorName);
     }
 }

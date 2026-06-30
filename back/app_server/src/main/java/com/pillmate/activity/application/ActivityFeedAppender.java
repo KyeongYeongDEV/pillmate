@@ -26,6 +26,12 @@ public class ActivityFeedAppender {
         activityFeedRepository.save(feed);
     }
 
+    public void appendCanceled(Long actorUserId, TimeOfDay timeSlot, String actorName) {
+        String summary = actorName + "이(가) " + toKorean(timeSlot) + "약 복용을 취소했어요";
+        ActivityFeed feed = ActivityFeed.create(actorUserId, ActivityType.DOSE_CANCELED, timeSlot, summary, ActivitySeverity.WARN);
+        activityFeedRepository.save(feed);
+    }
+
     private String toKorean(TimeOfDay timeSlot) {
         if (timeSlot == null) return "";
         return switch (timeSlot) {
