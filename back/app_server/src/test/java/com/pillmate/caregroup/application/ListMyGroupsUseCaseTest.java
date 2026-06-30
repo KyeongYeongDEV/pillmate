@@ -22,7 +22,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
@@ -54,7 +53,7 @@ class ListMyGroupsUseCaseTest {
                 Membership.of(10L, 2L, MemberRole.PATIENT, 1L)));
         given(membershipRepository.findByCareGroupId(11L)).willReturn(List.of(my11));
         given(userRepository.findById(anyLong())).willReturn(Optional.of(User.dummy("멤버")));
-        given(activityFeedRepository.findByActorUserIdIn(anyList(), anyInt())).willReturn(List.of());
+        given(activityFeedRepository.findByActorSince(anyLong(), any(), anyInt())).willReturn(List.of());
 
         List<MyGroupSummary> result = sut.listMyGroups(1L);
 

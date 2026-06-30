@@ -32,6 +32,12 @@ class ActivityFeedRepositoryImpl implements ActivityFeedRepository {
     }
 
     @Override
+    public List<ActivityFeed> findByActorSince(Long actorUserId, Instant since, int limit) {
+        return jpa.findByActorUserIdAndOccurredAtGreaterThanEqualOrderByOccurredAtDesc(
+                actorUserId, since, PageRequest.of(0, limit));
+    }
+
+    @Override
     public boolean existsRecent(Long actorUserId, ActivityType type, TimeOfDay timeSlot, Instant since) {
         return jpa.existsByActorUserIdAndActivityTypeAndTimeSlotAndOccurredAtGreaterThanEqual(
                 actorUserId, type, timeSlot, since);

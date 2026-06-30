@@ -71,12 +71,15 @@ public class ListMyGroupsUseCase {
     }
 
     private LastActivitySummary latestActivity(List<Membership> members) {
-        List<Long> memberIds = members.stream().map(Membership::getUserId).toList();
-        List<ActivityFeed> recent = activityFeedRepository.findByActorUserIdIn(memberIds, 1);
-        if (recent.isEmpty()) {
+        // 멤버별 가입(joinedAt) 시점 이후 최신 1건 — 새 그룹은 과거 활동 미노출
+        ActivityFeed first = members.stream()
+                .flatMap(m -> activityFeedRepository
+                        .findByActorSince(m.getUserId(), m.getJoinedAt(), 1).stream())
+                .max(java.util.Comparator.comparing(ActivityFeed::getOccurredAt))
+                .orElse(null);
+        if (first == null) {
             return null;
         }
-        ActivityFeed first = recent.get(0);
         return new LastActivitySummary(
                 first.getSummary(),
                 first.getActivityType().name(),

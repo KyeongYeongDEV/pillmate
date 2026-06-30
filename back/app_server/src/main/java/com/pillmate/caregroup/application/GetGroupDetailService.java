@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -93,8 +94,13 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
     }
 
     private List<ActivityView> toRecentActivities(List<Membership> memberships, Map<Long, String> nameById) {
-        List<Long> memberIds = memberships.stream().map(Membership::getUserId).toList();
-        List<ActivityFeed> feeds = activityFeedRepository.findByActorUserIdIn(memberIds, RECENT_ACTIVITY_LIMIT);
+        // 멤버별 가입 시점(joinedAt) 이후 활동만 합집합 → 새 그룹은 과거 활동 미노출
+        List<ActivityFeed> feeds = memberships.stream()
+                .flatMap(m -> activityFeedRepository
+                        .findByActorSince(m.getUserId(), m.getJoinedAt(), RECENT_ACTIVITY_LIMIT).stream())
+                .sorted(Comparator.comparing(ActivityFeed::getOccurredAt).reversed())
+                .limit(RECENT_ACTIVITY_LIMIT)
+                .toList();
         return feeds.stream()
                 .map(f -> new ActivityView(
                         nameById.getOrDefault(f.getActorUserId(), "멤버"),

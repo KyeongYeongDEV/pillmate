@@ -12,6 +12,9 @@ import java.util.List;
 interface ActivityFeedJpaRepository extends JpaRepository<ActivityFeed, Long> {
     List<ActivityFeed> findByActorUserIdInOrderByOccurredAtDesc(List<Long> actorUserIds, Pageable pageable);
 
+    List<ActivityFeed> findByActorUserIdAndOccurredAtGreaterThanEqualOrderByOccurredAtDesc(
+            Long actorUserId, Instant occurredAtFrom, Pageable pageable);
+
     boolean existsByActorUserIdAndActivityTypeAndTimeSlotAndOccurredAtGreaterThanEqual(
             Long actorUserId, ActivityType activityType, TimeOfDay timeSlot, Instant occurredAtFrom);
 }
