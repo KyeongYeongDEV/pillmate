@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import CustomTabBar from '@/components/navigation/CustomTabBar';
+import { router } from 'expo-router';
 
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
@@ -33,15 +34,18 @@ const makeProps = (activeRouteName = 'home') => ({
 });
 
 describe('CustomTabBar', () => {
-  it('4개 탭 레이블(register-fab 제외) 렌더', () => {
+  beforeEach(() => (router.push as jest.Mock).mockClear());
+
+  it('4개 탭(홈/복약/약봉투/그룹) 렌더, 상담(chat) 제외', () => {
     render(<CustomTabBar {...makeProps()} />);
     expect(screen.getByLabelText('홈')).toBeTruthy();
     expect(screen.getByLabelText('복약')).toBeTruthy();
-    expect(screen.getByLabelText('상담')).toBeTruthy();
+    expect(screen.getByLabelText('약봉투')).toBeTruthy();
     expect(screen.getByLabelText('그룹')).toBeTruthy();
+    expect(screen.queryByLabelText('상담')).toBeNull();
   });
 
-  it('비활성 탭 탭 → navigation.navigate 호출', async () => {
+  it('비활성 탭(복약) → navigation.navigate(schedule)', async () => {
     const props = makeProps('home');
     render(<CustomTabBar {...props} />);
     fireEvent.press(screen.getByLabelText('복약'));
@@ -50,7 +54,17 @@ describe('CustomTabBar', () => {
     expect(props.navigation.navigate).toHaveBeenCalledWith('schedule');
   });
 
-  it('활성 탭 다시 탭해도 navigate 안 함', async () => {
+  it('약봉투(register-fab) 탭 → router.push(/prescriptions), navigate 안 함', async () => {
+    const props = makeProps('home');
+    render(<CustomTabBar {...props} />);
+    fireEvent.press(screen.getByLabelText('약봉투'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(router.push).toHaveBeenCalledWith('/prescriptions');
+    expect(props.navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('활성 탭(홈) 다시 탭해도 navigate 안 함', async () => {
     const props = makeProps('home');
     render(<CustomTabBar {...props} />);
     fireEvent.press(screen.getByLabelText('홈'));

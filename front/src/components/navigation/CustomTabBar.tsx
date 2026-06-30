@@ -3,15 +3,19 @@ import { View, Pressable, Text, StyleSheet } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scale, colors, space } from '@/styles/tokens';
 
 const TAB_ICONS: Record<string, { icon: string; label: string }> = {
-  home:     { icon: 'home',           label: '홈' },
-  schedule: { icon: 'calendar',       label: '복약' },
-  chat:     { icon: 'message-circle', label: '상담' },
-  group:    { icon: 'users',          label: '그룹' },
+  home:          { icon: 'home',      label: '홈' },
+  schedule:      { icon: 'calendar',  label: '복약' },
+  'register-fab': { icon: 'file-text', label: '약봉투' },
+  group:         { icon: 'users',     label: '그룹' },
 };
+
+const REGISTER_ROUTE_NAME = 'register-fab';
+const PRESCRIPTION_LIST_PATH = '/prescriptions' as const;
 
 interface TabIconProps { name: string; focused: boolean; label: string }
 
@@ -25,46 +29,26 @@ function TabIcon({ name, focused, label }: TabIconProps) {
   );
 }
 
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   const handleTabPress = useCallback(async (routeName: string, isFocused: boolean) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (routeName === REGISTER_ROUTE_NAME) {
+      router.push(PRESCRIPTION_LIST_PATH as any);
+      return;
+    }
     if (!isFocused) navigation.navigate(routeName);
   }, [navigation]);
 
   const isFocused = (routeName: string) => state.routes[state.index]?.name === routeName;
   const visibleRoutes = state.routes.filter(r => TAB_ICONS[r.name]);
-  const leftRoutes = visibleRoutes.slice(0, 2);
-  const rightRoutes = visibleRoutes.slice(2);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <View style={styles.bar}>
-        {leftRoutes.map((route) => {
+        {visibleRoutes.map((route) => {
           const tabDef = TAB_ICONS[route.name];
-          if (!tabDef) return null;
-          const focused = isFocused(route.name);
-          return (
-            <Pressable
-              key={route.key}
-              style={styles.tabButton}
-              onPress={() => handleTabPress(route.name, focused)}
-              accessibilityLabel={tabDef.label}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: focused }}
-            >
-              <TabIcon name={tabDef.icon} focused={focused} label={tabDef.label} />
-            </Pressable>
-          );
-        })}
-
-        {/* Empty center slot — FAB is rendered as overlay in TabsLayout */}
-        <View style={styles.fabSlot} />
-
-        {rightRoutes.map((route) => {
-          const tabDef = TAB_ICONS[route.name];
-          if (!tabDef) return null;
           const focused = isFocused(route.name);
           return (
             <Pressable
@@ -108,9 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: scale(56),
-  },
-  fabSlot: {
-    width: scale(80),
   },
   tabItem: {
     alignItems: 'center',

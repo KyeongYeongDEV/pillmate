@@ -42,17 +42,25 @@ function Row({ label, right, onPress, danger, showDivider }: RowProps) {
     <>
       {showDivider && <View style={styles.divider} />}
       <Pressable
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        style={({ pressed }) => pressed && styles.rowPressed}
         onPress={onPress}
         disabled={!onPress}
         accessibilityRole={onPress ? 'button' : 'text'}
         accessibilityLabel={label}
       >
-        <Text style={[styles.rowLabel, danger && styles.rowDanger]}>{label}</Text>
-        <View style={styles.rowRight}>
-          {right ?? (
-            onPress && <Feather name="chevron-right" size={scale(16)} color={colors.labelAssistive} />
-          )}
+        <View style={styles.row}>
+          <Text
+            style={[styles.rowLabel, danger && styles.rowDanger]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {label}
+          </Text>
+          <View style={styles.rowRight}>
+            {right ?? (
+              onPress && <Feather name="chevron-right" size={scale(18)} color={colors.labelAssistive} />
+            )}
+          </View>
         </View>
       </Pressable>
     </>
@@ -180,11 +188,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: space.s16, paddingVertical: space.s16,
+    minHeight: scale(56), width: '100%',
   },
   rowPressed: { backgroundColor: colors.fillNormal },
-  rowLabel: { ...typography.body1n, color: colors.labelNormal, flex: 1 },
+  rowLabel: { ...typography.body1n, color: colors.labelNormal, flex: 1, marginRight: space.s8 },
   rowDanger: { color: colors.statusNegative },
-  rowRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  rowRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' },
 
   divider: { height: 1, backgroundColor: colors.line, marginHorizontal: space.s16 },
   versionTxt: { ...typography.label1n, color: colors.labelAssistive },
