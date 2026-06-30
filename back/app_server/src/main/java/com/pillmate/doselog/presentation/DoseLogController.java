@@ -2,8 +2,10 @@ package com.pillmate.doselog.presentation;
 
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
+import com.pillmate.doselog.application.BulkCheckDoseUseCase;
 import com.pillmate.doselog.application.CheckDoseUseCase;
 import com.pillmate.doselog.application.GetDoseHistoryUseCase;
+import com.pillmate.doselog.application.dto.BulkCheckDoseRequest;
 import com.pillmate.doselog.application.dto.CheckDoseRequest;
 import com.pillmate.doselog.application.dto.DoseLogResponse;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import java.util.List;
 public class DoseLogController {
 
     private final CheckDoseUseCase checkDoseUseCase;
+    private final BulkCheckDoseUseCase bulkCheckDoseUseCase;
     private final GetDoseHistoryUseCase getDoseHistoryUseCase;
 
     @PatchMapping("/check")
@@ -28,6 +31,13 @@ public class DoseLogController {
             @RequestBody @Valid CheckDoseRequest request) {
         Long userId = UserContext.get();
         return ResponseEntity.ok(ApiResponse.success(checkDoseUseCase.check(request, userId)));
+    }
+
+    @PatchMapping("/bulk-check")
+    public ResponseEntity<ApiResponse<List<DoseLogResponse>>> bulkCheck(
+            @RequestBody @Valid BulkCheckDoseRequest request) {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(bulkCheckDoseUseCase.bulkCheck(request, userId)));
     }
 
     @GetMapping

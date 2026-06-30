@@ -17,7 +17,11 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     private final DoseLogJpaRepository jpa;
 
     @Override public DoseLog save(DoseLog log) { return jpa.save(log); }
+    @Override public List<DoseLog> saveAll(List<DoseLog> logs) { return jpa.saveAll(logs); }
     @Override public Optional<DoseLog> findById(Long id) { return jpa.findById(id); }
+    @Override public List<DoseLog> findAllByIdIn(java.util.Collection<Long> ids) {
+        return jpa.findAllById(ids);
+    }
 
     @Override
     public List<DoseLog> findByPatientIdAndScheduledAtBetween(Long patientId, Instant from, Instant to) {
