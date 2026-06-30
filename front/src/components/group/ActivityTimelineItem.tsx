@@ -12,6 +12,7 @@ interface DotColorMap {
 const DOT_COLOR: DotColorMap = {
   DOSE_TAKEN: colors.statusPositive,
   DOSE_MISSED: colors.statusNegative,
+  DOSE_CANCELED: colors.statusNegative,
   AI_INSIGHT: colors.violet45,
   AI_REPORT: colors.violet45,
   PRESCRIPTION_ADDED: colors.primaryBase,

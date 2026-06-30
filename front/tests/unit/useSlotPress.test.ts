@@ -114,13 +114,13 @@ describe('useSlotPress', () => {
     expect(mockDispatch).not.toHaveBeenCalled();
   });
 
-  it('state=done + 30초 이내 → CANCEL action 즉시 발사 (자유 토글, SKIP 아님)', () => {
+  it('state=done → 락 이내여도 항상 confirm Alert (lock 분기 제거)', () => {
     const lockedAt = Date.now() - 1_000;
     mockSelector.mockReturnValue(makeMap(lockedAt));
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(IDS, 'done'); });
-    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
-    expect(alertSpy).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith('복약 취소', '취소하시겠습니까?', expect.any(Array));
+    expect(checkDose).not.toHaveBeenCalled();
   });
 
   it('state=done + 30초 초과 → confirm Alert 표시, 즉시 발사 없음', () => {
@@ -160,11 +160,24 @@ describe('useSlotPress', () => {
     expect(checkDose).not.toHaveBeenCalled();
   });
 
-  it('state=done + doseLogId가 map에 없음 → CANCEL 즉시 발사 (락 없음)', () => {
+  it('state=done + doseLogId가 map에 없음 → 항상 confirm Alert (락 없음)', () => {
     mockSelector.mockReturnValue({});
     const { result } = renderHook(() => useSlotPress());
     act(() => { result.current(IDS, 'done'); });
-    expect(checkDose).toHaveBeenCalledWith({ doseLogId: DOSE_LOG_ID, action: 'CANCEL' });
+    expect(alertSpy).toHaveBeenCalledWith('복약 취소', '취소하시겠습니까?', expect.any(Array));
+    expect(checkDose).not.toHaveBeenCalled();
+  });
+
+  it('복수 id CANCEL "예" → 각 id skipOptimistic=true 로 CANCEL 호출', () => {
+    mockSelector.mockReturnValue({});
+    const { result } = renderHook(() => useSlotPress());
+    act(() => { result.current([5, 6, 7], 'done'); });
+    const yesBtn = findAlertButton('예');
+    expect(yesBtn).toBeDefined();
+    act(() => { yesBtn!.onPress?.(); });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: 5, action: 'CANCEL', skipOptimistic: true });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: 6, action: 'CANCEL', skipOptimistic: true });
+    expect(checkDose).toHaveBeenCalledWith({ doseLogId: 7, action: 'CANCEL', skipOptimistic: true });
   });
 
   it('state=done + lockedAt 정확히 30초 전 → 경계값 confirm 분기', () => {

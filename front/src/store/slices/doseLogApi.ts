@@ -10,7 +10,7 @@ export const doseLogApiSlice = createApi({
   tagTypes: ['Schedule', 'DoseLog', 'Activity'],
   endpoints: (build) => ({
     checkDose: build.mutation<DoseLogResponse, CheckDoseInput>({
-      query: (body) => ({
+      query: ({ skipOptimistic: _skipOptimistic, ...body }) => ({
         url: '/dose-logs/check',
         method: 'PATCH',
         body,

@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch } from '@/store/hooks';
 import { useCheckDoseMutation } from '@/store/slices/doseLogApi';
-import { selectIsLocked, markDone, markWait } from '@/store/slices/doseStateSlice';
-import type { RootState } from '@/store';
+import { markDone, markWait } from '@/store/slices/doseStateSlice';
 
 const CANCEL_CONFIRM_TITLE = '복약 취소';
 const CANCEL_CONFIRM_MSG = '취소하시겠습니까?';
@@ -11,7 +10,6 @@ const TAKE_PARTIAL_FAIL_MSG = '일부 복약 기록에 실패했습니다. 다�
 const CANCEL_PARTIAL_FAIL_MSG = '일부 복약 취소에 실패했습니다. 다시 시도해 주세요.';
 
 export function useSlotPress() {
-  const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const [checkDose] = useCheckDoseMutation();
   const dispatch = useAppDispatch();
 
@@ -62,14 +60,9 @@ export function useSlotPress() {
       });
     };
 
-    if (selectIsLocked(doseStateMap, primaryId, Date.now())) {
-      Alert.alert(CANCEL_CONFIRM_TITLE, CANCEL_CONFIRM_MSG, [
-        { text: '아니요', style: 'cancel' },
-        { text: '예', onPress: fireCancel },
-      ]);
-      return;
-    }
-
-    fireCancel();
-  }, [doseStateMap, checkDose, dispatch]);
+    Alert.alert(CANCEL_CONFIRM_TITLE, CANCEL_CONFIRM_MSG, [
+      { text: '아니요', style: 'cancel' },
+      { text: '예', style: 'destructive', onPress: fireCancel },
+    ]);
+  }, [checkDose, dispatch]);
 }

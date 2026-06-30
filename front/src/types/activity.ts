@@ -1,6 +1,6 @@
 export type ActivitySeverity = 'INFO' | 'WARN';
 
-export type ActivityType = 'DOSE_TAKEN' | 'DOSE_MISSED';
+export type ActivityType = 'DOSE_TAKEN' | 'DOSE_MISSED' | 'DOSE_CANCELED';
 
 export type TimeSlot = 'MORNING' | 'NOON' | 'EVENING' | 'BEDTIME';
 

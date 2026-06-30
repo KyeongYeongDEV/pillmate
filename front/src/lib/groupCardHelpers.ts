@@ -19,6 +19,7 @@ const DEFAULT_KIND: EventKindStyle = EVENT_KIND.note;
 const ACTIVITY_TO_KIND: Record<string, keyof typeof EVENT_KIND> = {
   DOSE_TAKEN: 'done',
   DOSE_MISSED: 'miss',
+  DOSE_CANCELED: 'miss',
   AI_INSIGHT: 'ai',
   AI_REPORT: 'ai',
   MEMBER_JOINED: 'note',
@@ -41,6 +42,7 @@ export function isPersonalGroup(group: MyGroupSummary): boolean {
 const ACTIVITY_LABEL: Record<string, string> = {
   DOSE_TAKEN: '복용',
   DOSE_MISSED: '미복용',
+  DOSE_CANCELED: '취소',
   AI_INSIGHT: 'AI',
   AI_REPORT: 'AI',
   PRESCRIPTION_ADDED: '약봉투',
