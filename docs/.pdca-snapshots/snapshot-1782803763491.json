@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-12T09:27:27.469Z",
+  "timestamp": "2026-06-30T07:16:03.489Z",
   "reason": "compaction",
   "status": {
     "version": "2.0",
-    "lastUpdated": "2026-06-02T16:09:29.717Z",
+    "lastUpdated": "2026-06-29T13:30:47.945Z",
     "activeFeatures": [
       "PillMate-Phase1",
       "scripts",
@@ -60,7 +60,8 @@
       "[id]",
       "router",
       "notifications",
-      "expo"
+      "expo",
+      "tmp"
     ],
     "primaryFeature": "PillMate-Phase1",
     "features": {
@@ -159,9 +160,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-21T07:51:46.605Z",
-          "lastUpdated": "2026-06-02T14:40:21.625Z"
+          "lastUpdated": "2026-06-29T13:29:35.497Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/application/SendGroupDoseNotificationServiceTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/doselog/application/CheckDoseUseCase.java"
       },
       "presentation": {
         "phase": "do",
@@ -185,9 +186,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-21T07:52:14.906Z",
-          "lastUpdated": "2026-06-02T14:35:25.274Z"
+          "lastUpdated": "2026-06-29T13:28:59.001Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/user/domain/model/User.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/activity/domain/model/ActivityType.java"
       },
       "repository": {
         "phase": "do",
@@ -315,9 +316,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-22T06:51:11.981Z",
-          "lastUpdated": "2026-05-22T07:28:17.034Z"
+          "lastUpdated": "2026-06-19T15:29:42.428Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/.cmux/roles/qa-claude.sh"
+        "lastFile": "/Users/user/Downloads/pillmate/.cmux/roles/qa-gemini.sh"
       },
       "core": {
         "phase": "do",
@@ -458,9 +459,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-24T03:13:34.471Z",
-          "lastUpdated": "2026-06-01T16:14:03.690Z"
+          "lastUpdated": "2026-06-29T10:41:15.470Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/app/(tabs)/group.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/app/(tabs)/_layout.tsx"
       },
       "unit": {
         "phase": "do",
@@ -471,9 +472,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-24T03:14:07.865Z",
-          "lastUpdated": "2026-06-02T14:36:47.681Z"
+          "lastUpdated": "2026-06-18T10:13:23.648Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/tests/unit/notificationDeepLink.test.ts"
+        "lastFile": "/Users/user/Downloads/pillmate/front/tests/unit/notificationsSetup.test.ts"
       },
       "ai": {
         "phase": "do",
@@ -549,9 +550,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:08:16.823Z",
-          "lastUpdated": "2026-06-02T14:37:50.908Z"
+          "lastUpdated": "2026-06-29T13:30:47.945Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/app/_layout.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/lib/groupCardHelpers.ts"
       },
       "slices": {
         "phase": "do",
@@ -562,9 +563,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:08:38.579Z",
-          "lastUpdated": "2026-06-02T14:35:01.837Z"
+          "lastUpdated": "2026-06-29T13:11:41.769Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/store/slices/userApi.ts"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/store/slices/doseLogApi.ts"
       },
       "store": {
         "phase": "do",
@@ -614,7 +615,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:39:39.512Z",
-          "lastUpdated": "2026-06-02T16:09:29.716Z"
+          "lastUpdated": "2026-06-29T10:41:09.840Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/front/src/components/navigation/CustomTabBar.tsx"
       },
@@ -666,9 +667,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T05:41:50.088Z",
-          "lastUpdated": "2026-06-02T06:56:15.760Z"
+          "lastUpdated": "2026-06-29T13:30:32.513Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/components/group/InviteCodeCard.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/components/group/ActivityTimelineItem.tsx"
       },
       "search": {
         "phase": "do",
@@ -770,9 +771,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-02T14:36:21.499Z",
-          "lastUpdated": "2026-06-02T14:37:42.495Z"
+          "lastUpdated": "2026-06-18T10:13:07.630Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/lib/notifications/NotificationsBootstrap.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/lib/notifications/setup.ts"
       },
       "expo": {
         "phase": "do",
@@ -786,6 +787,19 @@
           "lastUpdated": "2026-06-02T14:42:38.996Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/infrastructure/expo/ExpoPushSenderAdapterTest.java"
+      },
+      "tmp": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-19T07:28:19.433Z",
+          "lastUpdated": "2026-06-19T07:39:06.992Z"
+        },
+        "lastFile": "/tmp/cap2.py"
       }
     },
     "pipeline": {
@@ -796,7 +810,7 @@
     "session": {
       "startedAt": "2026-05-21T06:14:29.491Z",
       "onboardingCompleted": false,
-      "lastActivity": "2026-06-02T16:09:29.717Z"
+      "lastActivity": "2026-06-29T13:30:47.945Z"
     },
     "history": [
       {
@@ -8524,6 +8538,306 @@
       {
         "timestamp": "2026-06-02T16:09:29.717Z",
         "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:27:09.790Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:27:14.699Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:27:19.937Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:27:25.936Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:27:30.564Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:30:21.680Z",
+        "feature": "unit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:30:27.445Z",
+        "feature": "unit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T09:30:37.187Z",
+        "feature": "unit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T10:13:07.425Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T10:13:07.630Z",
+        "feature": "notifications",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T10:13:08.641Z",
+        "feature": "slices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T10:13:09.094Z",
+        "feature": "slices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-18T10:13:23.648Z",
+        "feature": "unit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:28:19.433Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:37:05.376Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:37:52.325Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:39:06.992Z",
+        "feature": "tmp",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:43:52.799Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:44:05.347Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:47:56.498Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T07:48:02.616Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-19T15:29:42.428Z",
+        "feature": "roles",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T09:30:46.883Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T09:30:57.567Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:08:43.951Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:14:43.762Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:12.636Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:18.055Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:32.697Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:17:47.929Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:18:06.145Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:26:06.188Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:26:11.407Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:41:09.841Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:41:15.470Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:03.003Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:09.456Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:14.483Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:24.250Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:32.332Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:11:41.770Z",
+        "feature": "slices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:28:59.001Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:20.388Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:26.892Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:35.497Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:05.937Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:22.162Z",
+        "feature": "group",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:32.513Z",
+        "feature": "group",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:42.120Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:47.945Z",
+        "feature": "front",
         "phase": "do",
         "action": "updated"
       }

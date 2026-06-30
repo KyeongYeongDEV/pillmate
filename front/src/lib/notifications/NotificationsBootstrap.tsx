@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useRegisterDeviceTokenMutation } from '@/store/slices/userApi';
 import type { RegisterDeviceTokenRequest } from '@/store/slices/userApi';
+import { useAppDispatch } from '@/store/hooks';
 import {
   configureNotificationHandler,
   ensurePushPermission,
@@ -10,6 +11,7 @@ import {
   fetchNativeDeviceToken,
 } from './setup';
 import { extractRouteFromNotification } from './deepLink';
+import { handlePushReceived } from './pushSync';
 
 const NOTIFICATION_INBOX_ROUTE = '/notifications';
 
@@ -22,6 +24,7 @@ async function resolveDeviceTokenRequest(): Promise<RegisterDeviceTokenRequest |
 
 export default function NotificationsBootstrap() {
   const [registerDeviceToken] = useRegisterDeviceTokenMutation();
+  const dispatch = useAppDispatch();
   const bootstrappedRef = useRef(false);
 
   useEffect(() => {
@@ -50,6 +53,14 @@ export default function NotificationsBootstrap() {
     });
     return () => sub.remove();
   }, []);
+
+  // 포그라운드 수신 — 화면 띄운 상태에서 푸시 오면 관련 cache 즉시 invalidate
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((notification) => {
+      handlePushReceived(notification, dispatch);
+    });
+    return () => sub.remove();
+  }, [dispatch]);
 
   return null;
 }
