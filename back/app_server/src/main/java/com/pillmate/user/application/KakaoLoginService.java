@@ -31,10 +31,15 @@ public class KakaoLoginService {
 
     @Transactional
     public AuthResult login(String code, String redirectUri) {
+        return login(code, redirectUri, null);
+    }
+
+    @Transactional
+    public AuthResult login(String code, String redirectUri, Long devUserId) {
         if (kakaoOAuthPort.isConfigured() && code != null && !code.isBlank()) {
             return loginWithKakao(code, redirectUri);
         }
-        return devFallback();
+        return devFallback(devUserId);
     }
 
     private AuthResult loginWithKakao(String code, String redirectUri) {
@@ -50,14 +55,26 @@ public class KakaoLoginService {
                         User.ofOAuth(profile.kakaoId(), UserProvider.KAKAO, profile.nickname(), profile.email())));
     }
 
-    private AuthResult devFallback() {
+    // prod(devFallbackEnabled=false)에서는 devUserId 헤더를 보기 전에 즉시 차단 → 헤더 위조 무력화 (P0)
+    private AuthResult devFallback(Long devUserId) {
         if (!devFallbackEnabled) {
             throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
         }
-        log.warn("DEV kakao fallback → userId=1");
-        User user = userRepository.findById(DEV_FALLBACK_USER_ID)
-                .orElseGet(() -> userRepository.save(User.dummy("dev-seed")));
+        User user = resolveDevUser(devUserId);
+        log.warn("DEV kakao fallback → userId={}", user.getId());
         return toAuthResult(user, false, null);
+    }
+
+    // dev 모드에서만: 헤더로 요청된 seed user 가 실재하면 그 user, 아니면 기본 seed(1)
+    private User resolveDevUser(Long requestedUserId) {
+        if (requestedUserId != null) {
+            User requested = userRepository.findById(requestedUserId).orElse(null);
+            if (requested != null) {
+                return requested;
+            }
+        }
+        return userRepository.findById(DEV_FALLBACK_USER_ID)
+                .orElseGet(() -> userRepository.save(User.dummy("dev-seed")));
     }
 
     private AuthResult toAuthResult(User user, boolean isNewUser, KakaoProfile profile) {

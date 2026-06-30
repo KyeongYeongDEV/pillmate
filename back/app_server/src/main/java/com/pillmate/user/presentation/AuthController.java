@@ -34,10 +34,13 @@ public class AuthController {
     }
 
     @PostMapping("/kakao")
-    public ResponseEntity<ApiResponse<AuthResult>> kakaoLogin(@RequestBody KakaoLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResult>> kakaoLogin(
+            @RequestBody KakaoLoginRequest request,
+            @RequestHeader(value = "X-Dev-User-Id", required = false) Long devUserId) {
         AuthResult result = kakaoLoginService.login(
                 request.code() != null ? request.code() : "",
-                request.redirectUri() != null ? request.redirectUri() : "");
+                request.redirectUri() != null ? request.redirectUri() : "",
+                devUserId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

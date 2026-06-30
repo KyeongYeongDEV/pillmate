@@ -14,7 +14,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -33,7 +36,7 @@ class AuthControllerTest {
     void kakaoLogin_returns200() throws Exception {
         AuthResult result = new AuthResult("jwt.token.here", 1L, true,
                 new AuthResult.ProfileInfo("홍길동", "hong@test.com", null));
-        given(kakaoLoginService.login(any(), any())).willReturn(result);
+        given(kakaoLoginService.login(any(), any(), any())).willReturn(result);
 
         mockMvc.perform(post("/auth/kakao")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -50,12 +53,44 @@ class AuthControllerTest {
     void kakaoLogin_emptyCode_returns200() throws Exception {
         AuthResult result = new AuthResult("seed.jwt", 1L, false,
                 new AuthResult.ProfileInfo("seed", null, null));
-        given(kakaoLoginService.login(any(), any())).willReturn(result);
+        given(kakaoLoginService.login(any(), any(), any())).willReturn(result);
 
         mockMvc.perform(post("/auth/kakao")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\":\"\",\"redirectUri\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.userId").value(1));
+    }
+
+    @Test
+    @DisplayName("POST /auth/kakao + X-Dev-User-Id:2 헤더 → service 에 devUserId=2 전달")
+    void kakaoLogin_withDevUserIdHeader_passesToService() throws Exception {
+        AuthResult result = new AuthResult("u2.jwt", 2L, false,
+                new AuthResult.ProfileInfo("user2", null, null));
+        given(kakaoLoginService.login(any(), any(), eq(2L))).willReturn(result);
+
+        mockMvc.perform(post("/auth/kakao")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Dev-User-Id", "2")
+                        .content("{\"code\":\"\",\"redirectUri\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(2));
+
+        then(kakaoLoginService).should().login(any(), any(), eq(2L));
+    }
+
+    @Test
+    @DisplayName("POST /auth/kakao 헤더 없음 → service 에 devUserId=null 전달 (기존 흐름)")
+    void kakaoLogin_noHeader_passesNullDevUserId() throws Exception {
+        AuthResult result = new AuthResult("seed.jwt", 1L, false,
+                new AuthResult.ProfileInfo("seed", null, null));
+        given(kakaoLoginService.login(any(), any(), any())).willReturn(result);
+
+        mockMvc.perform(post("/auth/kakao")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"\",\"redirectUri\":\"\"}"))
+                .andExpect(status().isOk());
+
+        then(kakaoLoginService).should().login(any(), any(), isNull());
     }
 }

@@ -122,6 +122,62 @@ class KakaoLoginServiceTest {
         verify(userRepository, never()).findById(any());
     }
 
+    // T-DEV-USERID-SELECTOR: dev fallback 시 X-Dev-User-Id 헤더로 seed user 선택
+    @Test
+    @DisplayName("dev fallback + devUserId=2 (seed 존재) → user2 JWT 발급")
+    void login_devFallback_withDevUserId_returnsRequestedUser() {
+        ReflectionTestUtils.setField(sut, "devFallbackEnabled", true);
+        given(kakaoOAuthPort.isConfigured()).willReturn(false);
+        given(userRepository.findById(2L)).willReturn(Optional.of(userWithId(2L, "user2")));
+
+        AuthResult result = sut.login("", "", 2L);
+
+        assertThat(result.userId()).isEqualTo(2L);
+        verify(jwtTokenProvider).issue(2L);
+        verify(kakaoOAuthPort, never()).exchange(any(), any());
+    }
+
+    @Test
+    @DisplayName("dev fallback + devUserId 미존재(99) → 기본 seed userId=1 로 폴백")
+    void login_devFallback_devUserIdNotFound_fallsBackToSeed1() {
+        ReflectionTestUtils.setField(sut, "devFallbackEnabled", true);
+        given(kakaoOAuthPort.isConfigured()).willReturn(false);
+        given(userRepository.findById(99L)).willReturn(Optional.empty());
+        given(userRepository.findById(1L)).willReturn(Optional.of(userWithId(1L, "seed")));
+
+        AuthResult result = sut.login("", "", 99L);
+
+        assertThat(result.userId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("★P0 보안 — prod(devFallback=false) + devUserId=2 헤더 → 헤더 무시, KAKAO_AUTH_FAILED, findById 미호출")
+    void login_prodMode_ignoresDevUserIdHeader_throws() {
+        // devFallbackEnabled 기본 false (prod)
+        given(kakaoOAuthPort.isConfigured()).willReturn(false);
+
+        assertThatThrownBy(() -> sut.login("", "", 2L))
+                .isInstanceOf(PillmateException.class)
+                .satisfies(ex -> assertThat(((PillmateException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.KAKAO_AUTH_FAILED));
+
+        verify(userRepository, never()).findById(any());
+        verify(jwtTokenProvider, never()).issue(any());
+    }
+
+    @Test
+    @DisplayName("prod(devFallback=false) + 실제 카카오 code → devUserId 헤더 무관 정상 카카오 로그인")
+    void login_prodMode_realCode_ignoresDevUserId() {
+        given(kakaoOAuthPort.isConfigured()).willReturn(true);
+        given(kakaoOAuthPort.exchange("realcode", "redirect")).willReturn(KAKAO_PROFILE);
+        given(userRepository.findByProviderAndExternalId(UserProvider.KAKAO, "kakao-id-1"))
+                .willReturn(Optional.of(userWithId(7L, "홍길동")));
+
+        AuthResult result = sut.login("realcode", "redirect", 2L);
+
+        assertThat(result.userId()).isEqualTo(7L);  // 카카오 프로필 user, devUserId(2) 무시
+    }
+
     private User userWithId(Long id, String name) {
         User user = User.dummy(name);
         ReflectionTestUtils.setField(user, "id", id);
