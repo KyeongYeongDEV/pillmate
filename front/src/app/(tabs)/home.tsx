@@ -151,7 +151,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>고정 그룹 알림</Text>
             {pinnedGroupId != null && (
               <Pressable
-                onPress={() => router.push({ pathname: '/group/[id]/activity', params: { id: String(pinnedGroupId) } } as any)}
+                onPress={() => router.push({ pathname: '/group/[id]', params: { id: String(pinnedGroupId) } } as any)}
                 accessibilityLabel="알림 보러가기"
                 accessibilityRole="button"
                 hitSlop={8}

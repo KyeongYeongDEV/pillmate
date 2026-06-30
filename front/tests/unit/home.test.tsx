@@ -52,7 +52,7 @@ describe('HomeScreen 고정 그룹 알림 헤더 링크', () => {
 
     fireEvent.press(link);
     expect(router.push).toHaveBeenCalledWith({
-      pathname: '/group/[id]/activity',
+      pathname: '/group/[id]',
       params: { id: '7' },
     });
   });
