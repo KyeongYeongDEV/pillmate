@@ -8,10 +8,15 @@ export const activityApi = createApi({
   baseQuery: createPillmateBaseQuery(),
   tagTypes: ['Activity'],
   endpoints: (build) => ({
-    getRecentActivity: build.query<ActivityFeedItem[], { groupId?: number } | void>({
+    getRecentActivity: build.query<ActivityFeedItem[], { groupId?: number; limit?: number } | void>({
       query: (arg) => {
         const groupId = arg && 'groupId' in arg ? arg.groupId : undefined;
-        return groupId != null ? `/activity?groupId=${groupId}` : '/activity';
+        const limit = arg && 'limit' in arg ? arg.limit : undefined;
+        const params = new URLSearchParams();
+        if (groupId != null) params.set('groupId', String(groupId));
+        if (limit != null) params.set('limit', String(limit));
+        const qs = params.toString();
+        return qs ? `/activity?${qs}` : '/activity';
       },
       transformResponse: (response: ApiEnvelope<ActivityFeedItem[]>) => response?.data ?? [],
       providesTags: ['Activity'],

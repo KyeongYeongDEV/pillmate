@@ -40,7 +40,7 @@ export default function HomeScreen() {
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(
-      pinnedGroupId != null ? { groupId: pinnedGroupId } : skipToken,
+      pinnedGroupId != null ? { groupId: pinnedGroupId, limit: 10 } : skipToken,
       { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
     );
 
@@ -149,6 +149,16 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>고정 그룹 알림</Text>
+            {pinnedGroupId != null && (
+              <Pressable
+                onPress={() => router.push({ pathname: '/group/[id]/activity', params: { id: String(pinnedGroupId) } } as any)}
+                accessibilityLabel="알림 보러가기"
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={styles.sectionLink}>알림 보러가기 ›</Text>
+              </Pressable>
+            )}
           </View>
 
           <FamilyActivityFeed
@@ -193,6 +203,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.headline1, fontWeight: '700', color: colors.labelNormal },
   sectionDate: { ...typography.label2, fontWeight: '600', color: colors.labelAlternative },
   viewAll: { ...typography.label2, fontWeight: '600', color: colors.primaryNormal },
+  sectionLink: { ...typography.label2, fontWeight: '600', color: colors.primaryNormal },
   safetyFooter: {
     padding: space.s12, borderRadius: radius.r12, backgroundColor: '#F0F7FF',
     borderWidth: 1, borderColor: '#C8DDFF',
