@@ -22,7 +22,8 @@ npm install --legacy-peer-deps
 ```bash
 npm run ios       # iOS 시뮬레이터
 npm run android   # Android 에뮬레이터
-npm start         # Metro + QR
+npm start         # Metro + QR (시뮬/에뮬: Platform.OS 분기 자동)
+npm run start:auto-ip  # 실기기: Mac LAN IP 자동 감지 → .env.local 갱신 + Metro 시작
 ```
 
 ## 테스트
