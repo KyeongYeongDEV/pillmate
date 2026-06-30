@@ -118,6 +118,31 @@ class DoseLogTest {
         assertThat(log.getSkipReason()).isEqualTo("외출 중");
     }
 
+    // T-CANCEL-IDEMPOTENT-GUARD: cancel() boolean 반환 — 실제 전이 시만 true (publish/append 중복 적재 방지)
+    @Test
+    @DisplayName("TAKEN 에서 cancel() — 실제 전이 → true, PENDING + checkedAt null")
+    void cancel_whenTaken_returnsTrue() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        log.take(99L, FIXED);
+
+        boolean transitioned = log.cancel();
+
+        assertThat(transitioned).isTrue();
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.PENDING);
+        assertThat(log.getCheckedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("이미 PENDING 에서 cancel() — 전이 없음 → false, status 불변")
+    void cancel_whenAlreadyPending_returnsFalse() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+
+        boolean transitioned = log.cancel();
+
+        assertThat(transitioned).isFalse();
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.PENDING);
+    }
+
     @Test
     @DisplayName("markGroupNotified() — 발송 시각 기록 + isGroupNotified true")
     void markGroupNotified_recordsTimestamp() {
@@ -154,61 +179,23 @@ class DoseLogTest {
         assertThat(log.getStatus()).isEqualTo(DoseStatus.TAKEN);
     }
 
+    // T-SESSION-2026-06-29-RETRO Group C: isEditableOn → 항상 true (사용자 명시 동의 — 까먹은 약 체크 허용).
+    // 과거 시각 경계(어제/내일/자정) 잠금 테스트는 제거된 동작이라 폐기, 아래 always-true 계약으로 대체.
     @Test
-    @DisplayName("isEditableOn — scheduledAt KST 날짜 == 오늘 KST 날짜면 true")
-    void isEditableOn_whenScheduledToday_returnsTrue() {
-        // given — now: KST 2026-06-12 19:00, scheduled: KST 2026-06-12 08:00
-        Clock now = kstClock("2026-06-12T10:00:00Z");
-        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
-
-        // when / then
-        assertThat(log.isEditableOn(now)).isTrue();
-    }
-
-    @Test
-    @DisplayName("isEditableOn — 어제(KST) 예정분은 false")
-    void isEditableOn_whenScheduledYesterday_returnsFalse() {
-        // given — now: KST 2026-06-12 10:00, scheduled: KST 2026-06-11 08:00
+    @DisplayName("isEditableOn — 어제/오늘/내일/먼 과거 어떤 날짜든 항상 true (시간 경계 완화)")
+    void isEditableOn_anyDate_returnsTrue() {
+        // given — now: KST 2026-06-12 10:00
         Clock now = kstClock("2026-06-12T01:00:00Z");
-        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-10T23:00:00Z"));
+        DoseLog today = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));      // KST 2026-06-12
+        DoseLog yesterday = DoseLog.of(1L, 2L, Instant.parse("2026-06-10T23:00:00Z"));  // KST 2026-06-11
+        DoseLog tomorrow = DoseLog.of(1L, 2L, Instant.parse("2026-06-12T23:00:00Z"));   // KST 2026-06-13
+        DoseLog farPast = DoseLog.of(1L, 2L, Instant.parse("2026-01-01T00:00:00Z"));
 
-        // when / then
-        assertThat(log.isEditableOn(now)).isFalse();
-    }
-
-    @Test
-    @DisplayName("isEditableOn — 내일(KST) 예정분은 false")
-    void isEditableOn_whenScheduledTomorrow_returnsFalse() {
-        // given — now: KST 2026-06-12 10:00, scheduled: KST 2026-06-13 08:00
-        Clock now = kstClock("2026-06-12T01:00:00Z");
-        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-12T23:00:00Z"));
-
-        // when / then
-        assertThat(log.isEditableOn(now)).isFalse();
-    }
-
-    @Test
-    @DisplayName("isEditableOn — 오늘 KST 23:59 에도 당일분은 true")
-    void isEditableOn_atEndOfKstDay_returnsTrue() {
-        // given — now: KST 2026-06-12 23:59, scheduled: KST 2026-06-12 08:00
-        Clock now = kstClock("2026-06-12T14:59:00Z");
-        DoseLog log = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
-
-        // when / then
-        assertThat(log.isEditableOn(now)).isTrue();
-    }
-
-    @Test
-    @DisplayName("isEditableOn — KST 자정 경계(UTC 15:00): 자정 직후엔 전날분 false, 당일분 true")
-    void isEditableOn_atKstMidnightBoundary() {
-        // given — now: UTC 2026-06-11 15:00 == KST 2026-06-12 00:00
-        Clock now = kstClock("2026-06-11T15:00:00Z");
-        DoseLog yesterdayLog = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T14:59:59Z"));
-        DoseLog todayLog = DoseLog.of(1L, 2L, Instant.parse("2026-06-11T23:00:00Z"));
-
-        // when / then — KST 2026-06-11 23:59:59 분은 잠김, KST 2026-06-12 08:00 분은 허용
-        assertThat(yesterdayLog.isEditableOn(now)).isFalse();
-        assertThat(todayLog.isEditableOn(now)).isTrue();
+        // when / then — 모두 편집 가능
+        assertThat(today.isEditableOn(now)).isTrue();
+        assertThat(yesterday.isEditableOn(now)).isTrue();
+        assertThat(tomorrow.isEditableOn(now)).isTrue();
+        assertThat(farPast.isEditableOn(now)).isTrue();
     }
 
     @Test

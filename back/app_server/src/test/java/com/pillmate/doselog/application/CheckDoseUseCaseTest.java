@@ -36,7 +36,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
-@DisplayName("CheckDoseUseCase — TAKE/SKIP/CANCEL/권한/멱등/날짜 잠금 단위")
+@DisplayName("CheckDoseUseCase — TAKE/SKIP/CANCEL/권한/멱등/취소 활동피드 단위")
 @ExtendWith(MockitoExtension.class)
 class CheckDoseUseCaseTest {
 
@@ -153,10 +153,12 @@ class CheckDoseUseCaseTest {
         assertThat(captor.getValue().scheduleId()).isEqualTo(SCHEDULE_ID);
     }
 
+    // T-SESSION-2026-06-29-RETRO Group D: groupNotified 조건 제거 → 알림 발송 여부 무관 publish.
+    // T-CANCEL-IDEMPOTENT-GUARD: 단, 실제 TAKEN→PENDING 전이 시에만 (cancel()==true).
     @Test
-    @DisplayName("CANCEL — 60초 내(그룹 알림 미발송) → 이벤트 미발행, 조용히 복귀")
-    void check_whenCancelBeforeGroupNotified_noEvent() {
-        // given
+    @DisplayName("CANCEL(TAKEN) — 실제 취소 전이 시 DoseCheckCanceled 이벤트 발행")
+    void cancel_whenTaken_publishesEvent() {
+        // given — TAKEN 상태 (groupNotified 기록 없음)
         DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_TODAY);
         doseLog.take(PATIENT_ID);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
@@ -165,8 +167,52 @@ class CheckDoseUseCaseTest {
         // when
         sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
 
+        // then — 발행됨
+        ArgumentCaptor<DoseCheckCanceled> captor = ArgumentCaptor.forClass(DoseCheckCanceled.class);
+        then(eventPublisher).should().publishEvent(captor.capture());
+        assertThat(captor.getValue().actorUserId()).isEqualTo(PATIENT_ID);
+        assertThat(captor.getValue().scheduleId()).isEqualTo(SCHEDULE_ID);
+    }
+
+    @Test
+    @DisplayName("CANCEL(이미 PENDING) — 멱등 가드: 전이 없으면 publish/append 0회 (중복 적재 방지)")
+    void cancel_whenAlreadyPending_skipsPublishAndAppend() {
+        // given — 이미 PENDING (take 호출 X)
+        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_TODAY);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        // when
+        sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
+
+        // then — 전이 없으니 이벤트/활동피드 미적재
+        then(eventPublisher).should(never()).publishEvent(any());
+        then(activityFeedAppender).should(never()).appendCanceled(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("CANCEL — schedule 조회되면 ActivityFeedAppender.appendCanceled 호출 (그룹 피드 적재)")
+    void cancel_appendsCanceledActivity() {
+        // given
+        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_TODAY);
+        doseLog.take(PATIENT_ID);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        com.pillmate.schedule.domain.model.Schedule schedule =
+                org.mockito.Mockito.mock(com.pillmate.schedule.domain.model.Schedule.class);
+        given(schedule.getTimeOfDay()).willReturn(com.pillmate.schedule.domain.model.TimeOfDay.EVENING);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        com.pillmate.user.domain.model.User user =
+                org.mockito.Mockito.mock(com.pillmate.user.domain.model.User.class);
+        given(user.getName()).willReturn("아버지");
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(user));
+
+        // when
+        sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID);
+
         // then
-        then(eventPublisher).should(never()).publishEvent(any(DoseCheckCanceled.class));
+        then(activityFeedAppender).should()
+                .appendCanceled(PATIENT_ID, com.pillmate.schedule.domain.model.TimeOfDay.EVENING, "아버지");
     }
 
     @Test
@@ -185,59 +231,37 @@ class CheckDoseUseCaseTest {
         assertThat(response.skipReason()).isEqualTo("운동 중");
     }
 
+    // T-SESSION-2026-06-29-RETRO Group C: verifyEditableToday(날짜 잠금) 제거 — 어제/내일 예정분도
+    // TAKE/SKIP/CANCEL 모두 허용(사용자 명시 동의, 까먹은 약 체크). 구 DOSE_LOG_DATE_LOCKED 거부 테스트 폐기.
     @Test
-    @DisplayName("어제(KST) dose_log TAKE — DOSE_LOG_DATE_LOCKED 거부, 저장 없음")
-    void check_whenScheduledYesterday_takeRejected() {
+    @DisplayName("어제(KST) 예정분 TAKE — 이제 거부 없이 정상 TAKEN (날짜 잠금 제거)")
+    void check_whenScheduledYesterday_nowAllowed() {
         // given
         DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_YESTERDAY);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.empty());
 
-        // when / then
-        assertThatThrownBy(() -> sut.check(new CheckDoseRequest(DOSE_LOG_ID, "TAKE", null), PATIENT_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DOSE_LOG_DATE_LOCKED);
-        then(doseLogRepository).should(never()).save(any());
+        // when
+        DoseLogResponse response = sut.check(new CheckDoseRequest(DOSE_LOG_ID, "TAKE", null), PATIENT_ID);
+
+        // then — 거부 없이 TAKEN
+        assertThat(response.status()).isEqualTo(DoseStatus.TAKEN);
+        then(doseLogRepository).should().save(any());
     }
 
     @Test
-    @DisplayName("내일(KST) dose_log TAKE — DOSE_LOG_DATE_LOCKED 거부")
-    void check_whenScheduledTomorrow_takeRejected() {
+    @DisplayName("내일(KST) 예정분 SKIP — 이제 거부 없이 정상 SKIPPED")
+    void check_whenScheduledTomorrow_nowAllowed() {
         // given
         DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_TOMORROW);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(doseLogRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        // when / then
-        assertThatThrownBy(() -> sut.check(new CheckDoseRequest(DOSE_LOG_ID, "TAKE", null), PATIENT_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DOSE_LOG_DATE_LOCKED);
-    }
+        // when
+        DoseLogResponse response = sut.check(new CheckDoseRequest(DOSE_LOG_ID, "SKIP", "외출"), PATIENT_ID);
 
-    @Test
-    @DisplayName("어제(KST) dose_log CANCEL — TAKE 와 동일하게 거부, 이벤트 미발행")
-    void check_whenScheduledYesterday_cancelRejected() {
-        // given
-        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_YESTERDAY);
-        doseLog.take(PATIENT_ID);
-        doseLog.markGroupNotified(FIXED_NOW.minusSeconds(86_400));
-        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
-
-        // when / then
-        assertThatThrownBy(() -> sut.check(new CheckDoseRequest(DOSE_LOG_ID, "CANCEL", null), PATIENT_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DOSE_LOG_DATE_LOCKED);
-        then(eventPublisher).should(never()).publishEvent(any());
-    }
-
-    @Test
-    @DisplayName("어제(KST) dose_log SKIP — 동일 거부")
-    void check_whenScheduledYesterday_skipRejected() {
-        // given
-        DoseLog doseLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, SCHEDULED_YESTERDAY);
-        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
-
-        // when / then
-        assertThatThrownBy(() -> sut.check(new CheckDoseRequest(DOSE_LOG_ID, "SKIP", "외출"), PATIENT_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DOSE_LOG_DATE_LOCKED);
+        // then
+        assertThat(response.status()).isEqualTo(DoseStatus.SKIPPED);
     }
 }
