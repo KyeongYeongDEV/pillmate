@@ -2,6 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import { saveToken, setCurrentUserId } from '@/lib/auth/storage';
+import { resolveDevUserId } from '@/lib/auth/devUserId';
 
 export interface KakaoLoginRequest {
   code: string;
@@ -26,12 +27,19 @@ const EMPTY_RESULT: AuthResult = {
   profile: { name: '', email: '', profileUrl: null },
 };
 
+// dev fallback: resolveDevUserId() 있으면 X-Dev-User-Id 주입(env override → Platform.OS 분기).
+// prod 는 BE 가 PILLMATE_DEV_FALLBACK=false 일 때 무시(보안).
+export function devUserIdHeaders(): Record<string, string> {
+  const devUserId = resolveDevUserId();
+  return devUserId ? { 'X-Dev-User-Id': devUserId } : {};
+}
+
 export const authApiSlice = createApi({
   reducerPath: 'authApi',
   baseQuery: createPillmateBaseQuery(),
   endpoints: (build) => ({
     kakaoLogin: build.mutation<AuthResult, KakaoLoginRequest>({
-      query: (body) => ({ url: '/auth/kakao', method: 'POST', body }),
+      query: (body) => ({ url: '/auth/kakao', method: 'POST', body, headers: devUserIdHeaders() }),
       transformResponse: (response: ApiEnvelope<AuthResult>) =>
         response?.data ?? EMPTY_RESULT,
       async onQueryStarted(_arg, { queryFulfilled }) {
@@ -46,7 +54,7 @@ export const authApiSlice = createApi({
     }),
 
     exchangeKakaoCode: build.mutation<AuthResult, { loginCode: string }>({
-      query: (body) => ({ url: '/auth/kakao/exchange', method: 'POST', body }),
+      query: (body) => ({ url: '/auth/kakao/exchange', method: 'POST', body, headers: devUserIdHeaders() }),
       transformResponse: (response: ApiEnvelope<AuthResult>) =>
         response?.data ?? EMPTY_RESULT,
       async onQueryStarted(_arg, { queryFulfilled }) {
