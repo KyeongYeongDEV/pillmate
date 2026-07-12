@@ -72,6 +72,8 @@ class PrescriptionOcrResponse(BaseModel):
 
     items: list[OcrItemWithDecision]
     source: Literal["식품의약품안전처"] = MFDS_SOURCE
+    # 주민등록번호 감지 시 true — 등록 차단 + 재촬영 유도용 (개인정보보호법 고유식별정보)
+    pii_detected: bool = False
 
 
 class RawOcrItemList(BaseModel):
@@ -80,3 +82,16 @@ class RawOcrItemList(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     items: list[RawOcrItem] = Field(default_factory=list)
+    has_resident_number: bool = False
+
+
+class RawOcrItems(list):
+    """list[RawOcrItem] + 이미지 레벨 has_resident_number 플래그.
+
+    VisionAdapter.extract 의 반환 타입(list[RawOcrItem])을 깨지 않으면서
+    컨테이너 레벨 PII 감지 플래그를 파이프라인으로 전달한다.
+    """
+
+    def __init__(self, items: list[RawOcrItem] = (), has_resident_number: bool = False):
+        super().__init__(items)
+        self.has_resident_number = has_resident_number

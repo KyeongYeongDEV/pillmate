@@ -21,8 +21,10 @@ from app.rag.ocr.drug_search import (
 )
 from app.rag.health_report.service import HealthReportService
 from app.rag.prescription_recommendation.service import PrescriptionRecommendationService
+from app.rag.ocr.cache import NullOcrResultCache, RedisOcrResultCache
 from app.rag.ocr.image_fetcher import HttpxImageFetcher
 from app.rag.ocr.matcher import DrugMatcher
+from app.rag.ocr.reranker import BgeRerankerAdapter
 from app.rag.ocr.service import OcrPrescriptionService
 from app.rag.pgvector_retriever import OpenAIEmbeddingAdapter, PgVectorRetriever
 
@@ -45,10 +47,16 @@ async def lifespan(app: FastAPI):
         dimensions=settings.embedding_dim,
     )
     retriever = PgVectorRetriever(pool=pool, embedder=embedder)
-    llm = GeminiInvoker(api_keys=settings.gemini_keys, model=settings.gemini_model)
+    llm = GeminiInvoker(api_keys=settings.gemini_key_list, model=settings.gemini_model)
     service = ChatService(retriever=retriever, llm=llm, top_k=settings.retrieval_top_k)
 
-    ocr_service = _build_ocr_service(pool=pool, retriever=retriever, settings=settings)
+    bge_reranker = BgeRerankerAdapter()
+    _warmup_bge(bge_reranker)
+    ocr_cache = await _build_ocr_cache(settings)
+    ocr_service = _build_ocr_service(
+        pool=pool, retriever=retriever, settings=settings,
+        bge_reranker=bge_reranker, cache=ocr_cache,
+    )
     health_report_service = HealthReportService(llm=_GeminiLlmRunner(llm=llm))
     recommendation_service = PrescriptionRecommendationService(llm=_GeminiLlmRunner(llm=llm))
 
@@ -62,6 +70,34 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await pool.close()
+
+
+def _warmup_bge(bge_reranker: BgeRerankerAdapter) -> None:
+    # 부팅 시 dummy encode 로 BGE 모델 사전 로드 → 첫 요청 -60초. 실패해도 정상 부팅 유지.
+    import time
+    started = time.monotonic()
+    try:
+        bge_reranker.warmup()
+        elapsed = time.monotonic() - started
+        logger.info("bge_warmup completed elapsed=%.1fs", elapsed)
+    except Exception as exc:
+        logger.warning("bge_warmup failed — first request will pay cold start: %s", exc.__class__.__name__)
+
+
+async def _build_ocr_cache(settings):
+    # cost-aware: 동일 이미지 OCR 재요청 sub-second 반환. 실패 시 NullCache 로 fallback (부팅 유지).
+    try:
+        from redis import asyncio as redis_asyncio
+        client = redis_asyncio.Redis(
+            host=settings.redis_host, port=settings.redis_port,
+            decode_responses=False,
+        )
+        await client.ping()
+        logger.info("ocr_cache redis connected host=%s port=%d", settings.redis_host, settings.redis_port)
+        return RedisOcrResultCache(redis_client=client)
+    except Exception as exc:
+        logger.warning("ocr_cache redis unavailable — using NullCache: %s", exc.__class__.__name__)
+        return NullOcrResultCache()
 
 
 def _resolve_vision_variant(settings) -> str:
@@ -78,12 +114,12 @@ def _build_vision(settings):
         from app.rag.ocr.vision import GeminiVisionAdapter
         from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
         primary = GeminiVisionLiteAdapter(
-            api_keys=settings.gemini_keys, model="gemini-2.5-flash-lite",
+            api_keys=settings.gemini_key_list, model="gemini-2.5-flash-lite",
             fewshot_enabled=settings.ocr_fewshot_enabled,
             timeout_sec=CASCADE_PRIMARY_TIMEOUT_SEC,
         )
         fallback = GeminiVisionAdapter(
-            api_keys=settings.gemini_keys, model="gemini-2.5-flash",
+            api_keys=settings.gemini_key_list, model="gemini-2.5-flash",
             fewshot_enabled=settings.ocr_fewshot_enabled,
         )
         logger.info("OCR vision adapter=cascade primary=flash-lite fallback=flash")
@@ -92,26 +128,30 @@ def _build_vision(settings):
     if variant == "lite":
         from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
         return GeminiVisionLiteAdapter(
-            api_keys=settings.gemini_keys,
+            api_keys=settings.gemini_key_list,
             model=settings.gemini_model,
             fewshot_enabled=settings.ocr_fewshot_enabled,
         )
     from app.rag.ocr.vision import GeminiVisionAdapter
     return GeminiVisionAdapter(
-        api_keys=settings.gemini_keys,
+        api_keys=settings.gemini_key_list,
         model=settings.gemini_model,
         fewshot_enabled=settings.ocr_fewshot_enabled,
     )
 
 
-def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
+def _build_ocr_service(
+    pool, retriever, settings,
+    bge_reranker: BgeRerankerAdapter | None = None,
+    cache=None,
+) -> OcrPrescriptionService:
     from app.rag.ocr.correction import OcrCorrectionAdapter
     from app.rag.ocr.pill_identify import PillIdentifyAdapter
     from app.rag.ocr.preprocess import ImagePreprocessor
 
     if settings.drug_matcher_impl == "rrf":
         from app.rag.ocr.rrf_factory import build_rrf_matcher
-        matcher = build_rrf_matcher(pool=pool)
+        matcher = build_rrf_matcher(pool=pool, bge_reranker=bge_reranker)
     else:
         matcher = DrugMatcher(
             ilike=AsyncpgIlikeSearch(pool=pool),
@@ -119,13 +159,14 @@ def _build_ocr_service(pool, retriever, settings) -> OcrPrescriptionService:
             ingredient=AsyncpgIngredientSearch(pool=pool),
         )
     vision = _build_vision(settings)
-    correction = OcrCorrectionAdapter(api_keys=settings.gemini_keys, model=settings.gemini_model)
+    correction = OcrCorrectionAdapter(api_keys=settings.gemini_key_list, model=settings.gemini_model)
     preprocessor = ImagePreprocessor() if settings.ocr_preprocess_enabled else None
     pill_identifier = PillIdentifyAdapter(pool=pool) if settings.pill_identify_enabled else None
     return OcrPrescriptionService(
         fetcher=HttpxImageFetcher(),
         vision=vision,
         matcher=matcher,
+        cache=cache,
         correction=correction,
         preprocessor=preprocessor,
         pill_identifier=pill_identifier,

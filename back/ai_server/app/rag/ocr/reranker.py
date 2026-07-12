@@ -92,6 +92,20 @@ class BgeRerankerAdapter:
             )
         return self._model
 
+    def warmup(self) -> None:
+        # startup 시 dummy pair 로 모델 사전 로드 → 첫 요청 -60초 (cold start 제거).
+        try:
+            model = self._load()
+            model.compute_score([["아모디핀정 5mg", "아모디핀정 5mg"]], normalize=True)
+        except Exception as exc:
+            self._mark_degraded()
+            raise exc
+
+    def _mark_degraded(self) -> None:
+        # degraded 확정 시 모델 참조 해제 — 기여 없는 ~600MB 를 GC 대상으로 (재로드는 _degraded 가 차단)
+        self._degraded = True
+        self._model = None
+
     def rerank(self, query: str, candidates: list[Candidate]) -> list[Candidate]:
         """BGE cross-encoder 로 상위 BGE_TOP_K 후보를 재정렬한다.
 
@@ -113,10 +127,10 @@ class BgeRerankerAdapter:
                     c.final_score * DOMAIN_WEIGHT + float(bge_score) * BGE_WEIGHT
                 )
             return sorted(top, key=lambda x: -x.final_score) + rest
-        except (AttributeError, Exception) as exc:
+        except Exception as exc:
             import logging
             logging.getLogger(__name__).warning(
                 "BGE rerank 실패 → DomainReranker only fallback: %s", exc
             )
-            self._degraded = True
+            self._mark_degraded()
             return candidates

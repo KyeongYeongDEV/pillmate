@@ -1,13 +1,19 @@
 """OCR 오인식 보정 LLM 어댑터 (Tier 3 fallback)."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import time
 from typing import Protocol
 
 from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
+
+# T-AI-OCR-LATENCY-30S 후속 — per-call 상한. 이름 못 읽은 알약당 순차 호출이 15~37s 씩
+# 걸려 total_elapsed_ms 가 100s 근처까지 늘어난 실측 근거로 vision 과 동일 20s 적용.
+CORRECTION_TIMEOUT_SEC = 20.0
 
 try:
     from google.genai.errors import ClientError as _GenAIClientError
@@ -40,6 +46,7 @@ class OcrCorrectionAdapter:
         api_keys: list[str] | None = None,
         model: str = "gemini-2.5-flash-lite",
         _llms: list[AsyncChatModel] | None = None,
+        timeout_sec: float = CORRECTION_TIMEOUT_SEC,
     ) -> None:
         if _llms is not None:
             self._llms = _llms
@@ -54,15 +61,25 @@ class OcrCorrectionAdapter:
             self._llms = [llm]
         else:
             raise ValueError("llm, api_keys, or _llms must be provided")
+        self._timeout = timeout_sec
 
     async def correct(self, name_raw: str) -> list[str]:
         prompt = CORRECTION_PROMPT_TEMPLATE.format(name_raw=name_raw)
         for i, llm in enumerate(self._llms):
+            t0 = time.monotonic()
             try:
-                result = await llm.ainvoke([HumanMessage(content=prompt)])
+                result = await asyncio.wait_for(
+                    llm.ainvoke([HumanMessage(content=prompt)]), timeout=self._timeout
+                )
                 content = getattr(result, "content", str(result))
+                self._log_attempt(t0, "ok", None)
                 return self._parse_candidates(content)
-            except _RATE_LIMIT_ERRORS:
+            except asyncio.TimeoutError:
+                self._log_attempt(t0, "timeout", "TimeoutError")
+                logger.warning("ocr correction timed out for '%s'", name_raw)
+                return []
+            except _RATE_LIMIT_ERRORS as exc:
+                self._log_attempt(t0, "api_error", exc.__class__.__name__)
                 if i < len(self._llms) - 1:
                     logger.warning(
                         "correction key_rotation: key[%d] 429/503 → fallback retry key[%d]",
@@ -71,10 +88,25 @@ class OcrCorrectionAdapter:
                     continue
                 logger.warning("ocr correction all keys exhausted for '%s'", name_raw)
                 return []
-            except Exception:
+            except Exception as exc:
+                self._log_attempt(t0, "api_error", exc.__class__.__name__)
                 logger.warning("ocr correction failed for '%s'", name_raw)
                 return []
         return []
+
+    @staticmethod
+    def _log_attempt(t0: float, outcome: str, error_class: str | None) -> None:
+        logger.info(
+            json.dumps(
+                {
+                    "event": "correction_attempt",
+                    "elapsed_ms": int((time.monotonic() - t0) * 1000),
+                    "outcome": outcome,
+                    "error_class": error_class,
+                },
+                ensure_ascii=False,
+            )
+        )
 
     def _parse_candidates(self, content: str) -> list[str]:
         try:

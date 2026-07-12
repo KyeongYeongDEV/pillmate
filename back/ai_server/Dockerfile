@@ -26,7 +26,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install --user \
     "opencv-python-headless>=4.9" \
     "numpy>=1.26" \
     "Pillow>=10.0" \
-    "transformers>=4.44.2" \
+    "redis>=5.0" \
+    "transformers>=4.44.2,<5.0" \
     "FlagEmbedding>=1.2" \
     "prometheus-fastapi-instrumentator>=0.11" \
     "sentry-sdk>=2.0"
@@ -35,9 +36,14 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PATH=/root/.local/bin:$PATH
+    PATH=/root/.local/bin:$PATH \
+    TZ=Asia/Seoul
 
 # builder 에서 설치한 site-packages 만 복사 — 빌드 툴/캐시 제외로 이미지 축소
 COPY --from=builder /root/.local /root/.local

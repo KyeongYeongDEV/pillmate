@@ -120,3 +120,59 @@ class TestBgeRerankerAdapter:
 
         assert result[-1].item_seq == "TAIL", "TAIL 후보는 끝에 위치해야 한다"
         assert result[-1].final_score == 0.1, "TAIL 후보 final_score는 불변이어야 한다"
+
+
+class _FailingModel:
+    def compute_score(self, pairs, normalize=True):
+        raise AttributeError("XLMRobertaTokenizer has no attribute prepare_for_model")
+
+
+class TestBgeWarmupAndDegradedRelease:
+    """T-BE-BGE-RERANKER-FIX — warmup 성공/실패 + degraded 시 모델 메모리 해제."""
+
+    def test_warmup_invokes_compute_score_with_dummy_pair(self):
+        calls: list[list[list[str]]] = []
+
+        class RecordingModel:
+            def compute_score(self, pairs, normalize=True):
+                calls.append(pairs)
+                return [0.5] * len(pairs)
+
+        adapter = BgeRerankerAdapter()
+        adapter._model = RecordingModel()
+
+        adapter.warmup()
+
+        assert len(calls) == 1
+        assert adapter._degraded is False
+
+    def test_warmup_failure_marks_degraded_and_releases_model(self):
+        adapter = BgeRerankerAdapter()
+        adapter._model = _FailingModel()
+
+        with pytest.raises(AttributeError):
+            adapter.warmup()
+
+        assert adapter._degraded is True
+        assert adapter._model is None, "degraded 확정 시 600MB 모델 참조 해제 (GC 대상)"
+
+    def test_rerank_failure_marks_degraded_releases_model_and_returns_input(self):
+        adapter = BgeRerankerAdapter()
+        adapter._model = _FailingModel()
+        candidates = [_cand("SEQ1", "약정10mg", final_score=0.3)]
+
+        result = adapter.rerank("약 10mg", candidates)
+
+        assert result == candidates, "실패 시 DomainReranker 결과 그대로 (graceful degrade)"
+        assert adapter._degraded is True
+        assert adapter._model is None
+
+    def test_rerank_when_degraded_short_circuits_without_load(self):
+        adapter = BgeRerankerAdapter()
+        adapter._degraded = True
+        candidates = [_cand("SEQ1", "약정10mg", final_score=0.3)]
+
+        result = adapter.rerank("약 10mg", candidates)
+
+        assert result == candidates
+        assert adapter._model is None, "degraded 상태에서 모델 재로드 없어야 한다"

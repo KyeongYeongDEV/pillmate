@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.domain.ocr import PrescriptionOcrRequest, PrescriptionOcrResponse
-from app.exceptions import ImageFetchError, OcrParseError, VisionInvocationError
+from app.exceptions import ImageFetchError, OcrParseError, VisionBusyError, VisionInvocationError
 from app.rag.ocr.service import OcrPrescriptionService
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,8 @@ async def ocr_prescription(
         raise HTTPException(status_code=502, detail={"code": "OCR_001", "message": "presigned 이미지 다운로드 실패"})
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail={"code": "OCR_002", "message": "Gemini Vision 응답 지연"})
+    except VisionBusyError:
+        raise HTTPException(status_code=504, detail={"code": "OCR_004", "message": "혼잡, 잠시 후 재시도해 주세요"})
     except VisionInvocationError:
         raise HTTPException(status_code=504, detail={"code": "OCR_002", "message": "Gemini Vision 호출 실패"})
     except OcrParseError:

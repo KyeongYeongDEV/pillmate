@@ -9,8 +9,8 @@ from app.domain.ocr import PrescriptionOcrResponse
 
 logger = logging.getLogger(__name__)
 
-IMAGE_HASH_TTL_SEC = 60 * 60 * 24  # 24h, cost-aware: 동일 이미지 재요청 시 Gemini Vision 재호출 회피
-OCR_CACHE_KEY_PREFIX = "ocr:prescription:"
+IMAGE_HASH_TTL_SEC = 300  # 5분 (cost-aware.md 규정 준수) — 영구 TTL 금지, 동일 이미지 재요청 sub-second 반환
+OCR_CACHE_KEY_PREFIX = "ocr:v1:"  # v1 — 파이프라인 변경 시 bump 하여 stale 캐시 무효화
 
 
 def image_hash(image_bytes: bytes) -> str:

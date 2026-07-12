@@ -14,6 +14,7 @@ from app.domain.ocr import (
 )
 from app.domain.pill_appearance import PillAppearance
 from app.exceptions import OcrParseError
+from app.rag.ocr.lenient_parse import parse_items_leniently
 from app.rag.ocr.vision import VISION_TIMEOUT_SEC, AsyncChatModel, GeminiVisionAdapter
 
 logger = logging.getLogger(__name__)
@@ -70,10 +71,24 @@ class GeminiVisionLiteAdapter(GeminiVisionAdapter):
     def _parse(self, content: str) -> list[RawOcrItem]:
         try:
             parsed = self._parser.parse(content)
+            return [self._to_raw(item) for item in parsed.items]
         except Exception as exc:
-            logger.warning("ocr lite response parse failed: %s", exc.__class__.__name__)
-            raise OcrParseError(str(exc)) from exc
-        return [self._to_raw(item) for item in parsed.items]
+            logger.warning(
+                "ocr lite response parse failed: %s — attempting partial recovery", exc.__class__.__name__
+            )
+            return self._parse_partial(content, exc)
+
+    def _parse_partial(self, content: str, original_exc: Exception) -> list[RawOcrItem]:
+        try:
+            result = parse_items_leniently(content, RawOcrItemLite)
+        except Exception:
+            raise OcrParseError(str(original_exc)) from original_exc
+        if not result.items:
+            raise OcrParseError(str(original_exc)) from original_exc
+        logger.warning(
+            "ocr lite partial_recovery kept=%d dropped=%d", len(result.items), result.dropped_count
+        )
+        return [self._to_raw(item) for item in result.items]
 
     @staticmethod
     def _to_raw(lite: RawOcrItemLite) -> RawOcrItem:

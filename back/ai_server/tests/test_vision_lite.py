@@ -119,6 +119,26 @@ class TestGeminiVisionLiteAdapterExtract:
 
         assert items == []
 
+    @pytest.mark.asyncio
+    async def test_extract_partial_recovery_drops_broken_item_keeps_survivor(self):
+        """T-AI-OCR-LATENCY-30S — 아이템 하나 dose_amount 타입오염이어도 전체 재호출 없이 부분복구."""
+        from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
+
+        # dose_amount 가 숫자로 해석 불가한 문자열 → strict 파싱 실패 → lenient 복구로 None 강등, 생존
+        broken_response = (
+            '{"items": [{"name_raw": "타이레놀정", "confidence": 0.9, "dose_amount": "모름"}]}'
+        )
+        llm = AsyncMock()
+        llm.ainvoke.return_value = MagicMock(content=broken_response)
+
+        adapter = GeminiVisionLiteAdapter(_llms=[llm])
+        items = await adapter.extract(_tiny_jpeg())
+
+        assert len(items) == 1
+        assert items[0].name_raw == "타이레놀정"
+        assert items[0].dose_amount is None
+        assert llm.ainvoke.await_count == 1  # 재호출 없이 부분복구로 해결
+
 
 class TestVisionVariantFactory:
     def _settings(self, model: str, variant: str = "auto"):
@@ -126,7 +146,7 @@ class TestVisionVariantFactory:
         return SimpleNamespace(
             gemini_model=model,
             ocr_vision_variant=variant,
-            gemini_keys=["AIzaTESTKEY1234"],
+            gemini_key_list=["AIzaTESTKEY1234"],
             ocr_fewshot_enabled=False,
         )
 

@@ -24,7 +24,7 @@ class GeminiInvoker(LlmInvoker):
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         if not api_keys:
-            raise RuntimeError("GEMINI_API_KEY1 또는 GEMINI_API_KEY 환경변수 필요")
+            raise RuntimeError("GEMINI_API_KEY 환경변수 필요")
         self._clients = [
             ChatGoogleGenerativeAI(model=model, google_api_key=k, temperature=0.0)
             for k in api_keys

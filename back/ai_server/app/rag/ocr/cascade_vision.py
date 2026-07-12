@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 from app.domain.ocr import RawOcrItem
-from app.exceptions import VisionInvocationError
+from app.exceptions import VisionBusyError, VisionInvocationError
 from app.rag.ocr.vision import GeminiVisionAdapter
 from app.rag.ocr.vision_lite import GeminiVisionLiteAdapter
 
@@ -26,7 +26,7 @@ class CascadeVisionAdapter:
     async def extract(self, image_bytes: bytes) -> list[RawOcrItem]:
         try:
             result = await self._primary.extract(image_bytes)
-        except (VisionInvocationError, asyncio.TimeoutError) as exc:
+        except (VisionInvocationError, VisionBusyError, asyncio.TimeoutError) as exc:
             logger.warning("cascade primary failed type=%s → flash fallback", type(exc).__name__)
             return await self._fallback.extract(image_bytes)
 

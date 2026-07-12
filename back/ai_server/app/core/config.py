@@ -9,16 +9,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    gemini_api_key1: str = Field(default="", alias="GEMINI_API_KEY1")
-    gemini_api_key2: str = Field(default="", alias="GEMINI_API_KEY2")
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-2.5-flash-lite")
 
     @property
-    def gemini_keys(self) -> list[str]:
-        """Priority: KEY1 → KEY2 → GEMINI_API_KEY (legacy backward compat)."""
-        primary = self.gemini_api_key1 or self.gemini_api_key
-        return [k for k in [primary, self.gemini_api_key2] if k]
+    def gemini_key_list(self) -> list[str]:
+        """빈 키 필터 — 빈 리스트면 GeminiInvoker 가 RuntimeError 로 부팅 조기 실패 (fail-fast)."""
+        return [k for k in [self.gemini_api_key] if k]
+
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     openai_api_key_alt: str = Field(default="", alias="OpenAI_API_KEY")
     embedding_model: str = Field(default="text-embedding-3-small")
@@ -34,6 +32,9 @@ class Settings(BaseSettings):
     postgres_user: str = Field(default="pillmate", alias="POSTGRES_USER")
     postgres_password: str = Field(default="", alias="POSTGRES_PASSWORD")
 
+    redis_host: str = Field(default="localhost", alias="REDIS_HOST")
+    redis_port: int = Field(default=6379, alias="REDIS_PORT")
+
     retrieval_top_k: int = Field(default=5)
     faithfulness_threshold: float = Field(default=0.95)
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
@@ -46,8 +47,10 @@ class Settings(BaseSettings):
     ocr_preprocess_enabled: bool = Field(default=True, alias="PREPROCESS_ENABLED")
     ocr_fewshot_enabled: bool = Field(default=True, alias="FEWSHOT_ENABLED")
 
-    # Phase B-7: 낱알식별 fallback (Tier 5)
-    pill_identify_enabled: bool = Field(default=True, alias="PILL_IDENTIFY_ENABLED")
+    # Phase B-7: 낱알식별 fallback (Tier 5) — 기본 비활성 (2026-07-11 사용자 결정).
+    # 실측 근거: OcrProcessed total_elapsed_ms 병목 조사 중 이름 미인식 약 다건 발생 시
+    # 지연 원인으로 지목되어 기본 OFF. 코드는 유지 — 필요 시 플래그만 켜면 재활성.
+    pill_identify_enabled: bool = Field(default=False, alias="PILL_IDENTIFY_ENABLED")
 
     # Phase C-1: 매처 구현 선택 (rrf | legacy)
     drug_matcher_impl: str = Field(default="rrf", alias="DRUG_MATCHER_IMPL")

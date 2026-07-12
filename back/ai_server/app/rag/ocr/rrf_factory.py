@@ -24,10 +24,11 @@ from app.rag.ocr.rrf_matcher import RrfMatcher
 from app.rag.ocr.rrf_wire import RrfMatcherAdapter
 
 
-def build_rrf_matcher_inner(pool: Any) -> RrfMatcher:
+def build_rrf_matcher_inner(pool: Any, bge_reranker: BgeRerankerAdapter | None = None) -> RrfMatcher:
     """Gate A++ RrfMatcher — eval 스크립트가 match(parsed) 직접 호출 시 사용.
 
     main.py 와 run_eval_full.py 가 동일 구성을 공유하도록 이 함수가 단일 진실 공급원.
+    lifespan 에서 warmup 된 BgeRerankerAdapter 를 주입 가능 — 미주입 시 새 인스턴스 (cold).
     """
     return RrfMatcher(
         exact_single=StrongExactAdapter(pool=pool),
@@ -42,19 +43,11 @@ def build_rrf_matcher_inner(pool: Any) -> RrfMatcher:
             "ingredient": IngredientMultiAdapter(pool=pool),
         },
         reranker=DomainReranker(),
-        bge_reranker=BgeRerankerAdapter(),
+        bge_reranker=bge_reranker or BgeRerankerAdapter(),
         decider=MatchDecider(),
     )
 
 
-def build_rrf_matcher(pool: Any) -> RrfMatcherAdapter:
-    """DrugMatcherPort 호환 어댑터 — OcrPrescriptionService 주입용.
-
-    Args:
-        pool: asyncpg connection pool (이미 생성된 것을 전달)
-
-    Returns:
-        RrfMatcherAdapter — DrugMatcherPort(match(parsed, raw)) 시그니처 호환.
-        OcrPrescriptionService.match() 에 바로 주입 가능.
-    """
-    return RrfMatcherAdapter(rrf_matcher=build_rrf_matcher_inner(pool))
+def build_rrf_matcher(pool: Any, bge_reranker: BgeRerankerAdapter | None = None) -> RrfMatcherAdapter:
+    """DrugMatcherPort 호환 어댑터 — OcrPrescriptionService 주입용."""
+    return RrfMatcherAdapter(rrf_matcher=build_rrf_matcher_inner(pool, bge_reranker=bge_reranker))

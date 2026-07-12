@@ -104,6 +104,19 @@ async def test_cascade_partial_quality_no_fallback():
 
 
 @pytest.mark.asyncio
+async def test_cascade_primary_busy_error_fallback():
+    """T-AI-OCR-LATENCY-30S — primary 재시도예산 소진(VisionBusyError) 도 flash fallback 트리거."""
+    from app.exceptions import VisionBusyError
+
+    cascade, primary, fallback = _cascade(
+        primary_exc=VisionBusyError("vision retry budget exhausted"),
+        fallback_result=[_item("타이레놀정", "0.95")])
+    result = await cascade.extract(b"img")
+    assert result[0].name_raw == "타이레놀정"
+    fallback.extract.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_cascade_both_fail_propagates():
     cascade, primary, fallback = _cascade(
         primary_exc=VisionInvocationError("lite fail"),
@@ -117,7 +130,7 @@ class TestFactoryCascadeVariant:
         from types import SimpleNamespace
         return SimpleNamespace(
             gemini_model=model, ocr_vision_variant=variant,
-            gemini_keys=["AIzaTESTKEY1234"], ocr_fewshot_enabled=False)
+            gemini_key_list=["AIzaTESTKEY1234"], ocr_fewshot_enabled=False)
 
     def test_factory_cascade_variant_returns_cascade_adapter(self):
         from app.main import _build_vision

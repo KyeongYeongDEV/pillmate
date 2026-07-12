@@ -5,6 +5,7 @@ import json
 import logging
 import time
 from typing import TYPE_CHECKING, Protocol
+from uuid import uuid4
 
 from app.domain.ocr import (
     OcrItem,
@@ -26,6 +27,7 @@ from app.rag.ocr.pill_identify import PillIdentifyAdapter
 from app.rag.ocr.normalizer import normalize_for_cascade
 from app.rag.ocr.parser import ParsedItem, parse_drug_item
 from app.rag.ocr.rrf import Candidate, MatchDecision, MatchDecisionType
+from app.rag.ocr import vision_metrics
 
 if TYPE_CHECKING:
     from app.rag.ocr.preprocess import ImagePreprocessor
@@ -74,17 +76,21 @@ class OcrPrescriptionService:
         self._in_flight = in_flight or InFlightRegistry()
 
     async def process(self, request: PrescriptionOcrRequest) -> PrescriptionOcrResponse:
+        t0 = time.monotonic()
         image_bytes = await self._fetcher.fetch(str(request.image_url))
         hash_hex = image_hash(image_bytes)
         cached = await self._cache.get(hash_hex)
         if cached is not None:
-            self._log_done(request, cached.items, stages=None, cache_hit=True)
+            self._log_done(
+                request, cached.items, stages=None, cache_hit=True,
+                total_elapsed_ms=self._elapsed_ms(t0), vision_attempts=0,
+            )
             return cached
         future, is_owner = await self._in_flight.get_or_create(hash_hex)
         if not is_owner:
             return await future
         try:
-            response = await self._process_new(image_bytes, request, hash_hex)
+            response = await self._process_new(image_bytes, request, hash_hex, t0)
             await self._in_flight.complete(hash_hex, response)
             return response
         except BaseException as exc:
@@ -92,16 +98,24 @@ class OcrPrescriptionService:
             raise
 
     async def _process_new(
-        self, image_bytes: bytes, request: PrescriptionOcrRequest, hash_hex: str
+        self, image_bytes: bytes, request: PrescriptionOcrRequest, hash_hex: str, t0: float
     ) -> PrescriptionOcrResponse:
         if self._preprocessor is not None:
             image_bytes = self._apply_preprocess(image_bytes)
+        vision_metrics.reset_attempts()
         response, stages = await self._build_response(
             image_bytes, hash_hex=hash_hex, image_key=request.image_key
         )
         await self._cache.set(hash_hex, response)
-        self._log_done(request, response.items, stages=stages, cache_hit=False)
+        self._log_done(
+            request, response.items, stages=stages, cache_hit=False,
+            total_elapsed_ms=self._elapsed_ms(t0), vision_attempts=vision_metrics.get_attempts(),
+        )
         return response
+
+    @staticmethod
+    def _elapsed_ms(t0: float) -> int:
+        return int((time.monotonic() - t0) * 1000)
 
     def _apply_preprocess(self, image_bytes: bytes) -> bytes:
         try:
@@ -121,7 +135,8 @@ class OcrPrescriptionService:
         items = [self._to_decision_item(result, raw) for result, raw in zip(results, raw_items)]
         stages = [result.stage for result in results]
         self._log_stage_decisions(raw_items, results)
-        return PrescriptionOcrResponse(items=items), stages
+        pii_detected = getattr(raw_items, "has_resident_number", False)
+        return PrescriptionOcrResponse(items=items, pii_detected=pii_detected), stages
 
     def _to_decision_item(self, result: MatchResult, raw: RawOcrItem) -> OcrItemWithDecision:
         if result.item is not None:
@@ -159,16 +174,26 @@ class OcrPrescriptionService:
         hash_hex: str | None = None,
         image_key: str | None = None,
     ) -> list[MatchResult]:
-        results = []
-        for raw in raw_items:
-            t0 = int(time.monotonic() * 1000)
-            result = await self._match_with_fallback(raw)
-            latency_ms = int(time.monotonic() * 1000) - t0
-            results.append(result)
-            if self._match_logger is not None:
-                entry = self._build_log_entry(raw, result, hash_hex, image_key, latency_ms)
-                asyncio.ensure_future(self._safe_log(entry))
-        return results
+        # T-AI-OCR-LATENCY-30S 후속 — 아이템별 매칭(Tier 3 correction 등 미해결 알약당
+        # Gemini 호출 포함)을 순차→동시 실행. 임계·후보결정 로직(_match_with_fallback)은 불변,
+        # 아이템 간 독립 실행만 병렬화 — 실측 순차 3건 합산(+80s)이 병목이었음.
+        return await asyncio.gather(*(
+            self._match_one(raw, hash_hex, image_key) for raw in raw_items
+        ))
+
+    async def _match_one(
+        self,
+        raw: RawOcrItem,
+        hash_hex: str | None,
+        image_key: str | None,
+    ) -> MatchResult:
+        t0 = int(time.monotonic() * 1000)
+        result = await self._match_with_fallback(raw)
+        latency_ms = int(time.monotonic() * 1000) - t0
+        if self._match_logger is not None:
+            entry = self._build_log_entry(raw, result, hash_hex, image_key, latency_ms)
+            asyncio.ensure_future(self._safe_log(entry))
+        return result
 
     def _build_log_entry(
         self,
@@ -298,13 +323,23 @@ class OcrPrescriptionService:
         items: list[OcrItem],
         stages: list[MatchStage] | None,
         cache_hit: bool,
+        total_elapsed_ms: int,
+        vision_attempts: int,
     ) -> None:
+        # BE 가 request_id 를 안 보내는 경로(None)에서도 이 요청 하나를 로그상 식별 가능하게 채움.
+        request_id = request.request_id or uuid4()
+        # unresolved(MANUAL) 건수 — pill_identify 기본 OFF 이후 통합추출(B) 도입 판단용 데이터.
+        unresolved_count = sum(1 for item in items if getattr(item, "decision", None) == "MANUAL")
         logger.info(
-            "OcrProcessed request_id=%s item_count=%d matched=%s cache_hit=%s",
-            request.request_id,
+            "OcrProcessed request_id=%s item_count=%d matched=%s cache_hit=%s "
+            "total_elapsed_ms=%d vision_attempts=%d unresolved_count=%d",
+            request_id,
             len(items),
             self._format_matched(items, stages),
             cache_hit,
+            total_elapsed_ms,
+            vision_attempts,
+            unresolved_count,
         )
 
     def _log_stage_decisions(

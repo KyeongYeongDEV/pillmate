@@ -18,5 +18,9 @@ class VisionInvocationError(AiServerError):
     """Gemini Vision 호출 실패 (네트워크/타임아웃 외)."""
 
 
+class VisionBusyError(AiServerError):
+    """Vision 재시도 예산(25s)·횟수(2회) 소진 — 혼잡으로 판단, fast-fail."""
+
+
 class OcrParseError(AiServerError):
     """LLM 응답 JSON 파싱 실패."""
