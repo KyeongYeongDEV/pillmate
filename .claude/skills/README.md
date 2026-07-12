@@ -19,6 +19,7 @@ Claude Code의 `Skill` 도구로 호출됩니다.
 | `dose-check-flow` | 복용 체크 + 알림 흐름 검증 | 복용 체크 |
 | `mfds-sync` | 식약처 API 동기화 | 식약처, MFDS |
 | `cost-audit` | LLM/인프라 비용 감사 | 비용 감사 |
+| `security-audit` | 유료 SaaS 출시 전 보안 종합 점검 (13관점) | 보안 점검, 출시 전 감사 |
 | `commit-convention` | 태그 기반 커밋 메시지 + 브랜치 전략 강제 | 커밋, 브랜치, push |
 
 ## 작성 규칙

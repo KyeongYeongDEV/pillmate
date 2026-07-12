@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Usage: say <be|fe|dev|qa-claude|qa-gemini> "message text"
+# Usage: say <be|fe|dev|qa-claude|qa-gemini|reviewer|ops|adv> "message text"
 # Sends a message to the named agent's pane.
+#
+# 2026-07-07 강화 (오배달 사고 재발 방지):
+#  - 전송 전 타겟 pane 라벨 검증 (stale UUID → 엉뚱한 패널/CTO 자신에게 배달 방지)
+#  - CTO 패널로의 전송 절대 차단
+#  - 전송 후 Enter 재확인 (say Enter 미전달 상습 이슈)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,34 +14,58 @@ RUNTIME="$SCRIPT_DIR/../.runtime/cmux.env"
 source "$RUNTIME"
 
 role="${1:-}"; message="${2:-}"
-[[ -z "$role" || -z "$message" ]] && { echo "Usage: say <be|fe|dev|qa-claude|qa-gemini|reviewer|researcher> \"message\"" >&2; exit 1; }
+[[ -z "$role" || -z "$message" ]] && { echo "Usage: say <be|fe|dev|qa-claude|qa-gemini|reviewer|ops|adv> \"message\"" >&2; exit 1; }
 
 DB_SAFETY="[DB 데이터 삭제 절대 금지 — DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는) X. 사용자 명시 동의 + spec 명시 시만 예외. 룰: .claude/rules/common/db-safety.md] "
 prefix=""
+expect_label=""
 case "$role" in
-  be|be-dev)    target="${BE_DEV_SURFACE:-$DEV_SURFACE}"
+  be|be-dev)    target="${BE_DEV_SURFACE:-$DEV_SURFACE}"; expect_label="BE-Dev"
                 prefix="$DB_SAFETY" ;;
-  fe|fe-dev)    target="$FE_DEV_SURFACE"
+  fe|fe-dev)    target="$FE_DEV_SURFACE"; expect_label="FE-Dev"
                 prefix="$DB_SAFETY" ;;
-  dev)          target="${BE_DEV_SURFACE:-$DEV_SURFACE}"
+  dev)          target="${BE_DEV_SURFACE:-$DEV_SURFACE}"; expect_label="BE-Dev"
                 prefix="$DB_SAFETY" ;;
-  qa-claude)    target="$QA_CLAUDE_SURFACE"
+  qa-claude)    target="$QA_CLAUDE_SURFACE"; expect_label="QA-Claude"
                 prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25 참조. .cmux/prompts/qa-claude.md 룰 따름.] " ;;
-  qa-gemini)    target="$QA_GEMINI_SURFACE"
-                prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. 위반 사고 2026-05-25(drug_embeddings 4736건 삭제)에서 정책 재확립. GEMINI.md + .cmux/prompts/qa-gemini.md 룰 절대 따름. 발견은 보고만, 수정 X.] " ;;
-  reviewer)     target="${REVIEWER_SURFACE:-}"
+  qa-gemini)    target="$QA_GEMINI_SURFACE"; expect_label=""
+                prefix="${DB_SAFETY}[READ-ONLY QA. 코드/docker/git 변경 절대 금지. GEMINI.md + .cmux/prompts/qa-gemini.md 룰 절대 따름. 발견은 보고만, 수정 X.] " ;;
+  reviewer)     target="${REVIEWER_SURFACE:-}"; expect_label="Reviewer"
                 [[ -z "$target" ]] && { echo "✗ REVIEWER_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
                 prefix="${DB_SAFETY}[READ-ONLY Reviewer. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 도구 호출 X. .cmux/prompts/reviewer.md 룰 따름. SOLID/clean-code/db-safety/medical-safety/외부-비동기 9개 체크리스트 line 단위 P0/P1/P2 리포트.] " ;;
-  researcher)   target="${RESEARCHER_SURFACE:-}"
-                [[ -z "$target" ]] && { echo "✗ RESEARCHER_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
-                prefix="${DB_SAFETY}[READ-ONLY Researcher. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 도구 호출 X. .claude/agents/researcher.md 룰 따름. 출력: 4섹션 markdown(영향 파일/컨벤션/깨질 caller/선례). spec 작성·결정·구현 X.] " ;;
-  adv|adversarial) target="${ADVERSARIAL_SURFACE:-}"
+  ops|deploy|researcher) target="${OPS_SURFACE:-${RESEARCHER_SURFACE:-}}"; expect_label="Ops"
+                [[ -z "$target" ]] && { echo "✗ OPS_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
+                prefix="${DB_SAFETY}[Ops/Deploy 패널. 프로덕션 명령은 spec 명시분만. 시크릿 값 출력 절대 금지(secret-safety.md). .cmux/prompts/ops.md 룰 따름.] " ;;
+  adv|adversarial) target="${ADVERSARIAL_SURFACE:-}"; expect_label="Adversarial"
                 [[ -z "$target" ]] && { echo "✗ ADVERSARIAL_SURFACE 미설정 — .cmux/.runtime/cmux.env 확인" >&2; exit 1; }
                 prefix="${DB_SAFETY}[READ-ONLY Adversarial-QA. 코드/docker/git 변경 절대 금지. Edit/Write/MultiEdit 호출 X. .cmux/prompts/adversarial.md 룰 따름. '어떻게 깨지나/우회되나'를 구체 시나리오로 사냥, 의료안전 우선. P0/P1/P2 + 마지막줄 ADV_<TASK>_PASS|FAIL.] " ;;
   *)            echo "✗ unknown role: $role" >&2; exit 1 ;;
 esac
 
+# ── 가드 1: 타겟이 CTO 패널이면 절대 전송 금지 (2026-07-06 /clear 오배달 사고) ──
+if [[ -n "${CTO_SURFACE:-}" && "$target" == "$CTO_SURFACE" ]]; then
+  echo "✗ ABORT: target($role) 이 CTO 패널 UUID 와 동일 — cmux.env stale 의심. cmux tree --id-format both 로 재매핑 후 재시도" >&2
+  exit 1
+fi
+
+# ── 가드 2: 전송 전 pane 라벨 실검증 (tree 에서 UUID→라벨 대조) ──
+if [[ -n "$expect_label" ]]; then
+  actual_label="$(cmux tree --workspace "$CMUX_WORKSPACE" --id-format both 2>/dev/null | grep -F "$target" | grep -oE '"[^"]+"' | head -1 | tr -d '"')" || actual_label=""
+  if [[ -n "$actual_label" && "$actual_label" != *"$expect_label"* ]]; then
+    echo "✗ ABORT: $target 의 실제 라벨('$actual_label')이 기대('$expect_label')와 다름 — cmux.env stale. 재매핑 필요" >&2
+    exit 1
+  fi
+fi
+
 cmux send-panel --panel "$target" --workspace "$CMUX_WORKSPACE" -- "${prefix}${message}"
 sleep 0.5
 cmux send-key-panel --panel "$target" --workspace "$CMUX_WORKSPACE" Enter >/dev/null
-echo "→ sent to $role ($target)"
+
+# ── 가드 3: Enter 미전달 상습 이슈 — 2초 후 composer 에 텍스트 잔존 시 Enter 1회 재시도 ──
+sleep 2
+if cmux capture-pane --panel "$target" --workspace "$CMUX_WORKSPACE" 2>/dev/null | tail -6 | grep -qF "${message:0:24}"; then
+  cmux send-key-panel --panel "$target" --workspace "$CMUX_WORKSPACE" Enter >/dev/null
+  echo "→ sent to $role ($target) [Enter 재시도 1회]"
+else
+  echo "→ sent to $role ($target)"
+fi

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# panel-health — 모든 워커 패널의 컨텍스트 토큰 사용량을 한눈에 (context hygiene 강제용)
+# 2026-07-07 신설. 근거: BE/FE 패널이 clear 없이 798k/653k 까지 방치 → degraded/멈춤.
+#
+# 사용: ./.cmux/bin/panel-health            # 전체 상태 표
+#       ./.cmux/bin/panel-health --clear-over 150   # 임계값 초과 패널에 /clear 자동 전송
+#
+# 임계값(토큰): WARN=120k, CLEAR 권장=200k, DANGER=400k(강제 clear 권장)
+set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME="$SCRIPT_DIR/../.runtime/cmux.env"
+[[ -f "$RUNTIME" ]] || { echo "✗ runtime missing" >&2; exit 1; }
+source "$RUNTIME"
+
+WARN=120; DANGER=400
+# 자동 조치는 안전한 compact(맥락 보존)만. clear 는 작업 전환 시 CTO 가 수동 판단(맥락 손실 위험).
+compact_over=""
+[[ "${1:-}" == "--compact-over" ]] && compact_over="${2:-150}"
+
+panels=(
+  "BE-Dev:${BE_DEV_SURFACE:-}"
+  "FE-Dev:${FE_DEV_SURFACE:-}"
+  "QA-Claude:${QA_CLAUDE_SURFACE:-}"
+  "Reviewer:${REVIEWER_SURFACE:-}"
+  "Adversarial:${ADVERSARIAL_SURFACE:-}"
+  "Ops:${OPS_SURFACE:-}"
+)
+
+# 패널 화면에서 컨텍스트 크기 추출 — "~NNNk uncached" / "NNNk tokens" / "/clear to save NNNk"
+# 우선순위: uncached/save 힌트 라인의 숫자(= 실제 누적 컨텍스트). 없으면 0.
+read_tokens() {
+  local surface="$1" line
+  line="$(cmux capture-pane --panel "$surface" --workspace "$CMUX_WORKSPACE" 2>/dev/null \
+    | tail -15 | grep -iE 'uncached|to save|to start fresh' | tail -1)"
+  [[ -z "$line" ]] && { echo 0; return; }
+  echo "$line" | grep -oE '[0-9]+(\.[0-9]+)?k' | head -1 | tr -d 'k' | cut -d. -f1
+}
+
+# 처리중 감지 — 스피너 경과시간 라인 "… (Xm Ys ·" / "… (Xs ·" / 스트리밍 "↓ Nk tokens"
+is_busy() {
+  cmux capture-pane --panel "$1" --workspace "$CMUX_WORKSPACE" 2>/dev/null \
+    | tail -12 | grep -qE '\([0-9]+m [0-9]+s ·|\([0-9]+s ·|↓ [0-9.]+k tokens'
+}
+
+printf "%-14s %-10s %s\n" "PANEL" "TOKENS(k)" "STATUS"
+printf "%-14s %-10s %s\n" "-----" "---------" "------"
+over_list=()
+for entry in "${panels[@]}"; do
+  name="${entry%%:*}"; surface="${entry#*:}"
+  [[ -z "$surface" ]] && { printf "%-14s %-10s %s\n" "$name" "-" "(미설정)"; continue; }
+  tok="$(read_tokens "$surface")"
+  [[ -z "$tok" ]] && tok=0
+  busy=""; is_busy "$surface" && busy=1
+  status="ok"
+  # 진행 중(busy) 고토큰 = compact 권장(맥락 보존). idle = 작업 전환 시 clear 판단.
+  if (( tok >= WARN )); then
+    status="⚠️  ≥${WARN}k — 진행 중이면 /compact, 완결+전환이면 /clear"
+  fi
+  (( tok >= DANGER )) && status="🔴 ≥${DANGER}k DANGER — 맥락 파일화 후 compact/restart"
+  [[ -n "$busy" ]] && status="$status  [busy·측정불가]"
+  printf "%-14s %-10s %s\n" "$name" "$tok" "$status"
+  if [[ -n "$compact_over" ]] && (( tok >= compact_over )); then
+    over_list+=("$name:$surface:$tok")
+  fi
+done
+
+if [[ -n "$compact_over" && ${#over_list[@]} -gt 0 ]]; then
+  echo
+  echo "→ 임계값(${compact_over}k) 초과 패널 /compact 전송 (안전 — 맥락 보존):"
+  for o in "${over_list[@]}"; do
+    nm="${o%%:*}"; rest="${o#*:}"; sf="${rest%%:*}"
+    cmux send-panel --panel "$sf" --workspace "$CMUX_WORKSPACE" -- "/compact" >/dev/null 2>&1
+    sleep 0.8
+    cmux send-key-panel --panel "$sf" --workspace "$CMUX_WORKSPACE" Enter >/dev/null 2>&1
+    echo "   /compact → $nm ($sf)"
+  done
+  echo "ℹ️  clear 는 작업 전환 시에만 CTO 수동 판단 (context-hygiene.md)."
+fi

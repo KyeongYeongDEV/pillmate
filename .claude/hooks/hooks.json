@@ -20,6 +20,12 @@
         "filePattern": "ai_server/app/**/*.py",
         "command": ".claude/scripts/check_medical_source.sh \"$FILE\"",
         "description": "LLM 응답 코드에 식약처 출처 강제 패턴 확인."
+      },
+      {
+        "matcher": "Write|Edit",
+        "filePattern": "**/*",
+        "command": ".claude/scripts/check_secret_leak.sh \"$FILE\"",
+        "description": "실키 패턴(AKIA/sk-/AIza/private key) 유출 즉시 경고 — secret-safety.md"
       }
     ],
     "PreToolUse": [

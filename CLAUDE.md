@@ -17,6 +17,10 @@
 4. **오버엔지니어링 금지**: Phase 1은 단일 서버, MSA/Kafka는 Phase 3/4
 5. **Ubiquitous Language**: `.claude/contexts/ubiquitous-language.md`의 용어만 사용
 6. **DB 데이터 삭제 절대 금지** (2026-05-25 사용자 명시): 어떤 에이전트도(CTO·BE·FE·QA-Claude·QA-Gemini) `DELETE/TRUNCATE/DROP/UPDATE(WHERE 없는)` 절대 X. 사용자 명시 동의 + spec 명시한 경우만 예외. 상세 `.claude/rules/common/db-safety.md`
+7. **시크릿 노출 금지** (2026-07-07): 시크릿 값을 채팅·로그·커밋·명령줄 인자에 출력 절대 X. compose 검증은 더미 `--env-file` 필수. 상세 `.claude/rules/common/secret-safety.md`
+8. **실측 증거 없는 DONE 금지** (2026-07-07): UI=스크린샷·픽셀실측, API=curl 실측, 버그=재현→픽스→재현불가. 코드 diff 만으로 DONE 반려. 상세 `.claude/rules/common/verification-evidence.md`
+9. **QA 리스크 2단계** (2026-07-07): 의료·보안·데이터·결제·배포·개인정보 = 트리오(Reviewer+QA-Claude+Adversarial) 의무, 그 외 = CTO 직접검증. 상세 `.claude/rules/common/qa-risk-tiers.md`
+10. **스코프 규율** (2026-07-07): spec 명시분만 변경. 무관 코드·동작 건드림 금지, 없앤 제약/기능 spec 없이 재추가 금지(anti-revival), 같은 파일 동시편집 금지. 상세 `.claude/rules/common/scope-discipline.md`
 
 위반 시 PR 차단. 자세한 규칙은 `.claude/rules/`를 참조.
 
@@ -179,6 +183,35 @@ ArchUnit으로 자동 검증: `/pill-arch-check`
 
 ---
 
+
+---
+
+## ✅ 품질 기준선 (체크 가능한 기준 — 형용사 금지)
+
+> 모든 모델(패널·서브에이전트)은 작업 전 이 레이어를 먼저 읽는다. "잘", "깔끔히" 같은 형용사가 아니라 체크 가능한 기준.
+
+| # | 기준 (체크 가능) | 판정 |
+|---|-----------------|------|
+| Q1 | DONE 보고에 실측 증거 첨부 (UI=스크린샷/픽셀, API=curl, 버그=재현3단) | 없으면 반려 |
+| Q2 | 변경 파일이 spec 명시 범위 안인가 (`git diff --stat` 로 확인) | 벗어나면 반려 |
+| Q3 | 새 제약/검증 추가 시 과거 제거 이력 grep/git log 확인했는가 | 미확인이면 반려 |
+| Q4 | 시크릿 값이 출력/커밋에 0건인가 | 1건이라도 있으면 즉시 중단 |
+| Q5 | 도메인 코드에 대응 테스트 존재 + GREEN | 없으면 반려 |
+| Q6 | 트랜잭션 안 외부호출 0, DDD 역방향 의존 0 | 위반 즉시 수정 |
+
+### 약한 모델이 자주 저지르는 실수 (이 프로젝트 실사고 기반)
+1. 코드 diff 만 보고 "적용됐다" 판정 (렌더/컨테이너 미반영) → Q1 로 차단
+2. "이왕 하는 김에" 무관 코드 정리 → Q2 로 차단
+3. 좋아 보이는 검증·제약을 임의 추가 (사용자가 없앤 것 재추가) → Q3 로 차단
+4. compose/printenv 출력에 실키 노출 → Q4 로 차단
+5. 실패를 DONE 으로 포장 → 검증 불가면 "구현 완료, 검증 블록: <이유>" 로 정직 보고
+
+### Escalation 기준 (불확실할 때)
+- spec 에 없는 결정이 필요하다 → **CTO 에 질문** (추측 진행 금지)
+- 두 룰이 충돌한다 → 우선순위: medical > db > secret > ddd > tdd > 나머지
+- 같은 접근 2회 실패 → 접근을 바꾸지 말고 **일단 보고** (3회째 시도 전에 CTO 판단)
+- 사용자 데이터를 변경/삭제해야 할 것 같다 → 무조건 중단 + 보고 (db-safety)
+
 ## 📚 더 읽을 거리
 
 - `docs/01-plan/features/PillMate-Phase1.plan.md` — Phase 1 계획서
@@ -194,3 +227,4 @@ ArchUnit으로 자동 검증: `/pill-arch-check`
 | 날짜       | 변경                                          |
 | ---------- | --------------------------------------------- |
 | 2026-05-21 | 하네스 골격 초기 작성 (TDD + DDD + 의료 안전) |
+| 2026-07-07 | 하네스 강화: secret-safety·verification-evidence·qa-risk-tiers 룰, deploy-gate 스킬, Researcher→Ops 패널 전환, say 오배달 가드, secret-leak 훅, bkit 플러그인 제거 |

@@ -125,3 +125,11 @@ CTO 는 **단 한 줄의 코드/설정/Dockerfile/yml/sql/json/md(spec 제외) �
 ### 사용자 승인 절차
 - 코드 변경이 필요한 어떤 task 든 spec 작성 → say be/fe → 결과 보고 → push 승인 요청
 - "이건 한 줄이라 제가 직접..." 같은 합리화는 위반
+
+## 컨텍스트 위생 강제 (2026-07-07 — context-hygiene.md)
+디스패치 루프에 **내장 의무**. 방치 시 패널이 수백k까지 부풀어 degraded/멈춤 (798k 사고).
+1. 패널이 DONE 보고 + 태스크 완결 → **다음 디스패치 전 그 패널 /clear** (회수 시점이 유일한 idle 창).
+2. 여러 패널 굴리는 구간: 매 디스패치 라운드 시작에 `./.cmux/bin/panel-health` 스캔. WARN(≥120k) 먼저 정리.
+3. 같은 패널에 clear 없이 3태스크 연속 금지.
+4. clear 는 대화만 지움 — 코드=워킹트리, 결과=outbox, 지시=specs. idle 패널 clear 손실 0. 주저 X.
+5. busy 패널은 clear 불가 → idle 대기. degraded(/clear 미반영)면 `bin/restart-panel <role>`.
