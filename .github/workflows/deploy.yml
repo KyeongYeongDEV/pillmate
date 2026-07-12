@@ -3,6 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches: [dev]   # CICD 검증 단계 — dev 에서 파이프라인 확인 후 [main] 으로 승격 예정
+  workflow_dispatch:  # Actions 탭에서 수동 재실행용
 
 # 동시 배포 방지 — 이전 실행이 완료될 때까지 대기
 concurrency:
