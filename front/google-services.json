@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "33234423949",
+    "project_id": "pillmate-feb52",
+    "storage_bucket": "pillmate-feb52.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:33234423949:android:b8e6d2a19516d9ef9c12c4",
+        "android_client_info": {
+          "package_name": "com.pillmate.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJJhgYLeVVtven-tZax14euRjvJ0o_eU8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

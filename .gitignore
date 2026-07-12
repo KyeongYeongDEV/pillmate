@@ -15,7 +15,8 @@ application-prod.yml
 
 # Firebase / FCM 자격증명 (절대 커밋 금지)
 **/firebase-service-account*.json
-**/google-services.json
+# google-services.json 은 클라이언트 설정(APK에 포함되는 값) — EAS 빌드 필요로 커밋 (Firebase 공식: 커밋 가능)
+# **/google-services.json
 **/GoogleService-Info.plist
 **/serviceAccountKey*.json
 **/*firebase*credential*.json
