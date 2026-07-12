@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ActivityIndicator,
   Animated, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as Device from 'expo-device';
+import { Image } from 'expo-image';
 import { useKakaoLoginMutation, useExchangeKakaoCodeMutation } from '@/store/slices/authApi';
 import KakaoTalkIcon from '@/components/common/KakaoTalkIcon';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '';
 const KAKAO_REDIRECT_URI = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI  ?? '';
-// 프로덕션: REST 키 + https 콜백 URI 모두 설정된 경우. 미설정 → dev-fallback.
-const IS_PROD_KAKAO  = Boolean(KAKAO_REST_API_KEY && KAKAO_REDIRECT_URI);
+// 프로덕션: REST 키 + https 콜백 URI 모두 설정 + 실기기(Device.isDevice)인 경우만.
+// 시뮬레이터/에뮬레이터는 항상 dev-fallback 자동로그인(임의 userId) — 실기기만 실제 카카오.
+const IS_PROD_KAKAO  = Boolean(KAKAO_REST_API_KEY && KAKAO_REDIRECT_URI) && Device.isDevice;
 const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
 const RETURN_URL     = 'pillmate://oauth/kakao';
 const TERMS_URL = 'https://pillmate.app/terms';
@@ -39,6 +42,14 @@ export default function LoginScreen() {
       showError('로그인에 실패했어요. 다시 시도해 주세요.');
     }
   }
+
+  // 시뮬레이터/에뮬레이터: 로그인 화면 진입 즉시 dev-fallback 자동로그인(임의 userId)
+  useEffect(() => {
+    if (!Device.isDevice) {
+      loginWithCode('', '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function showError(msg: string) {
     setErrorMsg(msg);
@@ -94,7 +105,11 @@ export default function LoginScreen() {
         {/* Logo area */}
         <View style={styles.logoArea}>
           <View style={styles.logoIcon}>
-            <Text style={styles.logoEmoji}>💊</Text>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={styles.logoImage}
+              contentFit="contain"
+            />
           </View>
           <Text style={styles.wordmark}>PillMate</Text>
           <Text style={styles.tagline}>
@@ -184,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue95, alignItems: 'center', justifyContent: 'center',
     marginBottom: space.s4,
   },
-  logoEmoji: { fontSize: scale(36) },
+  logoImage: { width: scale(48), height: scale(48) },
   wordmark: { fontSize: scale(28), fontWeight: '800', color: colors.labelNormal, letterSpacing: -0.5 },
   tagline: {
     ...typography.body1r, color: colors.labelAlternative,

@@ -16,6 +16,7 @@
 - [ ] DuckDNS `pillmatefriend.duckdns.org` → VM IP 최신 (IP 변경 대비 duckdns cron 갱신 스크립트 권장)
 - [ ] Caddy HTTPS 발급 확인 (`curl -I https://pillmatefriend.duckdns.org`)
 - [ ] DB 백업 cron 배선 확인 (`backup_postgres.sh` + 복원 리허설 1회) — **백업 없는 배포 금지** (db-safety)
+- [ ] 주기적 `docker image prune -af --filter until=168h` cron (blue-green 이미지 누적 방지)
 - [ ] DB 백업 **S3 오프사이트 + 30일 자동 만료** (`BACKUP_S3=true` cron + `setup-s3-backup-lifecycle.sh --apply`, `db-backups/` prefix) — VM 유실 대비. 라이프사이클은 기존 규칙 병합(처방전 이미지 규칙 불변)
 
 ## G3. 프로파일/설정 정합
@@ -39,6 +40,7 @@
 
 ## G6. 검증/QA
 - [ ] `/security-audit` skill 재실행 → P0=0 확인
+- [ ] 2026-07-12 감사 발견 3건 픽스 확인: OCR 후보 IDOR(소유권 가드+resolverId), Swagger prod off, Actuator 외부 차단 — 트리오 PASS 필수
 - [ ] QA Tier 1 미검증 잔여 태스크 0 (qa-risk-tiers.md)
 - [ ] 핵심 여정 e2e: 로그인(카카오 실계정)→약봉투 등록→오늘 체크→그룹 공유→알림 — 프로드 환경에서 1회
 - [ ] 블루그린 전환 리허설 (부하 중 드랍 0 — 로컬 250req 선례 재현)
