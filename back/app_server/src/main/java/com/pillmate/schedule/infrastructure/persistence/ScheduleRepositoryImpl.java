@@ -1,7 +1,6 @@
 package com.pillmate.schedule.infrastructure.persistence;
 
 import com.pillmate.schedule.domain.model.Schedule;
-import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -20,8 +19,8 @@ class ScheduleRepositoryImpl implements ScheduleRepository {
     @Override public Optional<Schedule> findById(Long id) { return jpa.findById(id); }
 
     @Override
-    public List<Schedule> findActiveByPatientAndTime(Long patientId, TimeOfDay timeOfDay, LocalDate date) {
-        return jpa.findActiveByPatientAndTime(patientId, timeOfDay, date);
+    public List<Schedule> findActiveByPatient(Long patientId, LocalDate date) {
+        return jpa.findActiveByPatient(patientId, date);
     }
 
     @Override

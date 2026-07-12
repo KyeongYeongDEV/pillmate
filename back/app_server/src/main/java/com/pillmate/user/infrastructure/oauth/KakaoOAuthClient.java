@@ -1,5 +1,6 @@
 package com.pillmate.user.infrastructure.oauth;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
@@ -109,16 +110,21 @@ public class KakaoOAuthClient implements KakaoOAuthPort {
         return new KakaoProfile(String.valueOf(info.id()), nickname, email, profileImageUrl);
     }
 
+    // 카카오 응답 필드는 문서에 없는 값(token_type 등)도 포함될 수 있어 미지 필드 무시 — strict 파싱 실패 방지
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoTokenResponse(@JsonProperty("access_token") String accessToken) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoUserInfoResponse(
             Long id,
             @JsonProperty("kakao_account") KakaoAccount kakaoAccount) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoAccount(
             String email,
             KakaoAccountProfile profile) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoAccountProfile(
             String nickname,
             @JsonProperty("profile_image_url") String profileImageUrl) {}

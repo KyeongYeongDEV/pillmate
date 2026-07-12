@@ -6,7 +6,11 @@ import java.util.List;
 public interface OcrPort {
     OcrResult extractFromImage(String imageUrl, String imageKey);
 
-    record OcrResult(List<OcrItem> items, String source) {}
+    record OcrResult(List<OcrItem> items, String source, boolean piiDetected) {
+        public OcrResult(List<OcrItem> items, String source) {
+            this(items, source, false);
+        }
+    }
 
     record OcrItem(
             String kdCode,

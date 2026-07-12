@@ -3,6 +3,8 @@ package com.pillmate.prescription.presentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.ratelimit.RateLimitExceededException;
+import com.pillmate.prescription.application.GetActivePrescriptionsWithInsightUseCase;
 import com.pillmate.prescription.application.GetLatestPrescriptionWithInsightUseCase;
 import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
@@ -53,7 +55,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -81,8 +85,29 @@ class PrescriptionControllerTest {
     @MockitoBean GetPrescriptionsUseCase getPrescriptionsUseCase;
     @MockitoBean GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
     @MockitoBean GetLatestPrescriptionWithInsightUseCase getLatestPrescriptionWithInsightUseCase;
+    @MockitoBean GetActivePrescriptionsWithInsightUseCase getActivePrescriptionsWithInsightUseCase;
     @MockitoBean UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
     @MockitoBean SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
+
+    @Test
+    @DisplayName("POST /prescriptions/ocr/extract — 일일 한도 초과 → 429 + PILL_090 '내일 다시' 메시지")
+    void postOcrExtract_rateLimited_returns429() throws Exception {
+        given(extractPrescriptionOcrUseCase.extract(any(), any()))
+                .willThrow(new RateLimitExceededException());
+
+        org.springframework.test.web.servlet.MvcResult asyncResult =
+                mockMvc.perform(post("/prescriptions/ocr/extract")
+                                .header("X-User-Id", "1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"imageKey\":\"prescriptions/2026/07/uuid.jpg\"}"))
+                        .andExpect(request().asyncStarted())
+                        .andReturn();
+
+        mockMvc.perform(asyncDispatch(asyncResult))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("PILL_090"))
+                .andExpect(jsonPath("$.error.message").value("오늘 사용량을 초과했어요. 내일 다시 시도해 주세요."));
+    }
 
     @Test
     @DisplayName("POST /prescriptions/upload-url → 200 + uploadUrl/objectKey/expiresAt")
@@ -259,6 +284,36 @@ class PrescriptionControllerTest {
                 .andExpect(jsonPath("$.data.drugCount").value(3))
                 .andExpect(jsonPath("$.data.primaryDrugName").value("메트포르민정"))
                 .andExpect(jsonPath("$.data.insights[0].source").value("식약처"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/active-with-insights → 200 + 복약중 처방전 배열")
+    void getActiveWithInsights_returns200() throws Exception {
+        given(getActivePrescriptionsWithInsightUseCase.loadActiveForPatient(7L)).willReturn(
+                List.of(new LatestPrescriptionWithInsightResponse(42L, LocalDate.of(2026, 6, 10), 3, "메트포르민정",
+                                List.of(new PrescriptionInsightView(1L, PrescriptionInsightType.RECOMMENDATION,
+                                        PrescriptionInsightSeverity.INFO, "비타민 B12 영향 가능",
+                                        "장기 복용 시 흡수에 영향을 줄 수 있어요.", "식약처", new BigDecimal("0.90")))),
+                        new LatestPrescriptionWithInsightResponse(41L, LocalDate.of(2026, 6, 1), 1, "타이레놀",
+                                List.of(new PrescriptionInsightView(2L, PrescriptionInsightType.RECOMMENDATION,
+                                        PrescriptionInsightSeverity.INFO, "제목", "설명", "식약처", new BigDecimal("0.80"))))));
+
+        mockMvc.perform(get("/prescriptions/active-with-insights").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].prescriptionId").value(42))
+                .andExpect(jsonPath("$.data[1].prescriptionId").value(41))
+                .andExpect(jsonPath("$.data[0].insights[0].source").value("식약처"));
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/active-with-insights 복약중 없음 → 200 + 빈 배열")
+    void getActiveWithInsights_empty_returns200() throws Exception {
+        given(getActivePrescriptionsWithInsightUseCase.loadActiveForPatient(7L)).willReturn(List.of());
+
+        mockMvc.perform(get("/prescriptions/active-with-insights").header("X-User-Id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test

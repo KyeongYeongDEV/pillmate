@@ -1,5 +1,6 @@
 package com.pillmate.notification.integration;
 
+import com.pillmate.caregroup.domain.event.MemberJoined;
 import com.pillmate.caregroup.domain.model.CareGroup;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
@@ -197,6 +198,28 @@ class NotificationDispatchIntegrationTest {
             assertThat(saved.stream().map(Notification::getRecipientUserId).toList())
                     .containsExactlyInAnyOrder(memberUserId, memberBId);
             assertThat(saved).allMatch(n -> n.getReferenceId().equals(prescriptionId));
+        });
+    }
+
+    @Test
+    @DisplayName("MemberJoined — 기존 멤버(가입 actor 제외)에게 GROUP_MEMBER_JOINED 알림 저장")
+    void on_memberJoined_savesNotificationForExistingMembersExceptActor() {
+        // given — memberUserId 가 그룹에 새로 가입한 상황(actor=memberUserId), 기존 멤버는 actorUserId(테스트 그룹장)
+        MemberJoined event = new MemberJoined(careGroupId, memberUserId);
+
+        // when
+        notificationDispatcher.on(event);
+
+        // then — 기존 멤버(actorUserId)에게만 저장, 방금 가입한 memberUserId(이벤트의 actor) 제외
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            List<Notification> saved = notificationRepository.findAll().stream()
+                    .filter(n -> n.getType() == NotificationType.GROUP_MEMBER_JOINED)
+                    .toList();
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getRecipientUserId()).isEqualTo(actorUserId);
+            assertThat(saved.get(0).getActorUserId()).isEqualTo(memberUserId);
+            assertThat(saved.get(0).getCareGroupId()).isEqualTo(careGroupId);
+            assertThat(saved.get(0).getBody()).contains("member").contains("참여");
         });
     }
 }

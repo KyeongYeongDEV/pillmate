@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -28,10 +29,11 @@ public class CreateScheduleUseCase {
     public CreateScheduleResponse create(CreateScheduleRequest req, Long createdBy) {
         careGroupGuard.requireAccessible(req.careGroupId());
         patientAccessGuard.requireAccess(createdBy, req.patientId());
-        List<Schedule> existing = scheduleRepository.findActiveByPatientAndTime(
-                req.patientId(), req.timeOfDay(), req.startDate());
+        List<Schedule> existing = scheduleRepository.findActiveByPatient(
+                req.patientId(), req.startDate());
 
-        if (conflictChecker.hasConflict(req.patientId(), req.drugId(), req.timeOfDay(),
+        LocalTime resolvedTime = req.customTime() != null ? req.customTime() : req.timeOfDay().defaultTime();
+        if (conflictChecker.hasConflict(req.patientId(), req.drugId(), resolvedTime,
                 req.startDate(), req.endDate(), existing)) {
             throw new PillmateException(ErrorCode.SCHEDULE_CONFLICT);
         }

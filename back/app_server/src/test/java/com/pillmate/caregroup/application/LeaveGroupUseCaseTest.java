@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 class LeaveGroupUseCaseTest {
 
     @Mock MembershipRepository membershipRepository;
+    @Mock com.pillmate.notification.application.port.RecipientCachePort recipientCachePort;
 
     private static final Long USER_ID = 1L;
     private static final Long GROUP_ID = 10L;
@@ -35,7 +36,7 @@ class LeaveGroupUseCaseTest {
             Clock.fixed(Instant.parse("2026-06-14T09:00:00Z"), ZoneOffset.UTC);
 
     private LeaveGroupUseCase sut() {
-        return new LeaveGroupUseCase(membershipRepository, FIXED_CLOCK);
+        return new LeaveGroupUseCase(membershipRepository, recipientCachePort, FIXED_CLOCK);
     }
 
     @Test
@@ -75,5 +76,41 @@ class LeaveGroupUseCaseTest {
 
         assertThat(admin.hasLeft()).isTrue();
         verify(membershipRepository).save(admin);
+    }
+
+    // T-BE-REDIS-RECIPIENT-CACHE — 탈퇴 시 수신자 캐시 무효화
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.DisplayName("탈퇴 성공 시 group recipients 캐시 evict")
+    void leave_evictsRecipientCache() {
+        Membership membership = Membership.of(GROUP_ID, USER_ID, MemberRole.PATIENT, null);
+        given(membershipRepository.findByCareGroupIdAndUserId(GROUP_ID, USER_ID))
+                .willReturn(java.util.Optional.of(membership));
+
+        sut().leave(GROUP_ID, USER_ID);
+
+        org.mockito.Mockito.verify(recipientCachePort).evict(GROUP_ID);
+    }
+
+    // T-BE-WITHDRAW — 회원탈퇴 시 본인 모든 활성 그룹 soft 탈퇴
+    @Test
+    @DisplayName("leaveAll — 활성 멤버십만 LEFT 전이 + 그룹별 캐시 evict, 이미 탈퇴한 건 건너뜀")
+    void leaveAll_leavesOnlyActiveMemberships() {
+        Membership active1 = Membership.of(10L, USER_ID, MemberRole.PATIENT, null);
+        Membership active2 = Membership.of(20L, USER_ID, MemberRole.ADMIN, null);
+        Membership alreadyLeft = Membership.of(30L, USER_ID, MemberRole.PATIENT, null);
+        alreadyLeft.leave(FIXED_CLOCK);
+        given(membershipRepository.findByUserId(USER_ID))
+                .willReturn(java.util.List.of(active1, active2, alreadyLeft));
+
+        sut().leaveAll(USER_ID);
+
+        assertThat(active1.hasLeft()).isTrue();
+        assertThat(active2.hasLeft()).isTrue();
+        verify(membershipRepository).save(active1);
+        verify(membershipRepository).save(active2);
+        verify(membershipRepository, never()).save(alreadyLeft);
+        verify(recipientCachePort).evict(10L);
+        verify(recipientCachePort).evict(20L);
+        verify(recipientCachePort, never()).evict(30L);
     }
 }

@@ -4,6 +4,10 @@ spring:
   application:
     name: pillmate-server
 
+  lifecycle:
+    # graceful shutdown 시 in-flight 요청 drain 최대 대기 (blue-green stop 무중단). 트랜잭션 내 외부호출 없음 원칙이라 25s면 충분.
+    timeout-per-shutdown-phase: 25s
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:pillmate}
     username: ${POSTGRES_USER:pillmate}
@@ -24,13 +28,17 @@ spring:
 
   mvc:
     async:
-      request-timeout: 90s
+      request-timeout: 180s
 
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: false
     validate-on-migrate: true
+
+server:
+  # SIGTERM 수신 시 새 요청 거부 + 기존 요청 drain 후 종료 (모든 프로파일 공통, 로컬 dev 안전)
+  shutdown: graceful
 
 ---
 # local / dev 환경: SEED 마이그레이션 추가 실행 (운영 배포 시 SPRING_PROFILES_ACTIVE=production 으로 이 섹션 비활성화)
@@ -78,7 +86,7 @@ ai-server:
   base-url: ${AI_SERVER_BASE_URL:http://ai-server:8001}
   timeout:
     connect-ms: 5000
-    read-ms: 120000
+    read-ms: 170000
 
 slack:
   webhook-url: ${SLACK_WEBHOOK_URL:}
@@ -93,6 +101,13 @@ sentry:
   exception-resolver-order: 2147483647
 
 pillmate:
+  ratelimit:
+    enabled: ${PILLMATE_RATELIMIT_ENABLED:true}
+    ocr:
+      daily-limit: ${PILLMATE_OCR_DAILY_LIMIT:50}
+    global:
+      # 전역 per-user 분당 한도 — 정상 폴링(30초=분당 2~4) 대비 넉넉. 초과 시 429
+      per-minute: ${PILLMATE_GLOBAL_RPM:120}
   notification:
     provider: ${PILLMATE_NOTIFICATION_PROVIDER:log}
     expo:
@@ -104,6 +119,9 @@ pillmate:
     jwt:
       secret: ${PILLMATE_JWT_SECRET:}
       access-ttl-days: ${PILLMATE_JWT_ACCESS_TTL_DAYS:14}
+  # 관리 엔드포인트(약품 alias 승인 등) 허용 userId 목록(CSV). 비면 전원 차단(fail-closed)
+  admin:
+    user-ids: ${PILLMATE_ADMIN_USER_IDS:}
 
 kakao:
   client-id: ${KAKAO_REST_API_KEY:}

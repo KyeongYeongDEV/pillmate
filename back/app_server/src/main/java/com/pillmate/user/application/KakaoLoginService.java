@@ -51,8 +51,18 @@ public class KakaoLoginService {
 
     private User upsertUser(KakaoProfile profile) {
         return userRepository.findByProviderAndExternalId(UserProvider.KAKAO, profile.kakaoId())
+                .map(existing -> reactivateIfWithdrawn(existing, profile))
                 .orElseGet(() -> userRepository.save(
                         User.ofOAuth(profile.kakaoId(), UserProvider.KAKAO, profile.nickname(), profile.email())));
+    }
+
+    // 탈퇴 계정 재로그인 → 최신 카카오 프로필로 재활성화 후 로그인
+    private User reactivateIfWithdrawn(User user, KakaoProfile profile) {
+        if (!user.isWithdrawn()) {
+            return user;
+        }
+        user.reactivate(profile.nickname(), profile.email(), profile.profileImageUrl());
+        return userRepository.save(user);
     }
 
     // prod(devFallbackEnabled=false)에서는 devUserId 헤더를 보기 전에 즉시 차단 → 헤더 위조 무력화 (P0)

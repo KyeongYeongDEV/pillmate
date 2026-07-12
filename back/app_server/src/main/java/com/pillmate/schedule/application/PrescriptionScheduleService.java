@@ -59,11 +59,19 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
 
     private List<ResolvedSlot> resolveSlots(List<SlotSpec> slots) {
         if (slots == null || slots.isEmpty()) {
-            return DEFAULT_SLOTS.stream().map(timeOfDay -> new ResolvedSlot(timeOfDay, null)).toList();
+            return DEFAULT_SLOTS.stream()
+                    .map(timeOfDay -> new ResolvedSlot(timeOfDay, timeOfDay.defaultTime()))
+                    .toList();
         }
         return slots.stream()
-                .map(slot -> new ResolvedSlot(parseTimeOfDay(slot.timeOfDay()), slot.customTime()))
+                .map(this::toResolvedSlot)
                 .toList();
+    }
+
+    private ResolvedSlot toResolvedSlot(SlotSpec slot) {
+        TimeOfDay timeOfDay = parseTimeOfDay(slot.timeOfDay());
+        LocalTime customTime = slot.customTime() != null ? slot.customTime() : timeOfDay.defaultTime();
+        return new ResolvedSlot(timeOfDay, customTime);
     }
 
     private TimeOfDay parseTimeOfDay(String raw) {
@@ -83,7 +91,7 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
     private Optional<Schedule> createIfNoConflict(
             CreatePrescriptionSchedulesCommand command, ResolvedSlot slot, List<Schedule> existing) {
         if (conflictChecker.hasPrescriptionSlotConflict(
-                command.prescriptionId(), slot.timeOfDay(), command.startDate(), command.endDate(), existing)) {
+                command.prescriptionId(), slot.customTime(), command.startDate(), command.endDate(), existing)) {
             return Optional.empty();
         }
         return Optional.of(scheduleRepository.save(buildSchedule(command, slot)));

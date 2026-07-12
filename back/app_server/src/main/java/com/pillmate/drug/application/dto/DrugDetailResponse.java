@@ -13,25 +13,36 @@ public record DrugDetailResponse(
         String form,
         String company,
         String source,
-        String imageUrl
+        String imageUrl,
+        String className
 ) {
     public static DrugDetailResponse from(Drug drug, String imageUrl) {
         return new DrugDetailResponse(
                 drug.getId(),
                 drug.getKdCode(),
                 drug.getName(),
-                drug.getIngredient(),
+                resolveIngredient(drug),
                 drug.getEfficacy(),
                 drug.getDosage(),
                 drug.getSideEffect(),
                 drug.getForm(),
                 drug.getCompany(),
                 drug.getSource(),
-                imageUrl
+                imageUrl,
+                drug.getClassName()
         );
     }
 
     public static DrugDetailResponse from(Drug drug) {
         return from(drug, drug.getItemImage());
+    }
+
+    // main_ingr(79% 적재) 우선, 비어 있으면 legacy ingredient 컬럼으로 fallback
+    private static String resolveIngredient(Drug drug) {
+        return notBlank(drug.getMainIngr()) ? drug.getMainIngr() : drug.getIngredient();
+    }
+
+    private static boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

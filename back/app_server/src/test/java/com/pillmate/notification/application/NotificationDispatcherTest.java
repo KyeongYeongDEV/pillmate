@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.domain.event.MemberJoined;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.MembershipPair;
@@ -121,7 +122,7 @@ class NotificationDispatcherTest {
     }
 
     @Test
-    @DisplayName("PrescriptionRegistered — route '/group/{careGroupId}' + 본문 '약봉투' + actor 이름 포함")
+    @DisplayName("PrescriptionRegistered — route '/group/{careGroupId}' + 본문 '약봉투' + actor 이름 포함, 그룹명 prefix 없음")
     void on_prescriptionRegistered_routeIsGroupAndBodyContainsYakBongTuAndActorName() {
         // given
         PrescriptionRegistered event = new PrescriptionRegistered(ACTOR_ID, PRESCRIPTION_ID);
@@ -141,7 +142,8 @@ class NotificationDispatcherTest {
         String body = notifCaptor.getValue().get(0).getBody();
         assertThat(body).contains("약봉투");
         assertThat(body).contains("actor");   // User.dummy("actor") 의 name
-        assertThat(body).contains("테스트그룹");
+        assertThat(body).doesNotContain("테스트그룹");
+        assertThat(body).doesNotContain("[");
 
         // then — FCM data route
         ArgumentCaptor<NotificationSenderPort.NotificationCommand> cmdCaptor =
@@ -318,6 +320,79 @@ class NotificationDispatcherTest {
         assertThat(recipients).containsExactly(MEMBER_ID);
         assertThat(recipients).doesNotContain(ACTOR_ID);      // actor 제외
         assertThat(recipients).doesNotContain(MEMBER_B_ONLY); // groupB 전용 미수신
+    }
+
+    // T-GROUP-JOIN-REALTIME-PUSH
+    @Test
+    @DisplayName("MemberJoined — 기존 멤버(actor 제외) 전원에게 GROUP_MEMBER_JOINED 저장 + send")
+    void on_memberJoined_savesAndSendsToExistingMembersExceptActor() {
+        // given
+        MemberJoined event = new MemberJoined(GROUP_ID, ACTOR_ID);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, MEMBER_ID, MemberRole.GUARDIAN, null),
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null)   // 방금 가입한 actor 본인
+        ));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        // when
+        sut.on(event);
+
+        // then
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        List<Notification> created = captor.getValue();
+        assertThat(created).hasSize(1);
+        assertThat(created.get(0).getRecipientUserId()).isEqualTo(MEMBER_ID);
+        assertThat(created.get(0).getType()).isEqualTo(NotificationType.GROUP_MEMBER_JOINED);
+        assertThat(created.get(0).getCareGroupId()).isEqualTo(GROUP_ID);
+        assertThat(created.get(0).getBody()).contains("actor").contains("참여");   // User.dummy("actor") 의 name
+        verify(notificationSenderPort).send(any());
+    }
+
+    @Test
+    @DisplayName("MemberJoined — push data 에 type=GROUP_MEMBER_JOINED, groupId, route 포함")
+    void on_memberJoined_pushDataContainsTypeAndGroupId() {
+        // given
+        MemberJoined event = new MemberJoined(GROUP_ID, ACTOR_ID);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, MEMBER_ID, MemberRole.GUARDIAN, null),
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null)
+        ));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        User member = User.dummy("member");
+        member.registerPushToken("ExponentPushToken[member]", PushProvider.EXPO);
+        given(userRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        // when
+        sut.on(event);
+
+        // then
+        ArgumentCaptor<NotificationSenderPort.NotificationCommand> cmdCaptor =
+                ArgumentCaptor.forClass(NotificationSenderPort.NotificationCommand.class);
+        verify(notificationSenderPort).send(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().data())
+                .containsEntry("type", "GROUP_MEMBER_JOINED")
+                .containsEntry("groupId", String.valueOf(GROUP_ID))
+                .containsEntry("route", "/group/" + GROUP_ID);
+    }
+
+    @Test
+    @DisplayName("MemberJoined — 가입자 본인뿐(기존 멤버 없음)이면 발송 X")
+    void on_memberJoined_whenNoOtherMembers_skips() {
+        // given
+        MemberJoined event = new MemberJoined(GROUP_ID, ACTOR_ID);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                Membership.of(GROUP_ID, ACTOR_ID, MemberRole.PATIENT, null)
+        ));
+
+        // when
+        sut.on(event);
+
+        // then
+        verify(notificationPersistenceService, org.mockito.Mockito.never()).saveAll(anyList());
     }
 
     private Notification buildNotification(Long recipientId, NotificationType type) {

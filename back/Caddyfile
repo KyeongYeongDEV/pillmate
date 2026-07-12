@@ -1,11 +1,33 @@
 # PillMate — Caddy 리버스 프록시
 # 초기 활성 컬러: blue. deploy.sh 가 배포 시 자동으로 업스트림을 전환하고 reload.
 # DOMAIN / ACME_EMAIL 은 .env.prod 에서 주입 (docker-compose.prod.yml caddy 서비스 env).
+#
+# rate_limit 은 mholt/caddy-ratelimit 모듈 (caddy/Dockerfile 커스텀 이미지). 표준 이미지엔 없음.
+# ⚠️ deploy.sh 의 write_caddyfile 이 매 배포 이 파일을 재작성하므로, rate_limit 블록은
+#    그 템플릿에도 반드시 유지되어야 한다 (누락 시 계층① 엣지 방어가 사라짐).
 
 {
     email {env.ACME_EMAIL}
+    order rate_limit before basicauth
 }
 
 {env.DOMAIN} {
+    rate_limit {
+        # 일반 요청 per-IP 40r/s (정상 사용자 여유, 볼류메트릭 flood 차단)
+        zone per_ip {
+            key {remote_host}
+            events 40
+            window 1s
+        }
+        # 비인증 민감 경로(로그인 등) per-IP 5r/s — 크리덴셜 brute-force 방어
+        zone auth_ip {
+            match {
+                path /api/v1/auth/*
+            }
+            key {remote_host}
+            events 5
+            window 1s
+        }
+    }
     reverse_proxy pillmate-app-blue:8080
 }

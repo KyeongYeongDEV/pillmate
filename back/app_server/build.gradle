@@ -79,8 +79,20 @@ dependencyManagement {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'integration'
+    }
     // 테스트 환경: JWT 시크릿 + dev-fallback 활성화 (운영 PILLMATE_JWT_SECRET은 .env.prod 에서 별도 주입)
+    environment 'PILLMATE_JWT_SECRET', System.getenv('PILLMATE_JWT_SECRET') ?: 'test-jwt-secret-for-automated-testing-min32ch'
+    environment 'PILLMATE_DEV_FALLBACK', System.getenv('PILLMATE_DEV_FALLBACK') ?: 'true'
+}
+
+// 통합 테스트(@Tag("integration")) — 기본 게이트(test/build/check)에는 물리지 않고 수동 실행용.
+// junit.md: "기본 빌드는 단위 테스트만, CI에서 통합 포함"
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
     environment 'PILLMATE_JWT_SECRET', System.getenv('PILLMATE_JWT_SECRET') ?: 'test-jwt-secret-for-automated-testing-min32ch'
     environment 'PILLMATE_DEV_FALLBACK', System.getenv('PILLMATE_DEV_FALLBACK') ?: 'true'
 }

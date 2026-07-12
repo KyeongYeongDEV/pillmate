@@ -1,6 +1,7 @@
 package com.pillmate.prescription.presentation;
 
 import com.pillmate.common.response.ApiResponse;
+import com.pillmate.prescription.application.GetActivePrescriptionsWithInsightUseCase;
 import com.pillmate.prescription.application.GetLatestPrescriptionWithInsightUseCase;
 import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
@@ -52,6 +53,7 @@ public class PrescriptionController {
     private final GetPrescriptionsUseCase getPrescriptionsUseCase;
     private final GetPrescriptionDetailUseCase getPrescriptionDetailUseCase;
     private final GetLatestPrescriptionWithInsightUseCase getLatestPrescriptionWithInsightUseCase;
+    private final GetActivePrescriptionsWithInsightUseCase getActivePrescriptionsWithInsightUseCase;
     private final UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
     private final SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
     private final Executor ocrExecutor;
@@ -65,6 +67,7 @@ public class PrescriptionController {
             GetPrescriptionsUseCase getPrescriptionsUseCase,
             GetPrescriptionDetailUseCase getPrescriptionDetailUseCase,
             GetLatestPrescriptionWithInsightUseCase getLatestPrescriptionWithInsightUseCase,
+            GetActivePrescriptionsWithInsightUseCase getActivePrescriptionsWithInsightUseCase,
             UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase,
             SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase,
             @Qualifier("ocrExecutor") Executor ocrExecutor) {
@@ -76,6 +79,7 @@ public class PrescriptionController {
         this.getPrescriptionsUseCase = getPrescriptionsUseCase;
         this.getPrescriptionDetailUseCase = getPrescriptionDetailUseCase;
         this.getLatestPrescriptionWithInsightUseCase = getLatestPrescriptionWithInsightUseCase;
+        this.getActivePrescriptionsWithInsightUseCase = getActivePrescriptionsWithInsightUseCase;
         this.updatePrescriptionMemoUseCase = updatePrescriptionMemoUseCase;
         this.softDeletePrescriptionUseCase = softDeletePrescriptionUseCase;
         this.ocrExecutor = ocrExecutor;
@@ -90,6 +94,12 @@ public class PrescriptionController {
     public ResponseEntity<ApiResponse<LatestPrescriptionWithInsightResponse>> latestWithInsight() {
         return ResponseEntity.ok(ApiResponse.success(
                 getLatestPrescriptionWithInsightUseCase.loadLatestForPatient(UserContext.get())));
+    }
+
+    @GetMapping("/active-with-insights")
+    public ResponseEntity<ApiResponse<List<LatestPrescriptionWithInsightResponse>>> activeWithInsights() {
+        return ResponseEntity.ok(ApiResponse.success(
+                getActivePrescriptionsWithInsightUseCase.loadActiveForPatient(UserContext.get())));
     }
 
     @GetMapping("/{id}")
@@ -114,9 +124,11 @@ public class PrescriptionController {
     @PostMapping("/ocr/extract")
     public CompletableFuture<ResponseEntity<ApiResponse<OcrExtractResponse>>> ocrExtract(
             @Valid @RequestBody OcrExtractRequest request) {
+        // UserContext 는 ThreadLocal — ocrExecutor 스레드로 전파 안 되므로 여기서 캡처해 전달 (rate limit 우회 방지)
+        Long userId = UserContext.get();
         return CompletableFuture.supplyAsync(
                 () -> ResponseEntity.ok(ApiResponse.success(
-                        extractPrescriptionOcrUseCase.extract(request.imageKey()))),
+                        extractPrescriptionOcrUseCase.extract(request.imageKey(), userId))),
                 ocrExecutor);
     }
 

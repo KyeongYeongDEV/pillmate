@@ -16,7 +16,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 class DrugCacheAdapter implements DrugCachePort {
 
-    private static final String KEY_PREFIX = "DRUG:";
+    // 응답 스키마 변경 시 bump — 옛 캐시(stale 필드) 자동 miss 후 TTL 자연 소멸 (v2: main_ingr/className 추가)
+    private static final String CACHE_VERSION = "v2";
+    private static final String KEY_PREFIX = "DRUG:" + CACHE_VERSION + ":";
     private static final Duration TTL = Duration.ofMinutes(55);
 
     private final StringRedisTemplate redisTemplate;

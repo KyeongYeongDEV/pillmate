@@ -26,6 +26,14 @@ public class Drug {
     @Column(columnDefinition = "TEXT")
     private String ingredient;
 
+    // 식약처 원천 성분 컬럼(79% 적재) — ingredient 컬럼은 거의 비어 상세 응답에서 우선 사용
+    @Column(name = "main_ingr", columnDefinition = "TEXT")
+    private String mainIngr;
+
+    // 약효 분류명(99.7% 적재). DB 실제 컬럼은 VARCHAR(100) — ddl-auto:validate 정합
+    @Column(name = "class_name", length = 100)
+    private String className;
+
     @Column(columnDefinition = "TEXT")
     private String efficacy;
 

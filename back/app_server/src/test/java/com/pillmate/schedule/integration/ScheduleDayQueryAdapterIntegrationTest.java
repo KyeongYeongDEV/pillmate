@@ -89,6 +89,54 @@ class ScheduleDayQueryAdapterIntegrationTest {
     }
 
     @Test
+    @DisplayName("T-RX-CARD-USER-LABEL — prescriptions.label 이 day view 조회에 그대로 노출")
+    void findByPatientAndDate_exposesUserLabel() {
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+
+        // given
+        Long patientId = insertUser("label-patient");
+        Long careGroupId = insertCareGroup();
+        Long drugId = insertDrug("타이레놀500mg");
+        Long prescriptionId = insertPrescription(careGroupId, patientId, "2026-06-21");
+        entityManager.createNativeQuery("UPDATE prescriptions SET label = :l WHERE id = :id")
+                .setParameter("l", "감기약")
+                .setParameter("id", prescriptionId)
+                .executeUpdate();
+        insertPrescribedDrug(prescriptionId, drugId);
+        insertPrescriptionSchedule(careGroupId, patientId, prescriptionId, "MORNING");
+
+        // when
+        List<DayScheduleProjection> result =
+                scheduleDayQueryPort.findByPatientAndDate(patientId, LocalDate.of(2026, 6, 21));
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).label()).isEqualTo("감기약");
+    }
+
+    @Test
+    @DisplayName("T-RX-CARD-USER-LABEL — label 미지정 처방전은 null 로 노출(BE 스마트 기본값 계산 대상)")
+    void findByPatientAndDate_nullLabel_whenNotSet() {
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+
+        // given — label 컬럼 업데이트 없이 그대로(NULL)
+        Long patientId = insertUser("no-label-patient");
+        Long careGroupId = insertCareGroup();
+        Long drugId = insertDrug("아스피린");
+        Long prescriptionId = insertPrescription(careGroupId, patientId, "2026-06-21");
+        insertPrescribedDrug(prescriptionId, drugId);
+        insertPrescriptionSchedule(careGroupId, patientId, prescriptionId, "MORNING");
+
+        // when
+        List<DayScheduleProjection> result =
+                scheduleDayQueryPort.findByPatientAndDate(patientId, LocalDate.of(2026, 6, 21));
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).label()).isNull();
+    }
+
+    @Test
     @DisplayName("prescription_id NULL 레거시 per-drug seed 행도 day view 에 포함, singleDrugName = drugs.name")
     void findByPatientAndDate_includesLegacyPerDrugRows() {
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();

@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.domain.event.MemberJoined;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MembershipPair;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
@@ -113,6 +114,27 @@ public class NotificationDispatcher {
         saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId()));
     }
 
+    @Async("insightTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(MemberJoined event) {
+        List<Long> recipientIds = membershipRepository.findByCareGroupId(event.careGroupId()).stream()
+                .map(Membership::getUserId)
+                .filter(id -> !id.equals(event.actorUserId()))
+                .toList();
+        if (recipientIds.isEmpty()) {
+            return;
+        }
+
+        String actorName = resolveUserName(event.actorUserId());
+        List<Notification> notifications = recipientIds.stream()
+                .map(recipientId -> Notification.groupMemberJoined(
+                        recipientId, event.actorUserId(), event.careGroupId(), actorName))
+                .toList();
+
+        List<Notification> saved = notificationPersistenceService.saveAll(notifications);
+        saved.forEach(n -> dispatchOne(n, "/group/" + n.getCareGroupId()));
+    }
+
     private List<Notification> buildCanceledNotifications(DoseCheckCanceled event, Schedule schedule) {
         Long careGroupId = schedule.getCareGroupId();
         if (careGroupId == null) return List.of();
@@ -161,6 +183,7 @@ public class NotificationDispatcher {
         Map<String, String> data = new HashMap<>();
         data.put("route", route);
         data.put("groupId", String.valueOf(n.getCareGroupId()));
+        data.put("type", n.getType().name());
         return new NotificationCommand(
                 n.getId(),
                 n.getRecipientUserId(),

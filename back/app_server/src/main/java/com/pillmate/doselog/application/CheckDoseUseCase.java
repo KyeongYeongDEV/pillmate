@@ -19,10 +19,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
 public class CheckDoseUseCase {
+
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final DoseLogRepository doseLogRepository;
     private final ScheduleRepository scheduleRepository;
@@ -73,7 +76,8 @@ public class CheckDoseUseCase {
         String actorName = userRepository.findById(doseLog.getPatientId())
                 .map(User::getName)
                 .orElse("멤버");
-        activityFeedAppender.appendTaken(doseLog.getPatientId(), schedule.getTimeOfDay(), actorName);
+        activityFeedAppender.appendTaken(doseLog.getPatientId(), schedule.getTimeOfDay(),
+                formatTime(schedule.getCustomTime()), actorName);
     }
 
     private void appendCanceledActivity(DoseLog doseLog) {
@@ -82,6 +86,11 @@ public class CheckDoseUseCase {
         String actorName = userRepository.findById(doseLog.getPatientId())
                 .map(User::getName)
                 .orElse("멤버");
-        activityFeedAppender.appendCanceled(doseLog.getPatientId(), schedule.getTimeOfDay(), actorName);
+        activityFeedAppender.appendCanceled(doseLog.getPatientId(), schedule.getTimeOfDay(),
+                formatTime(schedule.getCustomTime()), actorName);
+    }
+
+    private String formatTime(java.time.LocalTime customTime) {
+        return customTime != null ? customTime.format(HH_MM) : "";
     }
 }

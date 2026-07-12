@@ -6,6 +6,7 @@ import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,14 @@ class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<User> findById(Long id) { return jpa.findById(id); }
+
+    @Override
+    public List<User> findAllByIdIn(List<Long> ids) { return jpa.findAllById(ids); }
+
+    @Override
+    public List<User> findByExpoPushTokenAndIdNot(String expoPushToken, Long keepUserId) {
+        return jpa.findByExpoPushTokenAndIdNot(expoPushToken, keepUserId);
+    }
 
     @Override
     public Optional<User> findByProviderAndExternalId(UserProvider provider, String externalId) {

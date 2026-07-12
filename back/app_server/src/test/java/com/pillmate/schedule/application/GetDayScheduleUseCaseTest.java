@@ -42,7 +42,7 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("서로 다른 시각 처방전 2개 → 2개 슬롯, 시각 ASC, 처방전 이름·prescriptionId 노출")
+    @DisplayName("서로 다른 시각 처방전 2개(둘다 label 없음, 같은 등록일) → 스마트 기본값 + ①② 번호, prescriptionId 노출")
     void execute_distinctTimes_returnsPrescriptionRows() {
         // given
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
@@ -64,7 +64,7 @@ class GetDayScheduleUseCaseTest {
         SlotView first = response.slots().get(0);
         assertThat(first.time()).isEqualTo("08:00");
         assertThat(first.prescriptionId()).isEqualTo(100L);
-        assertThat(first.prescriptionName()).isEqualTo("6월21일·타이레놀 외2종");
+        assertThat(first.prescriptionName()).isEqualTo("6월 21일 약봉투 ①");
         assertThat(first.items()).containsExactly("타이레놀", "게보린", "판콜에이");
         assertThat(first.drugCount()).isEqualTo(3);
         assertThat(first.pillColors()).containsExactly("#fff", "#999999", "#f00");
@@ -72,7 +72,7 @@ class GetDayScheduleUseCaseTest {
 
         SlotView second = response.slots().get(1);
         assertThat(second.prescriptionId()).isEqualTo(200L);
-        assertThat(second.prescriptionName()).isEqualTo("6월21일·아목시실린");
+        assertThat(second.prescriptionName()).isEqualTo("6월 21일 약봉투 ②");
         assertThat(second.state()).isEqualTo("wait");
     }
 
@@ -96,7 +96,7 @@ class GetDayScheduleUseCaseTest {
         assertThat(response.slots()).hasSize(1);
         SlotView slot = response.slots().get(0);
         assertThat(slot.time()).isEqualTo("08:00");
-        assertThat(slot.prescriptionName()).isEqualTo("6월21일·타이레놀, 6월21일·게보린");
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투 ①, 6월 21일 약봉투 ②");
         assertThat(slot.prescriptionId()).isEqualTo(100L);
         assertThat(slot.items()).containsExactly("타이레놀", "게보린");
         assertThat(slot.drugCount()).isEqualTo(2);
@@ -121,7 +121,7 @@ class GetDayScheduleUseCaseTest {
         // then
         assertThat(response.slots()).hasSize(1);
         assertThat(response.slots().get(0).prescriptionName())
-                .isEqualTo("6월21일·약1, 6월21일·약2, 6월21일·약3 외 3건");
+                .isEqualTo("6월 21일 약봉투 ①, 6월 21일 약봉투 ②, 6월 21일 약봉투 ③ 외 3건");
     }
 
     @Test
@@ -167,7 +167,7 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("약 0종 처방전 → 이름 'N월N일 처방전', items 비어있음, drugCount 0")
+    @DisplayName("약 0종 처방전(label 없음) → 약 이름과 무관하게 스마트 기본값 'M월 D일 약봉투', items 비어있음, drugCount 0")
     void execute_zeroDrugPrescription_showsDateOnlyName() {
         // given
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
@@ -179,7 +179,7 @@ class GetDayScheduleUseCaseTest {
 
         // then
         SlotView slot = response.slots().get(0);
-        assertThat(slot.prescriptionName()).isEqualTo("6월21일 처방전");
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
         assertThat(slot.items()).isEmpty();
         assertThat(slot.drugCount()).isZero();
     }
@@ -330,7 +330,7 @@ class GetDayScheduleUseCaseTest {
         assertThat(response.slots()).hasSize(1);
         SlotView slot = response.slots().get(0);
         assertThat(slot.prescriptionId()).isEqualTo(100L);
-        assertThat(slot.prescriptionName()).isEqualTo("6월21일·게보린, 타이레놀");
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투, 타이레놀");
         assertThat(slot.items()).containsExactly("게보린", "타이레놀");
         assertThat(slot.doseLogIds()).containsExactlyInAnyOrder(9L, 20L);
     }
@@ -397,15 +397,124 @@ class GetDayScheduleUseCaseTest {
     private DayScheduleProjection row(Long scheduleId, LocalTime customTime, Long prescriptionId,
                                       LocalDate prescribedAt, List<String> drugNames, List<String> pillColors,
                                       Long doseLogId, String doseStatus) {
+        return row(scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors,
+                doseLogId, doseStatus, null);
+    }
+
+    private DayScheduleProjection row(Long scheduleId, LocalTime customTime, Long prescriptionId,
+                                      LocalDate prescribedAt, List<String> drugNames, List<String> pillColors,
+                                      Long doseLogId, String doseStatus, String label) {
         return new DayScheduleProjection(
                 scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors,
-                doseLogId, doseStatus, null);
+                doseLogId, doseStatus, null, label);
     }
 
     private DayScheduleProjection legacyRow(Long scheduleId, LocalTime customTime,
                                              String singleDrugName, Long doseLogId, String doseStatus) {
         return new DayScheduleProjection(
                 scheduleId, customTime, null, null, List.of(), List.of(),
-                doseLogId, doseStatus, singleDrugName);
+                doseLogId, doseStatus, singleDrugName, null);
+    }
+
+    // ─── T-RX-CARD-USER-LABEL — 사용자 지정 약봉투 이름(label) 우선순위 ───────────
+
+    @Test
+    @DisplayName("(a) label 있으면 그대로 표시 (스마트 기본값 무시)")
+    void execute_withUserLabel_showsLabelAsIs() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(6L, LocalTime.of(8, 0), 100L, TODAY,
+                        List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN", "감기약"))
+        );
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.prescriptionName()).isEqualTo("감기약");
+    }
+
+    @Test
+    @DisplayName("(a) label 이 공백만이면 blank 취급 — 스마트 기본값 적용")
+    void execute_blankLabel_treatedAsAbsent() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(6L, LocalTime.of(8, 0), 100L, TODAY,
+                        List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN", "   "))
+        );
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
+    }
+
+    @Test
+    @DisplayName("(b) label 없으면 스마트 기본값 'M월 D일 약봉투' — 약 이름 미포함")
+    void execute_noLabel_showsSmartDefaultWithoutDrugName() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(6L, LocalTime.of(8, 0), 100L, TODAY,
+                        List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+
+        SlotView slot = sut.execute(TODAY).slots().get(0);
+
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
+        assertThat(slot.prescriptionName()).doesNotContain("타이레놀");
+    }
+
+    @Test
+    @DisplayName("(c) 같은 등록일 label 없는 약봉투 2건(다른 시각) → prescriptionId 오름차순 ①② 부여")
+    void execute_twoBlankLabelSameDate_assignsCircledNumbersByIdAscending() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(6L, LocalTime.of(19, 0), 200L, TODAY, List.of("게보린"), List.of("#fff"), 9L, "TAKEN"),
+                        row(7L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 10L, "TAKEN")
+                )
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        // 등록순(prescriptionId 오름차순) 100→①, 200→② — 슬롯(시각) 순서와 무관하게 결정적
+        SlotView morning = response.slots().stream().filter(s -> s.time().equals("08:00")).findFirst().orElseThrow();
+        SlotView evening = response.slots().stream().filter(s -> s.time().equals("19:00")).findFirst().orElseThrow();
+        assertThat(morning.prescriptionName()).isEqualTo("6월 21일 약봉투 ①");
+        assertThat(evening.prescriptionName()).isEqualTo("6월 21일 약봉투 ②");
+    }
+
+    @Test
+    @DisplayName("(c) 등록일이 다르면 번호 없이 각자 스마트 기본값 (날짜로 이미 구분됨)")
+    void execute_blankLabelDifferentDates_noNumberNeeded() {
+        LocalDate otherDate = LocalDate.of(2026, 6, 20);
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(6L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"),
+                        row(7L, LocalTime.of(19, 0), 200L, otherDate, List.of("게보린"), List.of("#fff"), 10L, "TAKEN")
+                )
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY);
+
+        SlotView morning = response.slots().stream().filter(s -> s.time().equals("08:00")).findFirst().orElseThrow();
+        SlotView evening = response.slots().stream().filter(s -> s.time().equals("19:00")).findFirst().orElseThrow();
+        assertThat(morning.prescriptionName()).isEqualTo("6월 21일 약봉투");
+        assertThat(evening.prescriptionName()).isEqualTo("6월 20일 약봉투");
+    }
+
+    @Test
+    @DisplayName("(d) 홈/스케줄 동일 조회(같은 patientId+date) → 같은 약봉투 항상 같은 번호 (결정적, 반복 호출 동일)")
+    void execute_calledTwice_sameQuery_producesSameNumbering() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(6L, LocalTime.of(19, 0), 200L, TODAY, List.of("게보린"), List.of("#fff"), 9L, "TAKEN"),
+                        row(7L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 10L, "TAKEN")
+                )
+        );
+
+        // when — 홈 화면 조회, 스케줄 화면 조회 시뮬레이션(동일 서비스 호출 2회)
+        DayScheduleResponse home = sut.execute(TODAY);
+        DayScheduleResponse schedule = sut.execute(TODAY);
+
+        // then — 같은 prescriptionId(100L) 는 두 호출 모두 같은 번호
+        String homeLabelFor100 = home.slots().stream()
+                .filter(s -> Long.valueOf(100L).equals(s.prescriptionId())).findFirst().orElseThrow().prescriptionName();
+        String scheduleLabelFor100 = schedule.slots().stream()
+                .filter(s -> Long.valueOf(100L).equals(s.prescriptionId())).findFirst().orElseThrow().prescriptionName();
+        assertThat(homeLabelFor100).isEqualTo(scheduleLabelFor100).isEqualTo("6월 21일 약봉투 ①");
     }
 }

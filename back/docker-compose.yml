@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: pillmate
       POSTGRES_USER: pillmate
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pillmate_local}
+      TZ: Asia/Seoul
+      PGTZ: Asia/Seoul
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -20,6 +22,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pillmate-redis
+    environment:
+      TZ: Asia/Seoul
     volumes:
       - redis_data:/data
     command: redis-server --save 60 1 --loglevel warning
@@ -47,14 +51,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pillmate_local}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      GEMINI_API_KEY1: ${GEMINI_API_KEY1:-}
-      GEMINI_API_KEY2: ${GEMINI_API_KEY2:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OCR_VISION_VARIANT: ${OCR_VISION_VARIANT:-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-${OpenAI_API_KEY:-}}
       OpenAI_API_KEY: ${OpenAI_API_KEY:-}
       SENTRY_DSN: ${SENTRY_DSN_AI:-}
-    ports:
-      - "8001:8001"
+      TZ: Asia/Seoul
+    # 호스트 publish 하지 않음(보안) — app 은 내부 네트워크 http://ai-server:8001 로 접근.
+    # 로컬 개발 시 호스트 노출은 docker-compose.override.yml(자동 로드)에서만 추가. prod 미노출.
+    expose:
+      - "8001"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:8001/healthz',timeout=2).status_code==200 else 1)"]
       interval: 15s
@@ -91,8 +98,13 @@ services:
       PILLMATE_NOTIFICATION_PROVIDER: ${PILLMATE_NOTIFICATION_PROVIDER:-log}
       FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
       PILLMATE_JWT_SECRET: ${PILLMATE_JWT_SECRET:-}
+      PILLMATE_DEV_FALLBACK: ${PILLMATE_DEV_FALLBACK:-false}
+      KAKAO_REST_API_KEY: ${KAKAO_OAUTH_KEY:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      TZ: Asia/Seoul
     volumes:
       - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     ports:

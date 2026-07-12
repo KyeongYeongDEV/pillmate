@@ -6,5 +6,6 @@ public enum NotificationType {
     DOSE_CANCELED,
     DDI_CRITICAL,
     PRESCRIPTION_NEW,
-    WEEKLY_REPORT
+    WEEKLY_REPORT,
+    GROUP_MEMBER_JOINED
 }

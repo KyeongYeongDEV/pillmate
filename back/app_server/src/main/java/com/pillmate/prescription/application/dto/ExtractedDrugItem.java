@@ -5,9 +5,11 @@ import java.math.BigDecimal;
 public record ExtractedDrugItem(
         String kdCode,
         String nameRaw,
+        String matchedName,
         BigDecimal doseAmount,
         String doseUnit,
         Integer frequency,
         Integer durationDays,
-        BigDecimal confidence
+        BigDecimal confidence,
+        String imageUrl
 ) {}

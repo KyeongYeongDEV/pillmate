@@ -66,7 +66,7 @@ class CreateScheduleUseCaseTest {
     @DisplayName("요청자 == 환자, 충돌 없음 → 스케줄 생성 성공")
     void create_whenOwnerAndNoConflict_savesSchedule() {
         // given
-        given(scheduleRepository.findActiveByPatientAndTime(PATIENT_ID, TimeOfDay.MORNING, START))
+        given(scheduleRepository.findActiveByPatient(PATIENT_ID, START))
                 .willReturn(List.of());
         given(conflictChecker.hasConflict(any(), any(), any(), any(), any(), any())).willReturn(false);
         given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));

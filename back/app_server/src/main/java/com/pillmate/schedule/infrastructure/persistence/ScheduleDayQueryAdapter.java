@@ -26,6 +26,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
                    s.custom_time,
                    s.prescription_id,
                    p.prescribed_at,
+                   p.label,
                    agg.drug_names,
                    agg.pill_colors,
                    dl.id             AS dose_log_id,
@@ -71,6 +72,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
         LocalTime customTime   = toLocalTime(row.get("custom_time"));
         Long prescriptionId    = toLong(row.get("prescription_id"));
         LocalDate prescribedAt = toLocalDate(row.get("prescribed_at"));
+        String label           = (String) row.get("label");
         List<String> drugNames  = toStringList(row.get("drug_names"));
         List<String> pillColors = toStringList(row.get("pill_colors"));
         Long doseLogId         = toLong(row.get("dose_log_id"));
@@ -78,7 +80,7 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
         String singleDrugName  = (String) row.get("single_drug_name");
         return new DayScheduleProjection(
                 scheduleId, customTime, prescriptionId, prescribedAt,
-                drugNames, pillColors, doseLogId, status, singleDrugName);
+                drugNames, pillColors, doseLogId, status, singleDrugName, label);
     }
 
     private Long toLong(Object value) {

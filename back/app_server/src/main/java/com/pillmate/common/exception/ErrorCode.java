@@ -49,6 +49,9 @@ public enum ErrorCode {
     INVALID_AUTH_TOKEN("PILL_084", "인증 토큰이 유효하지 않습니다."),
     LOGIN_CODE_NOT_FOUND("PILL_085", "유효하지 않은 로그인 코드입니다."),
     LOGIN_CODE_EXPIRED("PILL_086", "로그인 코드가 만료되었습니다. 다시 로그인해 주세요."),
+    RATE_LIMIT_EXCEEDED("PILL_090", "오늘 사용량을 초과했어요. 내일 다시 시도해 주세요."),
+    ADMIN_ACCESS_DENIED("PILL_091", "관리자 전용 기능입니다."),
+    ACCOUNT_WITHDRAWN("PILL_092", "탈퇴한 계정입니다. 다시 로그인해 주세요."),
     INTERNAL_SERVER_ERROR("PILL_999", "서버 내부 오류가 발생했습니다.");
 
     private final String code;

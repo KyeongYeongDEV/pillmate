@@ -18,11 +18,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class BulkCheckDoseUseCase {
+
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final DoseLogRepository doseLogRepository;
     private final ScheduleRepository scheduleRepository;
@@ -98,10 +101,11 @@ public class BulkCheckDoseUseCase {
         String actorName = userRepository.findById(representative.getPatientId())
                 .map(User::getName)
                 .orElse("멤버");
+        String timeLabel = schedule.getCustomTime() != null ? schedule.getCustomTime().format(HH_MM) : "";
         if (taken) {
-            activityFeedAppender.appendTaken(representative.getPatientId(), schedule.getTimeOfDay(), actorName);
+            activityFeedAppender.appendTaken(representative.getPatientId(), schedule.getTimeOfDay(), timeLabel, actorName);
         } else {
-            activityFeedAppender.appendCanceled(representative.getPatientId(), schedule.getTimeOfDay(), actorName);
+            activityFeedAppender.appendCanceled(representative.getPatientId(), schedule.getTimeOfDay(), timeLabel, actorName);
         }
     }
 }

@@ -1,17 +1,20 @@
 package com.pillmate.activity.application;
 
 import com.pillmate.activity.application.dto.ActivityFeedItem;
+import com.pillmate.activity.application.port.ActivityFeedCachePort;
 import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -26,6 +29,7 @@ public class ActivityFeedQueryService {
     private final ActivityFeedRepository activityFeedRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final ActivityFeedCachePort activityFeedCachePort;
 
     public List<ActivityFeedItem> query(Long viewerId, int limit) {
         return query(viewerId, null, limit);
@@ -49,20 +53,42 @@ public class ActivityFeedQueryService {
     }
 
     // 그룹 피드 — 멤버별 가입(joinedAt) 시점 이후만 (새 그룹은 과거 활동 미노출). viewer 자신 제외(기존 동작 유지)
+    // 30초 폴링 hot path: 멤버 N회 쿼리 대신 단일 IN over-fetch 후 인메모리 joinedAt 필터 (T-BE-ACTIVITY-FEED-BATCH 안 A)
     private List<ActivityFeedItem> groupFeed(Long viewerId, Long groupId, int limit) {
         if (!membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerId)) {
             throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
         }
+        return activityFeedCachePort.getGroupFeed(groupId, viewerId, limit)
+                .orElseGet(() -> loadAndCacheGroupFeed(viewerId, groupId, limit));
+    }
+
+    private List<ActivityFeedItem> loadAndCacheGroupFeed(Long viewerId, Long groupId, int limit) {
         List<Membership> members = membershipRepository.findByCareGroupId(groupId).stream()
                 .filter(m -> !m.getUserId().equals(viewerId))
                 .toList();
-        List<ActivityFeed> feeds = members.stream()
-                .flatMap(m -> activityFeedRepository
-                        .findByActorSince(m.getUserId(), m.getJoinedAt(), limit).stream())
+        if (members.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> memberIds = members.stream().map(Membership::getUserId).toList();
+        List<ActivityFeed> feeds = fetchFeedsAfterJoin(members, memberIds, limit);
+        List<ActivityFeedItem> items = mapFeeds(feeds, buildNameMap(memberIds));
+        activityFeedCachePort.putGroupFeed(groupId, viewerId, limit, items);
+        return items;
+    }
+
+    private List<ActivityFeed> fetchFeedsAfterJoin(List<Membership> members, List<Long> memberIds, int limit) {
+        Map<Long, Instant> joinedAtByUserId = members.stream()
+                .collect(Collectors.toMap(Membership::getUserId, Membership::getJoinedAt));
+        return activityFeedRepository.findByActorUserIdIn(memberIds, limit * members.size()).stream()
+                .filter(feed -> isAfterJoin(feed, joinedAtByUserId))
                 .sorted(Comparator.comparing(ActivityFeed::getOccurredAt).reversed())
                 .limit(limit)
                 .toList();
-        return mapFeeds(feeds, buildNameMap(members.stream().map(Membership::getUserId).toList()));
+    }
+
+    private boolean isAfterJoin(ActivityFeed feed, Map<Long, Instant> joinedAtByUserId) {
+        Instant joinedAt = joinedAtByUserId.get(feed.getActorUserId());
+        return joinedAt == null || !feed.getOccurredAt().isBefore(joinedAt);
     }
 
     private List<ActivityFeedItem> mapFeeds(List<ActivityFeed> feeds, Map<Long, String> nameById) {
@@ -72,10 +98,7 @@ public class ActivityFeedQueryService {
     }
 
     private Map<Long, String> buildNameMap(List<Long> userIds) {
-        return userIds.stream()
-                .collect(Collectors.toMap(
-                        id -> id,
-                        id -> userRepository.findById(id).map(u -> u.getName()).orElse("멤버")
-                ));
+        return userRepository.findAllByIdIn(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
     }
 }

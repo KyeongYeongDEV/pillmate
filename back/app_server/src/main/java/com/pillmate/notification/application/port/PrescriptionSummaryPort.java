@@ -7,5 +7,5 @@ public interface PrescriptionSummaryPort {
 
     Optional<PrescriptionSummary> findById(Long prescriptionId);
 
-    record PrescriptionSummary(LocalDate prescribedAt, String leadDrugName, int drugCount) {}
+    record PrescriptionSummary(LocalDate prescribedAt, String label) {}
 }

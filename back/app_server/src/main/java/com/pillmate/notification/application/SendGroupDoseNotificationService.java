@@ -4,7 +4,6 @@ import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
-import com.pillmate.common.prescription.PrescriptionLabel;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
@@ -12,6 +11,9 @@ import com.pillmate.notification.application.port.CareGroupLookupPort;
 import com.pillmate.notification.application.port.NotificationSenderPort;
 import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.application.port.PrescriptionSummaryPort;
+import com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary;
+import com.pillmate.notification.application.port.RecipientCachePort;
+import com.pillmate.notification.application.port.RecipientCachePort.CachedRecipient;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.repository.ScheduleRepository;
@@ -23,6 +25,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,12 +35,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SendGroupDoseNotificationService {
 
+    private static final DateTimeFormatter LABEL_MONTH_DAY = DateTimeFormatter.ofPattern("M월 d일");
+
     private final DoseLogRepository doseLogRepository;
     private final ScheduleRepository scheduleRepository;
     private final MembershipRepository membershipRepository;
     private final NotificationPersistenceService notificationPersistenceService;
     private final UserRepository userRepository;
     private final NotificationSenderPort notificationSenderPort;
+    private final RecipientCachePort recipientCachePort;
     private final PrescriptionSummaryPort prescriptionSummaryPort;
     private final CareGroupLookupPort careGroupLookupPort;
     private final Clock clock;
@@ -49,10 +56,11 @@ public class SendGroupDoseNotificationService {
         Schedule schedule = findSchedule(doseLog.getScheduleId());
         markGroupNotified(doseLog);
 
-        List<Long> recipientIds = findGroupMembersByGroup(schedule.getCareGroupId());
-        if (recipientIds.isEmpty()) {
+        List<CachedRecipient> groupRecipients = loadGroupRecipients(schedule.getCareGroupId());
+        if (groupRecipients.isEmpty()) {
             return;
         }
+        List<Long> recipientIds = groupRecipients.stream().map(CachedRecipient::userId).toList();
 
         List<Notification> notifications = buildNotifications(
                 doseLog, actorUserId, schedule, recipientIds);
@@ -61,7 +69,7 @@ public class SendGroupDoseNotificationService {
         }
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
-        saved.forEach(this::dispatchOne);
+        dispatchAll(saved, groupRecipients);
     }
 
     private void markGroupNotified(DoseLog doseLog) {
@@ -69,20 +77,50 @@ public class SendGroupDoseNotificationService {
         doseLogRepository.save(doseLog);
     }
 
-    private void dispatchOne(Notification notification) {
-        String token = lookupToken(notification.getRecipientUserId());
-        try {
-            notificationSenderPort.send(toCommand(notification, token));
-            notificationPersistenceService.markSent(notification.getId(), Instant.now());
-        } catch (Exception e) {
-            log.warn("푸시 발송 실패 notificationId={} reason={}", notification.getId(), e.getMessage());
-        }
+    private void dispatchAll(List<Notification> saved, List<CachedRecipient> groupRecipients) {
+        Map<Long, String> tokensByUserId = tokensByUserId(groupRecipients);
+        List<NotificationCommand> commands = saved.stream()
+                .map(n -> toCommand(n, tokensByUserId.get(n.getRecipientUserId())))
+                .toList();
+        List<Long> sentIds = notificationSenderPort.sendAll(commands);
+        markSentAll(sentIds);
     }
 
-    private String lookupToken(Long recipientUserId) {
-        return userRepository.findById(recipientUserId)
-                .map(User::getExpoPushToken)
-                .orElse(null);
+    private Map<Long, String> tokensByUserId(List<CachedRecipient> groupRecipients) {
+        Map<Long, String> tokens = new HashMap<>();
+        groupRecipients.stream()
+                .filter(recipient -> recipient.token() != null)
+                .forEach(recipient -> tokens.put(recipient.userId(), recipient.token()));
+        return tokens;
+    }
+
+    // 그룹 수신자+토큰 — 캐시 우선(TTL 5m), miss 시 DB 조회 후 적재 (Redis 장애 시 캐시 miss 로 DB fallback)
+    private List<CachedRecipient> loadGroupRecipients(Long careGroupId) {
+        if (careGroupId == null) {
+            return List.of();
+        }
+        return recipientCachePort.get(careGroupId)
+                .orElseGet(() -> loadAndCacheRecipients(careGroupId));
+    }
+
+    private List<CachedRecipient> loadAndCacheRecipients(Long careGroupId) {
+        List<Long> memberIds = findGroupMembersByGroup(careGroupId);
+        if (memberIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> tokens = new HashMap<>();
+        userRepository.findAllByIdIn(memberIds)
+                .forEach(user -> tokens.put(user.getId(), user.getExpoPushToken()));
+        List<CachedRecipient> recipients = memberIds.stream()
+                .map(id -> new CachedRecipient(id, tokens.get(id)))
+                .toList();
+        recipientCachePort.put(careGroupId, recipients);
+        return recipients;
+    }
+
+    private void markSentAll(List<Long> sentNotificationIds) {
+        Instant now = Instant.now(clock);
+        sentNotificationIds.forEach(id -> notificationPersistenceService.markSent(id, now));
     }
 
     private NotificationCommand toCommand(Notification n, String token) {
@@ -159,13 +197,25 @@ public class SendGroupDoseNotificationService {
         return careGroupLookupPort.findNameById(careGroupId).orElse(null);
     }
 
+    // 알림 표시용 처방전 이름: ①사용자 label(non-blank) 그대로 ②없으면 'M월 D일 약봉투'
+    // (카드 표시 규칙과 동일 — GetDayScheduleService.resolvePrescriptionLabels 참조. 알림은 단건이라 번호 불필요)
     private String resolvePrescriptionName(Long prescriptionId) {
         if (prescriptionId == null) {
             return null;
         }
         return prescriptionSummaryPort.findById(prescriptionId)
-                .map(summary -> PrescriptionLabel.of(
-                        summary.prescribedAt(), summary.leadDrugName(), summary.drugCount()))
+                .map(this::resolveLabel)
                 .orElse(null);
+    }
+
+    private String resolveLabel(PrescriptionSummary summary) {
+        if (isNotBlank(summary.label())) {
+            return summary.label();
+        }
+        return summary.prescribedAt().format(LABEL_MONTH_DAY) + " 약봉투";
+    }
+
+    private boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

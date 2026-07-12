@@ -57,6 +57,7 @@ class BulkCheckDoseUseCaseTest {
         lenient().when(doseLogRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
         Schedule schedule = org.mockito.Mockito.mock(Schedule.class);
         lenient().when(schedule.getTimeOfDay()).thenReturn(TimeOfDay.NOON);
+        lenient().when(schedule.getCustomTime()).thenReturn(java.time.LocalTime.of(12, 30));
         lenient().when(scheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
         User user = org.mockito.Mockito.mock(User.class);
         lenient().when(user.getName()).thenReturn("테스트유저");
@@ -82,7 +83,7 @@ class BulkCheckDoseUseCaseTest {
         List<DoseLogResponse> result = sut.bulkCheck(req("TAKE", 101L, 102L, 103L), PATIENT_ID);
 
         assertThatStatusAll(result, DoseStatus.TAKEN);
-        then(activityFeedAppender).should(times(1)).appendTaken(PATIENT_ID, TimeOfDay.NOON, "테스트유저");
+        then(activityFeedAppender).should(times(1)).appendTaken(PATIENT_ID, TimeOfDay.NOON, "12:30", "테스트유저");
         then(eventPublisher).should(never()).publishEvent(any());
     }
 
@@ -96,7 +97,7 @@ class BulkCheckDoseUseCaseTest {
         sut.bulkCheck(req("CANCEL", 101L, 102L, 103L), PATIENT_ID);
 
         then(eventPublisher).should(times(1)).publishEvent(any(DoseCheckCanceled.class));
-        then(activityFeedAppender).should(times(1)).appendCanceled(PATIENT_ID, TimeOfDay.NOON, "테스트유저");
+        then(activityFeedAppender).should(times(1)).appendCanceled(PATIENT_ID, TimeOfDay.NOON, "12:30", "테스트유저");
     }
 
     @Test
@@ -109,7 +110,7 @@ class BulkCheckDoseUseCaseTest {
 
         sut.bulkCheck(req("TAKE", 101L, 102L), PATIENT_ID);
 
-        then(activityFeedAppender).should(times(1)).appendTaken(PATIENT_ID, TimeOfDay.NOON, "테스트유저");
+        then(activityFeedAppender).should(times(1)).appendTaken(PATIENT_ID, TimeOfDay.NOON, "12:30", "테스트유저");
     }
 
     @Test
@@ -121,7 +122,7 @@ class BulkCheckDoseUseCaseTest {
 
         sut.bulkCheck(req("TAKE", 101L, 102L), PATIENT_ID);
 
-        then(activityFeedAppender).should(never()).appendTaken(anyLong(), any(), any());
+        then(activityFeedAppender).should(never()).appendTaken(anyLong(), any(), any(), any());
     }
 
     @Test
@@ -136,7 +137,7 @@ class BulkCheckDoseUseCaseTest {
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
         then(doseLogRepository).should(never()).saveAll(any());
-        then(activityFeedAppender).should(never()).appendTaken(anyLong(), any(), any());
+        then(activityFeedAppender).should(never()).appendTaken(anyLong(), any(), any(), any());
     }
 
     private void assertThatStatusAll(List<DoseLogResponse> result, DoseStatus expected) {

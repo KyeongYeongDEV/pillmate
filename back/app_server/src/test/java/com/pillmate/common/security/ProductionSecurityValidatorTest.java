@@ -11,8 +11,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProductionSecurityValidatorTest {
 
     private ProductionSecurityValidator newValidator(String secret) {
+        return newValidator(secret, false);
+    }
+
+    private ProductionSecurityValidator newValidator(String secret, boolean devFallbackEnabled) {
         ProductionSecurityValidator v = new ProductionSecurityValidator();
         ReflectionTestUtils.setField(v, "jwtSecret", secret);
+        ReflectionTestUtils.setField(v, "devFallbackEnabled", devFallbackEnabled);
         return v;
     }
 
@@ -36,7 +41,38 @@ class ProductionSecurityValidatorTest {
     }
 
     @Test
-    @DisplayName("강한 시크릿 → 정상 기동")
+    @DisplayName("placeholder(change_me) 시크릿 → 기동 실패")
+    void validate_placeholderSecret_throwsIllegalState() {
+        ProductionSecurityValidator v = newValidator("change_me_please_this_is_not_secure_at_all");
+
+        assertThatThrownBy(v::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PILLMATE_JWT_SECRET");
+    }
+
+    @Test
+    @DisplayName("32자 미만 시크릿 → 기동 실패")
+    void validate_tooShortSecret_throwsIllegalState() {
+        ProductionSecurityValidator v = newValidator("short-secret-31-chars-exactly!!");
+
+        assertThatThrownBy(v::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PILLMATE_JWT_SECRET");
+    }
+
+    @Test
+    @DisplayName("강한 시크릿이라도 dev-fallback=true → 기동 실패")
+    void validate_devFallbackEnabled_throwsIllegalState() {
+        ProductionSecurityValidator v = newValidator(
+                "super-secure-random-secret-value-at-least-32-chars", true);
+
+        assertThatThrownBy(v::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PILLMATE_DEV_FALLBACK");
+    }
+
+    @Test
+    @DisplayName("강한 시크릿 + dev-fallback=false → 정상 기동")
     void validate_secureSecret_passes() {
         ProductionSecurityValidator v = newValidator("super-secure-random-secret-value-at-least-32-chars");
 

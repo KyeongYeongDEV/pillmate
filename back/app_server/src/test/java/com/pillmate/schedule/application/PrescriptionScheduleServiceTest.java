@@ -98,13 +98,13 @@ class PrescriptionScheduleServiceTest {
     }
 
     @Test
-    @DisplayName("같은 처방전 같은 슬롯이 이미 있으면 건너뛰고 나머지만 생성")
+    @DisplayName("같은 처방전 같은 정확 시각이 이미 있으면 건너뛰고 나머지만 생성")
     void create_whenSlotConflicts_skipsConflictingSlot() {
         given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of());
         given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
-        given(conflictChecker.hasPrescriptionSlotConflict(eq(99L), eq(TimeOfDay.MORNING), any(), any(), anyList()))
+        given(conflictChecker.hasPrescriptionSlotConflict(eq(99L), eq(LocalTime.of(8, 0)), any(), any(), anyList()))
                 .willReturn(true);
-        given(conflictChecker.hasPrescriptionSlotConflict(eq(99L), eq(TimeOfDay.EVENING), any(), any(), anyList()))
+        given(conflictChecker.hasPrescriptionSlotConflict(eq(99L), eq(LocalTime.of(19, 0)), any(), any(), anyList()))
                 .willReturn(false);
 
         List<CreatedSchedule> created = sut.createForPrescription(command(
@@ -113,6 +113,44 @@ class PrescriptionScheduleServiceTest {
         verify(scheduleRepository, times(1)).save(any(Schedule.class));
         assertThat(created).hasSize(1);
         assertThat(created.get(0).timeOfDay()).isEqualTo("EVENING");
+    }
+
+    @Test
+    @DisplayName("한 처방전에 같은 bucket(MORNING) 다른 정확 시각 08:00·10:00 → 스케줄 2개 모두 저장 (유실 X)")
+    void create_sameBucketDifferentExactTime_savesBoth() {
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of());
+        given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
+        given(conflictChecker.hasPrescriptionSlotConflict(any(), any(LocalTime.class), any(), any(), anyList()))
+                .willReturn(false);
+
+        List<CreatedSchedule> created = sut.createForPrescription(command(
+                List.of(new SlotSpec("MORNING", LocalTime.of(8, 0)),
+                        new SlotSpec("MORNING", LocalTime.of(10, 0)))));
+
+        ArgumentCaptor<Schedule> captor = ArgumentCaptor.forClass(Schedule.class);
+        verify(scheduleRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(Schedule::getCustomTime)
+                .containsExactly(LocalTime.of(8, 0), LocalTime.of(10, 0));
+        assertThat(created).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("동일 정확 시각 08:00·08:00 중복 요청 → 두 번째는 conflict skip 되어 1개만 생성")
+    void create_sameExactTimeDuplicate_savesOnlyOne() {
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of());
+        given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> {
+            Schedule s = inv.getArgument(0);
+            given(conflictChecker.hasPrescriptionSlotConflict(
+                    eq(99L), eq(LocalTime.of(8, 0)), any(), any(), anyList())).willReturn(true);
+            return s;
+        });
+
+        List<CreatedSchedule> created = sut.createForPrescription(command(
+                List.of(new SlotSpec("MORNING", LocalTime.of(8, 0)),
+                        new SlotSpec("MORNING", LocalTime.of(8, 0)))));
+
+        verify(scheduleRepository, times(1)).save(any(Schedule.class));
+        assertThat(created).hasSize(1);
     }
 
     @Test

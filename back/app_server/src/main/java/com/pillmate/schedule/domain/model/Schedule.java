@@ -92,7 +92,10 @@ public class Schedule {
     }
 
     public boolean overlapsWith(LocalDate otherStart, LocalDate otherEnd) {
-        return !startDate.isAfter(otherEnd) && !endDate.isBefore(otherStart);
+        // endDate null = 무기한 스케줄 — 어느 방향이든 무기한이면 그 경계는 항상 겹침
+        boolean startsBeforeOtherEnds = otherEnd == null || !startDate.isAfter(otherEnd);
+        boolean endsAfterOtherStarts = endDate == null || !endDate.isBefore(otherStart);
+        return startsBeforeOtherEnds && endsAfterOtherStarts;
     }
 
     public void deactivate() {

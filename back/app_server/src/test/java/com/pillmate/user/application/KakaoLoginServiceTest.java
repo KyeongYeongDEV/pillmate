@@ -178,6 +178,27 @@ class KakaoLoginServiceTest {
         assertThat(result.userId()).isEqualTo(7L);  // 카카오 프로필 user, devUserId(2) 무시
     }
 
+    // T-BE-WITHDRAW — 탈퇴 계정 재로그인 시 재활성화
+    @Test
+    @DisplayName("탈퇴 계정 재로그인 → reactivate(프로필 갱신) + save 후 정상 로그인")
+    void login_withdrawnUser_reactivatesAndLogsIn() {
+        given(kakaoOAuthPort.isConfigured()).willReturn(true);
+        given(kakaoOAuthPort.exchange("code", "redirect")).willReturn(KAKAO_PROFILE);
+        User withdrawn = userWithId(5L, "탈퇴한 사용자");
+        withdrawn.withdraw(java.time.Instant.parse("2026-07-01T00:00:00Z"));
+        given(userRepository.findByProviderAndExternalId(UserProvider.KAKAO, "kakao-id-1"))
+                .willReturn(Optional.of(withdrawn));
+        given(userRepository.save(withdrawn)).willReturn(withdrawn);
+
+        AuthResult result = sut.login("code", "redirect");
+
+        assertThat(result.userId()).isEqualTo(5L);
+        assertThat(withdrawn.isWithdrawn()).isFalse();
+        assertThat(withdrawn.getName()).isEqualTo("홍길동");
+        assertThat(withdrawn.getEmail()).isEqualTo("hong@test.com");
+        verify(userRepository).save(withdrawn);
+    }
+
     private User userWithId(Long id, String name) {
         User user = User.dummy(name);
         ReflectionTestUtils.setField(user, "id", id);

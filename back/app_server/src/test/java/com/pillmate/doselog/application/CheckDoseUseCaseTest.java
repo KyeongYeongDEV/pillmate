@@ -187,7 +187,7 @@ class CheckDoseUseCaseTest {
 
         // then — 전이 없으니 이벤트/활동피드 미적재
         then(eventPublisher).should(never()).publishEvent(any());
-        then(activityFeedAppender).should(never()).appendCanceled(any(), any(), any());
+        then(activityFeedAppender).should(never()).appendCanceled(any(), any(), any(), any());
     }
 
     @Test
@@ -201,6 +201,7 @@ class CheckDoseUseCaseTest {
         com.pillmate.schedule.domain.model.Schedule schedule =
                 org.mockito.Mockito.mock(com.pillmate.schedule.domain.model.Schedule.class);
         given(schedule.getTimeOfDay()).willReturn(com.pillmate.schedule.domain.model.TimeOfDay.EVENING);
+        given(schedule.getCustomTime()).willReturn(java.time.LocalTime.of(19, 0));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
         com.pillmate.user.domain.model.User user =
                 org.mockito.Mockito.mock(com.pillmate.user.domain.model.User.class);
@@ -212,7 +213,7 @@ class CheckDoseUseCaseTest {
 
         // then
         then(activityFeedAppender).should()
-                .appendCanceled(PATIENT_ID, com.pillmate.schedule.domain.model.TimeOfDay.EVENING, "아버지");
+                .appendCanceled(PATIENT_ID, com.pillmate.schedule.domain.model.TimeOfDay.EVENING, "19:00", "아버지");
     }
 
     @Test

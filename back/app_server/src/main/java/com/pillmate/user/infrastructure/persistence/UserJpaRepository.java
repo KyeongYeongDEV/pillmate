@@ -8,4 +8,5 @@ import java.util.Optional;
 
 interface UserJpaRepository extends JpaRepository<User, Long> {
     Optional<User> findByProviderAndExternalId(UserProvider provider, String externalId);
+    java.util.List<User> findByExpoPushTokenAndIdNot(String expoPushToken, Long keepUserId);
 }

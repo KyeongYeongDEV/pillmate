@@ -58,9 +58,12 @@ public class AiServerOcrClient implements OcrPort {
 
     private record AiServerOcrRequest(String image_url, String image_key) {}
 
-    private record AiServerOcrResponse(List<AiServerOcrItem> items, String source) {
+    private record AiServerOcrResponse(List<AiServerOcrItem> items, String source, Boolean pii_detected) {
         public OcrResult toOcrResult(ObjectMapper mapper) {
-            return new OcrResult(items.stream().map(item -> item.toOcrItem(mapper)).toList(), source);
+            return new OcrResult(
+                    items.stream().map(item -> item.toOcrItem(mapper)).toList(),
+                    source,
+                    Boolean.TRUE.equals(pii_detected));
         }
     }
 

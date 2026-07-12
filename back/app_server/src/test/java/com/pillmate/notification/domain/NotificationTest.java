@@ -43,6 +43,27 @@ class NotificationTest {
     }
 
     @Test
+    @DisplayName("GROUP_MEMBER_JOINED 팩토리 — 본문에 actor 이름 + '참여' 포함")
+    void create_groupMemberJoined_typeAndBody() {
+        Notification n = Notification.groupMemberJoined(RECIPIENT, ACTOR, GROUP_ID, "홍길동");
+
+        assertThat(n.getType()).isEqualTo(NotificationType.GROUP_MEMBER_JOINED);
+        assertThat(n.getRecipientUserId()).isEqualTo(RECIPIENT);
+        assertThat(n.getActorUserId()).isEqualTo(ACTOR);
+        assertThat(n.getCareGroupId()).isEqualTo(GROUP_ID);
+        assertThat(n.getBody()).contains("홍길동").contains("참여");
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("GROUP_MEMBER_JOINED 팩토리 — actorName null 이면 '새 멤버' fallback")
+    void create_groupMemberJoined_nullActorName_fallsBack() {
+        Notification n = Notification.groupMemberJoined(RECIPIENT, ACTOR, GROUP_ID, null);
+
+        assertThat(n.getBody()).contains("새 멤버").contains("참여");
+    }
+
+    @Test
     @DisplayName("markSent() — PENDING → SENT, sentAt 기록")
     void markSent_transitionsToSent() {
         Notification n = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG);
@@ -121,7 +142,7 @@ class NotificationTest {
     }
 
     @Test
-    @DisplayName("prescriptionNew(6-param) — 본문/타이틀에 '약봉투' 포함, actor·groupName 반영")
+    @DisplayName("prescriptionNew(6-param) — 본문/타이틀에 '약봉투' 포함, actor 반영, groupName prefix 없음")
     void create_prescriptionNewWithNames_bodyContainsYakBongTu() {
         Long prescriptionId = 200L;
         Notification n = Notification.prescriptionNew(
@@ -130,7 +151,8 @@ class NotificationTest {
         assertThat(n.getTitle()).contains("약봉투");
         assertThat(n.getBody()).contains("약봉투");
         assertThat(n.getBody()).contains("홍길동");
-        assertThat(n.getBody()).contains("우리가족");
+        assertThat(n.getBody()).doesNotContain("우리가족");
+        assertThat(n.getBody()).doesNotContain("[");
     }
 
     @Test
@@ -144,11 +166,13 @@ class NotificationTest {
     }
 
     @Test
-    @DisplayName("doseTaken(6-param) — 본문에 actor·groupName 반영, actorName null 시 '그룹 멤버가' fallback")
+    @DisplayName("doseTaken(6-param) — 본문에 actor 반영·groupName prefix 없음, actorName null 시 '그룹 멤버가' fallback")
     void create_doseTakenWithNames_bodyContainsNamesAndFallback() {
         Notification withNames = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG,
                 "김철수", "우리가족");
-        assertThat(withNames.getBody()).contains("김철수").contains("우리가족");
+        assertThat(withNames.getBody()).contains("김철수");
+        assertThat(withNames.getBody()).doesNotContain("우리가족");
+        assertThat(withNames.getBody()).doesNotContain("[");
 
         Notification withFallback = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG,
                 null, null);

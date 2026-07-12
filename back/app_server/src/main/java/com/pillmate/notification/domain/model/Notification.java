@@ -123,8 +123,7 @@ public class Notification {
         if (actorName == null) {
             return "그룹 멤버가 " + action;
         }
-        String prefix = groupName != null ? "[" + groupName + "] " : "";
-        return prefix + actorName + "님이 " + action;
+        return actorName + "님이 " + action;
     }
 
     private static Notification doseForPrescription(Long recipientUserId, Long actorUserId,
@@ -165,12 +164,18 @@ public class Notification {
                                                 Long careGroupId, Long prescriptionId,
                                                 String actorName, String groupName) {
         String actor = actorName != null ? actorName : "그룹 멤버";
-        String body = groupName != null
-                ? "[" + groupName + "] " + actor + "님이 새 약봉투를 등록했어요"
-                : actor + "님이 새 약봉투를 등록했어요";
+        String body = actor + "님이 새 약봉투를 등록했어요";
         return createWithReference(recipientUserId, actorUserId, careGroupId,
                 prescriptionId, NotificationReferenceType.PRESCRIPTION,
                 NotificationType.PRESCRIPTION_NEW, "새 약봉투 등록", body);
+    }
+
+    public static Notification groupMemberJoined(Long recipientUserId, Long actorUserId,
+                                                  Long careGroupId, String actorName) {
+        String actor = actorName != null ? actorName : "새 멤버";
+        String body = actor + "님이 그룹에 참여했어요";
+        return create(recipientUserId, actorUserId, careGroupId, null,
+                NotificationType.GROUP_MEMBER_JOINED, "그룹 멤버 참여", body);
     }
 
     public static Notification weeklyReport(Long recipientUserId, Long actorUserId,

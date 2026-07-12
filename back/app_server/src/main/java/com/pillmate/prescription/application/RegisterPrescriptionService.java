@@ -10,6 +10,7 @@ import com.pillmate.prescription.application.dto.RegisterPrescriptionResponse;
 import com.pillmate.prescription.application.dto.RegisteredDrugItem;
 import com.pillmate.prescription.application.dto.ScheduleSpec;
 import com.pillmate.prescription.application.exception.EmptyPrescriptionItemsException;
+import com.pillmate.prescription.application.port.DoseLogBackfillPort;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.DrugLookupPort.DrugSummary;
 import com.pillmate.prescription.application.port.SchedulingPort;
@@ -27,7 +28,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ import java.util.Optional;
 public class RegisterPrescriptionService {
 
     private static final int DEFAULT_MEDICATION_DAYS = 30;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final PrescriptionRepository prescriptionRepository;
     private final DrugLookupPort drugLookupPort;
@@ -47,6 +51,8 @@ public class RegisterPrescriptionService {
     private final CheckInteractionsUseCase checkInteractionsUseCase;
     private final ApplicationEventPublisher eventPublisher;
     private final SchedulingPort schedulingPort;
+    private final DoseLogBackfillPort doseLogBackfillPort;
+    private final Clock clock;
 
     @Transactional
     public RegisterPrescriptionResponse register(RegisterPrescriptionCommand command) {
@@ -79,8 +85,27 @@ public class RegisterPrescriptionService {
         eventPublisher.publishEvent(new PrescriptionRegistered(command.patientId(), saved.getId()));
 
         List<SchedulingPort.ScheduledSlot> createdSchedules = createSchedules(command, saved.getId());
+        backfillTodayDoseLogs(command.patientId(), createdSchedules);
         return new RegisterPrescriptionResponse(
                 saved.getId(), saved.getOcrStatus(), registered, unresolvedCount, warnings, createdSchedules);
+    }
+
+    // 당일 등록 처방전도 즉시 체크 가능하도록 오늘(KST) dose_logs 즉시 백필.
+    // 실패해도 등록 자체는 성공 처리(로그만 남김) — 핵심 등록 흐름을 부수 기능이 막지 않도록.
+    private void backfillTodayDoseLogs(Long patientId, List<SchedulingPort.ScheduledSlot> createdSchedules) {
+        if (createdSchedules.isEmpty()) {
+            return;
+        }
+        try {
+            LocalDate today = LocalDate.now(clock.withZone(KST));
+            List<DoseLogBackfillPort.BackfillSlot> slots = createdSchedules.stream()
+                    .map(s -> new DoseLogBackfillPort.BackfillSlot(
+                            s.scheduleId(), s.customTime(), s.startDate(), s.endDate()))
+                    .toList();
+            doseLogBackfillPort.backfillToday(patientId, slots, today);
+        } catch (Exception e) {
+            log.warn("dose_logs 당일 백필 실패 (등록은 정상 처리됨) patientId={} reason={}", patientId, e.getMessage());
+        }
     }
 
     private List<SchedulingPort.ScheduledSlot> createSchedules(RegisterPrescriptionCommand command, Long prescriptionId) {
