@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.OcrMatchLogPort;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
@@ -26,6 +28,7 @@ public class ResolveCandidateService implements ResolveCandidateUseCase {
 
     private final PrescriptionRepository prescriptionRepository;
     private final CareGroupGuard careGroupGuard;
+    private final PatientAccessGuard patientAccessGuard;
     private final ObjectMapper objectMapper;
     private final DrugLookupPort drugLookupPort;
     private final OcrMatchLogPort ocrMatchLogPort;
@@ -35,6 +38,7 @@ public class ResolveCandidateService implements ResolveCandidateUseCase {
     public void resolve(Long prescriptionId, int itemIndex, Long selectedDrugId, Long resolverId) {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
                 .orElseThrow(() -> new PillmateException(ErrorCode.PRESCRIPTION_NOT_FOUND));
+        patientAccessGuard.requireAccess(UserContext.get(), prescription.getPatientId());
 
         PrescribedDrugCandidate candidate = findCandidate(prescription, itemIndex);
         validateNotResolved(candidate);

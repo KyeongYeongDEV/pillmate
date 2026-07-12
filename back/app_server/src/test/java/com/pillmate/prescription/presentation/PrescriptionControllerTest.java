@@ -46,11 +46,13 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -233,6 +235,49 @@ class PrescriptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ResolveCandidateRequest(12320L))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PUT .../resolve — resolverId 는 하드코딩 null 이 아니라 UserContext(X-User-Id) 값으로 감사추적 전달된다")
+    void resolveCandidate_passesUserContextAsResolverId() throws Exception {
+        doNothing().when(resolveCandidateUseCase).resolve(anyLong(), anyInt(), anyLong(), any());
+        org.mockito.ArgumentCaptor<Long> resolverIdCaptor = org.mockito.ArgumentCaptor.forClass(Long.class);
+
+        mockMvc.perform(put("/prescriptions/1/candidates/0/resolve")
+                        .header("X-User-Id", "4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ResolveCandidateRequest(12320L))))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(resolveCandidateUseCase)
+                .resolve(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(0),
+                        org.mockito.ArgumentMatchers.eq(12320L), resolverIdCaptor.capture());
+        assertThat(resolverIdCaptor.getValue()).isEqualTo(4L);
+    }
+
+    @Test
+    @DisplayName("GET /prescriptions/{id}/candidates 타인 처방전 → 403 PATIENT_ACCESS_DENIED (IDOR)")
+    void getCandidates_otherPatientPrescription_returns403() throws Exception {
+        given(getUnresolvedCandidatesUseCase.getUnresolved(1L))
+                .willThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED));
+
+        mockMvc.perform(get("/prescriptions/1/candidates").header("X-User-Id", "99"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
+    }
+
+    @Test
+    @DisplayName("PUT /prescriptions/{id}/candidates/{idx}/resolve 타인 처방전 → 403 PATIENT_ACCESS_DENIED (IDOR)")
+    void resolveCandidate_otherPatientPrescription_returns403() throws Exception {
+        doThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
+                .when(resolveCandidateUseCase).resolve(anyLong(), anyInt(), anyLong(), any());
+
+        mockMvc.perform(put("/prescriptions/1/candidates/0/resolve")
+                        .header("X-User-Id", "99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ResolveCandidateRequest(12320L))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_016"));
     }
 
     @Test

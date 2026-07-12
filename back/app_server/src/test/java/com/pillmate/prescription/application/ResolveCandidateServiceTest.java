@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.port.DrugLookupPort;
 import com.pillmate.prescription.application.port.OcrMatchLogPort;
 import com.pillmate.prescription.domain.model.CandidateDecisionType;
@@ -11,6 +13,8 @@ import com.pillmate.prescription.domain.model.PrescribedDrug;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +57,19 @@ class ResolveCandidateServiceTest {
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
 
+    @Spy
+    private PatientAccessGuard patientAccessGuard = new PatientAccessGuard();
+
+    @BeforeEach
+    void setUpUserContext() {
+        UserContext.set(2L); // prescriptionWithCandidate() 의 patientId 와 동일 — 기존 테스트는 본인 접근
+    }
+
+    @AfterEach
+    void clearUserContext() {
+        UserContext.clear();
+    }
+
     private Prescription prescriptionWithCandidate(String optionsJson) {
         Prescription p = Prescription.create(2L, "prescriptions/uuid.jpg", LocalDate.now());
         PrescribedDrug drug = PrescribedDrug.builder()
@@ -77,6 +94,7 @@ class ResolveCandidateServiceTest {
 
         PrescribedDrugCandidate candidate = prescription.getCandidates().get(0);
         assertThat(candidate.getResolvedDrugId()).isEqualTo(12320L);
+        assertThat(candidate.getResolvedBy()).isEqualTo(1L);
         verify(prescriptionRepository).save(prescription);
     }
 
@@ -133,5 +151,19 @@ class ResolveCandidateServiceTest {
         resolveCandidateService.resolve(1L, 0, 12320L, 1L);
 
         verify(ocrMatchLogPort, never()).updateUserCorrection(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("IDOR: 타인의 처방전 candidate resolve 시 403 PATIENT_ACCESS_DENIED")
+    void resolve_whenOtherPatientPrescription_throws403() {
+        UserContext.set(99L);
+        String optionsJson = "[{\"drugId\": 12320}]";
+        Prescription prescription = prescriptionWithCandidate(optionsJson);
+        given(prescriptionRepository.findById(1L)).willReturn(Optional.of(prescription));
+
+        assertThatThrownBy(() -> resolveCandidateService.resolve(1L, 0, 12320L, 99L))
+                .isInstanceOf(PillmateException.class)
+                .satisfies(e -> assertThat(((PillmateException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PATIENT_ACCESS_DENIED));
     }
 }

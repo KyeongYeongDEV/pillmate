@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,22 +24,18 @@ import java.util.Optional;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "pillmate.notification.provider", havingValue = "fcm")
+@RequiredArgsConstructor
 public class LazyFirebaseMessagingProvider implements FirebaseMessagingProvider {
 
     private static final String FIREBASE_APP_NAME = "pillmate-fcm";
 
+    @Value("${FIREBASE_SERVICE_ACCOUNT_JSON:}")
     private final String serviceAccountJson;
+    @Value("${FIREBASE_CREDENTIALS_PATH:}")
     private final String credentialsPath;
 
     private volatile boolean initialized = false;
     private volatile FirebaseMessaging messaging = null;
-
-    public LazyFirebaseMessagingProvider(
-            @Value("${FIREBASE_SERVICE_ACCOUNT_JSON:}") String serviceAccountJson,
-            @Value("${FIREBASE_CREDENTIALS_PATH:}") String credentialsPath) {
-        this.serviceAccountJson = serviceAccountJson;
-        this.credentialsPath = credentialsPath;
-    }
 
     @Override
     public Optional<FirebaseMessaging> get() {

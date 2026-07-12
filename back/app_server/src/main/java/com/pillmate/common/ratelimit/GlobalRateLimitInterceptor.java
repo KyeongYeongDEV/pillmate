@@ -3,6 +3,7 @@ package com.pillmate.common.ratelimit;
 import com.pillmate.common.security.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -13,6 +14,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * (가용성 > 완벽 방어). 한도 초과는 RateLimitExceededException → GlobalExceptionHandler 가 429 매핑.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class GlobalRateLimitInterceptor implements HandlerInterceptor {
 
     private static final String ACTION = "req";
@@ -20,12 +22,6 @@ public class GlobalRateLimitInterceptor implements HandlerInterceptor {
     private final RateLimiterPort rateLimiterPort;
     private final boolean enabled;
     private final int perMinuteLimit;
-
-    public GlobalRateLimitInterceptor(RateLimiterPort rateLimiterPort, boolean enabled, int perMinuteLimit) {
-        this.rateLimiterPort = rateLimiterPort;
-        this.enabled = enabled;
-        this.perMinuteLimit = perMinuteLimit;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

@@ -1,15 +1,34 @@
 package com.pillmate.prescription.presentation;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pillmate.common.response.ApiResponse;
+import com.pillmate.common.security.UserContext;
+import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
 import com.pillmate.prescription.application.GetActivePrescriptionsWithInsightUseCase;
 import com.pillmate.prescription.application.GetLatestPrescriptionWithInsightUseCase;
 import com.pillmate.prescription.application.GetPrescriptionDetailUseCase;
 import com.pillmate.prescription.application.GetPrescriptionsUseCase;
 import com.pillmate.prescription.application.GetUnresolvedCandidatesUseCase;
 import com.pillmate.prescription.application.GetUploadUrlUseCase;
-import com.pillmate.prescription.application.ExtractPrescriptionOcrUseCase;
 import com.pillmate.prescription.application.RegisterPrescriptionService;
 import com.pillmate.prescription.application.ResolveCandidateUseCase;
+import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
+import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
 import com.pillmate.prescription.application.dto.LatestPrescriptionWithInsightResponse;
 import com.pillmate.prescription.application.dto.OcrExtractResponse;
 import com.pillmate.prescription.application.dto.PrescriptionDetailResponse;
@@ -19,30 +38,15 @@ import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.application.dto.UploadUrlResponse;
 import com.pillmate.prescription.presentation.dto.OcrExtractRequest;
 import com.pillmate.prescription.presentation.dto.RegisterPrescriptionRequest;
-import com.pillmate.prescription.application.SoftDeletePrescriptionUseCase;
-import com.pillmate.prescription.application.UpdatePrescriptionMemoUseCase;
 import com.pillmate.prescription.presentation.dto.ResolveCandidateRequest;
 import com.pillmate.prescription.presentation.dto.UpdatePrescriptionMemoRequest;
-import com.pillmate.common.security.UserContext;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/prescriptions")
+@RequiredArgsConstructor
 public class PrescriptionController {
 
     private final GetUploadUrlUseCase getUploadUrlUseCase;
@@ -56,34 +60,8 @@ public class PrescriptionController {
     private final GetActivePrescriptionsWithInsightUseCase getActivePrescriptionsWithInsightUseCase;
     private final UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase;
     private final SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase;
+    @Qualifier("ocrExecutor")
     private final Executor ocrExecutor;
-
-    public PrescriptionController(
-            GetUploadUrlUseCase getUploadUrlUseCase,
-            RegisterPrescriptionService registerPrescriptionService,
-            ExtractPrescriptionOcrUseCase extractPrescriptionOcrUseCase,
-            GetUnresolvedCandidatesUseCase getUnresolvedCandidatesUseCase,
-            ResolveCandidateUseCase resolveCandidateUseCase,
-            GetPrescriptionsUseCase getPrescriptionsUseCase,
-            GetPrescriptionDetailUseCase getPrescriptionDetailUseCase,
-            GetLatestPrescriptionWithInsightUseCase getLatestPrescriptionWithInsightUseCase,
-            GetActivePrescriptionsWithInsightUseCase getActivePrescriptionsWithInsightUseCase,
-            UpdatePrescriptionMemoUseCase updatePrescriptionMemoUseCase,
-            SoftDeletePrescriptionUseCase softDeletePrescriptionUseCase,
-            @Qualifier("ocrExecutor") Executor ocrExecutor) {
-        this.getUploadUrlUseCase = getUploadUrlUseCase;
-        this.registerPrescriptionService = registerPrescriptionService;
-        this.extractPrescriptionOcrUseCase = extractPrescriptionOcrUseCase;
-        this.getUnresolvedCandidatesUseCase = getUnresolvedCandidatesUseCase;
-        this.resolveCandidateUseCase = resolveCandidateUseCase;
-        this.getPrescriptionsUseCase = getPrescriptionsUseCase;
-        this.getPrescriptionDetailUseCase = getPrescriptionDetailUseCase;
-        this.getLatestPrescriptionWithInsightUseCase = getLatestPrescriptionWithInsightUseCase;
-        this.getActivePrescriptionsWithInsightUseCase = getActivePrescriptionsWithInsightUseCase;
-        this.updatePrescriptionMemoUseCase = updatePrescriptionMemoUseCase;
-        this.softDeletePrescriptionUseCase = softDeletePrescriptionUseCase;
-        this.ocrExecutor = ocrExecutor;
-    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<PrescriptionSummary>>> list() {
@@ -158,7 +136,7 @@ public class PrescriptionController {
             @PathVariable Long id,
             @PathVariable int itemIndex,
             @Valid @RequestBody ResolveCandidateRequest request) {
-        resolveCandidateUseCase.resolve(id, itemIndex, request.selectedDrugId(), null);
+        resolveCandidateUseCase.resolve(id, itemIndex, request.selectedDrugId(), UserContext.get());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

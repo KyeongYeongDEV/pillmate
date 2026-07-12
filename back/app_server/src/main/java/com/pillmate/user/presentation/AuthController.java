@@ -6,6 +6,7 @@ import com.pillmate.user.application.LoginCodeService;
 import com.pillmate.user.application.dto.AuthResult;
 import com.pillmate.user.presentation.dto.KakaoLoginRequest;
 import com.pillmate.user.presentation.dto.LoginCodeExchangeRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,23 +16,15 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final KakaoLoginService kakaoLoginService;
     private final LoginCodeService loginCodeService;
+    @Value("${kakao.redirect-uri:}")
     private final String kakaoRedirectUri;
+    @Value("${app.deeplink:pillmate://oauth/kakao}")
     private final String deeplink;
-
-    public AuthController(
-            KakaoLoginService kakaoLoginService,
-            LoginCodeService loginCodeService,
-            @Value("${kakao.redirect-uri:}") String kakaoRedirectUri,
-            @Value("${app.deeplink:pillmate://oauth/kakao}") String deeplink) {
-        this.kakaoLoginService = kakaoLoginService;
-        this.loginCodeService = loginCodeService;
-        this.kakaoRedirectUri = kakaoRedirectUri;
-        this.deeplink = deeplink;
-    }
 
     @PostMapping("/kakao")
     public ResponseEntity<ApiResponse<AuthResult>> kakaoLogin(

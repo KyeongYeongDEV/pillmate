@@ -2,6 +2,8 @@ package com.pillmate.prescription.application;
 
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.PatientAccessGuard;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.dto.UnresolvedCandidateDto;
 import com.pillmate.prescription.domain.model.PrescribedDrugCandidate;
 import com.pillmate.prescription.domain.model.Prescription;
@@ -17,12 +19,14 @@ import java.util.List;
 public class GetUnresolvedCandidatesService implements GetUnresolvedCandidatesUseCase {
 
     private final PrescriptionRepository prescriptionRepository;
+    private final PatientAccessGuard patientAccessGuard;
 
     @Transactional(readOnly = true)
     @Override
     public List<UnresolvedCandidateDto> getUnresolved(Long prescriptionId) {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
                 .orElseThrow(() -> new PillmateException(ErrorCode.PRESCRIPTION_NOT_FOUND));
+        patientAccessGuard.requireAccess(UserContext.get(), prescription.getPatientId());
         return prescription.getCandidates().stream()
                 .filter(c -> !c.isResolved())
                 .map(this::toDto)

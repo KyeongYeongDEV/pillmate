@@ -4,11 +4,13 @@ import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
 import java.time.Instant;
 
+@RequiredArgsConstructor
 public class UserContextInterceptor implements HandlerInterceptor {
 
     private static final String USER_ID_HEADER = "X-User-Id";
@@ -16,11 +18,6 @@ public class UserContextInterceptor implements HandlerInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final boolean devFallbackEnabled;
-
-    public UserContextInterceptor(JwtTokenProvider jwtTokenProvider, boolean devFallbackEnabled) {
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.devFallbackEnabled = devFallbackEnabled;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
