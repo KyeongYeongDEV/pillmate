@@ -169,3 +169,6 @@ back/.backups/
 back/.backups/*
 !back/.backups/.gitkeep
 docs/store-assets.zip
+back/backups/
+docs/.pdca-snapshots/
+back/docs/.pdca-snapshots/

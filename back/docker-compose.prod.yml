@@ -40,6 +40,8 @@ x-app-prod: &app-prod
     start_period: 60s
   restart: unless-stopped
   mem_limit: 2g
+  # graceful shutdown(25s)이 Docker 기본 SIGTERM→SIGKILL 유예(10s)에 잘리지 않도록 확장 (app-blue/green 상속)
+  stop_grace_period: 30s
 
 services:
   # base의 app 서비스는 prod에서 사용하지 않음 — app-blue / app-green 사용
@@ -64,6 +66,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN_AI}
     restart: unless-stopped
     mem_limit: 3g
+    # 롤링 재기동 시 OCR/AI 요청 drain
+    stop_grace_period: 30s
 
   # ── Blue-Green App 인스턴스 ─────────────────────────────────────────
   # 평상시 한쪽만 up. deploy.sh 가 활성 컬러를 자동 전환.
@@ -75,9 +79,12 @@ services:
     <<: *app-prod
     container_name: pillmate-app-green
 
-  # ── Caddy 리버스 프록시 (자동 HTTPS) ──────────────────────────────
+  # ── Caddy 리버스 프록시 (자동 HTTPS + rate_limit) ─────────────────
+  # 표준 caddy:2-alpine 엔 rate_limit 모듈 없음 → caddy/Dockerfile(xcaddy) 커스텀 빌드
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
     container_name: pillmate-caddy
     ports:
       - "80:80"
