@@ -3,7 +3,9 @@ FROM gradle:8.10-jdk17 AS build
 WORKDIR /workspace
 
 # 의존성 메타데이터 먼저 — 소스 변경과 무관한 레이어로 분리 (cache hit 극대화)
-COPY settings.gradle build.gradle ./
+# lombok.config 필수: 없으면 @Value/@Qualifier 가 @RequiredArgsConstructor 생성자에 전파 안 돼
+# 런타임에 "No qualifying bean of type 'java.lang.String'" 로 기동 실패 (발견 2026-07-12, 별도 이슈)
+COPY settings.gradle build.gradle lombok.config ./
 COPY gradle ./gradle
 RUN --mount=type=cache,target=/root/.gradle \
     gradle --no-daemon dependencies --refresh-dependencies > /dev/null 2>&1 || true

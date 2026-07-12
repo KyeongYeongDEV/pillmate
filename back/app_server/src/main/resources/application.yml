@@ -36,20 +36,6 @@ spring:
     baseline-on-migrate: false
     validate-on-migrate: true
 
-server:
-  # SIGTERM 수신 시 새 요청 거부 + 기존 요청 drain 후 종료 (모든 프로파일 공통, 로컬 dev 안전)
-  shutdown: graceful
-
----
-# local / dev 환경: SEED 마이그레이션 추가 실행 (운영 배포 시 SPRING_PROFILES_ACTIVE=production 으로 이 섹션 비활성화)
-spring:
-  config:
-    activate:
-      on-profile: local
-  flyway:
-    locations:
-      - classpath:db/migration
-      - classpath:db/migration-dev
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -57,6 +43,8 @@ spring:
       timeout: 3000ms
 
 server:
+  # SIGTERM 수신 시 새 요청 거부 + 기존 요청 drain 후 종료 (모든 프로파일 공통, 로컬 dev 안전)
+  shutdown: graceful
   port: 8080
   servlet:
     context-path: /api/v1
@@ -132,3 +120,27 @@ kakao:
 
 app:
   deeplink: ${APP_DEEPLINK:pillmate://oauth/kakao}
+
+---
+# production 환경: API 문서(Swagger/OpenAPI) 외부 노출 차단 (보안감사 2026-07-12)
+spring:
+  config:
+    activate:
+      on-profile: production
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+---
+# local / dev 환경: SEED 마이그레이션 추가 실행 (운영 배포 시 SPRING_PROFILES_ACTIVE=production 으로 이 섹션 비활성화)
+spring:
+  config:
+    activate:
+      on-profile: local
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/migration-dev
