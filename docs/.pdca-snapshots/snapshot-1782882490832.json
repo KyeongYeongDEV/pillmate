@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-23T12:37:09.570Z",
+  "timestamp": "2026-07-01T05:08:10.832Z",
   "reason": "compaction",
   "status": {
     "version": "2.0",
-    "lastUpdated": "2026-06-19T15:29:42.428Z",
+    "lastUpdated": "2026-06-29T13:30:47.945Z",
     "activeFeatures": [
       "PillMate-Phase1",
       "scripts",
@@ -160,9 +160,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-21T07:51:46.605Z",
-          "lastUpdated": "2026-06-02T14:40:21.625Z"
+          "lastUpdated": "2026-06-29T13:29:35.497Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/application/SendGroupDoseNotificationServiceTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/doselog/application/CheckDoseUseCase.java"
       },
       "presentation": {
         "phase": "do",
@@ -186,9 +186,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-21T07:52:14.906Z",
-          "lastUpdated": "2026-06-02T14:35:25.274Z"
+          "lastUpdated": "2026-06-29T13:28:59.001Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/user/domain/model/User.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/activity/domain/model/ActivityType.java"
       },
       "repository": {
         "phase": "do",
@@ -459,9 +459,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-24T03:13:34.471Z",
-          "lastUpdated": "2026-06-01T16:14:03.690Z"
+          "lastUpdated": "2026-06-29T10:41:15.470Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/app/(tabs)/group.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/app/(tabs)/_layout.tsx"
       },
       "unit": {
         "phase": "do",
@@ -550,9 +550,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:08:16.823Z",
-          "lastUpdated": "2026-06-19T07:48:02.616Z"
+          "lastUpdated": "2026-06-29T13:30:47.945Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/components/common/AvatarStack.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/lib/groupCardHelpers.ts"
       },
       "slices": {
         "phase": "do",
@@ -563,9 +563,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:08:38.579Z",
-          "lastUpdated": "2026-06-18T10:13:09.094Z"
+          "lastUpdated": "2026-06-29T13:11:41.769Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/store/slices/userApi.ts"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/store/slices/doseLogApi.ts"
       },
       "store": {
         "phase": "do",
@@ -615,7 +615,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T02:39:39.512Z",
-          "lastUpdated": "2026-06-02T16:09:29.716Z"
+          "lastUpdated": "2026-06-29T10:41:09.840Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/front/src/components/navigation/CustomTabBar.tsx"
       },
@@ -667,9 +667,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-05-26T05:41:50.088Z",
-          "lastUpdated": "2026-06-02T06:56:15.760Z"
+          "lastUpdated": "2026-06-29T13:30:32.513Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/front/src/components/group/InviteCodeCard.tsx"
+        "lastFile": "/Users/user/Downloads/pillmate/front/src/components/group/ActivityTimelineItem.tsx"
       },
       "search": {
         "phase": "do",
@@ -810,7 +810,7 @@
     "session": {
       "startedAt": "2026-05-21T06:14:29.491Z",
       "onboardingCompleted": false,
-      "lastActivity": "2026-06-19T15:29:42.428Z"
+      "lastActivity": "2026-06-29T13:30:47.945Z"
     },
     "history": [
       {
@@ -8670,6 +8670,174 @@
       {
         "timestamp": "2026-06-19T15:29:42.428Z",
         "feature": "roles",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T09:30:46.883Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T09:30:57.567Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:08:43.951Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:14:43.762Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:12.636Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:18.055Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:15:32.697Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:17:47.929Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:18:06.145Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:26:06.188Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:26:11.407Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:41:09.841Z",
+        "feature": "navigation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T10:41:15.470Z",
+        "feature": "(tabs)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:03.003Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:09.456Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:14.483Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:24.250Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:04:32.332Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:11:41.770Z",
+        "feature": "slices",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:28:59.001Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:20.388Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:26.892Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:29:35.497Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:05.937Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:22.162Z",
+        "feature": "group",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:32.513Z",
+        "feature": "group",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:42.120Z",
+        "feature": "front",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:30:47.945Z",
+        "feature": "front",
         "phase": "do",
         "action": "updated"
       }

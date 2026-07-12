@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
+<rect width="1024" height="1024" fill="#17244E"/>
+<!-- P: 줄기(캡슐) + 보울 -->
+<g>
+  <rect x="330" y="230" width="150" height="570" rx="75" fill="#FFFFFF"/>
+  <rect x="330" y="560" width="150" height="240" rx="75" fill="#5B7CFA"/>
+  <path d="M480 230 h60 a190 190 0 0 1 0 380 h-60 z" fill="#5B7CFA"/>
+  <path d="M480 300 h55 a120 120 0 0 1 0 240 h-55 z" fill="#17244E"/>
+</g>
+<circle cx="700" cy="760" r="46" fill="#22C55E"/>
+<path d="M678 760 l16 16 30 -34" stroke="white" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
