@@ -168,3 +168,4 @@ worktrees/
 back/.backups/
 back/.backups/*
 !back/.backups/.gitkeep
+docs/store-assets.zip

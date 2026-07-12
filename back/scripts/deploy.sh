@@ -63,16 +63,34 @@ active_color() {
 }
 
 # Caddyfile 업스트림 교체 (동일 inode write → bind mount 반영)
+# ⚠️ rate_limit 블록은 반드시 유지 — 누락 시 계층① 엣지 방어(per-IP)가 사라진다.
+# (T-BE-GLOBAL-RATE-LIMIT: mholt/caddy-ratelimit, caddy/Dockerfile 커스텀 이미지 필요)
 write_caddyfile() {
     local color="$1"
     printf '{
     email {env.ACME_EMAIL}
+    order rate_limit before basicauth
 }
 
 {env.DOMAIN} {
+    rate_limit {
+        zone per_ip {
+            key {remote_host}
+            events 40
+            window 1s
+        }
+        zone auth_ip {
+            match {
+                path /api/v1/auth/*
+            }
+            key {remote_host}
+            events 5
+            window 1s
+        }
+    }
     reverse_proxy pillmate-app-%s:8080
 }\n' "$color" > "$CADDYFILE"
-    log "Caddyfile → app-$color"
+    log "Caddyfile → app-$color (rate_limit 유지)"
 }
 
 # Caddy 무중단 reload
