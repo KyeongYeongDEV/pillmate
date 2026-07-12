@@ -27,7 +27,7 @@ jobs:
       - name: Test — ai_server (pytest)
         working-directory: back/ai_server
         # self-hosted VM: uv 가 pyproject 기반 venv 자동 구성 (~/.local/bin/uv, arm64)
-        run: ~/.local/bin/uv run --frozen --python 3.11 pytest tests/ -m "not integration and not eval" -q
+        run: ~/.local/bin/uv run --frozen --python 3.11 --extra dev pytest tests/ -m "not integration and not eval" -q
 
       # ── .env.prod 자동 생성 (GitHub Secrets/Variables → 서버 파일) ──
       # deploy.sh 보다 먼저 실행: sync_workspace() rsync 가 .env.prod 를 exclude 하므로
