@@ -63,8 +63,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OCR_VISION_VARIANT: ${OCR_VISION_VARIANT:-flash}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      # OpenAI_API_KEY(mixed-case) 레거시 제거 — 빈값이 pydantic case-insensitive 매칭에서 실값을 덮는 사고(2026-07-12 prod)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-${OpenAI_API_KEY:-}}
-      OpenAI_API_KEY: ${OpenAI_API_KEY:-}
       SENTRY_DSN: ${SENTRY_DSN_AI:-}
       TZ: Asia/Seoul
     # 호스트 publish 하지 않음(보안) — app 은 내부 네트워크 http://ai-server:8001 로 접근.
