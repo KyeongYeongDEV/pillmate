@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-24T10:27:06.965Z",
+  "timestamp": "2026-07-03T12:29:23.287Z",
   "reason": "compaction",
   "status": {
     "version": "2.0",
-    "lastUpdated": "2026-06-24T10:23:57.263Z",
+    "lastUpdated": "2026-07-02T12:25:37.885Z",
     "activeFeatures": [
       "eval",
       "gt",
@@ -33,7 +33,17 @@
       "config",
       "security",
       "oauth",
-      "ai"
+      "ai",
+      "expo",
+      "monitoring",
+      "interceptor",
+      "pillmate",
+      "partition",
+      "prescription_recommendation",
+      "api",
+      "listener",
+      "ratelimit",
+      "cache"
     ],
     "primaryFeature": "eval",
     "features": {
@@ -72,9 +82,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-07T05:16:24.457Z",
-          "lastUpdated": "2026-06-24T10:18:46.839Z"
+          "lastUpdated": "2026-07-02T04:56:03.552Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/rag/ocr/service.py"
+        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/rag/ocr/reranker.py"
       },
       "scripts": {
         "phase": "do",
@@ -85,9 +95,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-07T05:17:39.460Z",
-          "lastUpdated": "2026-06-09T05:04:07.164Z"
+          "lastUpdated": "2026-07-02T09:13:37.357Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/scripts/bulk_embed_drugs.py"
+        "lastFile": "/Users/user/Downloads/pillmate/back/scripts/deploy.sh"
       },
       "model": {
         "phase": "do",
@@ -98,9 +108,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-07T06:01:58.901Z",
-          "lastUpdated": "2026-06-24T07:22:53.134Z"
+          "lastUpdated": "2026-07-02T12:25:37.885Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/domain/model/Prescription.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/drug/domain/model/Drug.java"
       },
       "event": {
         "phase": "do",
@@ -124,9 +134,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-07T06:14:27.487Z",
-          "lastUpdated": "2026-06-24T10:23:57.263Z"
+          "lastUpdated": "2026-07-02T12:14:40.163Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/prescription/application/ResolveCandidateServiceTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/user/application/RegisterPushTokenServiceTest.java"
       },
       "integration": {
         "phase": "do",
@@ -137,9 +147,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-07T06:28:18.671Z",
-          "lastUpdated": "2026-06-23T07:47:21.977Z"
+          "lastUpdated": "2026-06-28T04:38:04.452Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/caregroup/integration/InviteCodeRedisAdapterIntegrationTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/integration/NotificationDispatchIntegrationTest.java"
       },
       "domain": {
         "phase": "do",
@@ -150,9 +160,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-08T05:40:24.629Z",
-          "lastUpdated": "2026-06-24T10:17:40.214Z"
+          "lastUpdated": "2026-06-30T12:14:28.178Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/domain/ocr.py"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/caregroup/domain/InviteCodeTest.java"
       },
       "repository": {
         "phase": "do",
@@ -163,7 +173,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-08T05:48:35.638Z",
-          "lastUpdated": "2026-06-23T13:16:30.288Z"
+          "lastUpdated": "2026-07-02T12:13:16.948Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/user/domain/repository/UserRepository.java"
       },
@@ -176,9 +186,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-08T05:48:41.641Z",
-          "lastUpdated": "2026-06-24T10:22:28.967Z"
+          "lastUpdated": "2026-07-02T12:13:39.052Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/infrastructure/persistence/OcrMatchLogAdapter.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/user/infrastructure/persistence/UserJpaRepository.java"
       },
       "rag": {
         "phase": "do",
@@ -202,9 +212,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-08T09:46:46.321Z",
-          "lastUpdated": "2026-06-24T10:19:08.865Z"
+          "lastUpdated": "2026-07-02T04:56:27.524Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/tests/test_ocr_match_logger.py"
+        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/tests/test_bge_reranker.py"
       },
       "core": {
         "phase": "do",
@@ -215,9 +225,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-08T09:47:07.071Z",
-          "lastUpdated": "2026-06-13T08:58:34.701Z"
+          "lastUpdated": "2026-07-02T05:07:59.127Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/core/config.py"
+        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/tests/core/test_config_multi_key.py"
       },
       "__tests__": {
         "phase": "do",
@@ -241,7 +251,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-09T15:27:49.939Z",
-          "lastUpdated": "2026-06-13T13:31:28.424Z"
+          "lastUpdated": "2026-07-01T16:25:53.292Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/main.py"
       },
@@ -254,7 +264,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T01:52:36.567Z",
-          "lastUpdated": "2026-06-20T16:51:43.254Z"
+          "lastUpdated": "2026-07-02T05:09:38.079Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/schedule/domain/service/ScheduleConflictCheckerTest.java"
       },
@@ -267,9 +277,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T01:54:01.081Z",
-          "lastUpdated": "2026-06-12T08:06:42.130Z"
+          "lastUpdated": "2026-06-26T12:16:19.926Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/notification/infrastructure/scheduler/GroupDoseNotificationPoller.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/doselog/infrastructure/scheduler/DoseLogPartitionScheduler.java"
       },
       "port": {
         "phase": "do",
@@ -280,9 +290,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T08:10:39.223Z",
-          "lastUpdated": "2026-06-24T10:22:33.857Z"
+          "lastUpdated": "2026-07-02T05:35:35.466Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/application/port/OcrPort.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/notification/application/port/RecipientCachePort.java"
       },
       "dto": {
         "phase": "do",
@@ -293,9 +303,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T08:10:41.075Z",
-          "lastUpdated": "2026-06-24T07:33:53.669Z"
+          "lastUpdated": "2026-07-02T12:23:50.010Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/application/dto/PrescriptionDetailResponse.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/drug/application/dto/DrugDetailResponseTest.java"
       },
       "presentation": {
         "phase": "do",
@@ -306,9 +316,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T08:11:13.688Z",
-          "lastUpdated": "2026-06-24T07:52:39.908Z"
+          "lastUpdated": "2026-07-02T12:24:42.105Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/prescription/presentation/PrescriptionControllerTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/drug/presentation/DrugControllerTest.java"
       },
       "exception": {
         "phase": "do",
@@ -319,7 +329,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-12T14:31:57.077Z",
-          "lastUpdated": "2026-06-24T06:49:11.469Z"
+          "lastUpdated": "2026-07-02T05:21:49.322Z"
         },
         "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/common/exception/ErrorCode.java"
       },
@@ -332,9 +342,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-14T14:42:35.003Z",
-          "lastUpdated": "2026-06-14T14:43:38.047Z"
+          "lastUpdated": "2026-07-02T04:51:50.428Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/infrastructure/fcm/LazyFirebaseMessagingProviderTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/infrastructure/fcm/FcmSenderAdapterTest.java"
       },
       "prescription": {
         "phase": "do",
@@ -371,9 +381,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-21T13:14:37.210Z",
-          "lastUpdated": "2026-06-21T13:14:37.210Z"
+          "lastUpdated": "2026-06-27T13:54:04.888Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/common/config/OpenApiConfig.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/common/config/AsyncConfigTest.java"
       },
       "security": {
         "phase": "do",
@@ -384,9 +394,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-23T13:14:49.280Z",
-          "lastUpdated": "2026-06-23T17:10:39.183Z"
+          "lastUpdated": "2026-07-02T09:11:39.091Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/common/security/UserContextInterceptorTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/common/security/WebMvcConfig.java"
       },
       "oauth": {
         "phase": "do",
@@ -410,9 +420,139 @@
         "documents": {},
         "timestamps": {
           "started": "2026-06-24T07:47:34.610Z",
-          "lastUpdated": "2026-06-24T10:23:20.311Z"
+          "lastUpdated": "2026-06-28T10:18:31.406Z"
         },
-        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/prescription/infrastructure/ai/AiServerOcrClientTest.java"
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/infrastructure/ai/AiServerClientConfig.java"
+      },
+      "expo": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-24T10:53:37.764Z",
+          "lastUpdated": "2026-06-24T11:06:58.366Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/notification/infrastructure/expo/ExpoPushSenderAdapterTest.java"
+      },
+      "monitoring": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-24T12:51:26.228Z",
+          "lastUpdated": "2026-06-24T12:52:42.484Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/common/monitoring/SlackNotifier.java"
+      },
+      "interceptor": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-24T15:35:33.614Z",
+          "lastUpdated": "2026-06-25T04:38:18.246Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/user/presentation/interceptor/ActivityRecordingInterceptorTest.java"
+      },
+      "pillmate": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-24T15:36:27.483Z",
+          "lastUpdated": "2026-06-24T15:36:27.483Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/PillmateApplication.java"
+      },
+      "partition": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-26T12:15:57.976Z",
+          "lastUpdated": "2026-06-26T12:16:38.931Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/doselog/infrastructure/partition/PartitionManager.java"
+      },
+      "prescription_recommendation": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-27T09:16:29.452Z",
+          "lastUpdated": "2026-06-27T13:46:47.483Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/rag/prescription_recommendation/service.py"
+      },
+      "api": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-27T09:16:50.145Z",
+          "lastUpdated": "2026-06-27T09:16:50.145Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/ai_server/app/api/analyze.py"
+      },
+      "listener": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-06-27T09:19:45.619Z",
+          "lastUpdated": "2026-06-27T13:53:55.599Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/main/java/com/pillmate/prescription/application/listener/PrescriptionRecommendationListener.java"
+      },
+      "ratelimit": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-07-02T05:22:15.696Z",
+          "lastUpdated": "2026-07-02T09:12:25.122Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/common/ratelimit/RedisRateLimiterAdapterTest.java"
+      },
+      "cache": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-07-02T05:32:18.484Z",
+          "lastUpdated": "2026-07-02T12:24:07.954Z"
+        },
+        "lastFile": "/Users/user/Downloads/pillmate/back/app_server/src/test/java/com/pillmate/drug/infrastructure/cache/DrugCacheAdapterTest.java"
       }
     },
     "pipeline": {
@@ -423,7 +563,7 @@
     "session": {
       "startedAt": "2026-06-07T04:58:08.867Z",
       "onboardingCompleted": false,
-      "lastActivity": "2026-06-24T10:23:57.263Z"
+      "lastActivity": "2026-07-02T12:25:37.885Z"
     },
     "history": [
       {
@@ -5043,6 +5183,2610 @@
       {
         "timestamp": "2026-06-24T10:23:57.263Z",
         "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:52:49.254Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:52:57.973Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:53:11.108Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:53:26.989Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:53:37.764Z",
+        "feature": "expo",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:53:59.385Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:54:07.852Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:54:22.138Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:54:40.304Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:54:56.859Z",
+        "feature": "expo",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:55:47.705Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:55:51.587Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:59:43.516Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T10:59:48.507Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:00:02.209Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:06:54.520Z",
+        "feature": "expo",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:06:58.366Z",
+        "feature": "expo",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:43:04.952Z",
+        "feature": "exception",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:43:22.234Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:43:54.904Z",
+        "feature": "exception",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:44:40.698Z",
+        "feature": "exception",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:44:59.803Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:45:06.122Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:45:11.273Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T11:45:15.038Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:51:26.228Z",
+        "feature": "monitoring",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:51:39.583Z",
+        "feature": "monitoring",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:51:55.988Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:52:09.537Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:52:42.484Z",
+        "feature": "monitoring",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:53:09.850Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:53:26.919Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:53:39.977Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:53:48.114Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:53:56.389Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T12:54:00.377Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T14:28:08.012Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:31:52.058Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:31:59.010Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:32:01.074Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:21.180Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:24.943Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:27.416Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:30.090Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:33.615Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:39.528Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:35:42.125Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:36:14.339Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:36:23.508Z",
+        "feature": "security",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:36:27.483Z",
+        "feature": "pillmate",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:36:39.258Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:36:46.787Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:37:19.762Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:37:20.203Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:37:44.355Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:40:25.324Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:40:32.172Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:12.105Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:15.923Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:24.204Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:27.232Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:31.730Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:36.443Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:43.906Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:50.637Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-24T15:41:53.710Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T02:53:06.399Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T02:53:16.577Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:37:42.845Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:37:47.003Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:37:54.182Z",
+        "feature": "exception",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:37:58.855Z",
+        "feature": "security",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:38:09.378Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:38:09.760Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:38:18.246Z",
+        "feature": "interceptor",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:38:26.278Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:38:46.234Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:47:33.436Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T04:47:37.538Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:16:56.299Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:03.133Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:07.652Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:12.659Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:21.729Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:31.046Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:36.581Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:52.960Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:17:59.992Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:06.475Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:11.936Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:15.828Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:26.035Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:30.647Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:18:56.384Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:19:01.999Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:19:05.887Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:19:15.635Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-25T05:19:36.779Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:32:31.623Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:32:40.733Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:32:46.246Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:33:04.710Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:33:15.044Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:33:47.962Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:16.243Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:17.324Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:32.917Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:48.542Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:52.031Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:37:59.147Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:38:05.463Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:38:11.729Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:38:20.278Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:38:25.898Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T10:38:38.740Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:13.771Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:15.602Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:23.501Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:28.989Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:32.455Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:39.705Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:45.701Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:53.336Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:18:57.425Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:02.713Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:09.706Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:34.005Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:43.221Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:47.858Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:19:58.776Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:05.341Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:14.736Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:29.568Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:34.867Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:39.672Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:43.863Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:50.104Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:20:55.596Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:21:00.124Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T11:21:08.954Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T12:15:57.976Z",
+        "feature": "partition",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T12:16:05.926Z",
+        "feature": "partition",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T12:16:13.550Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T12:16:19.926Z",
+        "feature": "scheduler",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-26T12:16:38.931Z",
+        "feature": "partition",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:15:59.746Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:16:29.452Z",
+        "feature": "prescription_recommendation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:16:50.146Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:16:54.991Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:17:00.845Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:17:14.064Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:17:48.070Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:17:51.040Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:18:01.923Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:18:06.541Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:18:22.659Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:18:28.637Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:18:34.566Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:19:29.677Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:19:45.620Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:01.656Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:07.217Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:13.734Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:22.134Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:26.190Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:30.420Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:40.241Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:44.528Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:20:49.950Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:21:13.635Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:21:26.519Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:21:44.960Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:21:54.667Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:02.648Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:07.106Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:12.425Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:18.055Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:23.492Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:22:31.434Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:23:22.088Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:23:32.643Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:23:44.187Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:24:07.486Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:24:13.014Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:24:18.321Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:24:23.498Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:24:39.367Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:10.594Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:18.069Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:23.360Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:46.352Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:52.904Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:25:58.092Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T09:26:20.696Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T10:55:34.809Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T10:55:39.181Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T11:26:33.031Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T11:26:38.757Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T11:26:54.426Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T11:27:04.360Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:46:47.483Z",
+        "feature": "prescription_recommendation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:47:11.402Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:47:21.325Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:52:58.337Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:53:16.216Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:53:35.865Z",
+        "feature": "config",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:53:50.234Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:53:55.599Z",
+        "feature": "listener",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T13:54:04.888Z",
+        "feature": "config",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:10:36.584Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:10:46.712Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:10:55.535Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:11:03.202Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:11:13.568Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T15:12:11.236Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:58:48.603Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:58:54.983Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:58:59.892Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:04.741Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:09.453Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:16.445Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:41.595Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:45.950Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:50.330Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-27T23:59:54.321Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:00:40.671Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:00:46.135Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:00:51.455Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:01:07.233Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:39:36.929Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:39:42.330Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:40:31.925Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:40:38.430Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T00:40:55.974Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:26:31.262Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:26:37.155Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:26:42.142Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:26:48.016Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:26:53.436Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:31:16.713Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:31:27.625Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:31:38.467Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:31:46.351Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:32:01.260Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:32:21.897Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:32:26.608Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:32:36.783Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:37:59.095Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T04:38:04.452Z",
+        "feature": "integration",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T07:23:34.616Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T07:23:45.110Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T07:23:56.629Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T08:24:43.397Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T08:25:01.302Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T08:25:19.246Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T08:26:12.982Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T08:26:35.421Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T09:32:31.622Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T09:32:43.683Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T09:33:05.600Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T09:39:01.239Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T09:39:44.153Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T10:18:31.406Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T11:14:19.660Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T11:14:28.844Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T11:14:37.668Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-28T11:44:28.511Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:41:20.161Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:42:42.307Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:43:51.965Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:44:19.923Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:44:39.877Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-29T13:44:45.889Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:52:09.392Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:52:25.010Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:52:30.974Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:52:57.783Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:53:08.325Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T01:53:26.720Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:17:11.191Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:17:24.043Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:17:35.730Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:17:41.901Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:18:01.531Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:19:03.329Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:19:21.688Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:40:31.034Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:40:43.389Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:41:02.533Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:41:13.137Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T05:42:57.700Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:09:34.348Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:09:54.911Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:11:15.898Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:11:36.504Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:12:18.851Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:12:43.854Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:12:55.601Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:13:07.170Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:13:51.990Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T06:14:39.805Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:12:16.961Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:12:28.070Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:12:43.434Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:13:37.080Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:14:09.402Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:14:22.055Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:14:38.262Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:14:51.608Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T08:14:59.705Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:27:15.452Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:27:23.314Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:27:35.337Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:27:45.439Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:27:53.260Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:28:35.848Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:29:35.914Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:29:45.782Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:30:11.193Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:30:31.706Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T11:30:40.687Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:03:06.340Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:03:22.455Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:04:17.812Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:04:39.219Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:13:21.489Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:13:48.083Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:14:03.105Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:14:28.178Z",
+        "feature": "domain",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:15:19.482Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:15:24.735Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:15:35.578Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T12:15:41.453Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:52:32.461Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:52:52.262Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:53:06.217Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:53:19.719Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:53:36.477Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:54:27.620Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:54:36.370Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:54:46.055Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:54:52.081Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:54:57.825Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:55:03.775Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:55:11.679Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:55:17.586Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:56:01.238Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:56:31.445Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-06-30T16:56:37.665Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T07:12:34.627Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T07:52:18.329Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T07:52:23.523Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T07:53:03.589Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T12:21:40.782Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:15.045Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:21.022Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:29.205Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:37.262Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:42.572Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T15:13:47.866Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:07.490Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:14.256Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:32.880Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:46.231Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:51.743Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:24:56.545Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:25:18.015Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:25:38.027Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:25:53.292Z",
+        "feature": "ai_server",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:26:10.166Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-01T16:26:27.998Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:54:57.244Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:55:06.876Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:55:14.465Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:55:20.087Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:55:23.841Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:55:50.398Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T03:56:10.791Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:48:45.104Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:48:53.108Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:03.800Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:14.914Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:23.371Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:37.501Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:50.532Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:49:56.413Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:51:26.052Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:51:50.428Z",
+        "feature": "fcm",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:55:55.155Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:56:03.552Z",
+        "feature": "ocr",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T04:56:27.524Z",
+        "feature": "tests",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:07:26.029Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:07:59.127Z",
+        "feature": "core",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:08:41.136Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:09:14.078Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:09:21.288Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:09:38.079Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:10:05.113Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:16:58.501Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:21:49.323Z",
+        "feature": "exception",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:22:15.696Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:22:24.268Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:22:35.296Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:23:08.767Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:24:31.734Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:24:53.874Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:31:59.288Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:32:18.484Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:34:27.000Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:35:35.466Z",
+        "feature": "port",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:35:48.576Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T05:39:22.051Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T08:29:55.621Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:10:57.893Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:11:11.122Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:11:21.992Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:11:39.091Z",
+        "feature": "security",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:12:08.068Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:12:25.122Z",
+        "feature": "ratelimit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T09:13:37.357Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:13:06.931Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:13:16.948Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:13:32.438Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:13:39.052Z",
+        "feature": "persistence",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:14:00.859Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:14:08.259Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:14:40.163Z",
+        "feature": "application",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:23:10.118Z",
+        "feature": "model",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:23:26.798Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:23:32.515Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:23:50.010Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:24:07.954Z",
+        "feature": "cache",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:24:42.105Z",
+        "feature": "presentation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-07-02T12:25:37.885Z",
+        "feature": "model",
         "phase": "do",
         "action": "updated"
       }

@@ -88,6 +88,15 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
     expect(typeof action).toBe('function');
   });
 
+  it('caregroupApiSlice — joinGroup mutation 존재', () => {
+    expect(caregroupApiSlice.endpoints).toHaveProperty('joinGroup');
+  });
+
+  it('joinGroup — initiate(code) 호출 가능 + thunk 반환', () => {
+    const action = (caregroupApiSlice.endpoints.joinGroup as any).initiate('3F9K2P');
+    expect(typeof action).toBe('function');
+  });
+
   it('pinned 그룹 필터링 — pinned:true 첫 항목', () => {
     const groups: MyGroupSummary[] = [
       { groupId: 1, name: 'A', role: '보호자', memberCount: 2, membersPreview: [], lastActivity: null, unreadCount: 0, pinned: false },

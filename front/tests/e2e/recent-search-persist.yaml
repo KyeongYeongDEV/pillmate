@@ -1,0 +1,20 @@
+appId: com.pillmate.app
+---
+- launchApp
+- tapOn: "약봉투"
+- tapOn: "약봉투 등록하기"
+- tapOn: "약 검색하기"
+- inputText: "암로디핀"
+- assertVisible:
+    text: "검색 결과.*"
+- tapOn:
+    text: ".* 상세 보기$"
+    index: 0
+- assertVisible: "약 정보"
+- tapOn: "뒤로 가기"
+- tapOn: "취소"
+- tapOn: "약 검색하기"
+- assertVisible: "최근 검색"
+- assertVisible:
+    text: ".*암로디핀.*"
+- takeScreenshot: recent-search-persisted

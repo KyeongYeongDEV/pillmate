@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   resultItem: { flexDirection: 'row', alignItems: 'center', padding: space.s12, gap: space.s10 },
-  thumb: { width: scale(48), height: scale(48), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumb: { width: scale(64), height: scale(48), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   pillEmoji: { fontSize: scale(22) },
   resultText: { flex: 1 },

@@ -1,0 +1,10 @@
+appId: com.pillmate.app
+---
+- launchApp
+- tapOn: "홈"
+- assertVisible: "오늘의 복약"
+- takeScreenshot: dose-before-check
+- tapOn: "점심 12:30 복약 체크"
+- takeScreenshot: dose-after-check
+- tapOn: "점심 12:30 복약 체크"
+- takeScreenshot: dose-after-uncheck

@@ -43,13 +43,13 @@ describe('DrugMatchCard — confidence 색상 분기', () => {
     expect(getByText(/매칭 신뢰도가 낮아요/)).toBeTruthy();
   });
 
-  it('인식 실패(kdCode=null): 인식 실패 배지 + 경고 배너', () => {
+  it('인식 실패(kdCode=null): 인식 실패 배지 유지, 미매칭 배너는 미노출', () => {
     const item: DrugListItem = { ...baseItem, id: 'test-4', kdCode: null, matchedName: null, confidence: null };
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DrugMatchCard item={item} onReplace={jest.fn()} onRemove={jest.fn()} />,
     );
     expect(getByText(/인식 실패/)).toBeTruthy();
-    expect(getByText(/식약처 DB에서 자동 확인되지 않았어요/)).toBeTruthy();
+    expect(queryByText(/식약처 DB에서 자동 확인되지 않았어요/)).toBeNull();
   });
 });
 

@@ -1,61 +1,28 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import CameraGuideOverlay from '../../src/components/prescription/CameraGuideOverlay';
-import type { CameraHints } from '../../src/hooks/useCameraGuide';
 
-const allOkHints: CameraHints = { stability: 'ok', brightness: 'ok', tilt: 'ok' };
-const loadingHints: CameraHints = { stability: 'loading', brightness: 'ok', tilt: 'ok' };
-const warnHints: CameraHints = { stability: 'warn', brightness: 'ok', tilt: 'ok' };
-
-describe('CameraGuideOverlay', () => {
-  it('hint 3개 모두 렌더링', () => {
-    const { getByLabelText } = render(
-      <CameraGuideOverlay hints={allOkHints} allOk={true} />,
-    );
-    expect(getByLabelText('흔들림 ok')).toBeTruthy();
-    expect(getByLabelText('조명 ok')).toBeTruthy();
-    expect(getByLabelText('각도 ok')).toBeTruthy();
+describe('CameraGuideOverlay (미니멀 — 프레임 + 안내 1줄)', () => {
+  it('props 없이 렌더 (네모칸 프레임)', () => {
+    const { toJSON } = render(<CameraGuideOverlay />);
+    expect(toJSON()).toBeTruthy();
   });
 
-  it('stability=loading → 흔들림 loading 레이블', () => {
-    const { getByLabelText } = render(
-      <CameraGuideOverlay hints={loadingHints} allOk={false} />,
-    );
-    expect(getByLabelText('흔들림 loading')).toBeTruthy();
+  it('촬영 유도 메인 문구 + 개인정보 주의 문구 노출', () => {
+    const { getByText } = render(<CameraGuideOverlay />);
+    expect(getByText('알약 정보만 있으면 돼요!')).toBeTruthy();
+    expect(getByText('⚠️ 주민번호는 가려주세요')).toBeTruthy();
   });
 
-  it('stability=warn → 흔들림 warn 레이블', () => {
-    const { getByLabelText } = render(
-      <CameraGuideOverlay hints={warnHints} allOk={false} />,
-    );
-    expect(getByLabelText('흔들림 warn')).toBeTruthy();
-  });
-
-  it('allOk=false 일 때 기본 안내 문구 표시', () => {
-    const { getByText } = render(
-      <CameraGuideOverlay hints={loadingHints} allOk={false} />,
-    );
-    expect(getByText('여기에 약봉투를 맞춰주세요')).toBeTruthy();
-  });
-
-  it('allOk=true + autoShutterCountdown=null 시 안내 문구 표시', () => {
-    const { getByText } = render(
-      <CameraGuideOverlay hints={allOkHints} allOk={true} autoShutterCountdown={null} />,
-    );
-    expect(getByText('약봉투를 맞춰주세요')).toBeTruthy();
-  });
-
-  it('autoShutterCountdown=3 시 카운트다운 텍스트 표시', () => {
-    const { getByText } = render(
-      <CameraGuideOverlay hints={allOkHints} allOk={true} autoShutterCountdown={3} />,
-    );
-    expect(getByText('3초 후 자동 촬영')).toBeTruthy();
+  it('#52 제거 요소 미재도입 — 힌트/흔들림/이전 안내문구 미노출', () => {
+    const { queryByText } = render(<CameraGuideOverlay />);
+    expect(queryByText('여기에 약봉투를 맞춰주세요')).toBeNull();
+    expect(queryByText('약봉투를 맞춰주세요')).toBeNull();
+    expect(queryByText('흔들림')).toBeNull();
   });
 
   it('커스텀 frameWidth/frameHeight 적용', () => {
-    const { toJSON } = render(
-      <CameraGuideOverlay hints={allOkHints} allOk={true} frameWidth={320} frameHeight={420} />,
-    );
+    const { toJSON } = render(<CameraGuideOverlay frameWidth={320} frameHeight={420} />);
     expect(toJSON()).toBeTruthy();
   });
 });

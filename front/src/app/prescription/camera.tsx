@@ -1,5 +1,5 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Switch } from 'react-native';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Image } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -12,11 +12,9 @@ import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 import CameraGuideOverlay from '@/components/prescription/CameraGuideOverlay';
 import OcrProgress from '@/components/prescription/OcrProgress';
-import { useCameraGuide } from '@/hooks/useCameraGuide';
 import { useOcrInFlight } from '@/hooks/useOcrInFlight';
+import { PII_BLOCK_ALERT_TITLE, PII_BLOCK_ALERT_MESSAGE } from '@/lib/constants';
 import { downsizeForOcr } from '@/lib/imageProcessing';
-
-const AUTO_SHUTTER_DELAY = 3;
 
 export default function CameraScreen() {
   const insets = useSafeAreaInsets();
@@ -25,13 +23,10 @@ export default function CameraScreen() {
   const [loading, setLoading] = useState(false);
   const [ocrError, setOcrError] = useState(false);
   const [lastProcessed, setLastProcessed] = useState<{ uri: string; imageKey: string } | null>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   const attemptRef = useRef(0);
-  const [autoShutter, setAutoShutter] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const cameraRef = useRef<CameraView>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dispatch = useAppDispatch();
-  const { hints, allOk, reset, warnShake } = useCameraGuide();
   const { begin, end, hashImageUri } = useOcrInFlight();
 
   const uploadImage = useCallback(async (uri: string): Promise<string> => {
@@ -43,10 +38,15 @@ export default function CameraScreen() {
     return uploadResp.objectKey;
   }, [dispatch]);
 
-  const runOcrExtract = useCallback(async (imageKey: string) => {
+  const runOcrExtract = useCallback(async (imageKey: string): Promise<boolean> => {
     const prescribedAt = new Date().toISOString().slice(0, 10);
     const extractResp = await prescriptionApi.ocrExtract({ prescribedAt, imageKey });
+    if (extractResp.piiDetected) {
+      Alert.alert(PII_BLOCK_ALERT_TITLE, PII_BLOCK_ALERT_MESSAGE);
+      return false;
+    }
     dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey }));
+    return true;
   }, [dispatch]);
 
   const processImage = useCallback(
@@ -62,20 +62,20 @@ export default function CameraScreen() {
       setOcrError(false);
       try {
         const imageKey = await uploadImage(uri);
-        await runOcrExtract(imageKey);
+        const proceed = await runOcrExtract(imageKey);
         if (attemptRef.current !== attempt) return; // 사용자가 대기 중 취소
+        if (!proceed) { setLoading(false); return; } // 주민번호 감지 — 재촬영 유도
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
         if (attemptRef.current !== attempt) return;
         setLoading(false);
         setOcrError(true);
-        reset();
       } finally {
         end(hash);
       }
     },
-    [begin, end, hashImageUri, uploadImage, runOcrExtract, reset],
+    [begin, end, hashImageUri, uploadImage, runOcrExtract],
   );
 
   // 기존 이미지(이미 S3 업로드됨)로 ocrExtract 만 재호출 — 재촬영/재업로드 없음
@@ -94,8 +94,9 @@ export default function CameraScreen() {
     setOcrError(false);
     setLoading(true);
     try {
-      await runOcrExtract(lastProcessed.imageKey);
+      const proceed = await runOcrExtract(lastProcessed.imageKey);
       if (attemptRef.current !== attempt) return;
+      if (!proceed) { setLoading(false); return; } // 주민번호 감지 — 재촬영 유도
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/prescription/review' as any);
     } catch {
@@ -111,37 +112,23 @@ export default function CameraScreen() {
     attemptRef.current += 1; // 진행 중 attempt 의 UI 효과 무효화
     setLoading(false);
     setOcrError(false);
-    reset();
-  }, [reset]);
+  }, []);
 
   const capture = useCallback(async () => {
     if (!cameraRef.current) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
-    if (photo) await processImage(photo.uri);
-  }, [processImage]);
-
-  const stopCountdown = useCallback(() => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = null;
-    setCountdown(null);
+    if (photo) setPreviewUri(photo.uri);
   }, []);
 
-  useEffect(() => {
-    if (!autoShutter || !allOk) { stopCountdown(); return; }
-    let remaining = AUTO_SHUTTER_DELAY;
-    setCountdown(remaining);
-    countdownRef.current = setInterval(() => {
-      remaining -= 1;
-      if (remaining <= 0) {
-        stopCountdown();
-        capture();
-      } else {
-        setCountdown(remaining);
-      }
-    }, 1000);
-    return stopCountdown;
-  }, [autoShutter, allOk, capture, stopCountdown]);
+  const handleRetake = useCallback(() => {
+    setPreviewUri(null);
+  }, []);
+
+  const handleConfirmUse = useCallback(() => {
+    if (!previewUri) return;
+    processImage(previewUri);
+  }, [previewUri, processImage]);
 
   const handleGallery = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -171,6 +158,32 @@ export default function CameraScreen() {
     );
   }
 
+  if (previewUri) {
+    return (
+      <View style={styles.root}>
+        <Image source={{ uri: previewUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+
+        <View style={[styles.top, { top: insets.top + 16 }]}>
+          <Pressable onPress={() => safeBack('/prescription')} style={styles.circle} accessibilityLabel="취소" accessibilityRole="button">
+            <Text style={styles.circleIcon}>✕</Text>
+          </Pressable>
+          <View style={styles.previewHint}>
+            <Text style={styles.previewHintText}>글자가 선명한지 확인해 주세요</Text>
+          </View>
+        </View>
+
+        <View style={[styles.previewBottom, { bottom: insets.bottom + 24 }]}>
+          <Pressable onPress={handleRetake} style={styles.previewBtnSecondary} accessibilityLabel="다시 찍기" accessibilityRole="button">
+            <Text style={styles.previewBtnSecondaryText}>다시 찍기</Text>
+          </Pressable>
+          <Pressable onPress={handleConfirmUse} style={styles.previewBtnPrimary} accessibilityLabel="사용하기" accessibilityRole="button">
+            <Text style={styles.previewBtnPrimaryText}>사용하기</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <CameraView
@@ -180,29 +193,15 @@ export default function CameraScreen() {
         enableTorch={flash === 'on'}
       />
 
-      <CameraGuideOverlay hints={hints} allOk={allOk} autoShutterCountdown={countdown} />
+      <CameraGuideOverlay />
 
       <View style={[styles.top, { top: insets.top + 16 }]}>
         <Pressable onPress={() => safeBack('/prescription')} style={styles.circle} accessibilityLabel="닫기" accessibilityRole="button">
           <Text style={styles.circleIcon}>✕</Text>
         </Pressable>
-        <View style={styles.aiBadge}>
-          <Text style={styles.aiBadgeTxt}>✨ AI 자동 인식</Text>
-        </View>
         <Pressable onPress={() => setFlash(f => (f === 'on' ? 'off' : 'on'))} style={styles.circle} accessibilityLabel="플래시 토글" accessibilityRole="button">
           <Text style={styles.circleIcon}>{flash === 'on' ? '🔦' : '💡'}</Text>
         </Pressable>
-      </View>
-
-      <View style={[styles.autoShutterRow, { top: insets.top + 72 }]}>
-        <Text style={styles.autoShutterLabel}>자동 촬영</Text>
-        <Switch
-          value={autoShutter}
-          onValueChange={setAutoShutter}
-          trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.primaryNormal }}
-          thumbColor="#fff"
-          accessibilityLabel="자동 촬영 토글"
-        />
       </View>
 
       <View style={[styles.bottom, { bottom: insets.bottom + 24 }]}>
@@ -212,10 +211,7 @@ export default function CameraScreen() {
         <Pressable onPress={capture} style={styles.shutter} accessibilityLabel="촬영" accessibilityRole="button">
           <View style={styles.shutterInner} />
         </Pressable>
-        <Pressable onPress={() => router.push('/prescription/manual' as any)} style={styles.manualBtn} accessibilityLabel="수동 입력" accessibilityRole="button">
-          <Text style={styles.manualIcon}>✏️</Text>
-          <Text style={styles.manualTxt}>수동</Text>
-        </Pressable>
+        <View style={styles.bottomSpacer} />
       </View>
     </View>
   );
@@ -233,18 +229,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
   circleIcon: { fontSize: scale(18), color: '#fff' },
-  aiBadge: {
-    paddingHorizontal: space.s16, paddingVertical: space.s8,
-    borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.18)',
+  previewHint: {
+    flex: 1, alignItems: 'center', marginLeft: -scale(40),
   },
-  aiBadgeTxt: { ...typography.label2, color: '#fff', fontWeight: '600' },
-  autoShutterRow: {
-    position: 'absolute', top: 116, right: space.s16, zIndex: 10,
-    flexDirection: 'row', alignItems: 'center', gap: space.s8,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: radius.full,
-    paddingHorizontal: space.s12, paddingVertical: space.s6,
+  previewHintText: {
+    ...typography.body2n, color: '#fff', backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: space.s12, paddingVertical: space.s6, borderRadius: radius.r8,
+    overflow: 'hidden',
   },
-  autoShutterLabel: { color: '#fff', fontSize: scale(12), fontWeight: '600' },
+  previewBottom: {
+    position: 'absolute', left: 0, right: 0, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', gap: space.s12,
+    paddingHorizontal: space.s16,
+  },
+  previewBtnSecondary: {
+    flex: 1, height: scale(52), borderRadius: radius.r12,
+    backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
+  },
+  previewBtnSecondaryText: { ...typography.body1n, color: '#fff', fontWeight: '700' },
+  previewBtnPrimary: {
+    flex: 1, height: scale(52), borderRadius: radius.r12,
+    backgroundColor: colors.primaryNormal, alignItems: 'center', justifyContent: 'center',
+  },
+  previewBtnPrimaryText: { ...typography.body1n, color: '#fff', fontWeight: '700' },
   bottom: {
     position: 'absolute', bottom: 50, left: 0, right: 0, zIndex: 10,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -261,12 +268,7 @@ const styles = StyleSheet.create({
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.25)',
   },
   shutterInner: { width: scale(62), height: scale(62), borderRadius: scale(31), backgroundColor: '#fff', borderWidth: 2, borderColor: '#0F0F10' },
-  manualBtn: {
-    width: scale(52), height: scale(52), borderRadius: radius.r12,
-    backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
-  },
-  manualIcon: { fontSize: scale(18) },
-  manualTxt: { ...typography.caption1, color: '#fff', fontWeight: '600' },
+  bottomSpacer: { width: scale(52), height: scale(52) },
   permRoot: { flex: 1, backgroundColor: colors.bgAlt, alignItems: 'center', justifyContent: 'center', gap: space.s16 },
   permText: { ...typography.body1n, color: colors.labelNormal },
   permBtn: { backgroundColor: colors.primaryNormal, borderRadius: radius.r12, paddingHorizontal: space.s24, paddingVertical: space.s12 },

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import CameraScreen from '@/app/prescription/camera';
 import { prescriptionApi } from '@/lib/api/prescription';
@@ -10,10 +11,18 @@ jest.mock('expo-router', () => ({
   router: { replace: jest.fn(), push: jest.fn(), back: jest.fn() },
 }));
 
-jest.mock('expo-camera', () => ({
-  CameraView: () => null,
-  useCameraPermissions: () => [{ granted: true }, jest.fn()],
-}));
+jest.mock('expo-camera', () => {
+  const { forwardRef, useImperativeHandle } = require('react');
+  return {
+    CameraView: forwardRef((_props: unknown, ref: unknown) => {
+      useImperativeHandle(ref, () => ({
+        takePictureAsync: jest.fn().mockResolvedValue({ uri: 'file://captured.jpg' }),
+      }));
+      return null;
+    }),
+    useCameraPermissions: () => [{ granted: true }, jest.fn()],
+  };
+});
 
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
@@ -65,15 +74,6 @@ jest.mock('@/lib/imageProcessing', () => ({
   downsizeForOcr: jest.fn().mockResolvedValue({ uri: 'file://small.jpg', width: 1024, height: 1365 }),
 }));
 
-jest.mock('@/hooks/useCameraGuide', () => ({
-  useCameraGuide: () => ({
-    hints: { stability: 'ok', brightness: 'ok', tilt: 'ok' },
-    allOk: false,
-    reset: jest.fn(),
-    warnShake: jest.fn(),
-  }),
-}));
-
 jest.mock('@/components/prescription/CameraGuideOverlay', () => () => null);
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -101,6 +101,21 @@ describe('camera 등록 흐름 (B방식 통일)', () => {
     expect(router.replace).not.toHaveBeenCalledWith('/prescription/confirm');
   });
 
+  it('주민번호 감지(piiDetected) → review 라우팅 차단 + 경고 Alert', async () => {
+    (prescriptionApi.ocrExtract as jest.Mock).mockResolvedValueOnce({ items: [], piiDetected: true });
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    render(<CameraScreen />);
+    fireEvent.press(screen.getByLabelText('갤러리'));
+
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith('주민번호가 보여요', '가리고 다시 촬영해주세요.'),
+    );
+    expect(router.replace).not.toHaveBeenCalledWith('/prescription/review');
+
+    alertSpy.mockRestore();
+  });
+
   it('실패 후 다시 시도 → 업로드 재호출 0, ocrExtract만 재호출', async () => {
     (prescriptionApi.ocrExtract as jest.Mock)
       .mockRejectedValueOnce(new Error('quota 429'))
@@ -121,5 +136,43 @@ describe('camera 등록 흐름 (B방식 통일)', () => {
     expect(prescriptionApi.issueUploadUrl).toHaveBeenCalledTimes(1); // 증가 없음
     expect(prescriptionApi.uploadToS3).toHaveBeenCalledTimes(1); // 증가 없음
     expect(prescriptionApi.ocrExtract).toHaveBeenCalledTimes(2); // 재호출
+  });
+
+  it('촬영 → 미리보기만 뜨고 사용하기 전까지 서버 호출 0', async () => {
+    render(<CameraScreen />);
+    fireEvent.press(screen.getByLabelText('촬영'));
+
+    await waitFor(() => expect(screen.getByLabelText('사용하기')).toBeTruthy());
+    expect(screen.getByLabelText('다시 찍기')).toBeTruthy();
+    expect(prescriptionApi.issueUploadUrl).not.toHaveBeenCalled();
+    expect(prescriptionApi.uploadToS3).not.toHaveBeenCalled();
+    expect(prescriptionApi.ocrExtract).not.toHaveBeenCalled();
+  });
+
+  it('미리보기에서 다시 찍기 → 카메라로 복귀, 서버 호출 0', async () => {
+    render(<CameraScreen />);
+    fireEvent.press(screen.getByLabelText('촬영'));
+    await waitFor(() => expect(screen.getByLabelText('다시 찍기')).toBeTruthy());
+
+    fireEvent.press(screen.getByLabelText('다시 찍기'));
+
+    await waitFor(() => expect(screen.getByLabelText('촬영')).toBeTruthy());
+    expect(screen.queryByLabelText('사용하기')).toBeNull();
+    expect(prescriptionApi.issueUploadUrl).not.toHaveBeenCalled();
+    expect(prescriptionApi.uploadToS3).not.toHaveBeenCalled();
+    expect(prescriptionApi.ocrExtract).not.toHaveBeenCalled();
+  });
+
+  it('미리보기에서 사용하기 → 기존 upload→ocrExtract→review 흐름 그대로', async () => {
+    render(<CameraScreen />);
+    fireEvent.press(screen.getByLabelText('촬영'));
+    await waitFor(() => expect(screen.getByLabelText('사용하기')).toBeTruthy());
+
+    fireEvent.press(screen.getByLabelText('사용하기'));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/prescription/review'));
+    expect(prescriptionApi.issueUploadUrl).toHaveBeenCalledTimes(1);
+    expect(prescriptionApi.uploadToS3).toHaveBeenCalledTimes(1);
+    expect(prescriptionApi.ocrExtract).toHaveBeenCalledTimes(1);
   });
 });

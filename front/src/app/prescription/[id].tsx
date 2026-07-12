@@ -24,9 +24,11 @@ import { useInsightPolling } from '@/hooks/useInsightPolling';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { safeBack } from '@/lib/router/safeBack';
+import { deriveTimeOfDay } from '@/lib/prescription/timeOfDay';
+import { useSheetBottomPadding } from '@/hooks/useSheetBottomPadding';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import type { PrescriptionDetailView, NutrientNote } from '@/types/prescription';
-import type { SlotEditView, TimeOfDay } from '@/types/schedule';
+import type { SlotEditView } from '@/types/schedule';
 
 const PERIOD_ENDED_CODES = ['PILL_032', 'PILL_035'];
 const TOAST_DURATION_MS = 2500;
@@ -52,13 +54,7 @@ const TIME_OF_DAY_LABEL: Record<string, string> = {
   EVENING: '저녁',
 };
 
-const TOD_OPTIONS: TimeOfDay[] = ['MORNING', 'NOON', 'EVENING'];
-
-const TOD_DEFAULT_TIME: Record<TimeOfDay, string> = {
-  MORNING: '08:00:00',
-  NOON:    '12:30:00',
-  EVENING: '19:00:00',
-};
+const DEFAULT_SLOT_TIME = '08:00:00';
 
 export default function PrescriptionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,15 +79,15 @@ export default function PrescriptionDetailScreen() {
   const [updatePeriod]     = useUpdatePrescriptionPeriodMutation();
 
   const [pickerSlot,       setPickerSlot]       = useState<SlotEditView | null>(null);
-  const [addTodVisible,    setAddTodVisible]    = useState(false);
+  const [addPickerVisible, setAddPickerVisible] = useState(false);
   const [periodSheetVisible, setPeriodSheetVisible] = useState(false);
-  const [addPickerTod,  setAddPickerTod]  = useState<TimeOfDay | null>(null);
   const [memoEditing,   setMemoEditing]   = useState(false);
   const [memoText,      setMemoText]      = useState('');
   const [memoSaving,    setMemoSaving]    = useState(false);
   const [labelEditing,  setLabelEditing]  = useState(false);
   const [labelText,     setLabelText]     = useState('');
   const [labelSaving,   setLabelSaving]   = useState(false);
+  const sheetBottom = useSheetBottomPadding();
   const [toastMsg,      setToastMsg]      = useState('');
   const [toastVisible,  setToastVisible]  = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -126,17 +122,10 @@ export default function PrescriptionDetailScreen() {
     }
   }, [pickerSlot, updateTime, refetchSlots, showToast]);
 
-  const handleAddSlotTod = useCallback((tod: TimeOfDay) => {
-    setAddTodVisible(false);
-    setAddPickerTod(tod);
-  }, []);
-
   const handleAddSlotConfirm = useCallback(async (customTime: string) => {
-    const tod = addPickerTod;
-    setAddPickerTod(null);
-    if (!tod) return;
+    setAddPickerVisible(false);
     try {
-      await addSlot({ prescriptionId, timeOfDay: tod, customTime }).unwrap();
+      await addSlot({ prescriptionId, timeOfDay: deriveTimeOfDay(customTime), customTime }).unwrap();
     } catch (err: any) {
       const code = err?.data?.error?.code ?? err?.code ?? '';
       if (PERIOD_ENDED_CODES.includes(code)) {
@@ -145,7 +134,7 @@ export default function PrescriptionDetailScreen() {
         Alert.alert('오류', '알림 추가 중 문제가 발생했습니다.');
       }
     }
-  }, [addPickerTod, addSlot, prescriptionId, showToast]);
+  }, [addSlot, prescriptionId, showToast]);
 
   const handleRemoveSlot = useCallback(async (slot: SlotEditView) => {
     try {
@@ -246,37 +235,11 @@ export default function PrescriptionDetailScreen() {
         onClose={() => setPickerSlot(null)}
       />
 
-      <Modal
-        visible={addTodVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddTodVisible(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setAddTodVisible(false)} accessibilityLabel="닫기" />
-        <View style={styles.todSheet}>
-          <Text style={styles.todSheetTitle}>시간대 선택</Text>
-          {TOD_OPTIONS.map(tod => (
-            <Pressable
-              key={tod}
-              style={styles.todOption}
-              onPress={() => handleAddSlotTod(tod)}
-              accessibilityLabel={TIME_OF_DAY_LABEL[tod]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.todOptionTxt}>{TIME_OF_DAY_LABEL[tod]}</Text>
-            </Pressable>
-          ))}
-          <Pressable style={styles.todCancelBtn} onPress={() => setAddTodVisible(false)} accessibilityRole="button">
-            <Text style={styles.todCancelTxt}>취소</Text>
-          </Pressable>
-        </View>
-      </Modal>
-
       <TimePicker
-        visible={addPickerTod !== null}
-        initialTime={addPickerTod ? TOD_DEFAULT_TIME[addPickerTod] : '08:00:00'}
+        visible={addPickerVisible}
+        initialTime={DEFAULT_SLOT_TIME}
         onConfirm={handleAddSlotConfirm}
-        onClose={() => setAddPickerTod(null)}
+        onClose={() => setAddPickerVisible(false)}
       />
 
       <Modal
@@ -286,7 +249,7 @@ export default function PrescriptionDetailScreen() {
         onRequestClose={() => setPeriodSheetVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setPeriodSheetVisible(false)} accessibilityLabel="닫기" />
-        <View style={styles.periodSheet}>
+        <View style={[styles.periodSheet, { paddingBottom: sheetBottom }]}>
           <Text style={styles.periodSheetTitle}>복약 기간 수정</Text>
           <Text style={styles.periodSheetHint}>
             영양제처럼 계속 드시는 약은{'\n'}종료일을 길게 잡으세요
@@ -385,7 +348,7 @@ export default function PrescriptionDetailScreen() {
           slots={slots}
           isLoading={slotsLoading}
           onEditSlot={setPickerSlot}
-          onAddSlot={() => setAddTodVisible(true)}
+          onAddSlot={() => setAddPickerVisible(true)}
           onRemoveSlot={handleRemoveSlot}
         />
 
@@ -704,9 +667,6 @@ function SlotRow({ slot, isFirst, onEdit, onRemove }: SlotRowProps) {
             Number(slot.time.split(':')[1]),
           )}
         </Text>
-        <Text style={[styles.slotDayLabel, !slot.editable && styles.slotTimeMuted]}>
-          {label}
-        </Text>
       </View>
 
       <View style={styles.slotActions}>
@@ -888,7 +848,8 @@ const styles = StyleSheet.create({
   drugList: { gap: space.s8 },
   empty: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   rxDeleteBtn: {
-    marginTop: space.s8, paddingVertical: space.s14, borderRadius: radius.r12,
+    marginTop: space.s8, alignSelf: 'center',
+    paddingVertical: space.s14, paddingHorizontal: space.s32, borderRadius: radius.r12,
     borderWidth: 1, borderColor: colors.statusNegative,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -976,7 +937,6 @@ const styles = StyleSheet.create({
   slotActions: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   slotTime: { fontSize: scale(18), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.3 },
   slotTimeMuted: { color: colors.labelAssistive },
-  slotDayLabel: { fontSize: scale(12), color: colors.labelAlternative },
   slotEmpty: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', padding: space.s20 },
   deleteBtn: { padding: space.s6, borderRadius: radius.r8 },
   editBtn: {
@@ -998,22 +958,8 @@ const styles = StyleSheet.create({
   addSlotBtnBorder: { borderTopWidth: 1, borderTopColor: colors.line },
   addSlotBtnTxt: { fontSize: scale(13), fontWeight: '600', color: colors.primaryNormal },
 
-  // ToD modal
+  // Bottom-sheet shared (period sheet)
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-  todSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.bgNormal,
-    borderTopLeftRadius: radius.r20, borderTopRightRadius: radius.r20,
-    paddingTop: space.s24, paddingBottom: space.s40, paddingHorizontal: space.s24, gap: space.s4,
-  },
-  todSheetTitle: {
-    fontSize: scale(17), fontWeight: '700', color: colors.labelNormal,
-    textAlign: 'center', marginBottom: space.s16,
-  },
-  todOption: {
-    paddingVertical: space.s16, borderBottomWidth: 1, borderBottomColor: colors.line, alignItems: 'center',
-  },
-  todOptionTxt: { fontSize: scale(15), fontWeight: '600', color: colors.labelNormal },
   todCancelBtn: { paddingVertical: space.s16, alignItems: 'center', marginTop: space.s8 },
   todCancelTxt: { fontSize: scale(15), color: colors.labelAlternative },
 
@@ -1072,7 +1018,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: colors.bgNormal,
     borderTopLeftRadius: radius.r20, borderTopRightRadius: radius.r20,
-    paddingTop: space.s24, paddingBottom: space.s40, paddingHorizontal: space.s24, gap: space.s4,
+    paddingTop: space.s24, paddingHorizontal: space.s24, gap: space.s4,
   },
   periodSheetTitle: {
     fontSize: scale(17), fontWeight: '700', color: colors.labelNormal,

@@ -56,7 +56,7 @@ describe('DrugCard', () => {
     expect(getByLabelText('신뢰도 낮음')).toBeTruthy();
   });
 
-  it('shows unmatched warning for null kdCode OCR item', () => {
+  it('미매칭(null kdCode) 항목도 배너 없이 조용히 렌더', () => {
     const unmatchedItem: DrugListItem = {
       ...baseItem,
       id: 'unmatched-1',
@@ -64,9 +64,10 @@ describe('DrugCard', () => {
       confidence: 0.45,
       source: 'OCR_AUTO',
     };
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DrugCard item={unmatchedItem} onRemove={jest.fn()} />
     );
-    expect(getByText(/자동 확인되지 않았어요/)).toBeTruthy();
+    expect(getByText('암로디핀정 5mg')).toBeTruthy();
+    expect(queryByText(/자동 확인되지 않았어요/)).toBeNull();
   });
 });

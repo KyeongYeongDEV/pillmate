@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -10,34 +10,37 @@ import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import DaySection from '@/components/group/DaySection';
 import { safeBack } from '@/lib/router/safeBack';
+import { filterByDateRange, type DateRangeFilter } from '@/lib/activityDateFilter';
 import type { ActivityView } from '@/types/caregroup';
 import type { ActivityFeedItem } from '@/types/activity';
 
-type FilterTab = 'all' | 'dose' | 'rx' | 'ai';
-
-const TABS: { id: FilterTab; label: string }[] = [
-  { id: 'all',  label: '전체' },
-  { id: 'dose', label: '복약' },
-  { id: 'rx',   label: '약봉투' },
-  { id: 'ai',   label: 'AI' },
+const TABS: { id: DateRangeFilter; label: string }[] = [
+  { id: 'today', label: '오늘' },
+  { id: 'week',  label: '7일' },
+  { id: 'month', label: '30일' },
+  { id: 'custom', label: '기간' },
 ];
-
-const ACTIVITY_TYPE_BUCKETS: Record<FilterTab, string[]> = {
-  all: [],
-  dose: ['DOSE_TAKEN', 'DOSE_MISSED'],
-  rx:   ['PRESCRIPTION_ADDED'],
-  ai:   ['AI_INSIGHT', 'AI_REPORT'],
-};
 
 export default function ActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
-  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [activeRange, setActiveRange] = useState<DateRangeFilter>('week');
 
   const { data: feed = [], isLoading } = useGetRecentActivityQuery({ groupId });
   const { data: detail } = useGetGroupDetailQuery(groupId);
 
-  const filtered = useMemo(() => filterByTab(feed, activeTab), [feed, activeTab]);
+  const handleTabPress = useCallback((range: DateRangeFilter) => {
+    if (range === 'custom') {
+      Alert.alert('기간 선택', '사용자 정의 기간 선택은 추후 지원 예정이에요.');
+      return;
+    }
+    setActiveRange(range);
+  }, []);
+
+  const filtered = useMemo(
+    () => filterByDateRange(feed.map(toActivityView), activeRange),
+    [feed, activeRange],
+  );
   const grouped = useMemo(() => groupByDay(filtered), [filtered]);
 
   return (
@@ -57,12 +60,12 @@ export default function ActivityScreen() {
 
       <View style={styles.tabsRow}>
         {TABS.map(t => {
-          const on = t.id === activeTab;
+          const on = t.id === activeRange;
           return (
             <Pressable
               key={t.id}
               style={[styles.tab, on && styles.tabActive]}
-              onPress={() => setActiveTab(t.id)}
+              onPress={() => handleTabPress(t.id)}
               accessibilityRole="button"
             >
               <Text style={[styles.tabText, on && styles.tabTextActive]}>{t.label}</Text>
@@ -83,13 +86,6 @@ export default function ActivityScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function filterByTab(feed: ActivityFeedItem[], tab: FilterTab): ActivityView[] {
-  const items = feed.map(toActivityView);
-  if (tab === 'all') return items;
-  const allowed = new Set(ACTIVITY_TYPE_BUCKETS[tab]);
-  return items.filter(it => allowed.has(it.activityType));
 }
 
 function toActivityView(f: ActivityFeedItem): ActivityView {

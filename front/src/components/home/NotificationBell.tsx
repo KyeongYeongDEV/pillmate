@@ -9,8 +9,11 @@ import { scale, colors, radius, space } from '@/styles/tokens';
 const BADGE_MAX = 9;
 
 export default function NotificationBell() {
-  const { data = [] } = useGetNotificationsQuery();
-  const count = unreadCount(data);
+  const { count } = useGetNotificationsQuery(undefined, {
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    selectFromResult: ({ data }) => ({ count: unreadCount(data ?? []) }),
+  });
   return (
     <Pressable
       onPress={() => safePush('/notifications')}

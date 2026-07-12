@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { scale, colors, typography, space, radius, shadows } from '@/styles/tokens';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  addFromSearch, removeItem,
+  addManual, removeItem,
   addSlot, removeSlot, setSlotTime,
   setStartDate, setEndDate,
   setMemo, setSymptom, reset,
@@ -18,16 +18,16 @@ import { useRegisterPrescriptionMutation } from '@/store/slices/prescriptionApi'
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
 import TimePicker from '@/components/schedule/TimePicker';
 import DrugCard from '@/components/prescription/DrugCard';
-import DrugSearchModal from '@/components/prescription/DrugSearchModal';
 import DDIWarningCard from '@/components/prescription/DDIWarningCard';
 import DurationField from '@/components/prescription/DurationField';
 import type { RootState } from '@/store';
 import type {
-  PrescriptionTimeOfDay, DrugSearchResult,
   DrugListItem, PrescriptionSlotDraft, RegisterPrescriptionInput,
   InteractionWarning,
 } from '@/types/prescription';
 import { MFDS_SOURCE } from '@/lib/constants';
+import { deriveTimeOfDay } from '@/lib/prescription/timeOfDay';
+import { useSheetBottomPadding } from '@/hooks/useSheetBottomPadding';
 
 function validateRegisterInput(
   items: DrugListItem[], careGroupId: number | null,
@@ -76,25 +76,18 @@ function diffDaysInclusive(start: string, end: string): number {
   return Math.round(diff / 86_400_000) + 1;
 }
 
-const TOD_LABEL: Record<PrescriptionTimeOfDay, string> = {
-  MORNING: '아침',
-  NOON: '점심',
-  EVENING: '저녁',
-};
-
-const TOD_DEFAULT_TIME: Record<PrescriptionTimeOfDay, string> = {
-  MORNING: '08:00:00',
-  NOON: '12:30:00',
-  EVENING: '19:00:00',
-};
-
-const TOD_OPTIONS: PrescriptionTimeOfDay[] = ['MORNING', 'NOON', 'EVENING'];
+const DEFAULT_SLOT_TIME = '08:00:00';
 
 export default function PrescriptionReviewScreen() {
   const dispatch = useAppDispatch();
   const { items, prescriptionSlots, prescribedAt, startDate, endDate, imageKey, memo, symptom } =
     useAppSelector((s: RootState) => s.prescriptionFlow);
   const [label, setLabel] = useState('');
+  // placeholder 힌트만 — prefill 아님(값은 여전히 '') + 강제 아님. 미입력 시 label=null 전송, BE 가 스마트 기본값 부여.
+  const labelPlaceholder = useMemo(() => {
+    const now = new Date();
+    return `예: ${now.getMonth() + 1}월 ${now.getDate()}일 약봉투`;
+  }, []);
 
   const { data: groups = [] } = useGetMyGroupsQuery();
   const careGroupId = useMemo(() => {
@@ -104,10 +97,9 @@ export default function PrescriptionReviewScreen() {
 
   const [registerPrescription, { isLoading }] = useRegisterPrescriptionMutation();
 
-  const [searchVisible, setSearchVisible] = useState(false);
+  const [manualVisible, setManualVisible] = useState(false);
+  const [manualName, setManualName] = useState('');
   const [editingSlotUid, setEditingSlotUid] = useState<string | null>(null);
-  const [addTodPickerVisible, setAddTodPickerVisible] = useState(false);
-  const [pendingTod, setPendingTod] = useState<PrescriptionTimeOfDay | null>(null);
   const [addTimePickerVisible, setAddTimePickerVisible] = useState(false);
   const [ddiWarnings, setDdiWarnings] = useState<InteractionWarning[] | null>(null);
 
@@ -121,19 +113,35 @@ export default function PrescriptionReviewScreen() {
     return () => sub.remove();
   }, [ddiWarnings]);
 
+  // 화면 이탈 확정(헤더 뒤로가기/하드웨어 백/스와이프) 시 draft 정리 — 허브에 잔존 표시 방지.
+  // DDI 경고로 이탈이 막힌 동안은 unmount 자체가 발생하지 않으므로 여기서 건드릴 필요 없음.
+  useEffect(() => () => { dispatch(reset()); }, [dispatch]);
+
   const editingSlot = useMemo(
     () => prescriptionSlots.find(s => s.uid === editingSlotUid) ?? null,
     [prescriptionSlots, editingSlotUid],
   );
 
-  const handleDrugSelect = useCallback((drug: DrugSearchResult) => {
-    dispatch(addFromSearch({
-      kdCode: drug.kdCode,
-      nameRaw: drug.name,
-      matchedName: drug.name,
-      imageUrl: drug.imageUrl,
-    }));
-  }, [dispatch]);
+  const sortedSlots = useMemo(
+    () => [...prescriptionSlots].sort((a, b) => a.customTime.localeCompare(b.customTime)),
+    [prescriptionSlots],
+  );
+
+  const ddiSheetBottom = useSheetBottomPadding();
+  const footerBottom = useSheetBottomPadding(space.s16, space.s8);
+
+  const handleAddManual = useCallback(() => {
+    const name = manualName.trim();
+    if (!name) return;
+    dispatch(addManual({ nameRaw: name }));
+    setManualName('');
+    setManualVisible(false);
+  }, [dispatch, manualName]);
+
+  const handleCancelManual = useCallback(() => {
+    setManualName('');
+    setManualVisible(false);
+  }, []);
 
   const handleRemoveItem = useCallback((id: string) => {
     dispatch(removeItem(id));
@@ -152,17 +160,10 @@ export default function PrescriptionReviewScreen() {
     dispatch(removeSlot(uid));
   }, [dispatch]);
 
-  const handlePickTod = useCallback((tod: PrescriptionTimeOfDay) => {
-    setPendingTod(tod);
-    setAddTodPickerVisible(false);
-    setAddTimePickerVisible(true);
-  }, []);
-
   const handleAddSlotConfirm = useCallback((time: string) => {
-    if (pendingTod) dispatch(addSlot({ timeOfDay: pendingTod, customTime: time }));
+    dispatch(addSlot({ timeOfDay: deriveTimeOfDay(time), customTime: time }));
     setAddTimePickerVisible(false);
-    setPendingTod(null);
-  }, [dispatch, pendingTod]);
+  }, [dispatch]);
 
   const durationBase = startDate || prescribedAt || new Date().toISOString().slice(0, 10);
   const durationDays = endDate ? diffDaysInclusive(durationBase, endDate) : null;
@@ -223,7 +224,7 @@ export default function PrescriptionReviewScreen() {
         >
           <Text style={[styles.headerBtnTxt, ddiWarnings !== null && styles.headerBtnHidden]}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>약봉투 검토 · 등록</Text>
+        <Text style={styles.headerTitle}>약봉투 등록</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -237,7 +238,7 @@ export default function PrescriptionReviewScreen() {
         <View style={styles.labelCard}>
           <TextInput
             style={styles.labelInput}
-            placeholder="예: 내과 진료 처방"
+            placeholder={labelPlaceholder}
             placeholderTextColor={colors.labelAssistive}
             value={label}
             onChangeText={setLabel}
@@ -292,7 +293,7 @@ export default function PrescriptionReviewScreen() {
         <View style={styles.addRow}>
           <Pressable
             style={styles.addBtn}
-            onPress={() => setSearchVisible(true)}
+            onPress={() => router.push({ pathname: '/prescription/search', params: { mode: 'add' } } as any)}
             accessibilityLabel="약 검색으로 추가"
             accessibilityRole="button"
           >
@@ -300,7 +301,7 @@ export default function PrescriptionReviewScreen() {
           </Pressable>
           <Pressable
             style={styles.addBtn}
-            onPress={() => router.push('/prescription/manual' as any)}
+            onPress={() => setManualVisible(true)}
             accessibilityLabel="직접 입력으로 추가"
             accessibilityRole="button"
           >
@@ -312,15 +313,12 @@ export default function PrescriptionReviewScreen() {
         <SectionHeader title="알림 시간" />
 
         <View style={styles.slotsCard}>
-          {prescriptionSlots.map(slot => (
+          {sortedSlots.map(slot => (
             <View key={slot.uid} style={styles.slotRow}>
-              <View style={styles.slotLabelBadge}>
-                <Text style={styles.slotLabelTxt}>{TOD_LABEL[slot.timeOfDay]}</Text>
-              </View>
               <Pressable
                 style={styles.slotTimePill}
                 onPress={() => handleEditSlotTime(slot.uid)}
-                accessibilityLabel={`${TOD_LABEL[slot.timeOfDay]} 알림 시각 수정`}
+                accessibilityLabel={`${slot.customTime.slice(0, 5)} 알림 시각 수정`}
                 accessibilityRole="button"
               >
                 <Text style={styles.slotTimeTxt}>{slot.customTime.slice(0, 5)}</Text>
@@ -338,11 +336,11 @@ export default function PrescriptionReviewScreen() {
 
           <Pressable
             style={styles.addSlotBtn}
-            onPress={() => setAddTodPickerVisible(true)}
-            accessibilityLabel="알림 슬롯 추가"
+            onPress={() => setAddTimePickerVisible(true)}
+            accessibilityLabel="알림 시간 추가"
             accessibilityRole="button"
           >
-            <Text style={styles.addSlotTxt}>+ 슬롯 추가</Text>
+            <Text style={styles.addSlotTxt}>+ 시간 추가</Text>
           </Pressable>
         </View>
 
@@ -372,7 +370,7 @@ export default function PrescriptionReviewScreen() {
       </ScrollView>
 
       {/* 등록 버튼 */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: footerBottom }]}>
         <Pressable
           style={[styles.registerBtn, isLoading && styles.registerBtnDisabled]}
           onPress={handleRegister}
@@ -384,13 +382,38 @@ export default function PrescriptionReviewScreen() {
         </Pressable>
       </View>
 
-      {/* 약 검색 모달 */}
-      <DrugSearchModal
-        visible={searchVisible}
-        title="약 검색으로 추가"
-        onClose={() => setSearchVisible(false)}
-        onSelect={handleDrugSelect}
-      />
+      {/* 직접 입력 — 이름만 간단 입력 (검색 안 되는 약) */}
+      <Modal visible={manualVisible} transparent animationType="fade" onRequestClose={handleCancelManual}>
+        <Pressable style={styles.manualBackdrop} onPress={handleCancelManual}>
+          <Pressable style={styles.manualCard} onPress={() => {}}>
+            <Text style={styles.manualTitle}>약 이름 직접 입력</Text>
+            <TextInput
+              style={styles.manualInput}
+              placeholder="예: 타이레놀정 500mg"
+              placeholderTextColor={colors.labelAssistive}
+              value={manualName}
+              onChangeText={setManualName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleAddManual}
+            />
+            <View style={styles.manualBtnRow}>
+              <Pressable style={styles.manualCancelBtn} onPress={handleCancelManual} accessibilityLabel="취소" accessibilityRole="button">
+                <Text style={styles.manualCancelTxt}>취소</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.manualConfirmBtn, !manualName.trim() && styles.manualConfirmDisabled]}
+                onPress={handleAddManual}
+                disabled={!manualName.trim()}
+                accessibilityLabel="약 추가"
+                accessibilityRole="button"
+              >
+                <Text style={styles.manualConfirmTxt}>추가</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* 슬롯 시각 편집 TimePicker */}
       <TimePicker
@@ -400,49 +423,12 @@ export default function PrescriptionReviewScreen() {
         onClose={() => setEditingSlotUid(null)}
       />
 
-      {/* 슬롯 추가 — 시간대 선택 모달 */}
-      <Modal
-        visible={addTodPickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddTodPickerVisible(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setAddTodPickerVisible(false)}
-          accessibilityLabel="닫기"
-        />
-        <View style={styles.todSheet}>
-          <Text style={styles.todSheetTitle}>시간대 선택</Text>
-          {TOD_OPTIONS.map(tod => (
-            <Pressable
-              key={tod}
-              style={styles.todOption}
-              onPress={() => handlePickTod(tod)}
-              accessibilityLabel={TOD_LABEL[tod]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.todOptionTxt}>
-                {TOD_LABEL[tod]} <Text style={styles.todOptionTime}>({TOD_DEFAULT_TIME[tod].slice(0, 5)} 기본)</Text>
-              </Text>
-            </Pressable>
-          ))}
-          <Pressable
-            style={styles.todCancelBtn}
-            onPress={() => setAddTodPickerVisible(false)}
-            accessibilityRole="button"
-          >
-            <Text style={styles.todCancelTxt}>취소</Text>
-          </Pressable>
-        </View>
-      </Modal>
-
-      {/* 슬롯 추가 — 시각 선택 TimePicker */}
+      {/* 슬롯 추가 — 시각 직접 선택 TimePicker */}
       <TimePicker
         visible={addTimePickerVisible}
-        initialTime={pendingTod ? TOD_DEFAULT_TIME[pendingTod] : '08:00:00'}
+        initialTime={DEFAULT_SLOT_TIME}
         onConfirm={handleAddSlotConfirm}
-        onClose={() => { setAddTimePickerVisible(false); setPendingTod(null); }}
+        onClose={() => setAddTimePickerVisible(false)}
       />
 
       {/* DDI 병용금기 경고 모달 — 등록 성공 후 warnings 있을 때 */}
@@ -453,7 +439,7 @@ export default function PrescriptionReviewScreen() {
         onRequestClose={() => {/* 뒤로가기로 닫기 방지 — 반드시 확인 버튼 사용 */}}
       >
         <View style={styles.ddiBackdrop}>
-          <View style={styles.ddiSheet}>
+          <View style={[styles.ddiSheet, { paddingBottom: ddiSheetBottom }]}>
             <View style={styles.ddiTitleRow}>
               <Text style={styles.ddiTitle}>
                 ⚠️ 약물 상호작용 주의 ({ddiWarnings?.length ?? 0}건)
@@ -541,12 +527,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s16, paddingVertical: space.s10,
     borderBottomWidth: 1, borderBottomColor: colors.line,
   },
-  slotLabelBadge: {
-    width: scale(44), paddingVertical: space.s4,
-    borderRadius: radius.r8, backgroundColor: colors.fillNormal,
-    alignItems: 'center',
-  },
-  slotLabelTxt: { ...typography.label2, color: colors.labelNeutral, fontWeight: '700' },
   slotTimePill: {
     flex: 1, paddingVertical: space.s8, paddingHorizontal: space.s12,
     borderRadius: radius.r8, backgroundColor: colors.bgAlt,
@@ -590,39 +570,13 @@ const styles = StyleSheet.create({
   },
   registerBtnDisabled: { opacity: 0.6 },
   registerBtnTxt: { ...typography.headline1, color: '#fff' },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  todSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.bgNormal,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingTop: space.s24, paddingBottom: space.s40,
-    paddingHorizontal: space.s24, gap: space.s4,
-  },
-  todSheetTitle: {
-    fontSize: scale(17), fontWeight: '700', color: colors.labelNormal,
-    textAlign: 'center', marginBottom: space.s16,
-  },
-  todOption: {
-    paddingVertical: space.s16,
-    borderBottomWidth: 1, borderBottomColor: colors.line,
-    alignItems: 'center',
-  },
-  todOptionTxt: { ...typography.body1n, color: colors.labelNormal, fontWeight: '600' },
-  todOptionTime: { ...typography.caption1, color: colors.labelAssistive, fontWeight: '400' },
-  todCancelBtn: {
-    paddingVertical: space.s16, alignItems: 'center', marginTop: space.s8,
-  },
-  todCancelTxt: { ...typography.body1n, color: colors.labelAlternative },
   ddiBackdrop: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end',
   },
   ddiSheet: {
     backgroundColor: colors.bgNormal,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '85%', paddingBottom: space.s40,
+    maxHeight: '85%',
   },
   ddiTitleRow: {
     paddingHorizontal: space.s20, paddingTop: space.s24, paddingBottom: space.s12,
@@ -665,4 +619,30 @@ const styles = StyleSheet.create({
     ...typography.body2r, color: colors.labelNormal,
     paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(44),
   },
+  manualBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center', padding: space.s24,
+  },
+  manualCard: {
+    width: '100%', backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    padding: space.s20, gap: space.s16, ...shadows.medium,
+  },
+  manualTitle: { ...typography.headline2, color: colors.labelNormal },
+  manualInput: {
+    ...typography.body1n, color: colors.labelNormal,
+    paddingHorizontal: space.s16, paddingVertical: space.s12, minHeight: scale(48),
+    borderRadius: radius.r12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bgAlt,
+  },
+  manualBtnRow: { flexDirection: 'row', gap: space.s10 },
+  manualCancelBtn: {
+    flex: 1, paddingVertical: space.s14, borderRadius: radius.r12,
+    borderWidth: 1, borderColor: colors.line, alignItems: 'center',
+  },
+  manualCancelTxt: { ...typography.label2, color: colors.labelAlternative, fontWeight: '700' },
+  manualConfirmBtn: {
+    flex: 1, paddingVertical: space.s14, borderRadius: radius.r12,
+    backgroundColor: colors.primaryNormal, alignItems: 'center',
+  },
+  manualConfirmDisabled: { opacity: 0.5 },
+  manualConfirmTxt: { ...typography.label2, color: '#fff', fontWeight: '700' },
 });

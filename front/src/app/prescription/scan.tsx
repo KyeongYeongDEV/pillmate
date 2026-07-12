@@ -6,12 +6,14 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { useAppDispatch } from '@/store/hooks';
-import { addFromExtract, setImageKey } from '@/store/slices/prescriptionFlowSlice';
+import { addFromExtract, setImageKey, reset, setPrescribedAt } from '@/store/slices/prescriptionFlowSlice';
+import { getKstToday } from '@/utils/calendarUtils';
 import { prescriptionApi } from '@/lib/api/prescription';
 import { safeBack } from '@/lib/router/safeBack';
 import OcrProgress from '@/components/prescription/OcrProgress';
 import { useOcrInFlight } from '@/hooks/useOcrInFlight';
 import { downsizeForOcr } from '@/lib/imageProcessing';
+import { PII_BLOCK_ALERT_TITLE, PII_BLOCK_ALERT_MESSAGE } from '@/lib/constants';
 
 export default function ScanScreen() {
   const { galleryUri } = useLocalSearchParams<{ galleryUri?: string }>();
@@ -34,10 +36,21 @@ export default function ScanScreen() {
     return uploadResp.objectKey;
   }, [dispatch]);
 
-  const runOcrExtract = useCallback(async (imageKey: string) => {
+  const runOcrExtract = useCallback(async (imageKey: string): Promise<boolean> => {
     const prescribedAt = new Date().toISOString().slice(0, 10);
     const extractResp = await prescriptionApi.ocrExtract({ prescribedAt, imageKey });
+    if (extractResp.piiDetected) {
+      Alert.alert(PII_BLOCK_ALERT_TITLE, PII_BLOCK_ALERT_MESSAGE);
+      return false;
+    }
     dispatch(addFromExtract({ ...extractResp, prescribedAt, imageKey }));
+    return true;
+  }, [dispatch]);
+
+  const handleManual = useCallback(() => {
+    dispatch(reset());
+    dispatch(setPrescribedAt(getKstToday()));
+    router.push('/prescription/review' as any);
   }, [dispatch]);
 
   const processImage = useCallback(
@@ -53,8 +66,9 @@ export default function ScanScreen() {
       setOcrError(false);
       try {
         const imageKey = await uploadImage(uri);
-        await runOcrExtract(imageKey);
+        const proceed = await runOcrExtract(imageKey);
         if (attemptRef.current !== attempt) return; // 사용자가 대기 중 취소
+        if (!proceed) { setLoading(false); return; } // 주민번호 감지 — 재촬영 유도
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/prescription/review' as any);
       } catch {
@@ -84,8 +98,9 @@ export default function ScanScreen() {
     setOcrError(false);
     setLoading(true);
     try {
-      await runOcrExtract(lastProcessed.imageKey);
+      const proceed = await runOcrExtract(lastProcessed.imageKey);
       if (attemptRef.current !== attempt) return;
+      if (!proceed) { setLoading(false); return; } // 주민번호 감지 — 재촬영 유도
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/prescription/review' as any);
     } catch {
@@ -181,7 +196,7 @@ export default function ScanScreen() {
         <Pressable onPress={handleShutter} style={styles.shutter} accessibilityLabel="촬영" accessibilityRole="button">
           <View style={styles.shutterInner} />
         </Pressable>
-        <Pressable onPress={() => router.push('/prescription/manual' as any)} style={styles.manualBtn} accessibilityLabel="수동 입력" accessibilityRole="button">
+        <Pressable onPress={handleManual} style={styles.manualBtn} accessibilityLabel="수동 입력" accessibilityRole="button">
           <Text style={styles.manualIcon}>✏️</Text>
           <Text style={styles.manualTxt}>수동</Text>
         </Pressable>

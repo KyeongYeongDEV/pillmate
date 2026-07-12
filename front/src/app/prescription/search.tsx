@@ -15,15 +15,20 @@ import RecentSearchChips from '@/components/search/RecentSearchChips';
 import { colors, space, radius, typography } from '@/styles/tokens';
 import type { DrugSearchResult } from '@/types/prescription';
 import { safeBack } from '@/lib/router/safeBack';
+import { RECENT_SEARCHES_DISPLAY_COUNT } from '@/lib/constants';
+import {
+  getRecentSearches, saveRecentSearches, clearRecentSearches, pushRecentSearch,
+} from '@/lib/search/recentSearches';
 
 const MFDS_SOURCE = '식품의약품안전처 의약품안전나라';
-const INITIAL_RECENT = ['메트포르민', '오메가-3', '글리메피리드'];
 const TOAST_DURATION_MS = 1800;
 
 export default function DrugSearchScreen() {
   const dispatch = useAppDispatch();
   const existingItems = useAppSelector(s => s.prescriptionFlow.items);
-  const { q: initialQ } = useLocalSearchParams<{ q?: string }>();
+  const { q: initialQ, mode } = useLocalSearchParams<{ q?: string; mode?: string }>();
+  // mode=add(review "검색으로 추가")만 + 추가 가능. 그 외(기본, 등록 허브 "약 검색하기")는 순수 조회 전용.
+  const isAddMode = mode === 'add';
 
   const addedKdCodes = useMemo(
     () => new Set(existingItems.map(i => i.kdCode).filter((k): k is string => k !== null)),
@@ -32,16 +37,30 @@ export default function DrugSearchScreen() {
 
   const [query, setQuery] = useState(initialQ ?? '');
   const [debouncedQuery, setDebouncedQuery] = useState(initialQ ?? '');
-  const [recentSearches, setRecentSearches] = useState<string[]>(INITIAL_RECENT);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastDrug, setToastDrug] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    getRecentSearches().then(setRecentSearches);
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(timer);
   }, [query]);
+
+  // 결과 카드와 실제로 상호작용(상세보기/추가)한 시점 = 유효 검색 확정 — 중간 타이핑은 기록 안 함
+  const recordSearch = useCallback((term: string) => {
+    if (!term.trim()) return;
+    setRecentSearches(prev => {
+      const next = pushRecentSearch(prev, term);
+      saveRecentSearches(next);
+      return next;
+    });
+  }, []);
 
   const { data: results = [], isFetching } = useSearchDrugsQuery(debouncedQuery, {
     skip: !debouncedQuery,
@@ -69,12 +88,14 @@ export default function DrugSearchScreen() {
     }));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showToast(item.name);
+    recordSearch(debouncedQuery);
     // Stay on search screen — user can add multiple drugs
-  }, [dispatch, addedKdCodes, showToast]);
+  }, [dispatch, addedKdCodes, showToast, recordSearch, debouncedQuery]);
 
   const handleDetail = useCallback((item: DrugSearchResult) => {
+    recordSearch(debouncedQuery);
     router.push(`/drug/${item.kdCode}`);
-  }, []);
+  }, [recordSearch, debouncedQuery]);
 
   const handleClear = useCallback(() => setQuery(''), []);
 
@@ -83,12 +104,23 @@ export default function DrugSearchScreen() {
   }, []);
 
   const handleRecentRemove = useCallback((term: string) => {
-    setRecentSearches(prev => prev.filter(r => r !== term));
+    setRecentSearches(prev => {
+      const next = prev.filter(r => r !== term);
+      saveRecentSearches(next);
+      return next;
+    });
   }, []);
 
-  const handleClearAllRecent = useCallback(() => setRecentSearches([]), []);
+  const handleClearAllRecent = useCallback(() => {
+    setRecentSearches([]);
+    clearRecentSearches();
+  }, []);
 
   const showResults = !!debouncedQuery;
+  const displayedRecent = useMemo(
+    () => recentSearches.slice(0, RECENT_SEARCHES_DISPLAY_COUNT),
+    [recentSearches],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -145,8 +177,8 @@ export default function DrugSearchScreen() {
               <SearchResultCard
                 item={item}
                 query={debouncedQuery}
-                alreadyAdded={addedKdCodes.has(item.kdCode)}
-                onAdd={handleAdd}
+                alreadyAdded={isAddMode && addedKdCodes.has(item.kdCode)}
+                onAdd={isAddMode ? handleAdd : undefined}
                 onDetail={handleDetail}
               />
             )}
@@ -158,7 +190,7 @@ export default function DrugSearchScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <RecentSearchChips
-              items={recentSearches}
+              items={displayedRecent}
               onSelect={handleRecentSelect}
               onRemove={handleRecentRemove}
               onClearAll={handleClearAllRecent}

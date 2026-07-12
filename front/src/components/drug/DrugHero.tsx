@@ -16,7 +16,7 @@ export default function DrugHero({ name, company, ingredient, form, imageUrl }: 
   return (
     <View style={styles.hero}>
       {imageUrl
-        ? <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+        ? <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
         : <PillVisual size={scale(86)} colorA="#a5c8f5" colorB="#d0e8ff" />}
       <Text style={styles.name}>{name}</Text>
       {meta ? <Text style={styles.sub}>{meta}</Text> : null}
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: space.s16, marginTop: space.s12, marginBottom: space.s24,
   },
-  image: { width: scale(180), height: scale(180), borderRadius: radius.r16, backgroundColor: colors.bgNormal },
+  image: { width: scale(240), height: scale(180), borderRadius: radius.r16, backgroundColor: colors.bgNormal },
   name: {
     ...typography.headline1, fontWeight: '700', color: colors.labelNormal,
     marginTop: space.s14, textAlign: 'center', letterSpacing: -0.018,

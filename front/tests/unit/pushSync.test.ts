@@ -22,9 +22,9 @@ describe('handlePushReceived — 포그라운드 푸시 cache invalidate', () =>
     expect(types).toContain('caregroupApi/invalidateTags');
   });
 
-  it('비-DOSE 타입 → notification 만 무효화', () => {
+  it('비-DOSE·비-GROUP 타입 → notification 만 무효화', () => {
     const dispatch = jest.fn();
-    handlePushReceived(notif('GROUP_INVITE'), dispatch);
+    handlePushReceived(notif('SYSTEM_ANNOUNCEMENT'), dispatch);
     const types = dispatch.mock.calls.map(c => c[0]?.type);
     expect(types).toEqual(['notificationApi/invalidateTags']);
   });
@@ -34,5 +34,21 @@ describe('handlePushReceived — 포그라운드 푸시 cache invalidate', () =>
     handlePushReceived(notif(), dispatch);
     const types = dispatch.mock.calls.map(c => c[0]?.type);
     expect(types).toEqual(['notificationApi/invalidateTags']);
+  });
+
+  it('GROUP_MEMBER_JOINED → caregroup(Group/GroupDetail) + notification 무효화(activity 는 아님)', () => {
+    const dispatch = jest.fn();
+    handlePushReceived(notif('GROUP_MEMBER_JOINED'), dispatch);
+    const types = dispatch.mock.calls.map(c => c[0]?.type);
+    expect(types).toContain('caregroupApi/invalidateTags');
+    expect(types).toContain('notificationApi/invalidateTags');
+    expect(types).not.toContain('activityApi/invalidateTags');
+  });
+
+  it('GROUP_INVITE 등 다른 GROUP_* 타입도 동일 분기(prefix 매칭)', () => {
+    const dispatch = jest.fn();
+    handlePushReceived(notif('GROUP_INVITE'), dispatch);
+    const types = dispatch.mock.calls.map(c => c[0]?.type);
+    expect(types).toContain('caregroupApi/invalidateTags');
   });
 });

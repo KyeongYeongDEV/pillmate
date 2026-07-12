@@ -28,6 +28,8 @@ export default function LoginScreen() {
   const isLoading = kakaoLoading || exchangeLoading;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const toastOpacity = useState(() => new Animated.Value(0))[0];
+  // Pressable style function-form 은 New Arch 에서 무시되는 재현 케이스 확인됨 — 정적 스타일 + 로컬 state 로 pressed 처리
+  const [kakaoPressed, setKakaoPressed] = useState(false);
 
   async function loginWithCode(code: string, uri: string) {
     try {
@@ -111,28 +113,27 @@ export default function LoginScreen() {
               </View>
               <View style={styles.badgeTail} />
             </View>
-            {/* 외곽 View가 배경/모서리 담당 — Pressable 자체 배경 미렌더 회피 */}
+            {/* 외곽 View가 높이/배경/모서리 담당 — Pressable 은 stretch 만(가설2), style 은 정적 배열(가설1) */}
             <View style={styles.kakaoBtnBg}>
               <Pressable
-                style={({ pressed }) => [styles.kakaoBtnInner, pressed && styles.kakaoBtnPressed]}
+                style={styles.kakaoBtnInner}
                 onPress={handleKakaoPress}
+                onPressIn={() => setKakaoPressed(true)}
+                onPressOut={() => setKakaoPressed(false)}
                 disabled={isLoading}
                 accessibilityLabel="카카오로 시작"
                 accessibilityRole="button"
               >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={KAKAO_TEXT} />
-                ) : (
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: space.s10,
-                  }}>
-                    <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
-                    <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
-                  </View>
-                )}
+                <View style={[styles.kakaoBtnContent, kakaoPressed && styles.kakaoBtnPressed]}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color={KAKAO_TEXT} />
+                  ) : (
+                    <>
+                      <KakaoTalkIcon size={scale(20)} color={KAKAO_TEXT} />
+                      <Text style={styles.kakaoBtnTxt}>카카오로 시작</Text>
+                    </>
+                  )}
+                </View>
               </Pressable>
             </View>
           </View>
@@ -211,11 +212,15 @@ const styles = StyleSheet.create({
   kakaoBtnBg: {
     backgroundColor: KAKAO_YELLOW, borderRadius: radius.r14,
     overflow: 'hidden', // ripple 영역 clip + 둥근 모서리
+    height: scale(45), // 높이는 outer View 에 명시 — Pressable 내부 minHeight 무시 재발 방지. 사용자 피드백(88→60→45, 단계적 축소)
+    justifyContent: 'center',
   },
   kakaoBtnInner: {
-    width: '100%', minHeight: scale(112),
-    paddingVertical: space.s32,
+    flex: 1, alignSelf: 'stretch', width: '100%',
     alignItems: 'center', justifyContent: 'center',
+  },
+  kakaoBtnContent: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s10,
   },
   kakaoBtnPressed: { opacity: 0.85 },
   kakaoBtnTxt: { fontSize: scale(16), fontWeight: '700', color: KAKAO_TEXT },

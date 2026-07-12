@@ -22,7 +22,7 @@ jest.mock('@/store/slices/activityApi', () => ({
 jest.mock('@/store/slices/caregroupApi', () => ({ useGetMyGroupsQuery: jest.fn() }));
 
 jest.mock('@/store/slices/prescriptionApi', () => ({
-  useGetLatestWithInsightQuery: () => ({ data: null }),
+  useGetActiveWithInsightsQuery: () => ({ data: [] }),
 }));
 
 jest.mock('@/store/slices/scheduleApi', () => ({
@@ -40,11 +40,17 @@ jest.mock('@/components/home/NotificationBell', () => () => null);
 
 const mockGroups = useGetMyGroupsQuery as jest.Mock;
 
+// selectFromResult 옵션을 실제로 실행해 컴포넌트의 파생 로직까지 검증
+function mockGroupsData(groups: Array<{ groupId: number; pinned: boolean }>) {
+  mockGroups.mockImplementation((_arg: unknown, options?: { selectFromResult?: (r: { data: typeof groups }) => unknown }) =>
+    options?.selectFromResult ? options.selectFromResult({ data: groups }) : { data: groups });
+}
+
 describe('HomeScreen 고정 그룹 알림 헤더 링크', () => {
   beforeEach(() => (router.push as jest.Mock).mockClear());
 
   it('핀 그룹 있으면 "알림 보러가기" 노출 + 그룹 activity 라우팅', () => {
-    mockGroups.mockReturnValue({ data: [{ groupId: 7, pinned: true }] });
+    mockGroupsData([{ groupId: 7, pinned: true }]);
     render(<HomeScreen />);
 
     const link = screen.getByLabelText('알림 보러가기');
@@ -58,7 +64,7 @@ describe('HomeScreen 고정 그룹 알림 헤더 링크', () => {
   });
 
   it('핀 그룹 없으면 "알림 보러가기" 미노출', () => {
-    mockGroups.mockReturnValue({ data: [{ groupId: 7, pinned: false }] });
+    mockGroupsData([{ groupId: 7, pinned: false }]);
     render(<HomeScreen />);
     expect(screen.queryByLabelText('알림 보러가기')).toBeNull();
   });

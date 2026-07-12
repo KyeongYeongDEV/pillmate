@@ -67,6 +67,10 @@ export default function DrugDetailScreen() {
           imageUrl={drug.imageUrl}
         />
 
+        {drug.className?.trim() ? (
+          <DrugInfoSection title="분류" text={drug.className} />
+        ) : null}
+
         <DrugInfoSection title="효능·효과" text={drug.efficacy} />
         <DrugInfoSection title="용법·용량" text={drug.dosage} />
         <DrugInfoSection title="사용상의 주의사항" text={drug.sideEffect} />

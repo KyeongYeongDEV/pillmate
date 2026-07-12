@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -24,13 +24,30 @@ const ROLE_TINTS: Record<string, string> = {
   GUARDIAN: colors.guardianBlue,
 };
 
+// 자동 최신화 — 진입/포커스 시 refetch + 7초 polling(시뮬레이터 등 FCM 미지원 기기 대비, 실기기는 FCM 즉시 반영). pull-to-refresh(#50)·FCM invalidate 와 병행.
+const AUTO_REFRESH_OPTIONS = {
+  refetchOnMountOrArgChange: true,
+  refetchOnFocus: true,
+  pollingInterval: 7_000,
+} as const;
+
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
   const dispatch = useDispatch();
-  const { data: detail, isLoading, isError } = useGetGroupDetailQuery(groupId);
+  const { data: detail, isLoading, isError, refetch: refetchDetail } = useGetGroupDetailQuery(groupId, AUTO_REFRESH_OPTIONS);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
   const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchDetail();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchDetail]);
   const expiresAt = detail?.inviteCode?.expiresAt ?? null;
   const { remainingSeconds, isExpired } = useCountdown(expiresAt);
   const inviteActive = !!detail?.inviteCode && !isExpired;
@@ -92,7 +109,12 @@ export default function GroupDetailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <Header title="케어 그룹" />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryBase} />}
+      >
         {/* 그룹 카드 */}
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
@@ -144,7 +166,7 @@ export default function GroupDetailScreen() {
         </View>
 
         {/* 구성원 */}
-        <Text style={styles.sectionLabel}>구성원 · {detail.members.length}</Text>
+        <Text style={styles.sectionLabel}>구성원 {detail.members.length}명</Text>
         <View style={styles.listCard}>
           {detail.members.map((m, i) => (
             <MemberCard
@@ -214,9 +236,7 @@ function Header({ title }: { title: string }) {
         <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
-      <Pressable accessibilityLabel="그룹 설정" accessibilityRole="button" hitSlop={8}>
-        <Feather name="settings" size={scale(20)} color={colors.labelNormal} />
-      </Pressable>
+      <View style={{ width: scale(24) }} />
     </View>
   );
 }

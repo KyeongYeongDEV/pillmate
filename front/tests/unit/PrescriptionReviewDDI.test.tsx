@@ -54,7 +54,6 @@ jest.mock('@/store/slices/prescriptionFlowSlice', () => ({
 }));
 
 jest.mock('@/components/schedule/TimePicker', () => () => null);
-jest.mock('@/components/prescription/DrugSearchModal', () => () => null);
 jest.mock('@/components/prescription/DrugCard', () => () => null);
 jest.mock('@/lib/constants', () => ({ MFDS_SOURCE: '식품의약품안전처' }));
 

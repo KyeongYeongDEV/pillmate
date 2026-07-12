@@ -14,6 +14,26 @@ import type {
   UploadUrlResponse,
 } from '@/types/prescription';
 import type { AliasLog } from '@/hooks/usePrescriptionReview';
+import { scheduleApiSlice } from './scheduleApi';
+import { doseLogApiSlice } from './doseLogApi';
+
+// 처방전 등록/OCR 성공 시 홈 '오늘의 복약'(Schedule/DoseLog/Activity)·월간 스케줄을 cross-slice 무효화
+function invalidateScheduleAfterRegister(dispatch: (action: any) => void) {
+  dispatch(scheduleApiSlice.util.invalidateTags(['Schedule', 'MonthSchedule']));
+  dispatch(doseLogApiSlice.util.invalidateTags(['Schedule', 'DoseLog', 'Activity']));
+}
+
+async function onRegisterFulfilled(
+  _arg: unknown,
+  { dispatch, queryFulfilled }: { dispatch: (action: any) => void; queryFulfilled: Promise<unknown> },
+) {
+  try {
+    await queryFulfilled;
+    invalidateScheduleAfterRegister(dispatch);
+  } catch {
+    /* 등록 실패 시 invalidate 스킵 */
+  }
+}
 
 export const prescriptionApiSlice = createApi({
   reducerPath: 'prescriptionApi',
@@ -35,12 +55,18 @@ export const prescriptionApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<LatestPrescriptionWithInsight>) => response?.data ?? null,
       providesTags: ['Prescription'],
     }),
+    getActiveWithInsights: build.query<LatestPrescriptionWithInsight[], void>({
+      query: () => '/prescriptions/active-with-insights',
+      transformResponse: (response: ApiEnvelope<LatestPrescriptionWithInsight[]>) => response?.data ?? [],
+      providesTags: ['Prescription'],
+    }),
     issueUploadUrl: build.mutation<UploadUrlResponse, UploadUrlInput>({
       query: (body) => ({ url: '/prescriptions/upload-url', method: 'POST', body }),
     }),
     ocr: build.mutation<RegisterPrescriptionResponse, OcrInput>({
       query: (body) => ({ url: '/prescriptions/ocr', method: 'POST', body }),
       invalidatesTags: ['Prescription'],
+      onQueryStarted: onRegisterFulfilled,
     }),
     getCandidates: build.query<Candidate[], number>({
       query: (id) => `/prescriptions/${id}/candidates`,
@@ -66,6 +92,7 @@ export const prescriptionApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<RegisterPrescriptionResponse>) =>
         response?.data ?? { prescriptionId: 0, ocrStatus: 'MANUAL' as const, items: [], warnings: [] },
       invalidatesTags: ['Prescription'],
+      onQueryStarted: onRegisterFulfilled,
     }),
     updatePrescription: build.mutation<void, { id: number; label?: string | null; memo?: string | null }>({
       query: ({ id, ...body }) => ({
@@ -95,6 +122,7 @@ export const {
   useGetPrescriptionsQuery,
   useGetPrescriptionDetailQuery,
   useGetLatestWithInsightQuery,
+  useGetActiveWithInsightsQuery,
   useIssueUploadUrlMutation,
   useOcrMutation,
   useOcrExtractMutation,

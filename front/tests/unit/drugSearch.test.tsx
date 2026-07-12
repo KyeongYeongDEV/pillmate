@@ -92,6 +92,23 @@ describe('SearchResultCard', () => {
     fireEvent.press(screen.getByTestId(`add-btn-${DRUG.kdCode}`));
     expect(onAdd).toHaveBeenCalledWith(DRUG);
   });
+
+  it('onAdd 미전달(순수 조회 전용) → + 추가 버튼 미노출', () => {
+    render(<SearchResultCard item={DRUG} query="" onDetail={jest.fn()} />);
+    expect(screen.queryByTestId(`add-btn-${DRUG.kdCode}`)).toBeNull();
+  });
+
+  it('onAdd 미전달 → alreadyAdded=true 여도 "추가됨" 뱃지 미노출', () => {
+    render(<SearchResultCard item={DRUG} query="" alreadyAdded onDetail={jest.fn()} />);
+    expect(screen.queryByText('추가됨')).toBeNull();
+  });
+
+  it('onAdd 미전달 상태에서도 상세보기(onDetail)는 정상 호출', () => {
+    const onDetail = jest.fn();
+    render(<SearchResultCard item={DRUG} query="" onDetail={onDetail} />);
+    fireEvent.press(screen.getByTestId(`detail-btn-${DRUG.kdCode}`));
+    expect(onDetail).toHaveBeenCalledWith(DRUG);
+  });
 });
 
 // ── RecentSearchChips ─────────────────────────────────────────────────

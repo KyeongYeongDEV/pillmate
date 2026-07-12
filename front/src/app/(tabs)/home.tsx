@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable,
 } from 'react-native';
@@ -10,14 +10,15 @@ import { colors, typography, space, radius, shadows, scale } from '@/styles/toke
 import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
-import { useGetLatestWithInsightQuery } from '@/store/slices/prescriptionApi';
+import { useGetActiveWithInsightsQuery } from '@/store/slices/prescriptionApi';
 import { buildInsightSubtitle } from '@/lib/prescriptionInsight';
 import { useSlotPress } from '@/hooks/useSlotPress';
+import { useRotatingIndex } from '@/hooks/useRotatingIndex';
 import type { RootState } from '@/store';
 import TimeSlotCards, { TimeSlot } from '@/components/home/TimeSlotCards';
 import InsightCard from '@/components/home/InsightCard';
 import FamilyActivityFeed from '@/components/home/FamilyActivityFeed';
-import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
+import { MFDS_SOURCE, ACTIVITY_POLL_INTERVAL_MS, INSIGHT_ROTATE_INTERVAL_MS } from '@/lib/constants';
 import { useGetDayScheduleQuery } from '@/store/slices/scheduleApi';
 import {
   medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, STREAK_DISPLAY_MIN,
@@ -31,21 +32,27 @@ import NotificationBell from '@/components/home/NotificationBell';
 export default function HomeScreen() {
   const today = getKstToday();
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
-  const [showInsight, setShowInsight] = useState(true);
   const handleSettingsPress = useMemo(() => () => router.push('/(tabs)/my' as any), []);
   const pressSlot = useSlotPress();
 
-  const { data: groups = [] } = useGetMyGroupsQuery();
-  const pinnedGroupId = useMemo(() => groups.find(g => g.pinned)?.groupId ?? undefined, [groups]);
+  const { pinnedGroupId } = useGetMyGroupsQuery(undefined, {
+    selectFromResult: ({ data }) => ({ pinnedGroupId: data?.find(g => g.pinned)?.groupId }),
+  });
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
     useGetRecentActivityQuery(
       pinnedGroupId != null ? { groupId: pinnedGroupId, limit: 10 } : skipToken,
-      { pollingInterval: ACTIVITY_POLL_INTERVAL_MS },
+      {
+        pollingInterval: ACTIVITY_POLL_INTERVAL_MS,
+        refetchOnFocus: true,
+        refetchOnMountOrArgChange: true,
+      },
     );
 
-  const { data: latestInsight } = useGetLatestWithInsightQuery();
-  const insight = latestInsight?.insights?.[0] ?? null;
+  const { data: insightList = [] } = useGetActiveWithInsightsQuery();
+  const rotateIndex = useRotatingIndex(insightList.length, INSIGHT_ROTATE_INTERVAL_MS);
+  const currentInsight = insightList[rotateIndex] ?? null;
+  const insight = currentInsight?.insights?.[0] ?? null;
 
   const { data: scheduleDay } = useGetDayScheduleQuery(today);
   const rawSlots = scheduleDay?.slots ?? [];
@@ -62,15 +69,6 @@ export default function HomeScreen() {
   const handleSlotPress = useMemo(
     () => (slot: TimeSlot) => pressSlot(slot.doseLogIds, slot.state),
     [pressSlot],
-  );
-
-  const handlePrescriptionPress = useMemo(
-    () => (slot: TimeSlot) => {
-      if (slot.prescriptionId) {
-        router.push({ pathname: '/prescription/[id]', params: { id: String(slot.prescriptionId) } } as any);
-      }
-    },
-    [],
   );
 
   const now = new Date();
@@ -123,23 +121,21 @@ export default function HomeScreen() {
           <TimeSlotCards
             slots={slots}
             onSlotPress={handleSlotPress}
-            onPrescriptionPress={handlePrescriptionPress}
           />
         </View>
 
-        {/* AI 인사이트 — BE insight 있을 때만 노출 (없거나 실패 시 숨김) */}
-        {showInsight && insight && latestInsight && (
+        {/* AI 인사이트 — 복약중 처방전 인사이트를 10초마다 순환. 없으면 숨김 */}
+        {insight && currentInsight && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>AI 인사이트</Text>
             <InsightCard
               severity={insight.severity}
               message={insight.title}
               detail={insight.description}
-              subtitle={buildInsightSubtitle(latestInsight.prescribedAt, latestInsight.drugCount)}
-              onClose={() => setShowInsight(false)}
+              subtitle={buildInsightSubtitle(currentInsight.prescribedAt, currentInsight.drugCount)}
               onDetail={() => router.push({
                 pathname: '/prescription/[id]',
-                params: { id: String(latestInsight.prescriptionId) },
+                params: { id: String(currentInsight.prescriptionId) },
               } as any)}
             />
           </View>
@@ -152,11 +148,11 @@ export default function HomeScreen() {
             {pinnedGroupId != null && (
               <Pressable
                 onPress={() => router.push({ pathname: '/group/[id]', params: { id: String(pinnedGroupId) } } as any)}
-                accessibilityLabel="알림 보러가기"
+                accessibilityLabel="그룹으로 이동"
                 accessibilityRole="button"
                 hitSlop={8}
               >
-                <Text style={styles.sectionLink}>알림 보러가기 ›</Text>
+                <Text style={styles.sectionLink}>그룹으로 이동 ›</Text>
               </Pressable>
             )}
           </View>

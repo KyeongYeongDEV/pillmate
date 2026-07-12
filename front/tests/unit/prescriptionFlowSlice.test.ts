@@ -189,18 +189,14 @@ describe('prescriptionFlowSlice', () => {
   });
 
   describe('addManual', () => {
-    it('adds a MANUAL_INPUT item with null kdCode', () => {
-      const state = prescriptionFlowReducer(initialState, addManual({
-        nameRaw: '영양제',
-        doseAmount: 2,
-        doseUnit: '정',
-        frequency: 1,
-        durationDays: 30,
-      }));
+    it('adds a MANUAL_INPUT item with null kdCode and default dose', () => {
+      const state = prescriptionFlowReducer(initialState, addManual({ nameRaw: '영양제' }));
       expect(state.items).toHaveLength(1);
       expect(state.items[0].source).toBe('MANUAL_INPUT');
       expect(state.items[0].kdCode).toBeNull();
-      expect(state.items[0].doseAmount).toBe(2);
+      expect(state.items[0].nameRaw).toBe('영양제');
+      expect(state.items[0].matchedName).toBeNull();
+      expect(state.items[0].doseAmount).toBe(1);
     });
   });
 
@@ -276,9 +272,7 @@ describe('prescriptionFlowSlice', () => {
 
   describe('updateDoseAmount', () => {
     it('updates dose amount', () => {
-      let state = prescriptionFlowReducer(initialState, addManual({
-        nameRaw: '테스트', doseAmount: 1, doseUnit: '정', frequency: 1, durationDays: 7,
-      }));
+      let state = prescriptionFlowReducer(initialState, addManual({ nameRaw: '테스트' }));
       const id = state.items[0].id;
       state = prescriptionFlowReducer(state, updateDoseAmount({ id, amount: 3 }));
       expect(state.items[0].doseAmount).toBe(3);

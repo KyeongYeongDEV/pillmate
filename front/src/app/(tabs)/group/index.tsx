@@ -22,10 +22,6 @@ export default function GroupScreen() {
     () => groups.filter(g => g.groupId !== pinnedGroup?.groupId),
     [groups, pinnedGroup],
   );
-  const totalUnread = useMemo(
-    () => groups.reduce((sum, g) => sum + g.unreadCount, 0),
-    [groups],
-  );
 
   const handleCardPress = useCallback((groupId: number) => {
     router.push(`/group/${groupId}` as any);
@@ -48,7 +44,6 @@ export default function GroupScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <TabHeader
         title="그룹"
-        subtitle={`${groups.length}개 · 안 읽음 ${totalUnread}`}
         right={
           <Pressable
             onPress={() => router.push('/group/scan' as any)}

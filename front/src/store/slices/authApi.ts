@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import { saveToken, setCurrentUserId } from '@/lib/auth/storage';
+import { saveToken, setCurrentUserId, saveDisplayName } from '@/lib/auth/storage';
 import { resolveDevUserId } from '@/lib/auth/devUserId';
 
 export interface KakaoLoginRequest {
@@ -47,6 +47,7 @@ export const authApiSlice = createApi({
           const { data } = await queryFulfilled;
           if (data.token) await saveToken(data.token);
           if (data.userId) await setCurrentUserId(data.userId);
+          if (data.profile?.name) await saveDisplayName(data.profile.name);
         } catch {
           // 로그인 실패 — 컴포넌트에서 처리
         }
@@ -62,6 +63,7 @@ export const authApiSlice = createApi({
           const { data } = await queryFulfilled;
           if (data.token) await saveToken(data.token);
           if (data.userId) await setCurrentUserId(data.userId);
+          if (data.profile?.name) await saveDisplayName(data.profile.name);
         } catch {
           // 교환 실패 — 컴포넌트에서 처리
         }

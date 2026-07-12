@@ -79,13 +79,11 @@ function DrugMatchCard({ item, onReplace, onRemove }: Props) {
         )}
       </View>
 
-      {/* 낮음/인식실패 경고 배너 */}
-      {(isLow || isUnmatched) && (
+      {/* 낮은 신뢰도 경고 배너 */}
+      {isLow && (
         <View style={styles.warnBanner}>
           <Text style={styles.warnText}>
-            {isUnmatched
-              ? '식약처 DB에서 자동 확인되지 않았어요. [다른 약 검색]으로 직접 지정하거나 삭제해 주세요.'
-              : '매칭 신뢰도가 낮아요. 약이 맞는지 확인해 주세요. 약사·의사와 상담 권장.'}
+            매칭 신뢰도가 낮아요. 약이 맞는지 확인해 주세요. 약사·의사와 상담 권장.
           </Text>
         </View>
       )}
@@ -123,7 +121,7 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12 },
-  thumb: { width: scale(52), height: scale(52), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumb: { width: scale(68), height: scale(52), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   pillEmoji: { fontSize: scale(24) },
   nameBlock: { flex: 1 },

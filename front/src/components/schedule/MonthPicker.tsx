@@ -3,6 +3,7 @@ import {
   Modal, View, Text, Pressable, StyleSheet,
 } from 'react-native';
 import { scale, colors, space, radius } from '@/styles/tokens';
+import { useSheetBottomPadding } from '@/hooks/useSheetBottomPadding';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월',
                 '7월', '8월', '9월', '10월', '11월', '12월'];
@@ -21,6 +22,7 @@ export interface MonthPickerProps {
 export default function MonthPicker({ visible, year, month, onConfirm, onClose }: MonthPickerProps) {
   const [pickerYear, setPickerYear] = useState(year);
   const [pickerMonth, setPickerMonth] = useState(month);
+  const sheetBottom = useSheetBottomPadding();
 
   const handleOpen = () => { setPickerYear(year); setPickerMonth(month); };
 
@@ -36,7 +38,7 @@ export default function MonthPicker({ visible, year, month, onConfirm, onClose }
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="닫기" />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: sheetBottom }]}>
         <View style={styles.yearRow}>
           <Pressable
             onPress={decrementYear}
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
     bottom: 0, left: 0, right: 0,
     backgroundColor: colors.bgNormal,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingTop: space.s20, paddingBottom: space.s40,
+    paddingTop: space.s20,
     paddingHorizontal: space.s20,
   },
   yearRow: {

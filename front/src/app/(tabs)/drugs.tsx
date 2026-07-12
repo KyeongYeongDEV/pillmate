@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import DrugSearchBar from '@/components/search/DrugSearchBar';
 import PillVisual from '@/components/common/PillVisual';
 import { useSearchDrugsQuery } from '@/store/slices/drugApi';
@@ -68,6 +69,9 @@ export default function DrugsScreen() {
 }
 
 function DrugRow({ item }: { item: DrugSearchResult }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = !!item.imageUrl && !imgFailed;
+
   return (
     <Pressable
       testID={`drug-row-${item.kdCode}`}
@@ -76,7 +80,19 @@ function DrugRow({ item }: { item: DrugSearchResult }) {
       accessibilityLabel={`${item.name} 상세 보기`}
       accessibilityRole="button"
     >
-      <PillVisual size={scale(40)} colorA="#a5c8f5" colorB="#d0e8ff" />
+      {showImage ? (
+        <Image
+          source={{ uri: item.imageUrl! }}
+          style={styles.thumb}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          placeholder={{ blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' }}
+          onError={() => setImgFailed(true)}
+          accessibilityLabel="약 이미지"
+        />
+      ) : (
+        <PillVisual size={scale(40)} colorA="#a5c8f5" colorB="#d0e8ff" />
+      )}
       <View style={styles.rowInfo}>
         <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.rowSub} numberOfLines={1}>{item.ingredient ?? item.form ?? '—'}</Text>
@@ -100,6 +116,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgNormal, borderRadius: radius.r14, padding: space.s14,
     borderWidth: 1, borderColor: colors.line,
   },
+  thumb: { width: scale(56), height: scale(42), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { ...typography.body2n, color: colors.labelNormal, fontWeight: '700', letterSpacing: -0.012 },
   rowSub: { ...typography.caption1, color: colors.labelAlternative, marginTop: 1 },

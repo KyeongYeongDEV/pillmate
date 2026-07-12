@@ -3,6 +3,7 @@ import type {
   DrugListItem, DrugSource, InteractionWarning, OcrItem, OcrStatus,
   OcrExtractItem, PrescriptionSlotDraft, PrescriptionTimeOfDay,
 } from '@/types/prescription';
+import { deriveTimeOfDay } from '@/lib/prescription/timeOfDay';
 
 function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -148,20 +149,19 @@ const prescriptionFlowSlice = createSlice({
         decision: 'AUTO',
       });
     },
-    addManual(state, action: PayloadAction<{ nameRaw: string; doseAmount: number; doseUnit: string; frequency: number; durationDays: number }>) {
-      const input = action.payload;
+    addManual(state, action: PayloadAction<{ nameRaw: string }>) {
       state.items.push({
         id: `manual-${Date.now()}-${Math.random()}`,
         source: 'MANUAL_INPUT',
         kdCode: null,
-        nameRaw: input.nameRaw,
+        nameRaw: action.payload.nameRaw,
         matchedName: null,
         imageUrl: null,
         confidence: null,
-        doseAmount: input.doseAmount,
-        doseUnit: input.doseUnit,
-        frequency: input.frequency,
-        durationDays: input.durationDays,
+        doseAmount: 1,
+        doseUnit: '정',
+        frequency: 1,
+        durationDays: 7,
         decision: 'MANUAL',
       });
     },
@@ -174,7 +174,10 @@ const prescriptionFlowSlice = createSlice({
     },
     setSlotTime(state, action: PayloadAction<{ uid: string; customTime: string }>) {
       const slot = state.prescriptionSlots.find(s => s.uid === action.payload.uid);
-      if (slot) slot.customTime = action.payload.customTime;
+      if (slot) {
+        slot.customTime = action.payload.customTime;
+        slot.timeOfDay = deriveTimeOfDay(action.payload.customTime);
+      }
     },
     updateSlotCustomTime(state, action: PayloadAction<{ timeOfDay: PrescriptionTimeOfDay; customTime: string }>) {
       for (const slot of state.prescriptionSlots) {

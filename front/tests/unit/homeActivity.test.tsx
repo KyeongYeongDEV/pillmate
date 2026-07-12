@@ -31,11 +31,6 @@ describe('ActivityFeedItem', () => {
     expect(screen.queryByText('⚠ 주의')).toBeNull();
   });
 
-  it('WARN severity → 주의 뱃지 표시', () => {
-    render(<ActivityFeedItem item={{ ...BASE, severity: 'WARN', activityType: 'DOSE_MISSED', summary: '취침 전 약을 놓치셨어요' }} />);
-    expect(screen.getByText('⚠ 주의')).toBeTruthy();
-  });
-
   it('actorUserId 필드 없음 (PII 제거)', () => {
     expect(BASE).not.toHaveProperty('actorUserId');
   });

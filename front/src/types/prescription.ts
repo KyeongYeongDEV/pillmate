@@ -164,6 +164,7 @@ export interface DrugDetail {
   kdCode: string;
   name: string;
   ingredient: string | null;
+  className?: string | null;
   efficacy: string | null;
   dosage: string | null;
   sideEffect: string | null;
@@ -211,6 +212,7 @@ export interface OcrExtractItem {
 
 export interface OcrExtractResponse {
   items: OcrExtractItem[];
+  piiDetected?: boolean;
 }
 
 // ── 처방전 단위 슬롯 (알림 시각, 약별 아님) ────────────────────────────────

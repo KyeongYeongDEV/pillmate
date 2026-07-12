@@ -11,7 +11,6 @@ interface Props {
 }
 
 function MemberCard({ member, isFirst, onPress }: Props) {
-  const isPatient = member.role === '환자';
   return (
     <Pressable
       style={[styles.row, !isFirst && styles.borderTop]}
@@ -28,12 +27,6 @@ function MemberCard({ member, isFirst, onPress }: Props) {
           <Text style={styles.name}>{member.name}</Text>
           {member.isMe && <View style={styles.meBadge}><Text style={styles.meBadgeText}>나</Text></View>}
         </View>
-        <Text style={styles.sub}>{member.sub}</Text>
-      </View>
-      <View style={[styles.roleBadge, isPatient ? styles.patientBadge : styles.guardianBadge]}>
-        <Text style={[styles.roleText, isPatient ? styles.patientText : styles.guardianText]}>
-          {member.role}
-        </Text>
       </View>
     </Pressable>
   );
@@ -60,11 +53,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.fillStrong, borderRadius: radius.r4,
   },
   meBadgeText: { fontSize: scale(10), color: colors.labelAlternative, fontWeight: '600' },
-  sub: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 1 },
-  roleBadge: { paddingHorizontal: space.s10, paddingVertical: 4, borderRadius: radius.r6 },
-  patientBadge: { backgroundColor: colors.orange95 },
-  guardianBadge: { backgroundColor: colors.blue95 },
-  roleText: { fontSize: scale(11), fontWeight: '600' },
-  patientText: { color: colors.orange40 },
-  guardianText: { color: colors.primaryNormal },
 });

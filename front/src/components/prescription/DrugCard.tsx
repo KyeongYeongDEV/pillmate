@@ -73,15 +73,6 @@ function DrugCard({ item, onRemove }: Props) {
         </View>
       </View>
 
-      {/* 미매칭 경고 */}
-      {isUnmatched && (
-        <View style={styles.unmatchedBanner}>
-          <Text style={styles.unmatchedText}>
-            ⚠️ 식약처 DB에서 자동 확인되지 않았어요. 약사·의사와 상담하세요.
-          </Text>
-        </View>
-      )}
-
       {/* 삭제 */}
       <Pressable onPress={handleRemove} style={styles.removeBtn} accessibilityLabel="약 삭제" accessibilityRole="button">
         <Text style={styles.removeTxt}>삭제</Text>
@@ -100,7 +91,7 @@ const styles = StyleSheet.create({
     ...shadows.small,
   },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12 },
-  thumbnail: { width: scale(56), height: scale(56), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
+  thumbnail: { width: scale(72), height: scale(56), borderRadius: radius.r8, backgroundColor: colors.bgAlt },
   thumbnailPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   pillEmoji: { fontSize: scale(28) },
   nameBlock: { flex: 1 },
@@ -115,12 +106,6 @@ const styles = StyleSheet.create({
   warnIcon: { fontSize: scale(14) },
   conf: { ...typography.caption1, color: colors.statusPositive, fontWeight: '700' },
   confLow: { color: colors.statusNegative },
-  unmatchedBanner: {
-    backgroundColor: '#FFFBE6',
-    borderRadius: radius.r8,
-    padding: space.s8,
-  },
-  unmatchedText: { ...typography.caption1, color: colors.labelNeutral },
   removeBtn: { alignSelf: 'flex-end' },
   removeTxt: { ...typography.label2, color: colors.statusNegative },
 });

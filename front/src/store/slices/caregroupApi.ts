@@ -10,6 +10,8 @@ export interface CreateGroupResponse {
   inviteCode?: string;
 }
 
+const JOIN_TIMEOUT_MS = 10_000;
+
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
@@ -60,6 +62,11 @@ export const caregroupApiSlice = createApi({
       query: (groupId) => ({ url: `/groups/${groupId}/membership`, method: 'DELETE' }),
       invalidatesTags: ['Group'],
     }),
+    joinGroup: build.mutation<number, string>({
+      query: (code) => ({ url: `/groups/join/${code}`, method: 'POST', timeout: JOIN_TIMEOUT_MS }),
+      transformResponse: (response: ApiEnvelope<{ groupId: number }>) => response?.data?.groupId ?? 0,
+      invalidatesTags: ['Group'],
+    }),
   }),
 });
 
@@ -71,5 +78,6 @@ export const {
   useIssueInviteCodeMutation,
   useCreateGroupMutation,
   useLeaveGroupMutation,
+  useJoinGroupMutation,
 } = caregroupApiSlice;
 

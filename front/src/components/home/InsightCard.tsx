@@ -22,8 +22,7 @@ interface InsightCardProps {
 }
 
 // severity prop kept for API compatibility; visual is uniform per design
-function InsightCard({ message, detail, subtitle, onClose, onDetail }: InsightCardProps) {
-  const handleClose = useCallback(() => onClose?.(), [onClose]);
+function InsightCard({ message, detail, subtitle, onDetail }: InsightCardProps) {
   const handleDetail = useCallback(() => onDetail?.(), [onDetail]);
 
   return (
@@ -45,19 +44,9 @@ function InsightCard({ message, detail, subtitle, onClose, onDetail }: InsightCa
               onPress={handleDetail}
               style={styles.btnPrimary}
               accessibilityRole="button"
-              accessibilityLabel="자세히 보기"
+              accessibilityLabel="해당 약봉투 상세로 바로가기"
             >
-              <Text style={styles.btnPrimaryText}>알림 조정</Text>
-            </Pressable>
-          )}
-          {onClose && (
-            <Pressable
-              onPress={handleClose}
-              style={styles.btnSecondary}
-              accessibilityRole="button"
-              accessibilityLabel="AI 분석 카드 닫기"
-            >
-              <Text style={styles.btnSecondaryText}>나중에</Text>
+              <Text style={styles.btnPrimaryText}>바로가기</Text>
             </Pressable>
           )}
         </View>

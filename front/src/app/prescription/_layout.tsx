@@ -9,7 +9,6 @@ export default function PrescriptionLayout() {
       <Stack.Screen name="camera" />
       <Stack.Screen name="confirm" />
       <Stack.Screen name="result/[id]" />
-      <Stack.Screen name="manual" />
     </Stack>
   );
 }

@@ -7,33 +7,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { scale, colors, space, radius, typography } from '@/styles/tokens';
-import { API_BASE_URL } from '@/lib/api/client';
-import { getToken, getCurrentUserId } from '@/lib/auth/storage';
-import type { ApiEnvelope } from '@/lib/api/client';
+import { useJoinGroupMutation } from '@/store/slices/caregroupApi';
+import { joinGroupErrorMessage } from '@/lib/caregroup/joinError';
 import { safeBack } from '@/lib/router/safeBack';
 
 const INVITE_CODE_LEN = 6;
 
 export default function JoinGroupScreen() {
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinGroup, { isLoading: loading }] = useJoinGroupMutation();
 
   const canSubmit = code.trim().length === INVITE_CODE_LEN && !loading;
 
   const handleJoin = useCallback(async () => {
     if (!canSubmit) return;
-    setLoading(true);
     setError(null);
     try {
-      await joinGroup(code.trim().toUpperCase());
+      await joinGroup(code.trim().toUpperCase()).unwrap();
       safeBack('/(tabs)/group');
-    } catch (e: any) {
-      setError(e?.message ?? '그룹 참여에 실패했어요');
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      setError(joinGroupErrorMessage(e));
     }
-  }, [code, canSubmit]);
+  }, [code, canSubmit, joinGroup]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -83,37 +79,6 @@ export default function JoinGroupScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
-
-const JOIN_TIMEOUT_MS = 10_000;
-
-async function joinGroup(code: string): Promise<void> {
-  const token = await getToken();
-  const userId = await getCurrentUserId();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (userId != null) headers['X-User-Id'] = String(userId);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), JOIN_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${API_BASE_URL}/groups/join/${code}`, {
-      method: 'POST',
-      headers,
-      signal: controller.signal,
-    });
-    const envelope: ApiEnvelope<unknown> = await res.json();
-    if (!res.ok) {
-      if (res.status === 410) throw new Error('만료되었거나 잘못된 코드예요');
-      if (res.status === 404) throw new Error('초대 코드를 찾을 수 없어요');
-      throw new Error(envelope?.error?.message ?? '초대 코드가 올바르지 않아요');
-    }
-  } catch (e: any) {
-    if (e?.name === 'AbortError') throw new Error('연결 시간이 초과됐어요. 네트워크를 확인해주세요');
-    throw e;
-  } finally {
-    clearTimeout(timeoutId);
-  }
 }
 
 const styles = StyleSheet.create({

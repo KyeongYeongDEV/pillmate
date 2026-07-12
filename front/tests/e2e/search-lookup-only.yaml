@@ -1,0 +1,15 @@
+appId: com.pillmate.app
+---
+- launchApp
+- tapOn: "약봉투"
+- tapOn: "약봉투 등록하기"
+- assertVisible: "내 약봉투 등록"
+- tapOn: "약 검색하기"
+- inputText: "암로디핀"
+- assertVisible:
+    text: "검색 결과.*"
+- assertNotVisible:
+    text: ".* 추가$"
+- assertVisible:
+    text: ".* 상세 보기$"
+- takeScreenshot: lookup-only-no-add-button

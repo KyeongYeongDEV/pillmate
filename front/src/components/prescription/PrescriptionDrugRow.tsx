@@ -54,6 +54,7 @@ function DrugVisual({ drug }: { drug: PrescriptionDetailDrug }) {
       <Image
         source={{ uri: drug.imageUrl }}
         style={styles.drugImg}
+        resizeMode="contain"
         accessibilityLabel="약 이미지"
         onError={() => setImgFailed(true)}
       />
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   rawName: { fontSize: scale(12), color: colors.labelAssistive },
   dosage: { fontSize: scale(13), color: colors.labelNeutral, marginTop: space.s4 },
   drugImg: {
-    width: VISUAL_SIZE, height: VISUAL_SIZE,
+    width: scale(38), height: scale(28),
     borderRadius: radius.r8, backgroundColor: colors.fillNormal,
   },
 });

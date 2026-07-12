@@ -6,16 +6,16 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { scale, colors, space, radius, typography } from '@/styles/tokens';
-import { API_BASE_URL } from '@/lib/api/client';
-import { getToken, getCurrentUserId } from '@/lib/auth/storage';
+import { useJoinGroupMutation } from '@/store/slices/caregroupApi';
+import { joinGroupErrorMessage } from '@/lib/caregroup/joinError';
 import { extractInviteCode } from '@/lib/inviteCode';
 import { safeBack } from '@/lib/router/safeBack';
-import type { ApiEnvelope } from '@/lib/api/client';
 
 export default function ScanGroupQrScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinGroup] = useJoinGroupMutation();
 
   const handleScanned = useCallback(
     async ({ data }: { data: string }) => {
@@ -29,15 +29,15 @@ export default function ScanGroupQrScreen() {
         return;
       }
       try {
-        const groupId = await joinGroup(code);
+        const groupId = await joinGroup(code).unwrap();
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace(`/group/${groupId}` as any);
-      } catch (e: any) {
-        setError(e?.message ?? '가입 실패');
+      } catch (e) {
+        setError(joinGroupErrorMessage(e));
         setTimeout(() => setScanned(false), 1500);
       }
     },
-    [scanned],
+    [scanned, joinGroup],
   );
 
   if (!permission) {
@@ -120,21 +120,6 @@ function Header() {
       <View style={{ width: scale(22) }} />
     </View>
   );
-}
-
-async function joinGroup(code: string): Promise<number> {
-  const token = await getToken();
-  const userId = await getCurrentUserId();
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (userId != null) headers['X-User-Id'] = String(userId);
-
-  const res = await fetch(`${API_BASE_URL}/groups/join/${code}`, { method: 'POST', headers });
-  const envelope: ApiEnvelope<{ groupId: number }> = await res.json();
-  if (!res.ok) {
-    throw new Error(envelope?.error?.message ?? '초대 코드가 올바르지 않아요');
-  }
-  return envelope.data?.groupId ?? 0;
 }
 
 const styles = StyleSheet.create({
