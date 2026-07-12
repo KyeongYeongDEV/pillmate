@@ -4,7 +4,14 @@
 # 사전조건: back/.env.prod (gitignored) 에 실 시크릿 기입. .env.prod.example 참고.
 
 # YAML anchor — app-blue / app-green 공통 정의
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-app-prod: &app-prod
+  logging: *default-logging
   build:
     context: ./app_server
     dockerfile: Dockerfile
@@ -86,6 +93,7 @@ services:
       context: ./caddy
       dockerfile: Dockerfile
     container_name: pillmate-caddy
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"

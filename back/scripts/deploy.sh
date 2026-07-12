@@ -88,9 +88,10 @@ write_caddyfile() {
             window 1s
         }
     }
+    respond /api/v1/actuator/* 403
     reverse_proxy pillmate-app-%s:8080
 }\n' "$color" > "$CADDYFILE"
-    log "Caddyfile → app-$color (rate_limit 유지)"
+    log "Caddyfile → app-$color (rate_limit 유지, actuator 외부차단 유지)"
 }
 
 # Caddy 무중단 reload
@@ -130,6 +131,7 @@ first_deploy() {
         $COMPOSE stop app-blue
         exit 1
     fi
+    docker image prune -f >/dev/null 2>&1 || true  # dangling 즉시 정리 (블루그린 이미지 누적 방지)
     log "✓ First deploy complete. Active=blue"
 }
 
@@ -197,6 +199,7 @@ deploy() {
     $COMPOSE build ai-server
     $COMPOSE up -d --no-deps ai-server
 
+    docker image prune -f >/dev/null 2>&1 || true  # dangling 즉시 정리 (블루그린 이미지 누적 방지)
     log "✓ Deployment complete. Active=$new_color"
 }
 
