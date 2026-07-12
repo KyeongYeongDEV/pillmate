@@ -7,11 +7,11 @@
 #    그 템플릿에도 반드시 유지되어야 한다 (누락 시 계층① 엣지 방어가 사라짐).
 
 {
-    email {env.ACME_EMAIL}
+    email {$ACME_EMAIL}
     order rate_limit before basicauth
 }
 
-{env.DOMAIN} {
+{$DOMAIN} {
     rate_limit {
         # 일반 요청 per-IP 40r/s (정상 사용자 여유, 볼류메트릭 flood 차단)
         zone per_ip {
@@ -29,5 +29,8 @@
             window 1s
         }
     }
+    # 보안감사 2026-07-12: actuator 외부 전체 차단. 배포 헬스체크(deploy.sh wait_healthy)는
+    # docker inspect + 컨테이너 내부 curl localhost:8080 직접호출이라 Caddy 를 경유하지 않음 → 전체 차단 안전.
+    respond /api/v1/actuator/* 403
     reverse_proxy pillmate-app-blue:8080
 }

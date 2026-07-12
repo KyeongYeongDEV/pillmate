@@ -68,11 +68,11 @@ active_color() {
 write_caddyfile() {
     local color="$1"
     printf '{
-    email {env.ACME_EMAIL}
+    email {$ACME_EMAIL}
     order rate_limit before basicauth
 }
 
-{env.DOMAIN} {
+{$DOMAIN} {
     rate_limit {
         zone per_ip {
             key {remote_host}
