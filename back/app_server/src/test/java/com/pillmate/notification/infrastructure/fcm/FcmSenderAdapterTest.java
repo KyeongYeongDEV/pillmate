@@ -91,6 +91,61 @@ class FcmSenderAdapterTest {
                 .doesNotThrowAnyException();
     }
 
+    // ─── T-BE-FCM-ANDROID-CONFIG: AndroidConfig 채널/priority ────────────────
+
+    private NotificationCommand commandWithType(String type) {
+        Map<String, String> data = type == null
+                ? Map.of("route", "/home")
+                : Map.of("route", "/home", "type", type);
+        return new NotificationCommand(1L, 7L, "fcm-token-abcdef", "제목", "본문", data);
+    }
+
+    private Message sentMessageFor(NotificationCommand command) throws Exception {
+        given(messagingProvider.get()).willReturn(Optional.of(firebaseMessaging));
+        given(firebaseMessaging.send(any(Message.class))).willReturn("msg-id-1");
+        adapter().send(command);
+        ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
+        verify(firebaseMessaging).send(captor.capture());
+        return captor.getValue();
+    }
+
+    private Object androidConfigOf(Message message) {
+        return org.springframework.test.util.ReflectionTestUtils.getField(message, "androidConfig");
+    }
+
+    private String channelIdOf(Object androidConfig) {
+        Object notification = org.springframework.test.util.ReflectionTestUtils.getField(androidConfig, "notification");
+        return (String) org.springframework.test.util.ReflectionTestUtils.getField(notification, "channelId");
+    }
+
+    @Test
+    @DisplayName("type=DOSE_REMINDER → channel 'dose-reminder' + priority HIGH")
+    void toMessage_doseReminderType_usesDoseReminderChannelHighPriority() throws Exception {
+        Message message = sentMessageFor(commandWithType("DOSE_REMINDER"));
+
+        Object config = androidConfigOf(message);
+        assertThat(config).isNotNull();
+        assertThat(String.valueOf(org.springframework.test.util.ReflectionTestUtils.getField(config, "priority")))
+                .isEqualToIgnoringCase("high");
+        assertThat(channelIdOf(config)).isEqualTo("dose-reminder");
+    }
+
+    @Test
+    @DisplayName("type=DOSE_TAKEN(그 외 전부) → channel 'group-activity'")
+    void toMessage_otherType_usesGroupActivityChannel() throws Exception {
+        Message message = sentMessageFor(commandWithType("DOSE_TAKEN"));
+
+        assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("group-activity");
+    }
+
+    @Test
+    @DisplayName("type 키 없음 → channel 'group-activity' fallback")
+    void toMessage_missingType_fallsBackToGroupActivity() throws Exception {
+        Message message = sentMessageFor(commandWithType(null));
+
+        assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("group-activity");
+    }
+
     // ─── T-BE-NOTIFICATION-BATCH: sendAll(sendEach 배치) ─────────────────────
 
     private NotificationCommand command(Long notificationId, String token) {

@@ -100,6 +100,7 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(cmd.recipientUserId()).isEqualTo(MEMBER_ID);
         assertThat(cmd.recipientPushToken()).isEqualTo("ExponentPushToken[abc]");
         assertThat(cmd.data()).containsEntry("route", "/group/" + GROUP_ID);
+        assertThat(cmd.data()).containsEntry("type", "DOSE_TAKEN");
     }
 
     @Test

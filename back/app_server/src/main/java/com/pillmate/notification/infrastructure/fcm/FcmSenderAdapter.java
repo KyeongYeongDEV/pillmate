@@ -1,5 +1,7 @@
 package com.pillmate.notification.infrastructure.fcm;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -28,6 +30,11 @@ import java.util.Optional;
 public class FcmSenderAdapter implements NotificationSenderPort {
 
     private static final int FCM_BATCH_LIMIT = 500;
+    // FE NotificationsBootstrap 채널 ID 와 문자열 일치 (FE-Dev 합의)
+    private static final String CHANNEL_DOSE_REMINDER = "dose-reminder";
+    private static final String CHANNEL_GROUP_ACTIVITY = "group-activity";
+    private static final String DATA_KEY_TYPE = "type";
+    private static final String TYPE_DOSE_REMINDER = "DOSE_REMINDER";
 
     private final FirebaseMessagingProvider messagingProvider;
     private final Counter sentCounter;
@@ -105,6 +112,8 @@ public class FcmSenderAdapter implements NotificationSenderPort {
             if (responses.get(i).isSuccessful()) {
                 sentCounter.increment();
                 sentIds.add(chunk.get(i).notificationId());
+                log.info("[FCM] sent recipient={} messageId={}",
+                        chunk.get(i).recipientUserId(), responses.get(i).getMessageId());
             } else {
                 failedCounter.increment();
                 logBatchItemFailure(chunk.get(i), responses.get(i));
@@ -140,8 +149,24 @@ public class FcmSenderAdapter implements NotificationSenderPort {
                         .setTitle(command.title())
                         .setBody(command.body())
                         .build())
+                .setAndroidConfig(buildAndroidConfig(command))
                 .putAllData(command.data() == null ? Map.of() : command.data())
                 .build();
+    }
+
+    // 킬드 상태 전달 보장(priority HIGH) + FE 채널 분리(리마인더/그룹활동)
+    private AndroidConfig buildAndroidConfig(NotificationCommand command) {
+        return AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .setNotification(AndroidNotification.builder()
+                        .setChannelId(resolveChannelId(command.data()))
+                        .build())
+                .build();
+    }
+
+    private String resolveChannelId(Map<String, String> data) {
+        String type = data == null ? null : data.get(DATA_KEY_TYPE);
+        return TYPE_DOSE_REMINDER.equals(type) ? CHANNEL_DOSE_REMINDER : CHANNEL_GROUP_ACTIVITY;
     }
 
     private boolean isBlankToken(String token) {
