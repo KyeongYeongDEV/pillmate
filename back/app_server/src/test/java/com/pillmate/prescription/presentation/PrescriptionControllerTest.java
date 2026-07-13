@@ -174,6 +174,34 @@ class PrescriptionControllerTest {
     }
 
     @Test
+    @DisplayName("T-BE-SOLO-NOGROUP: schedule.careGroupId null(솔로 사용자) → 400 아닌 200 등록 허용")
+    void postRegister_whenScheduleCareGroupIdNull_returns200() throws Exception {
+        given(registerPrescriptionService.register(any()))
+                .willReturn(new RegisterPrescriptionResponse(
+                        88L, OcrStatus.MANUAL,
+                        List.of(new RegisteredDrugItem(
+                                null, null, "타이레놀", null, null, null))));
+
+        RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(
+                LocalDate.of(2026, 7, 13),
+                null,
+                List.of(new RegisterPrescriptionRequest.Item(
+                        null, "타이레놀", new BigDecimal("1.00"), "정", 3, 7, null)),
+                new RegisterPrescriptionRequest.ScheduleSpecRequest(
+                        null,
+                        List.of(new RegisterPrescriptionRequest.SlotRequest("MORNING", null)),
+                        null, null),
+                null, null, null);
+
+        mockMvc.perform(post("/prescriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-User-Id", "2")
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.prescriptionId").value(88));
+    }
+
+    @Test
     @DisplayName("POST /prescriptions items 비어있으면 400")
     void postRegister_returns400_whenItemsEmpty() throws Exception {
         RegisterPrescriptionRequest req = new RegisterPrescriptionRequest(

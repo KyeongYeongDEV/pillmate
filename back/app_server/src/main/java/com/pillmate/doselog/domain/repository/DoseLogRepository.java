@@ -17,4 +17,6 @@ public interface DoseLogRepository {
     boolean existsByScheduleIdAndScheduledAtInRange(Long scheduleId, Instant fromInclusive, Instant toExclusive);
     List<DoseLog> findByScheduleIdAndStatusFrom(Long scheduleId, DoseStatus status, Instant fromInclusive);
     List<DoseLog> findTakenNotGroupNotifiedBetween(Instant fromInclusive, Instant toInclusive);
+    List<DoseLog> findPendingNotRemindedBetween(Instant fromInclusive, Instant toInclusive);
+    int markRemindedIfPending(Long doseLogId, Instant now);
 }

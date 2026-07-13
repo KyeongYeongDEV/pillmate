@@ -75,6 +75,60 @@ class UpdateScheduleUseCaseTest {
     }
 
     @Test
+    @DisplayName("T-BE-SOLO-GUARD-UPDATE: 솔로(careGroupId null) 본인 → 그룹 가드 스킵하고 수정 성공")
+    void update_soloScheduleOwner_succeedsWithoutGroupGuard() {
+        // given
+        Schedule solo = Schedule.of(null, 2L, 10L, TimeOfDay.MORNING, LocalTime.of(8, 0), START, END, 2L);
+        ReflectionTestUtils.setField(solo, "id", SCHEDULE_ID);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(solo));
+        given(scheduleRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        UpdateScheduleRequest request = new UpdateScheduleRequest(null, LocalTime.of(9, 30), null);
+
+        // when
+        ScheduleResponse response = sutWith(WITHIN_PERIOD).update(SCHEDULE_ID, request);
+
+        // then
+        assertThat(response.customTime()).isEqualTo(LocalTime.of(9, 30));
+        verify(careGroupGuard, never()).requireAccessible(any());
+        verify(patientAccessGuard).requireAccess(2L, 2L);
+    }
+
+    @Test
+    @DisplayName("T-BE-SOLO-GUARD-UPDATE: 솔로 스케줄 타인 → PATIENT_ACCESS_DENIED (무가드 경로 없음)")
+    void update_soloScheduleNotOwner_denied() {
+        // given
+        UserContext.set(99L);
+        Schedule solo = Schedule.of(null, 2L, 10L, TimeOfDay.MORNING, LocalTime.of(8, 0), START, END, 2L);
+        ReflectionTestUtils.setField(solo, "id", SCHEDULE_ID);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(solo));
+        doThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
+                .when(patientAccessGuard).requireAccess(99L, 2L);
+        UpdateScheduleRequest request = new UpdateScheduleRequest(null, LocalTime.of(9, 30), null);
+
+        // when / then
+        assertThatThrownBy(() -> sutWith(WITHIN_PERIOD).update(SCHEDULE_ID, request))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
+        verify(scheduleRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("그룹 스케줄은 기존 그룹 가드 그대로 호출 (regression)")
+    void update_groupSchedule_stillChecksGroupGuard() {
+        // given
+        Schedule schedule = schedule(END);
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(scheduleRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        UpdateScheduleRequest request = new UpdateScheduleRequest(null, LocalTime.of(9, 30), null);
+
+        // when
+        sutWith(WITHIN_PERIOD).update(SCHEDULE_ID, request);
+
+        // then
+        verify(careGroupGuard).requireAccessible(5L);
+    }
+
+    @Test
     @DisplayName("기간 내 customTime 수정 → customTime 변경 + 오늘 기준 재예약 port 위임")
     void update_withinPeriod_changesCustomTimeAndDelegatesReschedule() {
         // given

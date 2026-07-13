@@ -47,6 +47,7 @@ public class DoseLog {
     private Instant checkedAt;
     private String skipReason;
     private Instant groupNotifiedAt;
+    private Instant remindedAt;
 
     public static DoseLog of(Long scheduleId, Long patientId, Instant scheduledAt) {
         DoseLog log = new DoseLog();

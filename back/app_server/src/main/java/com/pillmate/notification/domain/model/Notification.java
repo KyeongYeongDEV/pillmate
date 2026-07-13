@@ -32,7 +32,6 @@ public class Notification {
     @Column(nullable = false)
     private Long actorUserId;
 
-    @Column(nullable = false)
     private Long careGroupId;
 
     @Enumerated(EnumType.STRING)
@@ -67,6 +66,13 @@ public class Notification {
 
     @Column
     private Instant readAt;
+
+    // 환자 본인 복약 리마인더 — 솔로 사용자는 careGroupId null, actor = 본인
+    public static Notification doseReminder(Long recipientUserId, Long careGroupId,
+                                            Long doseLogId, String body) {
+        return create(recipientUserId, recipientUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_REMINDER, "💊 복약 시간이에요", body);
+    }
 
     public static Notification doseTaken(Long recipientUserId, Long actorUserId,
                                          Long careGroupId, Long doseLogId) {

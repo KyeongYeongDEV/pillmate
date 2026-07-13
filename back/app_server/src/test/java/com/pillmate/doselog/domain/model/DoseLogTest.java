@@ -41,6 +41,19 @@ class DoseLogTest {
     }
 
     @Test
+    @DisplayName("cancel() 이 remindedAt 은 유지 — 체크 취소해도 같은 시각 리마인더 재발송 금지")
+    void cancel_keepsRemindedAt() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        org.springframework.test.util.ReflectionTestUtils.setField(log, "remindedAt", FIXED_NOW);
+        log.take(2L, FIXED);
+
+        log.cancel();
+
+        assertThat(log.getStatus()).isEqualTo(DoseStatus.PENDING);
+        assertThat(log.getRemindedAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
     @DisplayName("skip() 호출 시 reason 보존")
     void skip_savesReason() {
         DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);

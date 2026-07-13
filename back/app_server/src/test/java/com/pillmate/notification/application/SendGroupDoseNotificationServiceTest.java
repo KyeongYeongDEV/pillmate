@@ -411,6 +411,25 @@ class SendGroupDoseNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("T-BE-SOLO-NOGROUP: careGroupId null(솔로) TAKEN — 발송 스킵하되 group_notified_at 마킹 (폴러 무한 재조회 방지)")
+    void notify_whenCareGroupIdNull_skipsButMarksGroupNotified() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(null);
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<DoseLog> captor = ArgumentCaptor.forClass(DoseLog.class);
+        verify(doseLogRepository).save(captor.capture());
+        assertThat(captor.getValue().isGroupNotified()).isTrue();
+        assertThat(captor.getValue().getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
+        verify(notificationSenderPort, never()).sendAll(anyList());
+        verify(recipientCachePort, never()).get(any());
+    }
+
+    @Test
     @DisplayName("배치 — recipient 3명이어도 토큰 조회(findAllByIdIn) 1회 + sendAll 1회")
     void notify_threeRecipients_singleTokenQueryAndSingleBatchSend() {
         Long MEMBER_2 = 3L;

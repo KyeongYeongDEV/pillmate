@@ -1,6 +1,7 @@
 package com.pillmate.notification.domain.model;
 
 public enum NotificationType {
+    DOSE_REMINDER,
     DOSE_TAKEN,
     DOSE_MISSED,
     DOSE_CANCELED,

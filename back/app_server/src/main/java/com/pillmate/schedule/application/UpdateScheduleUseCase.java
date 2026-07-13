@@ -34,7 +34,10 @@ public class UpdateScheduleUseCase {
     @Transactional
     public ScheduleResponse update(Long scheduleId, UpdateScheduleRequest request) {
         Schedule schedule = findOrThrow(scheduleId);
-        careGroupGuard.requireAccessible(schedule.getCareGroupId());
+        // 솔로(그룹 없는) 스케줄은 본인 소유 확인만 — PrescriptionScheduleService null 분기 선례
+        if (schedule.getCareGroupId() != null) {
+            careGroupGuard.requireAccessible(schedule.getCareGroupId());
+        }
         patientAccessGuard.requireAccess(UserContext.get(), schedule.getPatientId());
         applyChanges(schedule, request);
         return ScheduleResponse.from(scheduleRepository.save(schedule));

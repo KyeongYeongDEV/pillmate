@@ -5,6 +5,7 @@ import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.PatientAccessGuard;
 import com.pillmate.prescription.application.port.SchedulingPort;
+import com.pillmate.schedule.application.port.PeriodAdjustDoseLogsPort;
 import com.pillmate.schedule.application.port.PrescriptionSchedulePort;
 import com.pillmate.schedule.domain.model.Schedule;
 import com.pillmate.schedule.domain.model.TimeOfDay;
@@ -14,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -34,6 +37,8 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
     private final ScheduleConflictChecker conflictChecker;
     private final CareGroupGuard careGroupGuard;
     private final PatientAccessGuard patientAccessGuard;
+    private final PeriodAdjustDoseLogsPort periodAdjustDoseLogsPort;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -134,10 +139,13 @@ public class PrescriptionScheduleService implements PrescriptionSchedulePort, Sc
     @Override
     @Transactional
     public void deactivateByPrescriptionId(Long prescriptionId) {
+        Instant now = Instant.now(clock);
         scheduleRepository.findActiveByPrescriptionId(prescriptionId)
                 .forEach(schedule -> {
                     schedule.deactivate();
                     scheduleRepository.save(schedule);
+                    // 삭제한 처방에 리마인더 오발송 차단
+                    periodAdjustDoseLogsPort.skipPendingFrom(schedule.getId(), now);
                 });
     }
 }

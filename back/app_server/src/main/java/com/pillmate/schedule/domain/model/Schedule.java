@@ -21,7 +21,6 @@ public class Schedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private Long careGroupId;
 
     @Column(nullable = false)

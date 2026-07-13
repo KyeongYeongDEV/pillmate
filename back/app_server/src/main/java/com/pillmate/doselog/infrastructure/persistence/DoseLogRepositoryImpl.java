@@ -5,6 +5,7 @@ import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -43,5 +44,19 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     public List<DoseLog> findTakenNotGroupNotifiedBetween(Instant fromInclusive, Instant toInclusive) {
         return jpa.findByStatusAndCheckedAtBetweenAndGroupNotifiedAtIsNull(
                 DoseStatus.TAKEN, fromInclusive, toInclusive);
+    }
+
+    @Override
+    public List<DoseLog> findPendingNotRemindedBetween(Instant fromInclusive, Instant toInclusive) {
+        return jpa.findByStatusAndScheduledAtBetweenAndRemindedAtIsNull(
+                DoseStatus.PENDING, fromInclusive, toInclusive);
+    }
+
+    // @Modifying JPQL 은 활성 트랜잭션 필수 — 폴러 호출 경로는 비트랜잭션이라 여기서 개시
+    // (infra @Transactional 선례: PrescriptionLookupAdapter)
+    @Override
+    @Transactional
+    public int markRemindedIfPending(Long doseLogId, Instant now) {
+        return jpa.markRemindedIfStatus(doseLogId, now, DoseStatus.PENDING);
     }
 }

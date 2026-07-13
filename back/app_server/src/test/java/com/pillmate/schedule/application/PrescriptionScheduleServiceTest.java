@@ -40,13 +40,19 @@ class PrescriptionScheduleServiceTest {
     private static final LocalDate START = LocalDate.of(2026, 6, 21);
     private static final LocalDate END = LocalDate.of(2026, 6, 27);
 
+    private static final java.time.Instant FIXED_NOW = java.time.Instant.parse("2026-07-13T10:00:00Z");
+
     private final ScheduleRepository scheduleRepository = mock(ScheduleRepository.class);
     private final ScheduleConflictChecker conflictChecker = mock(ScheduleConflictChecker.class);
     private final CareGroupGuard careGroupGuard = mock(CareGroupGuard.class);
     private final PatientAccessGuard patientAccessGuard = mock(PatientAccessGuard.class);
+    private final com.pillmate.schedule.application.port.PeriodAdjustDoseLogsPort periodAdjustDoseLogsPort =
+            mock(com.pillmate.schedule.application.port.PeriodAdjustDoseLogsPort.class);
+    private final java.time.Clock clock = java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC);
 
     private final PrescriptionScheduleService sut = new PrescriptionScheduleService(
-            scheduleRepository, conflictChecker, careGroupGuard, patientAccessGuard);
+            scheduleRepository, conflictChecker, careGroupGuard, patientAccessGuard,
+            periodAdjustDoseLogsPort, clock);
 
     @Test
     @DisplayName("명시 슬롯 2개 → 약 곱 없이 처방전 단위 스케줄 2건, drugId null·prescriptionId 링크")
@@ -201,6 +207,24 @@ class PrescriptionScheduleServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SCHEDULE_INVALID_TIME_OF_DAY);
 
         verify(scheduleRepository, never()).save(any(Schedule.class));
+    }
+
+    @Test
+    @DisplayName("T-BE-REMINDER-FIX-2: 처방 소프트삭제 연동 비활성화 — 스케줄별 현재 이후 PENDING skip (리마인더 오발송 차단)")
+    void deactivateByPrescriptionId_skipsFuturePendingPerSchedule() {
+        Schedule s1 = Schedule.forPrescription(1L, 2L, 99L, TimeOfDay.MORNING, null, START, END, 2L);
+        Schedule s2 = Schedule.forPrescription(1L, 2L, 99L, TimeOfDay.EVENING, null, START, END, 2L);
+        org.springframework.test.util.ReflectionTestUtils.setField(s1, "id", 201L);
+        org.springframework.test.util.ReflectionTestUtils.setField(s2, "id", 202L);
+        given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(List.of(s1, s2));
+        given(scheduleRepository.save(any(Schedule.class))).willAnswer(inv -> inv.getArgument(0));
+
+        sut.deactivateByPrescriptionId(99L);
+
+        assertThat(s1.isActive()).isFalse();
+        assertThat(s2.isActive()).isFalse();
+        verify(periodAdjustDoseLogsPort).skipPendingFrom(201L, FIXED_NOW);
+        verify(periodAdjustDoseLogsPort).skipPendingFrom(202L, FIXED_NOW);
     }
 
     private CreatePrescriptionSchedulesCommand command(List<SlotSpec> slots) {

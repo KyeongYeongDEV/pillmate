@@ -52,7 +52,7 @@ public record RegisterPrescriptionRequest(
     }
 
     public record ScheduleSpecRequest(
-            @NotNull Long careGroupId,
+            Long careGroupId,
             @Valid List<SlotRequest> slots,
             LocalDate startDate,
             LocalDate endDate

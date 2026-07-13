@@ -35,9 +35,14 @@ public class PeriodAdjustDoseLogsService implements PeriodAdjustDoseLogsPort {
     @Override
     @Transactional
     public void skipPendingAfter(Long scheduleId, LocalDate cutoffDate) {
-        Instant from = policy.startOfNextDay(cutoffDate);
+        skipPendingFrom(scheduleId, policy.startOfNextDay(cutoffDate));
+    }
+
+    @Override
+    @Transactional
+    public void skipPendingFrom(Long scheduleId, Instant fromInclusive) {
         List<DoseLog> pendingLogs = doseLogRepository.findByScheduleIdAndStatusFrom(
-                scheduleId, DoseStatus.PENDING, from);
+                scheduleId, DoseStatus.PENDING, fromInclusive);
         for (DoseLog log : pendingLogs) {
             log.cancelForPeriodChange();
             doseLogRepository.save(log);

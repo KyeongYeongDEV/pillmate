@@ -94,6 +94,21 @@ class PeriodAdjustDoseLogsServiceTest {
     }
 
     @Test
+    @DisplayName("skipPendingFrom — 지정 시각 이후 PENDING 로그를 SKIPPED 처리 (비활성화·슬롯삭제 경로)")
+    void skipPendingFrom_marksPendingAsSkippedFromInstant() {
+        Instant from = Instant.parse("2026-07-13T10:00:00Z");
+        DoseLog pendingLog = DoseLog.of(SCHEDULE_ID, PATIENT_ID, from.plusSeconds(3600));
+        given(doseLogRepository.findByScheduleIdAndStatusFrom(
+                SCHEDULE_ID, DoseStatus.PENDING, from))
+                .willReturn(List.of(pendingLog));
+
+        sut.skipPendingFrom(SCHEDULE_ID, from);
+
+        assertThat(pendingLog.getStatus()).isEqualTo(DoseStatus.SKIPPED);
+        verify(doseLogRepository).save(pendingLog);
+    }
+
+    @Test
     @DisplayName("skipPendingAfter — 해당 기간에 로그 없으면 아무것도 안 함")
     void skipPendingAfter_noLogs_doesNothing() {
         LocalDate cutoff = LocalDate.of(2026, 6, 30);

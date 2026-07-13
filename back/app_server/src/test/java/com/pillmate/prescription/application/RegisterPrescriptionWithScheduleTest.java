@@ -96,6 +96,28 @@ class RegisterPrescriptionWithScheduleTest {
     }
 
     @Test
+    @DisplayName("T-BE-SOLO-NOGROUP: careGroupId null spec → 포트에 null 그대로 전파 + 스케줄 생성·당일 백필 정상")
+    void register_withNullCareGroupSpec_propagatesNullAndBackfills() {
+        // given
+        given(drugLookupPort.findByKdCode("KD-001"))
+                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", null)));
+        given(schedulingPort.createForPrescription(any()))
+                .willReturn(List.of(new ScheduledSlot(1L, "MORNING", LocalTime.of(8, 0), PRESCRIBED_AT, PRESCRIBED_AT)));
+        ScheduleSpec spec = new ScheduleSpec(null, List.of(new SlotInput("MORNING", LocalTime.of(8, 0))), null, null);
+
+        // when
+        RegisterPrescriptionResponse response = sut.register(command(spec, 7));
+
+        // then
+        ArgumentCaptor<CreateScheduleCommand> captor = ArgumentCaptor.forClass(CreateScheduleCommand.class);
+        verify(schedulingPort).createForPrescription(captor.capture());
+        assertThat(captor.getValue().careGroupId()).isNull();
+        assertThat(captor.getValue().patientId()).isEqualTo(2L);
+        assertThat(response.createdSchedules()).hasSize(1);
+        verify(doseLogBackfillPort).backfillToday(eq(2L), anyList(), any());
+    }
+
+    @Test
     @DisplayName("scheduleSpec 미동반 → 포트 미호출, createdSchedules 빈 목록 (기존 흐름 호환)")
     void register_withoutScheduleSpec_doesNotInvokePort() {
         // given
