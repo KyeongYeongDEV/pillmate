@@ -6,6 +6,7 @@ import type { RegisterDeviceTokenRequest } from '@/store/slices/userApi';
 import { useAppDispatch } from '@/store/hooks';
 import {
   configureNotificationHandler,
+  ensureAndroidNotificationChannels,
   ensurePushPermission,
   fetchExpoPushToken,
   fetchNativeDeviceToken,
@@ -32,6 +33,7 @@ export default function NotificationsBootstrap() {
     bootstrappedRef.current = true;
 
     configureNotificationHandler();
+    void ensureAndroidNotificationChannels();
 
     (async () => {
       const ok = await ensurePushPermission();

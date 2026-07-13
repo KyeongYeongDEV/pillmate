@@ -3,6 +3,7 @@ const mockGetPerm = jest.fn();
 const mockReqPerm = jest.fn();
 const mockGetToken = jest.fn();
 const mockGetDeviceToken = jest.fn();
+const mockSetChannel = jest.fn();
 
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: (...args: any[]) => mockSetHandler(...args),
@@ -10,6 +11,9 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: () => mockReqPerm(),
   getExpoPushTokenAsync: (opts: any) => mockGetToken(opts),
   getDevicePushTokenAsync: () => mockGetDeviceToken(),
+  setNotificationChannelAsync: (...args: any[]) => mockSetChannel(...args),
+  AndroidImportance: { MAX: 5, DEFAULT: 3 },
+  AndroidNotificationVisibility: { PUBLIC: 1 },
 }));
 
 jest.mock('react-native', () => ({
@@ -27,6 +31,7 @@ jest.mock('expo-device', () => ({
 
 import { Platform } from 'react-native';
 import {
+  ensureAndroidNotificationChannels,
   ensurePushPermission,
   fetchExpoPushToken,
   fetchNativeDeviceToken,
@@ -40,7 +45,22 @@ describe('notifications/setup', () => {
     mockReqPerm.mockReset();
     mockGetToken.mockReset();
     mockGetDeviceToken.mockReset();
+    mockSetChannel.mockReset();
     (Platform as any).OS = 'android';
+  });
+
+  it('ensureAndroidNotificationChannels — android 시 dose-reminder(MAX)·group-activity(DEFAULT) 채널 생성', async () => {
+    (Platform as any).OS = 'android';
+    await ensureAndroidNotificationChannels();
+    expect(mockSetChannel).toHaveBeenCalledTimes(2);
+    expect(mockSetChannel).toHaveBeenCalledWith('dose-reminder', expect.objectContaining({ importance: 5 }));
+    expect(mockSetChannel).toHaveBeenCalledWith('group-activity', expect.objectContaining({ importance: 3 }));
+  });
+
+  it('ensureAndroidNotificationChannels — ios 시 no-op', async () => {
+    (Platform as any).OS = 'ios';
+    await ensureAndroidNotificationChannels();
+    expect(mockSetChannel).not.toHaveBeenCalled();
   });
 
   it('configureNotificationHandler — foreground banner handler 등록', () => {

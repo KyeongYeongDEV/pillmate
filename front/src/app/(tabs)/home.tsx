@@ -28,6 +28,10 @@ import { formatFullDate, formatMonthDay, getKstToday } from '@/utils/calendarUti
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
 import NotificationBell from '@/components/home/NotificationBell';
+import BootSkeleton from '@/components/common/BootSkeleton';
+
+// 콜드 스타트 SWR 재검증은 유지하되, 웜 네비게이션(탭 재진입)마다 3중 재fetch 되는 부수효과는 완화 (CTO 결정).
+const HOME_REFETCH_THROTTLE_SEC = 30;
 
 export default function HomeScreen() {
   const today = getKstToday();
@@ -37,6 +41,7 @@ export default function HomeScreen() {
 
   const { pinnedGroupId } = useGetMyGroupsQuery(undefined, {
     selectFromResult: ({ data }) => ({ pinnedGroupId: data?.find(g => g.pinned)?.groupId }),
+    refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
   });
 
   const { data: feed = [], isLoading: feedLoading, isError: feedError } =
@@ -49,12 +54,18 @@ export default function HomeScreen() {
       },
     );
 
-  const { data: insightList = [] } = useGetActiveWithInsightsQuery();
+  const { data: insightList = [] } = useGetActiveWithInsightsQuery(undefined, {
+    refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
+  });
   const rotateIndex = useRotatingIndex(insightList.length, INSIGHT_ROTATE_INTERVAL_MS);
   const currentInsight = insightList[rotateIndex] ?? null;
   const insight = currentInsight?.insights?.[0] ?? null;
 
-  const { data: scheduleDay } = useGetDayScheduleQuery(today);
+  const {
+    data: scheduleDay, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule,
+  } = useGetDayScheduleQuery(today, { refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC });
+  // fulfilled 이전(로딩·에러)에는 "없어요" 확정 문구를 절대 띄우지 않는다 — 오프라인/첫실행에 오늘 복약 스킵 유도 위험(의료 P0).
+  const scheduleReady = scheduleDay !== undefined;
   const rawSlots = scheduleDay?.slots ?? [];
 
   const slots = useMemo(
@@ -78,6 +89,32 @@ export default function HomeScreen() {
   const slotStatuses = deriveSlotStatuses(slots, now);
   const dots = slots.map((s, i) => ({ label: s.label, status: slotStatuses[i] }));
   const showStreak = streak >= STREAK_DISPLAY_MIN;
+
+  // 캐시(rehydrate 포함) 없이 로딩/에러 상태면 "없어요" 확정 문구 대신 스켈레톤/재시도로 분기.
+  if (!scheduleReady && scheduleLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <BootSkeleton />
+      </SafeAreaView>
+    );
+  }
+  if (!scheduleReady && scheduleError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.errorState}>
+          <Text style={styles.errorText}>일정을 불러오지 못했어요</Text>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={() => refetchSchedule()}
+            accessibilityLabel="재시도"
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryTxt}>재시도</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -205,4 +242,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#C8DDFF',
   },
   safetyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center', lineHeight: scale(18) },
+  errorState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s16, padding: space.s24 },
+  errorText: { ...typography.body1n, color: colors.labelAlternative },
+  retryBtn: {
+    paddingHorizontal: space.s20, paddingVertical: space.s10,
+    borderRadius: radius.r12, backgroundColor: colors.primaryNormal,
+  },
+  retryTxt: { ...typography.label2, fontWeight: '700', color: '#fff' },
 });

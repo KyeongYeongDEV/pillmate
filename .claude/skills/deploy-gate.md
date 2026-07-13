@@ -26,6 +26,7 @@
 - [ ] `eas.json` production/preview 에 도메인 API URL + 카카오 prod env 채워짐
 - [ ] 카카오 콘솔: `https://pillmatefriend.duckdns.org/api/v1/auth/kakao/callback` Redirect URI 등록 + Client Secret prod 반영
 - [ ] 미존재 경로 404 매핑 (NoResourceFoundException → 500 PILL_999 버그 수정 여부)
+- [ ] Android `app.json` `expo.android.allowBackup: false` 반영된 APK 배포 (2026-07-13 ADV 발견 — 콜드캐시 AsyncStorage 에 복약/처방 정보 평문 저장, Expo 기본값 true 면 Google 자동백업으로 기기 밖 유출 가능. `T-FE-COLD-CACHE-FIX-R2` 에서 코드 반영, **재빌드 확인 필수**)
 
 ## G4. 데이터/DB
 - [ ] 시드 시퀀스 정합: 모든 테이블 `setval(seq, max(id))` 점검 스크립트 1회 (users_id_seq desync 사고 재발 방지)
