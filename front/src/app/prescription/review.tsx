@@ -30,17 +30,16 @@ import { deriveTimeOfDay } from '@/lib/prescription/timeOfDay';
 import { useSheetBottomPadding } from '@/hooks/useSheetBottomPadding';
 
 function validateRegisterInput(
-  items: DrugListItem[], careGroupId: number | null,
+  items: DrugListItem[],
 ): { title: string; message: string } | null {
   if (items.length === 0) return { title: '약 목록이 비어있습니다', message: '약을 1개 이상 추가해주세요.' };
-  if (careGroupId == null) return { title: '그룹이 없어요', message: '케어 그룹을 먼저 만들어주세요.' };
   return null;
 }
 
 function buildRegisterPayload(
   prescribedAt: string, imageKey: string | null,
   items: DrugListItem[], prescriptionSlots: PrescriptionSlotDraft[],
-  startDate: string, endDate: string, careGroupId: number,
+  startDate: string, endDate: string, careGroupId: number | null,
   label: string | null, memo: string | null, symptom: string | null,
 ): RegisterPrescriptionInput {
   const today = new Date().toISOString().slice(0, 10);
@@ -177,14 +176,14 @@ export default function PrescriptionReviewScreen() {
   }, [dispatch, durationBase]);
 
   const handleRegister = useCallback(async () => {
-    const validationErr = validateRegisterInput(items, careGroupId);
+    const validationErr = validateRegisterInput(items);
     if (validationErr) {
       Alert.alert(validationErr.title, validationErr.message);
       return;
     }
     try {
       const result = await registerPrescription(
-        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId!, label || null, memo || null, symptom || null),
+        buildRegisterPayload(prescribedAt, imageKey, items, prescriptionSlots, startDate, endDate, careGroupId, label || null, memo || null, symptom || null),
       ).unwrap();
       const warnings = result.warnings ?? [];
       if (warnings.length > 0) {

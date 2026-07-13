@@ -231,7 +231,7 @@ export interface PrescriptionSlotInput {
 }
 
 export interface PrescriptionScheduleInput {
-  careGroupId: number;
+  careGroupId: number | null;
   slots: PrescriptionSlotInput[];
   startDate: string;
   endDate: string | null;
