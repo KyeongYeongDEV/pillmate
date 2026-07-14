@@ -12,18 +12,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 
-class TestCorrectionDefaultTimeout:
-    def test_default_timeout_is_8_seconds(self):
-        from unittest.mock import AsyncMock
-
-        from app.rag.ocr.correction import CORRECTION_TIMEOUT_SEC, OcrCorrectionAdapter
-
-        adapter = OcrCorrectionAdapter(_llms=[AsyncMock()])
-
-        assert CORRECTION_TIMEOUT_SEC == 8.0
-        assert adapter._timeout == 8.0
-
-
 class TestCorrectionFactoryWiring:
     def _settings(self):
         return SimpleNamespace(

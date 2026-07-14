@@ -53,8 +53,12 @@ class OcrCorrectionAdapter:
         elif api_keys:
             from langchain_google_genai import ChatGoogleGenerativeAI
 
+            # 2026-07-14 리뷰 CONCERN — flash-lite SDK 기본(thinking OFF)에 암묵 의존하지 않고
+            # vision.py(VISION_THINKING_BUDGET) 선례처럼 명시해 8s 타임아웃 안 동작을 보장한다.
             self._llms = [
-                ChatGoogleGenerativeAI(model=model, google_api_key=k)
+                ChatGoogleGenerativeAI(
+                    model=model, google_api_key=k, thinking_budget=0
+                )
                 for k in api_keys
             ]
         elif llm is not None:
