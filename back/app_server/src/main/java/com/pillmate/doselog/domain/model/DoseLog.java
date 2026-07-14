@@ -89,6 +89,11 @@ public class DoseLog {
         if (status != DoseStatus.PENDING) {
             return;
         }
+        // 시각이 실제로 바뀔 때만 새 알림 대상으로 취급 — 무조건 리셋하면 동일 시각 재저장(폼 재제출)에도
+        // 이미 리마인드된 행이 리셋되어 poller RECENCY_WINDOW 안에서 중복 재발송될 수 있음 (2026-07-14)
+        if (!newScheduledAt.equals(this.scheduledAt)) {
+            this.remindedAt = null;
+        }
         this.scheduledAt = newScheduledAt;
     }
 

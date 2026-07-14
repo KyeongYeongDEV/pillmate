@@ -180,6 +180,31 @@ class DoseLogTest {
     }
 
     @Test
+    @DisplayName("reschedule — 이미 리마인드된 PENDING 도 remindedAt 리셋 (변경된 새 시각에 알림 재발송 가능)")
+    void reschedule_whenAlreadyReminded_resetsRemindedAt() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        org.springframework.test.util.ReflectionTestUtils.setField(log, "remindedAt", FIXED_NOW);
+        Instant newAt = FIXED_NOW.plus(Duration.ofHours(1));
+
+        log.reschedule(newAt);
+
+        assertThat(log.getScheduledAt()).isEqualTo(newAt);
+        assertThat(log.getRemindedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("reschedule — 동일 시각으로 재호출해도 remindedAt 유지 (폼 재제출 시 중복 알림 방지)")
+    void reschedule_withSameScheduledAt_keepsRemindedAt() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+        org.springframework.test.util.ReflectionTestUtils.setField(log, "remindedAt", FIXED_NOW);
+
+        log.reschedule(FIXED_NOW);
+
+        assertThat(log.getScheduledAt()).isEqualTo(FIXED_NOW);
+        assertThat(log.getRemindedAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
     @DisplayName("reschedule — TAKEN 은 no-op (완료 기록 보존, 재복용 방지)")
     void reschedule_whenTaken_isNoOp() {
         DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
