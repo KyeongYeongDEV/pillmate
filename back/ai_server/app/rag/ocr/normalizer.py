@@ -1,12 +1,36 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 
 _BRACKETS = re.compile(r"\([^)]*\)|\[[^\]]*\]")
 _WHITESPACE = re.compile(r"\s+")
 _UNIT_REGEX = re.compile(r"\d+\s*(?:mg|밀리그[램람]|밀리|밀|mcg|ug|MG)", re.IGNORECASE)
 _KOREAN_PREFIX = re.compile(r"^([가-힣]+)")
 _ENGLISH_WORD = re.compile(r"[A-Za-z]+")
+
+# 약품명 문자열에서 강도(dose)를 파싱 — decider/rrf_adapters 공용.
+# 단일 소스: 강도 판정 로직이 두 곳에서 따로 정의되면 판정 불일치(오확정) 위험 (T-AI-DOSE-NULL-CONFIRM).
+_DOSE_EXTRACT_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(mg|밀리그램|밀리그람|밀리그|밀리|mcg|µg|ug)",
+    re.IGNORECASE,
+)
+
+
+def extract_dose(name: str) -> tuple[Decimal | None, str | None]:
+    """약품명 문자열에서 (강도, 단위) 파싱. 강도 미표기 시 (None, None)."""
+    match = _DOSE_EXTRACT_RE.search(name)
+    if not match:
+        return None, None
+    amount = Decimal(match.group(1))
+    unit_raw = match.group(2).lower()
+    unit = "mcg" if unit_raw in ("mcg", "µg", "ug") else "mg"
+    return amount, unit
+
+
+def strip_dose(name: str) -> str:
+    """약품명에서 강도 부분만 제거 (같은 약의 다른 강도 변이 비교용)."""
+    return _DOSE_EXTRACT_RE.sub("", name).strip()
 
 # 식약처 등록 제조사 prefix (OCR 오인식 variant 포함)
 MANUFACTURER_PREFIXES: frozenset[str] = frozenset({

@@ -28,6 +28,7 @@ import jamotools
 
 from app.rag.ocr.fuzzy_search import JamoFuzzyRanker, TrigramFuzzySearch
 from app.rag.ocr.normalizer import (
+    extract_dose,
     first_english_token,
     first_token,
     normalize_for_cascade,
@@ -152,11 +153,12 @@ def _prefix_compatible(query: str, drug_name: str) -> bool:
 
 def _row_to_candidate(row: Any) -> Candidate:
     name_jamo = row["name_jamo"] or jamotools.split_syllables(row["name"])
+    dose_amount, dose_unit = extract_dose(row["name"])
     return Candidate(
         item_seq=row["kd_code"],
         name=row["name"],
-        dose_amount=None,
-        dose_unit=None,
+        dose_amount=dose_amount,
+        dose_unit=dose_unit,
         form=None,
         alias_source=None,
         name_jamo=name_jamo,
@@ -207,18 +209,21 @@ class TrigramMultiAdapter:
         if not fuzzy_hits:
             return []
         ranked = self._ranker.rerank(parsed.name_jamo, fuzzy_hits, prefix_match=True)
-        return [
-            Candidate(
-                item_seq=fc.kd_code,
-                name=fc.name,
-                dose_amount=None,
-                dose_unit=None,
-                form=None,
-                alias_source=None,
-                name_jamo=fc.name_jamo,
+        candidates = []
+        for fc in ranked:
+            dose_amount, dose_unit = extract_dose(fc.name)
+            candidates.append(
+                Candidate(
+                    item_seq=fc.kd_code,
+                    name=fc.name,
+                    dose_amount=dose_amount,
+                    dose_unit=dose_unit,
+                    form=None,
+                    alias_source=None,
+                    name_jamo=fc.name_jamo,
+                )
             )
-            for fc in ranked
-        ]
+        return candidates
 
 
 # ──────────────────────────────────────────────────────────
@@ -345,6 +350,24 @@ def _in_main_name(query: str, drug_name: str) -> bool:
     return query in main
 
 
+def _has_dose_ambiguity(pool: list[Candidate]) -> bool:
+    """dose=None(강도 정보 없음) 상황에서 후보 pool 내 강도 이질성 판정.
+
+    OCR/vision 이 강도를 못 읽으면(dose_amount=None) exact 단축이 이름만으로
+    단일 후보를 골라 AUTO 확정하는데, pool 에 서로 다른 강도의 동일 계열 약이
+    섞여 있으면(예: 노바스크정 5mg/10mg) 어느 강도인지 검증할 수 없다.
+
+    - 서로 다른 강도가 2개 이상 파싱됨 → 이질적 (판정 불가)
+    - 강도 파싱 가능 항목과 불가 항목이 혼재 → 검증 불가 → 보수적으로 이질 처리
+    - 전부 동일 강도이거나 전부 강도 정보 없음(단일 강도 약) → 이질 아님
+    """
+    doses = [extract_dose(c.name)[0] for c in pool]
+    known = {d for d in doses if d is not None}
+    if len(known) > 1:
+        return True
+    return bool(known) and any(d is None for d in doses)
+
+
 _STRONG_EXACT_SQL = """
 SELECT kd_code, name, name_jamo
 FROM drugs
@@ -466,5 +489,9 @@ class StrongExactAdapter:
             else:
                 # 용량 명시했는데 매칭 없음 → 단축 금지, RRF 위임 (의료 안전)
                 return None
+        elif _has_dose_ambiguity(pool):
+            # 용량 미확인(dose=None) + pool 내 강도 다변 → 단축 금지, RRF/CONFIRM 위임
+            # (의료 안전: 노바스크정 5mg/10mg 오확정 방지, T-AI-DOSE-NULL-CONFIRM)
+            return None
 
         return pool[0] if pool else None

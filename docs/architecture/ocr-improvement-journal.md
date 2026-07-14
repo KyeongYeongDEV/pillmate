@@ -28,6 +28,7 @@
 | B-9 | #151 T-AI-REAL-E2E-RRF | 2026-06-13 | 실 처방전 8장 운영 RRF 경로 첫 실측 | **AUTO 77.1%, surfacing 100%, ⚠️ 함량 불일치 false-auto 2건 발견** |
 | B-10 | #152 T-AI-DOSE-VERIFY-SHORTCIRCUIT | 2026-06-14 | StrongExact 함량 검증 + 이름 prefix 강화 + 점수 버그 수정 | **false-auto 0건, 정답 AUTO 회복, GT100 98% 유지** |
 | L-1 | T-AI-OCR-LATENCY-60S | 2026-07-14 | vision thinking_budget=0 + 프롬프트 필드정의 강화 + correction lite/8s | **vision 17.7~26.8s→4.5~7.6s, 실8장 AUTO 22/35·multiline 0·신규 false-auto 0** |
+| L-2 | T-AI-DOSE-NULL-CONFIRM | 2026-07-14 | dose=None 다강도 오확정 AUTO 차단 (Adversarial 발견, dead code `_dose_variants` 재활성화) | **RED 8건 재현→GREEN, 실8장 정답 AUTO 3건 유지, GT100 surfacing 98% 유지, false-auto 0** |
 
 ---
 
@@ -1195,3 +1196,76 @@ surfacing:         35/35 = 100.0%  (MANUAL도 options[0] 제시)
 
 ### 예상 효과 (배포 후 재실측 필요)
 - vision ~6s + 매칭 수 s + correction ≤8s(미해결 시) → **총 12~20s 내외** (기존 54~68s)
+
+## 14. L-2 — dose=None 다강도 오확정 AUTO 차단 (T-AI-DOSE-NULL-CONFIRM, 2026-07-14)
+
+**Why**: Adversarial 이 "vision이 dose_amount=null 을 주면 강도 게이트가 통째로 사라진다"는
+가설을 코드 3곳에서 실증. 프롬프트가 "함량 안 보이면 null" 을 명시 지시(L-1 시도2) 하므로
+dose=None 은 정상 입력이며, 이 경로에 다강도(예: 5mg/10mg) 방어가 전혀 없었다.
+
+### 발견된 3개 구멍 (Adversarial 실증)
+1. `normalize_for_cascade` 가 함량을 제거 → 강도 게이트 소스 자체가 cascade 쿼리에서 사라짐 (설계 의도, 문제는 아래 2·3).
+2. `StrongExactAdapter._pick_best`(rrf_adapters.py): `parsed.dose_amount is None` 이면 dose 필터를
+   완전히 건너뛰고 `pool[0]`(최단 이름 — 보통 저강도)을 score 1.0 AUTO 로 확정.
+   실증: `노바스크정` dose=None + pool={5mg,10mg} → 5mg AUTO (10mg 이 정답이면 오확정).
+3. `MatchDecider._dose_variants`(decider.py): 강도 다변 감지 방어 분기가 존재했으나
+   `Candidate.dose_amount` 를 어떤 retriever 도 채우지 않아 (`_row_to_candidate` 가 항상 `None`
+   하드코딩) **호출되어도 항상 빈 결과 — dead code**. AUTO 를 막을 마지막 방어선이 무력화 상태였음.
+
+### 픽스
+1. `normalizer.py`: `extract_dose(name)`/`strip_dose(name)` 신설 — 약품명 문자열에서 강도 파싱을
+   단일 소스로 통일(decider 의 개별 정규식과 중복/불일치 위험 제거).
+2. `rrf_adapters.py`:
+   - `_row_to_candidate` + `TrigramMultiAdapter` 가 `Candidate.dose_amount` 를 실제로 채움
+     → `_dose_variants` dead code 재활성화, `DomainReranker._dose_score` 보너스/패널티도 함께
+     재활성화(부수 효과, 안전 방향).
+   - `StrongExactAdapter._pick_best`: `parsed.dose_amount is None` 분기에 `_has_dose_ambiguity(pool)`
+     게이트 추가 — pool 내 서로 다른 강도가 2개 이상이거나 강도 파싱 가능/불가 혼재 시 단축 금지
+     (None → RRF/CONFIRM 위임). 단일 강도 약(뮤테란캡슐 등)·강도 정보 자체가 없는 복합제는
+     기존 AUTO 유지(과잉 CONFIRM 방지).
+3. `decider.py`: `_dose_variants` 를 전체 이름 비교(항상 self 만 매치되는 무의미한 비교)에서
+   `strip_dose()` 기준명 비교로 재작성 — 서로 다른 강도의 동일 계열 약(노바스크정5mg vs 10mg)을
+   실제로 찾아낸다.
+
+### 검증 (RED→GREEN→재현불가, 3단)
+- RED: 신규 테스트 8건을 fix 적용 전 코드(`git apply -R`)로 재현 → 전부 실패 확인
+  (노바스크 5mg/10mg pool 이 그대로 AUTO 로 반환됨을 직접 확인).
+- GREEN: fix 재적용 후 동일 8건 PASS + 전체 328 PASS(`pytest tests/ --ignore=tests/eval`).
+- 재현 불가 확인: fix 적용 상태에서 동일 시나리오 재실행 → None 반환(단축 금지) 확정.
+
+### 실증거 — 실 8장 e2e + GT100 블라인드
+- **실 8장(운영 RRF 경로, Gemini 8회 호출)**: 기존 정답 AUTO 3건(동광니자티딘150mg·엔테론150mg·
+  뮤테란200mg) 전부 유지. suspicious_auto 1건(`경동아스피린장용정`→`유영아스피린장용정100mg`)은
+  **13절에 이미 L-2 후보로 기록된 기존 구멍**(dose 값이 있는 경로의 dose_hits 오선택) — 본 fix 는
+  `parsed.dose_amount` 가 채워진 분기를 건드리지 않아(`elif` 로 dose=None 분기에만 개입) 무관/불변임을
+  코드상 확인.
+- **캐시 텍스트 재매칭(A/B, 동일 name_raw, Gemini 재호출 없음)**: 35개 중 4개 결정 변경, 전부 이전
+  AUTO→CONFIRM/MANUAL 강등(반대 방향 없음). DB 확인 결과 4건 전부 **실재하는 다강도/이질 pool**
+  (예: `포리부틴정(트리메부틴말레산염)`↔`포리부틴정150mg(트리메부틴말레산염)`이 서로 다른 kd_code 로
+  DB 에 별도 존재) — 과잉 CONFIRM 아닌 정당한 안전 강등.
+- **GT100 블라인드(DB-only, LLM 호출 없음)**: surfacing 98/100 유지(게이트 기준 충족). semantic hit
+  98→97(신규 miss `gt_011`, RRF fallback retriever 가 StrongExact 수준의 salt/제조사 정규화가 없어
+  exact_fast 차단 후 대체 후보를 못 찾음 — 별도 아키텍처 갭, 후속 과제로 기록). AUTO 비율은 69%→14%로
+  급락했으나 이는 **이 harness 고유 특성** 때문 — `run_blind_gt100.py` 는
+  `parse_drug_item(normalize_for_cascade(name_raw))` 만 사용하고 `raw.dose_amount` 별도 필드 보충이
+  전혀 없어 100건 전부가 dose=None 최악 조건으로 측정됨. 프로덕션은 `RrfMatcherAdapter`(service.py
+  경유)가 vision 의 별도 `dose_amount` 필드를 항상 보충하므로 이 정도 낙폭은 재현되지 않는다
+  (실 8장 A/B 는 26/35→22/35 로 하락 폭이 훨씬 작음). 오히려 기존 69% 가 강도 미검증 상태로
+  부풀려져 있었다는 정직한 반증.
+
+### 교훈
+1. **dead code 는 조용히 안전을 무력화한다**: `_dose_variants` 가 컴파일·테스트를 통과해도 입력
+   (`Candidate.dose_amount`)이 항상 None 이면 방어선이 아니라 장식이다. "방어 로직이 있다"와
+   "방어 로직이 실행된다"는 다른 주장 — 입력 소스까지 추적해야 한다.
+2. **평가 harness 의 입력 경로가 프로덕션과 다르면 지표가 왜곡된다**: GT100 블라인드는 의도적으로
+   `raw.dose_amount` 보충을 생략(text-only 측정 목적)하는데, 이 차이를 모르고 AUTO 69%→14% 만 보면
+   "치명적 회귀"로 오판할 뻔했다. A/B 비교는 반드시 "어느 경로(harness vs 프로덕션 wiring)로 쟀는지"
+   명시해야 한다.
+3. **"강도 불명 = 무조건 CONFIRM" 은 과잉이다**: 단일 강도 약·강도 정보 없는 복합제까지 강등시키면
+   UX 가 죽는다. "pool 내 강도가 실제로 갈리는가"로 좁혀야 안전과 편의가 공존한다.
+
+### 남은 갭 (후속 과제, 이번 스코프 아님)
+- `경동아스피린장용정`(dose 있음, dose_hits 오선택) — 13절 L-2 후보, 여전히 미해결.
+- RRF fallback retriever 들에 StrongExactAdapter 수준의 salt/제조사 정규화 부재 → exact_fast 차단 시
+  대체 후보를 못 찾는 사례 존재(GT100 gt_011). 후보안: PrefixRelaxMultiAdapter/IlikeMultiAdapter 에도
+  `normalize_for_cascade`+`_strip_salt` 적용 검토.
