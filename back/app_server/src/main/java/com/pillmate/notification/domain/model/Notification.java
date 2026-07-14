@@ -69,7 +69,7 @@ public class Notification {
     public static Notification doseReminder(Long recipientUserId, Long careGroupId,
                                             Long doseLogId, String body) {
         return create(recipientUserId, recipientUserId, careGroupId, doseLogId,
-                NotificationType.DOSE_REMINDER, "💊 복약 시간이에요", body);
+                NotificationType.DOSE_REMINDER, "복약 시간이에요", body);
     }
 
     public static Notification doseTaken(Long recipientUserId, Long actorUserId,
