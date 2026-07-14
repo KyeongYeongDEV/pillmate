@@ -1,10 +1,10 @@
 package com.pillmate.prescription.infrastructure.ai;
 
+import com.pillmate.common.config.AiServerProperties;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.prescription.application.port.OcrPort;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -25,9 +25,9 @@ public class AiServerOcrClient implements OcrPort {
     private final ObjectMapper objectMapper;
 
     public AiServerOcrClient(RestClient.Builder builder,
-                              @Value("${ai-server.base-url}") String baseUrl,
+                              AiServerProperties properties,
                               ObjectMapper objectMapper) {
-        this.restClient = builder.baseUrl(baseUrl).build();
+        this.restClient = builder.baseUrl(properties.baseUrl()).build();
         this.objectMapper = objectMapper;
     }
 

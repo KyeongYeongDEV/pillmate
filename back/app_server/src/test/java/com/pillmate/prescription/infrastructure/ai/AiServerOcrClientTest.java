@@ -1,5 +1,6 @@
 package com.pillmate.prescription.infrastructure.ai;
 
+import com.pillmate.common.config.AiServerProperties;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.prescription.application.port.OcrPort.OcrItem;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -20,12 +23,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
-import org.springframework.test.context.TestPropertySource;
-
 @RestClientTest(AiServerOcrClient.class)
-@TestPropertySource(properties = {
-    "ai-server.base-url=http://ai-server:8001"
-})
 class AiServerOcrClientTest {
 
     @Autowired
@@ -33,6 +31,14 @@ class AiServerOcrClientTest {
 
     @Autowired
     private MockRestServiceServer server;
+
+    @TestConfiguration
+    static class PropertiesTestConfig {
+        @Bean
+        AiServerProperties aiServerProperties() {
+            return new AiServerProperties("http://ai-server:8001", new AiServerProperties.Timeout(5000, 170000));
+        }
+    }
 
     @Test
     @DisplayName("AI 서버가 200 OK를 반환하면 OcrResult로 매핑한다")

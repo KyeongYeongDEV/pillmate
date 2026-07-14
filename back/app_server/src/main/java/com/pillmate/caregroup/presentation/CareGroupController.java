@@ -13,8 +13,10 @@ import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
 import com.pillmate.caregroup.domain.model.MemberRole;
+import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,9 +47,9 @@ public class CareGroupController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
-            @RequestBody Map<String, String> body) {
+            @RequestBody @Valid CreateGroupRequest request) {
         Long userId = UserContext.get();
-        CreateGroupResponse response = createCareGroupUseCase.create(body.get("name"), userId);
+        CreateGroupResponse response = createCareGroupUseCase.create(request.name(), userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

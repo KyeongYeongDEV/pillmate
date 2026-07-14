@@ -1,10 +1,10 @@
 package com.pillmate.prescription.infrastructure.ai;
 
+import com.pillmate.common.config.AiServerProperties;
 import com.pillmate.prescription.application.port.PrescriptionRecommendationPort;
 import com.pillmate.prescription.domain.model.PrescriptionInsightSeverity;
 import com.pillmate.prescription.domain.model.PrescriptionInsightType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -23,8 +23,8 @@ public class AiServerRecommendationClient implements PrescriptionRecommendationP
     private final RestClient restClient;
 
     public AiServerRecommendationClient(RestClient.Builder builder,
-                                        @Value("${ai-server.base-url}") String baseUrl) {
-        this.restClient = builder.baseUrl(baseUrl).build();
+                                        AiServerProperties properties) {
+        this.restClient = builder.baseUrl(properties.baseUrl()).build();
     }
 
     @Override

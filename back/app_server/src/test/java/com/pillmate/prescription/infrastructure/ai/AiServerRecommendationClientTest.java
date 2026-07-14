@@ -1,5 +1,6 @@
 package com.pillmate.prescription.infrastructure.ai;
 
+import com.pillmate.common.config.AiServerProperties;
 import com.pillmate.prescription.application.port.PrescriptionRecommendationPort.DrugContext;
 import com.pillmate.prescription.application.port.PrescriptionRecommendationPort.InsightDraft;
 import com.pillmate.prescription.domain.model.PrescriptionInsightType;
@@ -7,9 +8,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 import java.math.BigDecimal;
@@ -23,9 +25,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @RestClientTest(AiServerRecommendationClient.class)
-@TestPropertySource(properties = {
-        "ai-server.base-url=http://ai-server:8001"
-})
 class AiServerRecommendationClientTest {
 
     @Autowired
@@ -33,6 +32,14 @@ class AiServerRecommendationClientTest {
 
     @Autowired
     private MockRestServiceServer server;
+
+    @TestConfiguration
+    static class PropertiesTestConfig {
+        @Bean
+        AiServerProperties aiServerProperties() {
+            return new AiServerProperties("http://ai-server:8001", new AiServerProperties.Timeout(5000, 170000));
+        }
+    }
 
     private List<DrugContext> drugs() {
         return List.of(new DrugContext("200500823", "메트포르민정500밀리그램",

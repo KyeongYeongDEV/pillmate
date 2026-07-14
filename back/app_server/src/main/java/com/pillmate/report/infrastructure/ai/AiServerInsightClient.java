@@ -1,12 +1,12 @@
 package com.pillmate.report.infrastructure.ai;
 
+import com.pillmate.common.config.AiServerProperties;
 import com.pillmate.report.application.port.LlmInsightPort;
 import com.pillmate.report.application.port.PrescriptionContextPort.DrugSummary;
 import com.pillmate.report.domain.model.InsightSeverity;
 import com.pillmate.report.domain.model.InsightType;
 import com.pillmate.report.domain.service.DetectedPattern;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -25,9 +25,9 @@ class AiServerInsightClient implements LlmInsightPort {
 
     private final RestClient restClient;
 
-    AiServerInsightClient(@Value("${pillmate.ai-server.base-url:http://ai-server:8001}") String baseUrl) {
+    AiServerInsightClient(AiServerProperties properties) {
         this.restClient = RestClient.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(properties.baseUrl())
                 .requestFactory(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{
                     setConnectTimeout((int) TIMEOUT.toMillis());
                     setReadTimeout((int) TIMEOUT.toMillis());

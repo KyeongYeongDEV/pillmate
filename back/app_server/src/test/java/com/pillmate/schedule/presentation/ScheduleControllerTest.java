@@ -12,6 +12,7 @@ import com.pillmate.schedule.application.ListSchedulesUseCase;
 import com.pillmate.schedule.application.RemovePrescriptionSlotUseCase;
 import com.pillmate.schedule.application.UpdatePrescriptionPeriodUseCase;
 import com.pillmate.schedule.application.UpdateScheduleUseCase;
+import com.pillmate.schedule.application.dto.ScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotEditView;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.common.exception.ErrorCode;
@@ -97,6 +98,50 @@ class ScheduleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    @DisplayName("PATCH /schedules/{id} timeOfDay 만 부분 갱신 → 200 (다른 필드는 null 허용)")
+    void update_partialTimeOfDayOnly_returns200() throws Exception {
+        given(updateScheduleUseCase.update(eq(1L), any())).willReturn(
+                new ScheduleResponse(1L, null, 5L, 9L, TimeOfDay.EVENING, null,
+                        LocalDate.of(2026, 1, 1), null, true));
+
+        mockMvc.perform(patch("/schedules/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"timeOfDay\":\"EVENING\"}")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.timeOfDay").value("EVENING"));
+    }
+
+    @Test
+    @DisplayName("PATCH /schedules/{id} 빈 바디({}) → 200 (모든 필드 null, no-op 부분 갱신 허용)")
+    void update_emptyBody_returns200() throws Exception {
+        given(updateScheduleUseCase.update(eq(1L), any())).willReturn(
+                new ScheduleResponse(1L, null, 5L, 9L, TimeOfDay.MORNING, null,
+                        LocalDate.of(2026, 1, 1), null, true));
+
+        mockMvc.perform(patch("/schedules/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /schedules/{id} customTime 만 부분 갱신 → 200")
+    void update_partialCustomTimeOnly_returns200() throws Exception {
+        given(updateScheduleUseCase.update(eq(1L), any())).willReturn(
+                new ScheduleResponse(1L, null, 5L, 9L, TimeOfDay.MORNING,
+                        java.time.LocalTime.of(7, 30), LocalDate.of(2026, 1, 1), null, true));
+
+        mockMvc.perform(patch("/schedules/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customTime\":\"07:30\"}")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customTime").value("07:30:00"));
     }
 
     @Test
