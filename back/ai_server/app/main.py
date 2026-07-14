@@ -159,7 +159,8 @@ def _build_ocr_service(
             ingredient=AsyncpgIngredientSearch(pool=pool),
         )
     vision = _build_vision(settings)
-    correction = OcrCorrectionAdapter(api_keys=settings.gemini_key_list, model=settings.gemini_model)
+    # correction 은 어댑터 기본 flash-lite 사용 — vision 모델(flash) override 가 20s timeout 소진 병목이었음 (2026-07-14 실측)
+    correction = OcrCorrectionAdapter(api_keys=settings.gemini_key_list)
     preprocessor = ImagePreprocessor() if settings.ocr_preprocess_enabled else None
     pill_identifier = PillIdentifyAdapter(pool=pool) if settings.pill_identify_enabled else None
     return OcrPrescriptionService(

@@ -27,6 +27,7 @@
 | B-8 | #150 T-AI-WIRE-RRFMATCHER-PROD | 2026-06-13 | Gate D: main.py RrfMatcher 주입 + eval=prod 단일 경로 | surfacing 98%=98%, false-auto=0, 187 tests PASS |
 | B-9 | #151 T-AI-REAL-E2E-RRF | 2026-06-13 | 실 처방전 8장 운영 RRF 경로 첫 실측 | **AUTO 77.1%, surfacing 100%, ⚠️ 함량 불일치 false-auto 2건 발견** |
 | B-10 | #152 T-AI-DOSE-VERIFY-SHORTCIRCUIT | 2026-06-14 | StrongExact 함량 검증 + 이름 prefix 강화 + 점수 버그 수정 | **false-auto 0건, 정답 AUTO 회복, GT100 98% 유지** |
+| L-1 | T-AI-OCR-LATENCY-60S | 2026-07-14 | vision thinking_budget=0 + 프롬프트 필드정의 강화 + correction lite/8s | **vision 17.7~26.8s→4.5~7.6s, 실8장 AUTO 22/35·multiline 0·신규 false-auto 0** |
 
 ---
 
@@ -1158,3 +1159,39 @@ surfacing:         35/35 = 100.0%  (MANUAL도 options[0] 제시)
 
 - `VectorMultiAdapter`(rrf_factory 미연결 dead code) + 단위테스트 2건 + eval 참조 제거 — 매칭 동작 무변경(98% surfacing 유지, 운영 경로 unaffected). `PgVectorDrugSearch`(legacy DrugMatcher flag 경로)는 유지.
 - `.claude/rules/python/langchain.md` Retriever 절을 실제 구현(OCR=RrfMatcher 6 retriever+RRF k=60+BGE rerank, Chat RAG=pgvector dense 단독)에 맞게 개정 — 'pgvector+BM25 EnsembleRetriever 0.6/0.4' 허위 룰 폐기, '향후 hybrid 도입 시 재검토' 명시. 룰↔코드 정직성 확보.
+
+## 13. L-1 — OCR 지연 60s→목표 15~20s (T-AI-OCR-LATENCY-60S, 2026-07-14)
+
+**Why**: 오라클 서버 실측 (사용자 체감 "1분"): `OcrProcessed total_elapsed_ms=67923 / 54146`.
+분해: vision(gemini-2.5-flash) 호출당 16.8~27.8s + 파싱실패 재시도 1회(+17s) + Tier-3 correction
+미해결 4건 전부 20s timeout 소진(매칭 기여 0). 병목 1위=flash thinking 기본 ON, 2위=correction.
+
+### 시도 1 — vision thinking_budget=0 (단독)
+- 지연: 17.7~26.8s → **4.5~7.6s (3~4배 단축)** ✅
+- 그러나 실8장 e2e에서 **의료 게이트 FAIL**:
+  1. vision 이 조제 개수(1)를 dose_amount 필드에 기입 (3/3 재현) → dose 검증 오염
+     → `뮤테란캡슐200밀리그램` 이 **100밀리그램으로 false-auto**
+  2. name_raw 에 성분·함량 줄을 `\n` 로 이어붙임 → normalize 가 브랜드 훼손
+
+### 시도 2 — 프롬프트 필드 정의 강화 (ocr_system.txt 규칙 1 보강)
+- "name_raw 는 약품명 한 줄만", "dose_amount 는 함량, 투여 개수(1정/1포) 아님, 불명이면 null"
+- 재게이트 결과: **items 35 · AUTO 22 · MANUAL 12 · multiline 0 · 뮤테란 200→200 정확 AUTO** ✅
+- 남은 ⚠️ 1건(`경동아스피린장용정`→유영아스피린장용정100mg AUTO)은 **thinking 무관 기존 매처 구멍**:
+  vision 없이 매처에 `dose=100` 만 넣어도 동일 재현. DB `경동아스피린장용정`(이름에 함량 없음)이
+  dose_hits 필터에서 밀리고 이름에 "100mg" 붙은 타 브랜드가 선택됨. → 후속 태스크 (L-2 후보).
+
+### 함께 적용
+- correction: main.py 의 `model=settings.gemini_model`(flash) override 제거 → 어댑터 기본
+  flash-lite(thinking OFF) 복원 + `CORRECTION_TIMEOUT_SEC` 20→8s (worst-case -12~18s).
+- eval=prod 정합: run_real_e2e_rrf.py 도 thinking_budget=0 동기화, 리포트는
+  `real_e2e_rrf_2026-07-14-thinking0.*` 신규 저장 (06-13 baseline 보존).
+
+### 교훈
+1. **thinking 은 스키마 필드 배치까지 담당하고 있었다** — thinking 제거 시 필드 혼동(개수→함량)이
+   생기며, 프롬프트에 필드 정의를 명시하면 회복된다. "속도 최적화는 프롬프트 명세 강화와 세트".
+2. 6/13 리포트는 B-10 이전 매처라 baseline 오염 — **A/B 는 반드시 같은 매처로 당일 재측정**.
+3. exact_fast dose_hits 는 "이름에 함량 명기된 후보"만 남긴다 — 함량 미표기 정품 브랜드가 밀리는
+   역설 존재 (L-2 후보).
+
+### 예상 효과 (배포 후 재실측 필요)
+- vision ~6s + 매칭 수 s + correction ≤8s(미해결 시) → **총 12~20s 내외** (기존 54~68s)

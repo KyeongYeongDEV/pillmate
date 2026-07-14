@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 # 재시도는 에러(파싱실패/API에러/타임아웃) 시 정확히 1회만 — 타이머·백오프 없이 즉시.
 VISION_TIMEOUT_SEC = 150.0
 VISION_MAX_ERROR_RETRIES = 1
+# 2026-07-14 오라클 실측 — gemini-2.5-flash thinking 기본 ON 이 호출당 17~28s 의 주범.
+# OCR 추출은 구조화 전사라 thinking 불필요 → 명시 비활성 (정확도 A/B 는 journal 기록).
+VISION_THINKING_BUDGET = 0
 
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "ocr_system.txt"
 FEWSHOT_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "system_prompt.txt"
@@ -76,7 +79,8 @@ class GeminiVisionAdapter:
                 # response_mime_type=JSON 모드 — 파싱실패율을 낮추는 안전한 structured output 적용
                 # (전체 response_schema 바인딩은 few-shot/appearance 중첩 스키마와 충돌 위험 있어 보류)
                 ChatGoogleGenerativeAI(
-                    model=model, google_api_key=k, response_mime_type="application/json"
+                    model=model, google_api_key=k, response_mime_type="application/json",
+                    thinking_budget=VISION_THINKING_BUDGET,
                 )
                 for k in api_keys
             ]

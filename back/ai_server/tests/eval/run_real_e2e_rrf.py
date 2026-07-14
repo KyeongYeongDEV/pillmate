@@ -149,6 +149,8 @@ class RealE2ERrfRunner:
             model=GEMINI_MODEL,
             google_api_key=api_key,
             temperature=0.0,
+            # eval=prod 정합 — 운영 GeminiVisionAdapter 와 동일 (VISION_THINKING_BUDGET, 2026-07-14)
+            thinking_budget=0,
         )
 
     async def _vision_extract(self, image_path: Path) -> tuple[list[RawOcrItem], str | None]:
@@ -226,7 +228,7 @@ class RealE2ERrfRunner:
 
 def _build_md_report(results: list[ImageResult]) -> str:
     lines: list[str] = []
-    lines.append("# Real E2E RRF 평가 — 2026-06-13")
+    lines.append("# Real E2E RRF 평가 — 2026-07-14 (vision thinking_budget=0)")
     lines.append("")
     lines.append("> 운영 경로: `build_rrf_matcher_inner` (Gate D 통합, #150)")
     lines.append("> 레거시 `_cascade_search` 완전 제거 후 첫 실 처방전 측정.")
@@ -326,12 +328,12 @@ async def main() -> None:
     # 보고서 저장
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     md = _build_md_report(results)
-    report_path = REPORT_DIR / "real_e2e_rrf_2026-06-13.md"
+    report_path = REPORT_DIR / "real_e2e_rrf_2026-07-14-thinking0.md"
     report_path.write_text(md, encoding="utf-8")
     print(f"\n보고서 저장: {report_path}")
 
     # JSON 저장
-    json_path = REPORT_DIR / "real_e2e_rrf_2026-06-13.json"
+    json_path = REPORT_DIR / "real_e2e_rrf_2026-07-14-thinking0.json"
     json_data = []
     for r in results:
         json_data.append({

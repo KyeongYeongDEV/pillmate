@@ -52,15 +52,15 @@ class TestCorrectionPerCallTimeout:
         assert result == ["타이레놀정500밀리그램"]
 
     @pytest.mark.asyncio
-    async def test_default_timeout_is_20_seconds(self):
+    async def test_default_timeout_is_8_seconds(self):
         from app.rag.ocr.correction import CORRECTION_TIMEOUT_SEC, OcrCorrectionAdapter
 
         llm = AsyncMock()
         llm.ainvoke.return_value = MagicMock(content=_VALID_RESPONSE)
         adapter = OcrCorrectionAdapter(_llms=[llm])
 
-        assert CORRECTION_TIMEOUT_SEC == 20.0
-        assert adapter._timeout == 20.0
+        assert CORRECTION_TIMEOUT_SEC == 8.0
+        assert adapter._timeout == 8.0
 
 
 class TestCorrectionStructuredLog:

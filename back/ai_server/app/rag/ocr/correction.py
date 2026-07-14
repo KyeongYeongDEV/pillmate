@@ -11,9 +11,9 @@ from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
-# T-AI-OCR-LATENCY-30S 후속 — per-call 상한. 이름 못 읽은 알약당 순차 호출이 15~37s 씩
-# 걸려 total_elapsed_ms 가 100s 근처까지 늘어난 실측 근거로 vision 과 동일 20s 적용.
-CORRECTION_TIMEOUT_SEC = 20.0
+# 2026-07-14 오라클 실측 — 20s 상한에서 미해결 4건 전부 timeout 소진(매칭 기여 0)으로
+# total 54~68s 의 둘째 병목. flash-lite(thinking OFF) 정상 응답은 수 초 → 8s 로 축소.
+CORRECTION_TIMEOUT_SEC = 8.0
 
 try:
     from google.genai.errors import ClientError as _GenAIClientError
