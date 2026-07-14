@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator,
   Alert, Animated, Modal, TextInput,
@@ -25,6 +25,7 @@ import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { safeBack } from '@/lib/router/safeBack';
 import { deriveTimeOfDay } from '@/lib/prescription/timeOfDay';
+import { sortSlotsByTime } from '@/lib/prescription/sortSlots';
 import { useSheetBottomPadding } from '@/hooks/useSheetBottomPadding';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import type { PrescriptionDetailView, NutrientNote } from '@/types/prescription';
@@ -71,6 +72,7 @@ export default function PrescriptionDetailScreen() {
     isLoading: slotsLoading,
     refetch: refetchSlots,
   } = useGetPrescriptionSlotsQuery(prescriptionId);
+  const sortedSlots = useMemo(() => sortSlotsByTime(slots), [slots]);
   const [updateTime]       = useUpdateScheduleTimeMutation();
   const [addSlot]          = useAddPrescriptionSlotMutation();
   const [removeSlot]       = useRemovePrescriptionSlotMutation();
@@ -345,7 +347,7 @@ export default function PrescriptionDetailScreen() {
 
         <Text style={styles.sectionLabel}>알림 시간</Text>
         <SlotSection
-          slots={slots}
+          slots={sortedSlots}
           isLoading={slotsLoading}
           onEditSlot={setPickerSlot}
           onAddSlot={() => setAddPickerVisible(true)}
