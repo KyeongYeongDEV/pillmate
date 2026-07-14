@@ -10,7 +10,9 @@
 monitor/
 ├── alloy/                 # Grafana Alloy 에이전트(경량, ~수십MB) — 메트릭 수집→Grafana Cloud
 │   ├── config.alloy
+│   ├── config.prod.alloy      # 프로드(오라클) — blue-green 이중 타겟 scrape
 │   ├── docker-compose.yml
+│   ├── docker-compose.prod.yml # 프로드 compose (/opt/pillmate/monitoring/alloy)
 │   └── .env.example
 ├── grafana-cloud/SETUP.md # Grafana Cloud 무료 계정→스택→Alloy 연결 (★여기부터)
 ├── sentry/SETUP.md        # Sentry 무료 + Spring/FastAPI SDK + Slack 알림

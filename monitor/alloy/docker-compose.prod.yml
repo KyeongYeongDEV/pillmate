@@ -1,0 +1,24 @@
+# Grafana Alloy — 프로드(오라클) 배치용. config.prod.alloy 사용 (blue-green 이중 타겟).
+# 사용: /opt/pillmate/monitoring/alloy 에 이 폴더 배치 → .env 채움 → docker compose -f docker-compose.prod.yml up -d
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: pillmate-alloy
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+    volumes:
+      - ./config.prod.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    env_file: .env
+    mem_limit: 256m
+    networks: [pillmate_default]
+
+volumes:
+  alloy_data:
+
+networks:
+  pillmate_default:
+    external: true

@@ -35,8 +35,33 @@ docker logs pillmate-alloy   # remote_write 성공 로그 확인
    - JVM: Grafana.com 대시보드 ID **4701**(JVM Micrometer)
    - 또는 `monitor/dashboards/` 의 JSON import
 
+## 5-1. 프로드(오라클) 배치
+로컬용은 `config.alloy` + `docker-compose.yml`, 프로드는 `config.prod.alloy` + `docker-compose.prod.yml`.
+
+1. 서버에 배치 디렉토리 준비: `/opt/pillmate/monitoring/alloy`
+2. 아래 3개 파일을 서버로 복사:
+   - `config.prod.alloy` (blue-green 이중 타겟 scrape 설정)
+   - `docker-compose.prod.yml` (프로드 compose)
+   - `.env` (Grafana Cloud 자격증명 — `.env.example` 기준으로 채움)
+   ```bash
+   scp monitor/alloy/config.prod.alloy monitor/alloy/docker-compose.prod.yml pillmate:/opt/pillmate/monitoring/alloy/
+   ```
+3. 서버에서 기동:
+   ```bash
+   ssh pillmate 'cd /opt/pillmate/monitoring/alloy && docker compose -f docker-compose.prod.yml up -d'
+   docker logs pillmate-alloy   # remote_write 성공 로그 확인
+   ```
+
+**blue-green 이중 타겟 구조**: `config.prod.alloy`는 `pillmate-app-blue`, `pillmate-app-green` 두 슬롯을 동시에 scrape 한다. 배포 무중단 전환 시 **비활성 슬롯은 컨테이너가 없어 `up=0` 으로 조용히 실패**하고, 활성 슬롯만 `up=1` 로 수집된다. 항상 둘 중 하나만 살아있는 게 정상이다.
+
 ## 6. 알림(선택)
-- Grafana Cloud **Alerting** → 규칙(예: `up == 0` 5분) → Contact point에 Slack webhook(아래 slack/SETUP.md) 연결
+- Grafana Cloud **Alerting** → Contact point에 Slack webhook(아래 slack/SETUP.md) 연결
+
+> ⚠️ **blue-green 알림 룰 주의**: 비활성 슬롯은 상시 `up=0` 이므로 `up == 0` 단순 알림을 쓰면 배포와 무관하게 항상 알림이 뜬다.
+> app-server 다운 감지는 **둘 다 죽었을 때만** 발화하도록 써라:
+> ```
+> sum(up{service="app-server"}) == 0
+> ```
 
 ## 비용 가드
 - scrape_interval 30s 유지(15s 미만 금지 — series 폭증)

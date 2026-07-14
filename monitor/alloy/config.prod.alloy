@@ -1,0 +1,47 @@
+// Grafana Alloy 설정 — 프로드(오라클) 전용. 로컬용은 config.alloy.
+// blue-green 이중 타겟: 비활성 슬롯은 up=0 으로 조용히 실패, 활성 슬롯만 수집됨 (배포 전환 무중단)
+// 실행: 서버 /opt/pillmate/monitoring/alloy 에서 docker compose -f docker-compose.prod.yml up -d
+
+prometheus.scrape "spring_app" {
+  targets = [
+    {
+      __address__      = "pillmate-app-blue:8080",
+      __metrics_path__ = "/api/v1/actuator/prometheus",
+      service          = "app-server",
+      slot             = "blue",
+    },
+    {
+      __address__      = "pillmate-app-green:8080",
+      __metrics_path__ = "/api/v1/actuator/prometheus",
+      service          = "app-server",
+      slot             = "green",
+    },
+  ]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+prometheus.scrape "fastapi_ai" {
+  targets = [{
+    __address__      = "pillmate-ai-server:8001",
+    __metrics_path__ = "/metrics",
+    service          = "ai-server",
+  }]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+// 호스트 메트릭(unix exporter)은 제거: 컨테이너 안에서 호스트 /proc 미마운트라 오해 소지 메트릭 + 무료티어 카디널리티 낭비. 호스트 감시 필요 시 rootfs 마운트 방식으로 재도입.
+
+prometheus.remote_write "grafanacloud" {
+  external_labels = {
+    environment = "prod",
+  }
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROM_URL")
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROM_USER")
+      password = sys.env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
