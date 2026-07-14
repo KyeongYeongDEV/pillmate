@@ -1,7 +1,5 @@
 package com.pillmate.notification.domain.model;
 
-import com.pillmate.common.exception.ErrorCode;
-import com.pillmate.common.exception.PillmateException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -222,10 +220,9 @@ public class Notification {
         this.sentAt = now;
     }
 
+    // 앱 내 목록에서 사용자가 봤다 = 읽었다 (푸시 발송 도달 여부와 무관).
+    // FCM 발송 실패로 PENDING 에 머문 알림도 markSent 없이 바로 READ 전환 허용 — sentAt 은 null 로 정직하게 남는다.
     public void markRead(Instant now) {
-        if (this.status == NotificationStatus.PENDING) {
-            throw new PillmateException(ErrorCode.NOT_NOTIFICATION_OWNER);
-        }
         this.status = NotificationStatus.READ;
         this.readAt = now;
     }

@@ -4,14 +4,12 @@ import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.notification.domain.model.NotificationReferenceType;
 import com.pillmate.notification.domain.model.NotificationStatus;
 import com.pillmate.notification.domain.model.NotificationType;
-import com.pillmate.common.exception.PillmateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("Notification Aggregate — 팩토리/상태전이 단위")
 class NotificationTest {
@@ -85,12 +83,15 @@ class NotificationTest {
     }
 
     @Test
-    @DisplayName("PENDING 상태에서 markRead() 시 예외")
-    void markRead_whenPending_throws() {
+    @DisplayName("markRead() — PENDING → READ 허용 (FCM 발송 실패로 PENDING 에 머물러도 앱 내 읽음 처리 가능), sentAt 은 null 유지")
+    void markRead_whenPending_transitionsToReadWithoutSentAt() {
         Notification n = Notification.doseTaken(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG);
 
-        assertThatThrownBy(() -> n.markRead(Instant.now()))
-                .isInstanceOf(PillmateException.class);
+        n.markRead(Instant.now());
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.READ);
+        assertThat(n.getReadAt()).isNotNull();
+        assertThat(n.getSentAt()).isNull();
     }
 
     @Test

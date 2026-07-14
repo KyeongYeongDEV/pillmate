@@ -1,4 +1,4 @@
-import { notificationApiSlice } from '@/store/slices/notificationApi';
+import { notificationApiSlice, markReadInList } from '@/store/slices/notificationApi';
 import { notificationMeta, notificationRoute, unreadCount } from '@/lib/notificationMeta';
 import { relativeTime } from '@/utils/relativeTime';
 import type { NotificationItem } from '@/types/notification';
@@ -21,6 +21,21 @@ describe('notificationApi — 엔드포인트', () => {
 
   it('reducerPath 등록', () => {
     expect(notificationApiSlice.reducerPath).toBe('notificationApi');
+  });
+});
+
+describe('markReadInList — 낙관적 읽음 처리', () => {
+  it('해당 id 알림만 READ로 변경', () => {
+    const items = [item({ id: 1, status: 'SENT' }), item({ id: 2, status: 'SENT' })];
+    markReadInList(items, 1);
+    expect(items.find(n => n.id === 1)?.status).toBe('READ');
+    expect(items.find(n => n.id === 2)?.status).toBe('SENT');
+  });
+
+  it('없는 id는 변화 없음', () => {
+    const items = [item({ id: 1, status: 'SENT' })];
+    markReadInList(items, 99);
+    expect(items[0].status).toBe('SENT');
   });
 });
 
