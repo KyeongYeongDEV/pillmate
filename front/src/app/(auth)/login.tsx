@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import * as Device from 'expo-device';
 import { Image } from 'expo-image';
 import { useKakaoLoginMutation, useKakaoNativeLoginMutation } from '@/store/slices/authApi';
+import { registerPushForCurrentUser } from '@/lib/notifications/pushRegistration';
 import KakaoTalkIcon from '@/components/common/KakaoTalkIcon';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
 
@@ -30,6 +31,7 @@ export default function LoginScreen() {
   async function loginWithCode(code: string, uri: string) {
     try {
       await kakaoLogin({ code, redirectUri: uri }).unwrap();
+      void registerPushForCurrentUser();
       router.replace('/(tabs)/home');
     } catch {
       showError('로그인에 실패했어요. 다시 시도해 주세요.');
@@ -71,6 +73,7 @@ export default function LoginScreen() {
         return;
       }
       await kakaoNativeLogin({ accessToken }).unwrap();
+      void registerPushForCurrentUser();
       router.replace('/(tabs)/home');
     } catch {
       showError('로그인에 실패했어요. 다시 시도해 주세요.');
