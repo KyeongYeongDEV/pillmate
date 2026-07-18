@@ -199,6 +199,62 @@ class KakaoLoginServiceTest {
         verify(userRepository).save(withdrawn);
     }
 
+    // T-BE-KAKAO-NATIVE — 네이티브 SDK accessToken 검증 로그인
+    @Test
+    @DisplayName("네이티브 accessToken 신규 가입 — isNewUser=true, 웹 콜백과 동일 upsert 경로")
+    void loginWithAccessToken_newUser_savesAndReturnsNewUser() {
+        given(kakaoOAuthPort.profileByAccessToken("native-access-token")).willReturn(KAKAO_PROFILE);
+        given(userRepository.findByProviderAndExternalId(UserProvider.KAKAO, "kakao-id-1"))
+                .willReturn(Optional.empty());
+        given(userRepository.save(any(User.class))).willReturn(userWithId(10L, "홍길동"));
+
+        AuthResult result = sut.loginWithAccessToken("native-access-token");
+
+        assertThat(result.isNewUser()).isTrue();
+        assertThat(result.userId()).isEqualTo(10L);
+        verify(userRepository).save(any(User.class));
+        verify(kakaoOAuthPort, never()).exchange(any(), any());
+    }
+
+    @Test
+    @DisplayName("네이티브 accessToken 기존 사용자 — isNewUser=false, 저장 없음")
+    void loginWithAccessToken_existingUser_noSave() {
+        given(kakaoOAuthPort.profileByAccessToken("native-access-token")).willReturn(KAKAO_PROFILE);
+        given(userRepository.findByProviderAndExternalId(UserProvider.KAKAO, "kakao-id-1"))
+                .willReturn(Optional.of(userWithId(5L, "홍길동")));
+
+        AuthResult result = sut.loginWithAccessToken("native-access-token");
+
+        assertThat(result.isNewUser()).isFalse();
+        assertThat(result.userId()).isEqualTo(5L);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("네이티브 accessToken 빈값 — KAKAO_AUTH_FAILED(401), 카카오 호출 없음")
+    void loginWithAccessToken_blank_throwsKakaoAuthFailed() {
+        assertThatThrownBy(() -> sut.loginWithAccessToken(""))
+                .isInstanceOf(PillmateException.class)
+                .satisfies(ex -> assertThat(((PillmateException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.KAKAO_AUTH_FAILED));
+
+        verify(kakaoOAuthPort, never()).profileByAccessToken(any());
+    }
+
+    @Test
+    @DisplayName("네이티브 accessToken 카카오 검증 실패 — KakaoOAuthPort 예외 그대로 전파")
+    void loginWithAccessToken_invalidToken_propagatesKakaoAuthFailed() {
+        given(kakaoOAuthPort.profileByAccessToken("bad-token"))
+                .willThrow(new PillmateException(ErrorCode.KAKAO_AUTH_FAILED));
+
+        assertThatThrownBy(() -> sut.loginWithAccessToken("bad-token"))
+                .isInstanceOf(PillmateException.class)
+                .satisfies(ex -> assertThat(((PillmateException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.KAKAO_AUTH_FAILED));
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
     private User userWithId(Long id, String name) {
         User user = User.dummy(name);
         ReflectionTestUtils.setField(user, "id", id);

@@ -42,8 +42,20 @@ public class KakaoLoginService {
         return devFallback(devUserId);
     }
 
+    // 네이티브 SDK 로그인 — 클라이언트가 이미 카카오와 교환한 accessToken 을 검증 후 웹 콜백과 동일한 로그인 처리
+    @Transactional
+    public AuthResult loginWithAccessToken(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
+        }
+        return loginWithProfile(kakaoOAuthPort.profileByAccessToken(accessToken));
+    }
+
     private AuthResult loginWithKakao(String code, String redirectUri) {
-        KakaoProfile profile = kakaoOAuthPort.exchange(code, redirectUri);
+        return loginWithProfile(kakaoOAuthPort.exchange(code, redirectUri));
+    }
+
+    private AuthResult loginWithProfile(KakaoProfile profile) {
         boolean existing = userRepository.findByProviderAndExternalId(UserProvider.KAKAO, profile.kakaoId()).isPresent();
         User user = upsertUser(profile);
         return toAuthResult(user, !existing, profile);

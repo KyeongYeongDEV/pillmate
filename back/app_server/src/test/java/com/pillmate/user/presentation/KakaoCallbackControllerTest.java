@@ -7,6 +7,7 @@ import com.pillmate.common.security.JwtTokenProvider;
 import com.pillmate.user.application.KakaoLoginService;
 import com.pillmate.user.application.LoginCodeService;
 import com.pillmate.user.application.dto.AuthResult;
+import com.pillmate.user.presentation.dto.KakaoNativeLoginRequest;
 import com.pillmate.user.presentation.dto.LoginCodeExchangeRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,5 +104,32 @@ class KakaoCallbackControllerTest {
                 .andExpect(jsonPath("$.data.token").value("jwt.token.here"))
                 .andExpect(jsonPath("$.data.userId").value(42))
                 .andExpect(jsonPath("$.data.isNewUser").value(true));
+    }
+
+    // T-BE-KAKAO-NATIVE — 네이티브 SDK accessToken 검증 로그인
+    @Test
+    @DisplayName("POST /auth/kakao/native {accessToken} 유효 → 200 + JWT (웹 콜백과 동일 응답 스키마)")
+    void nativeLogin_validAccessToken_returns200WithJwt() throws Exception {
+        given(kakaoLoginService.loginWithAccessToken("valid-native-token")).willReturn(sampleResult);
+
+        mockMvc.perform(post("/auth/kakao/native")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new KakaoNativeLoginRequest("valid-native-token"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").value("jwt.token.here"))
+                .andExpect(jsonPath("$.data.userId").value(42))
+                .andExpect(jsonPath("$.data.isNewUser").value(true));
+    }
+
+    @Test
+    @DisplayName("POST /auth/kakao/native accessToken 무효 → 401 KAKAO_AUTH_FAILED")
+    void nativeLogin_invalidAccessToken_returns401() throws Exception {
+        given(kakaoLoginService.loginWithAccessToken("invalid-token"))
+                .willThrow(new PillmateException(ErrorCode.KAKAO_AUTH_FAILED));
+
+        mockMvc.perform(post("/auth/kakao/native")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new KakaoNativeLoginRequest("invalid-token"))))
+                .andExpect(status().isUnauthorized());
     }
 }

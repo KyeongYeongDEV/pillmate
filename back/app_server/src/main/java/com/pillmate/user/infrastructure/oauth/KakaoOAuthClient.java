@@ -23,20 +23,26 @@ public class KakaoOAuthClient implements KakaoOAuthPort {
     private final RestClient restClient;
     private final String tokenUrl;
     private final String userInfoUrl;
+    private final String accessTokenInfoUrl;
     private final String clientId;
     private final String clientSecret;
+    private final Long expectedAppId;
 
     public KakaoOAuthClient(
             RestClient.Builder builder,
             @Value("${kakao.token-url:https://kauth.kakao.com/oauth/token}") String tokenUrl,
             @Value("${kakao.user-info-url:https://kapi.kakao.com/v2/user/me}") String userInfoUrl,
+            @Value("${kakao.access-token-info-url:https://kapi.kakao.com/v1/user/access_token_info}") String accessTokenInfoUrl,
             @Value("${kakao.client-id:}") String clientId,
-            @Value("${kakao.client-secret:}") String clientSecret) {
+            @Value("${kakao.client-secret:}") String clientSecret,
+            @Value("${kakao.app-id:}") String appId) {
         this.restClient = builder.build();
         this.tokenUrl = tokenUrl;
         this.userInfoUrl = userInfoUrl;
+        this.accessTokenInfoUrl = accessTokenInfoUrl;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.expectedAppId = parseAppId(appId);
     }
 
     @Override
@@ -48,6 +54,46 @@ public class KakaoOAuthClient implements KakaoOAuthPort {
     public KakaoProfile exchange(String code, String redirectUri) {
         String accessToken = fetchAccessToken(code, redirectUri);
         return fetchUserInfo(accessToken);
+    }
+
+    // 네이티브 SDK accessToken 은 클라이언트가 카카오와 직접 교환한 토큰이라 발급 앱을 신뢰할 수 없음 —
+    // 프로필 조회 전 access_token_info 로 PillMate 앱(app_id) 발급분인지 검증 (타 카카오앱 토큰 치환 방지).
+    // 웹 콜백(exchange)은 client_id+client_secret 로 이미 앱이 바인딩돼 재검증이 불필요해 대상에서 제외.
+    @Override
+    public KakaoProfile profileByAccessToken(String accessToken) {
+        verifyAppId(accessToken);
+        return fetchUserInfo(accessToken);
+    }
+
+    private void verifyAppId(String accessToken) {
+        if (expectedAppId == null) {
+            return;
+        }
+        try {
+            AccessTokenInfoResponse info = restClient.get()
+                    .uri(accessTokenInfoUrl)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(AccessTokenInfoResponse.class);
+            if (info == null || !expectedAppId.equals(info.appId())) {
+                log.warn("Kakao access_token_info app_id mismatch (expected={})", expectedAppId);
+                throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
+            }
+        } catch (RestClientException e) {
+            log.error("Kakao access_token_info verification failed: {}", e.getMessage());
+            throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
+        }
+    }
+
+    private static Long parseAppId(String appId) {
+        if (appId == null || appId.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(appId.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("kakao.app-id 설정값이 숫자가 아닙니다: " + appId, e);
+        }
     }
 
     private String fetchAccessToken(String code, String redirectUri) {
@@ -118,6 +164,12 @@ public class KakaoOAuthClient implements KakaoOAuthPort {
     // 카카오 응답 필드는 문서에 없는 값(token_type 등)도 포함될 수 있어 미지 필드 무시 — strict 파싱 실패 방지
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoTokenResponse(@JsonProperty("access_token") String accessToken) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record AccessTokenInfoResponse(
+            Long id,
+            @JsonProperty("expires_in") Integer expiresIn,
+            @JsonProperty("app_id") Long appId) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record KakaoUserInfoResponse(

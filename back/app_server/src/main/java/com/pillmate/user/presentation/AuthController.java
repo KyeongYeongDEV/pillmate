@@ -5,6 +5,7 @@ import com.pillmate.user.application.KakaoLoginService;
 import com.pillmate.user.application.LoginCodeService;
 import com.pillmate.user.application.dto.AuthResult;
 import com.pillmate.user.presentation.dto.KakaoLoginRequest;
+import com.pillmate.user.presentation.dto.KakaoNativeLoginRequest;
 import com.pillmate.user.presentation.dto.LoginCodeExchangeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,12 @@ public class AuthController {
                 request.code() != null ? request.code() : "",
                 request.redirectUri() != null ? request.redirectUri() : "",
                 devUserId);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @PostMapping("/kakao/native")
+    public ResponseEntity<ApiResponse<AuthResult>> kakaoNativeLogin(@RequestBody KakaoNativeLoginRequest request) {
+        AuthResult result = kakaoLoginService.loginWithAccessToken(request.accessToken());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

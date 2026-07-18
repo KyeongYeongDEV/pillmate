@@ -117,6 +117,9 @@ kakao:
   redirect-uri: ${KAKAO_REDIRECT_URI:}
   token-url: https://kauth.kakao.com/oauth/token
   user-info-url: https://kapi.kakao.com/v2/user/me
+  access-token-info-url: https://kapi.kakao.com/v1/user/access_token_info
+  # PillMate 카카오 앱 고유 app_id — 네이티브 accessToken 이 이 앱에서 발급됐는지 검증 (타 카카오앱 토큰 치환 방지)
+  app-id: ${KAKAO_APP_ID:1495467}
 
 app:
   deeplink: ${APP_DEEPLINK:pillmate://oauth/kakao}
