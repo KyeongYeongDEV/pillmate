@@ -6,7 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import { clearAuth, getDisplayName, saveDisplayName } from '@/lib/auth/storage';
+import { resetPushRegistration } from '@/lib/notifications/pushRegistration';
 import { useUpdateUserNameMutation } from '@/store/slices/userApi';
 import { colors, space, scale, radius, typography, shadows } from '@/styles/tokens';
 import { NAME_MIN_LENGTH, NAME_MAX_LENGTH } from '@/lib/constants';
@@ -15,6 +17,18 @@ const TERMS_URL = 'https://pillmate.app/terms';
 const PRIVACY_URL = 'https://pillmate.app/privacy';
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 const DEFAULT_PROFILE_NAME = '내 계정';
+
+// 카카오 SDK 세션을 끊어 재로그인 시 계정 선택 화면이 다시 뜨게 한다. 앱 자체 로그아웃은 이 결과와 무관하게 진행한다.
+async function logoutKakaoSession(): Promise<void> {
+  if (!Device.isDevice) return; // 시뮬레이터는 네이티브 SDK 미지원
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { logout } = require('@react-native-seoul/kakao-login') as typeof import('@react-native-seoul/kakao-login');
+    await logout();
+  } catch {
+    // 카카오 세션 없음/실패 — 앱 로그아웃은 계속 진행
+  }
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -107,20 +121,20 @@ export default function MyScreen() {
     }
   }, [nameInput, updateUserName]);
 
+  async function performLogout() {
+    await logoutKakaoSession();
+    resetPushRegistration();
+    await clearAuth();
+    router.replace('/(auth)/login');
+  }
+
   function handleLogout() {
     Alert.alert(
       '로그아웃',
       '정말 로그아웃하시겠어요?',
       [
         { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            await clearAuth();
-            router.replace('/(auth)/login');
-          },
-        },
+        { text: '로그아웃', style: 'destructive', onPress: performLogout },
       ],
       { cancelable: true },
     );

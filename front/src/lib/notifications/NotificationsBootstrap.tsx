@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useAppDispatch } from '@/store/hooks';
@@ -30,6 +31,19 @@ export default function NotificationsBootstrap() {
       const token = await getToken();
       if (token) await registerPushForCurrentUser();
     })();
+  }, []);
+
+  // 포그라운드 복귀 시 자가치유 — 사용자가 설정에서 알림을 켜고 돌아오면 토큰을 재등록한다.
+  // registerPushForCurrentUser 는 멱등(권한 granted + 토큰 가드)이라 권한 여전히 거부면 조용히 스킵.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void (async () => {
+        const token = await getToken();
+        if (token) await registerPushForCurrentUser();
+      })();
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
