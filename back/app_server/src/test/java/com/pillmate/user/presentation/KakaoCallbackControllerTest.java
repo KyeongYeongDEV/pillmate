@@ -1,6 +1,8 @@
 package com.pillmate.user.presentation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.JwtTokenProvider;
 import com.pillmate.user.application.KakaoLoginService;
 import com.pillmate.user.application.LoginCodeService;
@@ -65,6 +67,18 @@ class KakaoCallbackControllerTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", containsString("pillmate://oauth/kakao")))
                 .andExpect(header().string("Location", containsString("error=access_denied")));
+    }
+
+    @Test
+    @DisplayName("code 정상인데 login() 실패 → 401 JSON 아닌 302 딥링크(error=login_failed) 바운스")
+    void callback_loginFails_redirectsWithLoginFailedNot401() throws Exception {
+        given(kakaoLoginService.login("bad-code", "https://example.com/api/v1/auth/kakao/callback"))
+                .willThrow(new PillmateException(ErrorCode.KAKAO_AUTH_FAILED));
+
+        mockMvc.perform(get("/auth/kakao/callback").param("code", "bad-code"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", containsString("pillmate://oauth/kakao")))
+                .andExpect(header().string("Location", containsString("error=login_failed")));
     }
 
     @Test

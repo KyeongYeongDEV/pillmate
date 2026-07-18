@@ -14,6 +14,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Slf4j
 @Component
@@ -61,6 +62,10 @@ public class KakaoOAuthClient implements KakaoOAuthPort {
                 throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
             }
             return response.accessToken();
+        } catch (RestClientResponseException e) {
+            // 카카오 4xx/5xx — error/error_description(KOExxx) 로 B(토큰교환실패) 원인 확정. 응답 바디에 시크릿 없음.
+            log.error("Kakao token exchange failed status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);
         } catch (RestClientException e) {
             log.error("Kakao token exchange failed: {}", e.getMessage());
             throw new PillmateException(ErrorCode.KAKAO_AUTH_FAILED);

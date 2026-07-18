@@ -7,6 +7,7 @@ import com.pillmate.user.application.dto.AuthResult;
 import com.pillmate.user.presentation.dto.KakaoLoginRequest;
 import com.pillmate.user.presentation.dto.LoginCodeExchangeRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
+@Slf4j
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -41,13 +43,25 @@ public class AuthController {
     public ResponseEntity<Void> kakaoCallback(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error) {
+        log.info("KakaoCallback hit code_present={} error={}", code != null, error);
         if (error != null) {
             return redirect(deeplink + "?error=" + error);
         }
+        try {
+            return redirect(deeplink + "?loginCode=" + issueLoginCode(code));
+        } catch (RuntimeException e) {
+            // 콜백은 도달했으나 토큰교환/로그인 실패 — 401 JSON 대신 앱 딥링크로 에러 바운스(앱이 실패 안내 가능)
+            log.error("KakaoCallback login failed: {}", e.getMessage());
+            return redirect(deeplink + "?error=login_failed");
+        }
+    }
+
+    private String issueLoginCode(String code) {
         AuthResult result = kakaoLoginService.login(code, kakaoRedirectUri);
         // JWT는 URL/로그에 노출하지 않음 — 단기(60초) 1회용 loginCode로 교환
         String loginCode = loginCodeService.generate(result);
-        return redirect(deeplink + "?loginCode=" + loginCode);
+        log.info("KakaoCallback success userId={} loginCode 발급", result.userId());
+        return loginCode;
     }
 
     @PostMapping("/kakao/exchange")
