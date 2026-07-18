@@ -155,10 +155,29 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>오늘의 복약</Text>
             <Text style={styles.sectionDate}>{formatMonthDay(today)}</Text>
           </View>
-          <TimeSlotCards
-            slots={slots}
-            onSlotPress={handleSlotPress}
-          />
+          {scheduleReady && slots.length === 0 ? (
+            <Pressable
+              style={styles.emptyCard}
+              onPress={() => router.push('/prescription' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="약봉투 등록하러 가기"
+              accessibilityHint="약봉투 등록 화면으로 이동합니다"
+            >
+              <View style={styles.emptyIcon}>
+                <Feather name="file-plus" size={scale(26)} color={colors.primaryNormal} />
+              </View>
+              <View style={styles.emptyTextArea}>
+                <Text style={styles.emptyTitle}>아직 등록한 약봉투가 없어요</Text>
+                <Text style={styles.emptySub}>약봉투 메뉴에서 약을 등록해 주세요</Text>
+              </View>
+              <Feather name="chevron-right" size={scale(22)} color={colors.labelAssistive} />
+            </Pressable>
+          ) : (
+            <TimeSlotCards
+              slots={slots}
+              onSlotPress={handleSlotPress}
+            />
+          )}
         </View>
 
         {/* AI 인사이트 — 복약중 처방전 인사이트를 10초마다 순환. 없으면 숨김 */}
@@ -242,6 +261,27 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#C8DDFF',
   },
   safetyText: { ...typography.caption1, color: colors.labelAlternative, textAlign: 'center', lineHeight: scale(18) },
+  emptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.s12,
+    backgroundColor: colors.bgNormal,
+    borderRadius: radius.r16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: space.s16,
+  },
+  emptyIcon: {
+    width: scale(44),
+    height: scale(44),
+    borderRadius: radius.full,
+    backgroundColor: colors.bgAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTextArea: { flex: 1, gap: scale(2) },
+  emptyTitle: { ...typography.headline1, fontWeight: '700', color: colors.labelNormal },
+  emptySub: { ...typography.body2r, color: colors.labelAlternative },
   errorState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s16, padding: space.s24 },
   errorText: { ...typography.body1n, color: colors.labelAlternative },
   retryBtn: {
