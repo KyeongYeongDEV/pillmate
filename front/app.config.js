@@ -8,6 +8,6 @@ module.exports = ({ config }) => ({
   plugins: [
     ...(config.plugins ?? []),
     ['@react-native-seoul/kakao-login', { kakaoAppKey: KAKAO_NATIVE_APP_KEY }],
-    ['expo-build-properties', { android: { extraMavenRepos: [KAKAO_MAVEN_REPO], kotlinVersion: '1.9.0' } }],
+    ['expo-build-properties', { android: { extraMavenRepos: [KAKAO_MAVEN_REPO] } }],
   ],
 });
