@@ -7,7 +7,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.123.129:8080/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.123.129:8080/api/v1",
+        "EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY": "b765d540ee7d9da3ba6bbbee80c2d7a0"
       },
       "android": {
         "buildType": "apk"
@@ -21,7 +22,8 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://pillmatefriend.duckdns.org/api/v1",
         "EXPO_PUBLIC_KAKAO_REST_API_KEY": "c564f56a915ce54575c0f0d0066b61df",
-        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://pillmatefriend.duckdns.org/api/v1/auth/kakao/callback"
+        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://pillmatefriend.duckdns.org/api/v1/auth/kakao/callback",
+        "EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY": "b765d540ee7d9da3ba6bbbee80c2d7a0"
       },
       "android": {
         "buildType": "apk"
@@ -31,7 +33,8 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://pillmatefriend.duckdns.org/api/v1",
         "EXPO_PUBLIC_KAKAO_REST_API_KEY": "c564f56a915ce54575c0f0d0066b61df",
-        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://pillmatefriend.duckdns.org/api/v1/auth/kakao/callback"
+        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://pillmatefriend.duckdns.org/api/v1/auth/kakao/callback",
+        "EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY": "b765d540ee7d9da3ba6bbbee80c2d7a0"
       }
     }
   },

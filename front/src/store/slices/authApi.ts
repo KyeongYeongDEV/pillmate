@@ -69,7 +69,28 @@ export const authApiSlice = createApi({
         }
       },
     }),
+
+    // 네이티브 카카오 SDK 로그인: 클라이언트가 accessToken 을 직접 받아 BE 로 전달.
+    kakaoNativeLogin: build.mutation<AuthResult, { accessToken: string }>({
+      query: (body) => ({ url: '/auth/kakao/native', method: 'POST', body, headers: devUserIdHeaders() }),
+      transformResponse: (response: ApiEnvelope<AuthResult>) =>
+        response?.data ?? EMPTY_RESULT,
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data.token) await saveToken(data.token);
+          if (data.userId) await setCurrentUserId(data.userId);
+          if (data.profile?.name) await saveDisplayName(data.profile.name);
+        } catch {
+          // 로그인 실패 — 컴포넌트에서 처리
+        }
+      },
+    }),
   }),
 });
 
-export const { useKakaoLoginMutation, useExchangeKakaoCodeMutation } = authApiSlice;
+export const {
+  useKakaoLoginMutation,
+  useExchangeKakaoCodeMutation,
+  useKakaoNativeLoginMutation,
+} = authApiSlice;

@@ -7,17 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Device from 'expo-device';
 import { Image } from 'expo-image';
-import { useKakaoLoginMutation, useExchangeKakaoCodeMutation } from '@/store/slices/authApi';
+import { useKakaoLoginMutation, useKakaoNativeLoginMutation } from '@/store/slices/authApi';
 import KakaoTalkIcon from '@/components/common/KakaoTalkIcon';
 import { colors, space, scale, radius, typography } from '@/styles/tokens';
 
-const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '';
-const KAKAO_REDIRECT_URI = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI  ?? '';
-// 프로덕션: REST 키 + https 콜백 URI 모두 설정 + 실기기(Device.isDevice)인 경우만.
-// 시뮬레이터/에뮬레이터는 항상 dev-fallback 자동로그인(임의 userId) — 실기기만 실제 카카오.
-const IS_PROD_KAKAO  = Boolean(KAKAO_REST_API_KEY && KAKAO_REDIRECT_URI) && Device.isDevice;
-const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
-const RETURN_URL     = 'pillmate://oauth/kakao';
 const TERMS_URL = 'https://pillmate.app/terms';
 const PRIVACY_URL = 'https://pillmate.app/privacy';
 const TOAST_DURATION_MS = 3000;
@@ -27,8 +20,8 @@ const KAKAO_TEXT = '#191600';
 
 export default function LoginScreen() {
   const [kakaoLogin, { isLoading: kakaoLoading }] = useKakaoLoginMutation();
-  const [exchangeKakaoCode, { isLoading: exchangeLoading }] = useExchangeKakaoCodeMutation();
-  const isLoading = kakaoLoading || exchangeLoading;
+  const [kakaoNativeLogin, { isLoading: nativeLoading }] = useKakaoNativeLoginMutation();
+  const isLoading = kakaoLoading || nativeLoading;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const toastOpacity = useState(() => new Animated.Value(0))[0];
   // Pressable style function-form 은 New Arch 에서 무시되는 재현 케이스 확인됨 — 정적 스타일 + 로컬 state 로 pressed 처리
@@ -61,38 +54,23 @@ export default function LoginScreen() {
   }
 
   async function handleKakaoPress() {
-    if (!IS_PROD_KAKAO) {
-      // dev-fallback: 빈 code → BE seed userId 반환
+    if (!Device.isDevice) {
+      // dev-fallback: 빈 code → BE seed userId 반환 (시뮬레이터는 네이티브 SDK 미지원)
       await loginWithCode('', '');
       return;
     }
 
     try {
-      // 동적 require: IS_PROD_KAKAO false 분기에선 절대 평가 안 됨
+      // 동적 require: 시뮬레이터 분기에선 네이티브 모듈을 평가하지 않는다.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { openAuthSessionAsync } = require('expo-web-browser') as typeof import('expo-web-browser');
-      const authorizeUrl =
-        `${KAKAO_AUTH_URL}?client_id=${KAKAO_REST_API_KEY}` +
-        `&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}` +
-        `&response_type=code`;
-
-      const result = await openAuthSessionAsync(authorizeUrl, RETURN_URL);
-      if (result.type !== 'success') return;
-
-      const qs = result.url.split('?')[1] ?? '';
-      const params = new URLSearchParams(qs);
-
-      if (params.get('error')) {
-        showError('카카오 로그인을 취소했거나 오류가 발생했어요.');
-        return;
-      }
-
-      const loginCode = params.get('loginCode') ?? '';
-      if (!loginCode) {
+      const { login } = require('@react-native-seoul/kakao-login') as typeof import('@react-native-seoul/kakao-login');
+      // 카톡 미설치 시 SDK 가 카카오계정 웹 로그인으로 자동 폴백.
+      const { accessToken } = await login();
+      if (!accessToken) {
         showError('로그인 정보를 받아오지 못했어요. 다시 시도해 주세요.');
         return;
       }
-      await exchangeKakaoCode({ loginCode }).unwrap();
+      await kakaoNativeLogin({ accessToken }).unwrap();
       router.replace('/(tabs)/home');
     } catch {
       showError('로그인에 실패했어요. 다시 시도해 주세요.');
