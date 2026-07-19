@@ -91,3 +91,21 @@ def test_init_sentry_passes_before_send_scrubber():
         init_sentry(dsn="https://test@sentry.io/123", environment="production")
         _, kwargs = mock_sdk.init.call_args
         assert callable(kwargs.get("before_send")), "before_send 는 callable 이어야 한다"
+
+
+# ─── 잘못된 DSN → 예외 흡수, 앱 기동 유지 ────────────────────────────────────
+
+def test_init_sentry_swallows_bad_dsn_and_does_not_raise():
+    from app.core.sentry import init_sentry
+
+    # 공개키 누락 형태 — 실제 sentry_sdk.init 이 BadDsn 을 던지는 케이스
+    init_sentry(dsn="https://o123.ingest.sentry.io/1", environment="production")
+
+
+def test_init_sentry_swallows_arbitrary_init_exception():
+    from app.core.sentry import init_sentry
+
+    with patch("app.core.sentry.sentry_sdk") as mock_sdk:
+        mock_sdk.init.side_effect = RuntimeError("boom")
+        init_sentry(dsn="https://test@sentry.io/123", environment="production")
+        mock_sdk.init.assert_called_once()

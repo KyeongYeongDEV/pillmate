@@ -21,16 +21,26 @@ def scrub_medical_data(event: dict, hint: dict) -> dict | None:
 
 
 def init_sentry(dsn: str | None, environment: str) -> None:
-    """Sentry SDK 초기화. DSN 빈값이면 skip (로컬 개발 환경 OFF)."""
+    """Sentry SDK 초기화. DSN 빈값이면 skip (로컬 개발 환경 OFF).
+
+    DSN 형식이 잘못된 경우(BadDsn 등)에도 예외를 전파하지 않고 Sentry 를
+    비활성화한 채 앱 기동을 계속한다 — 설정 오류로 서비스 전체가 죽으면 안 된다.
+    """
     if not dsn:
         logger.debug("SENTRY_DSN 빈값 — Sentry 비활성")
         return
 
-    sentry_sdk.init(
-        dsn=dsn,
-        environment=environment,
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-        before_send=scrub_medical_data,
-    )
+    try:
+        sentry_sdk.init(
+            dsn=dsn,
+            environment=environment,
+            traces_sample_rate=0.1,
+            send_default_pii=False,
+            before_send=scrub_medical_data,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Sentry init 실패 — DSN 오류로 비활성화: %s", exc.__class__.__name__
+        )
+        return
     logger.info("Sentry 초기화 완료 environment=%s", environment)
