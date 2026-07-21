@@ -16,6 +16,7 @@ import {
   getKstToday, isEditableDate,
 } from '@/utils/calendarUtils';
 import { deriveOverlayState } from '@/lib/scheduleUtils';
+import { useKstToday } from '@/hooks/useKstToday';
 import type { RootState } from '@/store';
 import type { MedSlot } from '@/types/schedule';
 
@@ -33,7 +34,7 @@ function alertDateLocked(selectedDate: string, today: string) {
 }
 
 export default function ScheduleScreen() {
-  const today = getKstToday();
+  const today = useKstToday();
 
   const [displayYear, setDisplayYear] = useState(() => Number(getKstToday().slice(0, 4)));
   const [displayMonth, setDisplayMonth] = useState(() => Number(getKstToday().slice(5, 7)));

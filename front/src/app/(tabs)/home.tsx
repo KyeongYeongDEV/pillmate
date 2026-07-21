@@ -24,7 +24,8 @@ import {
   medSlotToTimeSlot, buildDoseHeadline, deriveSlotStatuses, STREAK_DISPLAY_MIN,
   deriveOverlayState,
 } from '@/lib/scheduleUtils';
-import { formatFullDate, formatMonthDay, getKstToday } from '@/utils/calendarUtils';
+import { formatFullDate, formatMonthDay } from '@/utils/calendarUtils';
+import { useKstToday } from '@/hooks/useKstToday';
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
 import NotificationBell from '@/components/home/NotificationBell';
@@ -34,7 +35,7 @@ import BootSkeleton from '@/components/common/BootSkeleton';
 const HOME_REFETCH_THROTTLE_SEC = 30;
 
 export default function HomeScreen() {
-  const today = getKstToday();
+  const today = useKstToday();
   const doseStateMap = useAppSelector((state: RootState) => state.doseState);
   const handleSettingsPress = useMemo(() => () => router.push('/(tabs)/my' as any), []);
   const pressSlot = useSlotPress();
