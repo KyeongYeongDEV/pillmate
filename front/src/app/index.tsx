@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { getToken, ONBOARDING_SEEN_KEY } from '@/lib/auth/storage';
+import { refreshSessionIfNeeded } from '@/lib/auth/refreshSession';
 import { colors } from '@/styles/tokens';
 
 export default function Index() {
@@ -17,6 +18,7 @@ async function boot() {
   const token = await getToken();
   if (token) {
     router.replace('/(tabs)/home');
+    void refreshSessionIfNeeded(); // 화면전환은 그대로, 갱신은 백그라운드로
     return;
   }
   const seen = await SecureStore.getItemAsync(ONBOARDING_SEEN_KEY);

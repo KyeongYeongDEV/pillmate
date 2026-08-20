@@ -1,9 +1,12 @@
 package com.pillmate.user.presentation;
 
 import com.pillmate.common.response.ApiResponse;
+import com.pillmate.common.security.UserContext;
 import com.pillmate.user.application.KakaoLoginService;
 import com.pillmate.user.application.LoginCodeService;
+import com.pillmate.user.application.RefreshTokenService;
 import com.pillmate.user.application.dto.AuthResult;
+import com.pillmate.user.application.dto.RefreshTokenResponse;
 import com.pillmate.user.presentation.dto.KakaoLoginRequest;
 import com.pillmate.user.presentation.dto.KakaoNativeLoginRequest;
 import com.pillmate.user.presentation.dto.LoginCodeExchangeRequest;
@@ -24,6 +27,7 @@ public class AuthController {
 
     private final KakaoLoginService kakaoLoginService;
     private final LoginCodeService loginCodeService;
+    private final RefreshTokenService refreshTokenService;
     @Value("${kakao.redirect-uri:}")
     private final String kakaoRedirectUri;
     @Value("${app.deeplink:pillmate://oauth/kakao}")
@@ -75,6 +79,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResult>> exchangeLoginCode(
             @RequestBody LoginCodeExchangeRequest request) {
         AuthResult result = loginCodeService.exchange(request.loginCode());
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    // 세션 슬라이딩 갱신 — 인증된 사용자만 도달(UserContextInterceptor), 새 만료(14일)로 토큰 재발급
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refresh() {
+        RefreshTokenResponse result = refreshTokenService.refresh(UserContext.get());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

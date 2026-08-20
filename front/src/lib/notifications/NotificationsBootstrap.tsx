@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useAppDispatch } from '@/store/hooks';
 import { getToken } from '@/lib/auth/storage';
+import { refreshSessionIfNeeded } from '@/lib/auth/refreshSession';
 import {
   configureNotificationHandler,
   ensureAndroidNotificationChannels,
@@ -38,6 +39,7 @@ export default function NotificationsBootstrap() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
+      void refreshSessionIfNeeded(); // 포그라운드 복귀 시 세션 슬라이딩 갱신 (실패해도 조용히 무시)
       void (async () => {
         const token = await getToken();
         if (token) await registerPushForCurrentUser();

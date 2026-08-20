@@ -42,9 +42,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // UserContextInterceptor 먼저 등록 → afterCompletion은 역순이므로
         // ActivityRecordingInterceptor.afterCompletion이 먼저 실행되어 UserContext가 유효함
+        // 인증 예외는 카카오 로그인 진입점(무인증)만 — /auth/refresh 등 다른 /auth/** 는 반드시 인증 필요
         registry.addInterceptor(new UserContextInterceptor(jwtTokenProvider, devFallbackEnabled))
                 .addPathPatterns("/**")
-                .excludePathPatterns("/auth/**", "/v3/api-docs/**", "/swagger-ui/**");
+                .excludePathPatterns("/auth/kakao/**", "/v3/api-docs/**", "/swagger-ui/**");
 
         // 관리 엔드포인트 접근통제 — UserContext 설정 이후 등록. 허용 목록 비면 전원 차단(fail-closed)
         registry.addInterceptor(new AdminGuardInterceptor(parseAdminUserIds()))

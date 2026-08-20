@@ -31,7 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 @TestPropertySource(properties = {
         "kakao.redirect-uri=https://example.com/api/v1/auth/kakao/callback",
-        "app.deeplink=pillmate://oauth/kakao"
+        "app.deeplink=pillmate://oauth/kakao",
+        // 회귀 검증 — dev-fallback 비활성이어도 카카오 진입점은 무인증 접근 가능해야 함 (UserContextInterceptor exclude 좁힘 영향 확인)
+        "pillmate.auth.dev-fallback-enabled=false"
 })
 @DisplayName("GET /auth/kakao/callback — 카카오 HTTPS 콜백 + 딥링크 바운스")
 class KakaoCallbackControllerTest {
@@ -40,6 +42,7 @@ class KakaoCallbackControllerTest {
     @Autowired ObjectMapper objectMapper;
     @MockBean KakaoLoginService kakaoLoginService;
     @MockBean LoginCodeService loginCodeService;
+    @MockBean com.pillmate.user.application.RefreshTokenService refreshTokenService;
     @MockBean JwtTokenProvider jwtTokenProvider;
 
     private final AuthResult sampleResult = new AuthResult(
