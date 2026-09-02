@@ -19,6 +19,7 @@ import {
   useUpdatePrescriptionPeriodMutation,
 } from '@/store/slices/scheduleApi';
 import PrescriptionDrugRow from '@/components/prescription/PrescriptionDrugRow';
+import PrescriptionImageViewerModal from '@/components/prescription/PrescriptionImageViewerModal';
 import InsightCard from '@/components/home/InsightCard';
 import { useInsightPolling } from '@/hooks/useInsightPolling';
 import TimePicker, { formatTimeHHmm } from '@/components/schedule/TimePicker';
@@ -721,6 +722,7 @@ function AddSlotButton({ onPress, hasBorderTop }: { onPress: () => void; hasBord
 
 function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: () => void }) {
   const [failed, setFailed] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   if (!url || failed) {
     return (
       <Pressable style={styles.imagePlaceholder} onPress={onRefresh} accessibilityLabel="약봉투 이미지 다시 불러오기">
@@ -732,15 +734,28 @@ function PrescriptionImage({ url, onRefresh }: { url: string | null; onRefresh: 
     );
   }
   return (
-    <ExpoImage
-      source={{ uri: url }}
-      style={styles.image}
-      contentFit="cover"
-      cachePolicy="memory-disk"
-      placeholder={{ blurhash: 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4' }}
-      accessibilityLabel="약봉투 이미지"
-      onError={() => setFailed(true)}
-    />
+    <>
+      <Pressable
+        onPress={() => setViewerOpen(true)}
+        accessibilityLabel="약봉투 이미지 확대해서 보기"
+        accessibilityRole="button"
+      >
+        <ExpoImage
+          source={{ uri: url }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          placeholder={{ blurhash: 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4' }}
+          accessibilityLabel="약봉투 이미지"
+          onError={() => setFailed(true)}
+        />
+      </Pressable>
+      <PrescriptionImageViewerModal
+        visible={viewerOpen}
+        url={url}
+        onClose={() => setViewerOpen(false)}
+      />
+    </>
   );
 }
 
