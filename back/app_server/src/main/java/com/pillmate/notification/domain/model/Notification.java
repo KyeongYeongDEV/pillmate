@@ -147,6 +147,31 @@ public class Notification {
                 NotificationType.DOSE_CANCELED, "복약 알림", body);
     }
 
+    // 지연 복약 자가 알림 — "오전 8시 약을 아직 안 드셨어요" (2인칭, actor=본인, 솔로 사용자는 careGroupId null 허용)
+    public static Notification doseOverdueSelf(Long recipientUserId, Long careGroupId,
+                                                Long doseLogId, String timeLabel) {
+        return create(recipientUserId, recipientUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_OVERDUE, "복약 알림", timeLabel + " 약을 아직 안 드셨어요");
+    }
+
+    // 지연 복약 그룹 알림 — "○○님이 오전 8시 약을 아직 안 드셨어요" (3인칭, actor=환자 본인)
+    public static Notification doseOverdueGroup(Long recipientUserId, Long patientUserId,
+                                                 Long careGroupId, Long doseLogId,
+                                                 String patientName, String timeLabel) {
+        String subject = patientName != null ? patientName + "님이" : "그룹 멤버가";
+        String body = subject + " " + timeLabel + " 약을 아직 안 드셨어요";
+        return create(recipientUserId, patientUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_OVERDUE, "복약 알림", body);
+    }
+
+    // 그룹원 → 당사자 수동 넛지 — "○○님이 약 챙기라고 알려드려요"
+    public static Notification doseNudge(Long recipientUserId, Long actorUserId,
+                                         Long careGroupId, Long doseLogId, String actorName) {
+        String subject = actorName != null ? actorName + "님이" : "그룹 멤버가";
+        return create(recipientUserId, actorUserId, careGroupId, doseLogId,
+                NotificationType.DOSE_NUDGE, "복약 알림", subject + " 약 챙기라고 알려드려요");
+    }
+
     public static Notification ddiCritical(Long recipientUserId, Long actorUserId,
                                             Long careGroupId, Long prescriptionId,
                                             String warningDetail) {

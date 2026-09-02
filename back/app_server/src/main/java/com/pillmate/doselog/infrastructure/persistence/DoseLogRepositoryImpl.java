@@ -59,4 +59,16 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     public int markRemindedIfPending(Long doseLogId, Instant now) {
         return jpa.markRemindedIfStatus(doseLogId, now, DoseStatus.PENDING);
     }
+
+    @Override
+    public List<DoseLog> findPendingOverdueNotNotifiedBetween(Instant fromInclusive, Instant toInclusive) {
+        return jpa.findByStatusAndScheduledAtBetweenAndOverdueNotifiedAtIsNull(
+                DoseStatus.PENDING, fromInclusive, toInclusive);
+    }
+
+    @Override
+    @Transactional
+    public int markOverdueNotifiedIfPending(Long doseLogId, Instant now) {
+        return jpa.markOverdueNotifiedIfStatus(doseLogId, now, DoseStatus.PENDING);
+    }
 }

@@ -179,4 +179,61 @@ class NotificationTest {
                 null, null);
         assertThat(withFallback.getBody()).contains("그룹 멤버가");
     }
+
+    // ─── T-BE-GROUP-CARE-NUDGE ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("doseOverdueSelf — type DOSE_OVERDUE, actor=recipient(본인), 2인칭 본문")
+    void create_doseOverdueSelf_selfActorAndBody() {
+        Notification n = Notification.doseOverdueSelf(RECIPIENT, GROUP_ID, DOSE_LOG, "오전 8시");
+
+        assertThat(n.getType()).isEqualTo(NotificationType.DOSE_OVERDUE);
+        assertThat(n.getRecipientUserId()).isEqualTo(RECIPIENT);
+        assertThat(n.getActorUserId()).isEqualTo(RECIPIENT);
+        assertThat(n.getBody()).isEqualTo("오전 8시 약을 아직 안 드셨어요");
+    }
+
+    @Test
+    @DisplayName("doseOverdueSelf — careGroupId null(솔로) 허용")
+    void create_doseOverdueSelf_allowsNullCareGroup() {
+        Notification n = Notification.doseOverdueSelf(RECIPIENT, null, DOSE_LOG, "오전 8시");
+
+        assertThat(n.getCareGroupId()).isNull();
+    }
+
+    @Test
+    @DisplayName("doseOverdueGroup — 3인칭, patientName 포함 본문, actor=환자")
+    void create_doseOverdueGroup_thirdPersonBody() {
+        Notification n = Notification.doseOverdueGroup(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG, "홍길동", "오전 8시");
+
+        assertThat(n.getType()).isEqualTo(NotificationType.DOSE_OVERDUE);
+        assertThat(n.getActorUserId()).isEqualTo(ACTOR);
+        assertThat(n.getBody()).isEqualTo("홍길동님이 오전 8시 약을 아직 안 드셨어요");
+    }
+
+    @Test
+    @DisplayName("doseOverdueGroup — patientName null 시 '그룹 멤버가' fallback")
+    void create_doseOverdueGroup_nullPatientName_fallback() {
+        Notification n = Notification.doseOverdueGroup(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG, null, "오전 8시");
+
+        assertThat(n.getBody()).isEqualTo("그룹 멤버가 오전 8시 약을 아직 안 드셨어요");
+    }
+
+    @Test
+    @DisplayName("doseNudge — type DOSE_NUDGE, 본문에 actor 이름 포함")
+    void create_doseNudge_bodyContainsActorName() {
+        Notification n = Notification.doseNudge(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG, "김철수");
+
+        assertThat(n.getType()).isEqualTo(NotificationType.DOSE_NUDGE);
+        assertThat(n.getActorUserId()).isEqualTo(ACTOR);
+        assertThat(n.getBody()).isEqualTo("김철수님이 약 챙기라고 알려드려요");
+    }
+
+    @Test
+    @DisplayName("doseNudge — actorName null 시 '그룹 멤버가' fallback")
+    void create_doseNudge_nullActorName_fallback() {
+        Notification n = Notification.doseNudge(RECIPIENT, ACTOR, GROUP_ID, DOSE_LOG, null);
+
+        assertThat(n.getBody()).isEqualTo("그룹 멤버가 약 챙기라고 알려드려요");
+    }
 }

@@ -248,6 +248,14 @@ class DoseLogTest {
     }
 
     @Test
+    @DisplayName("새로 생성된 DoseLog — overdueNotifiedAt 초기값 null (지연 알림 폴러 원자 클레임 대상)")
+    void of_initial_overdueNotifiedAtIsNull() {
+        DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);
+
+        assertThat(log.getOverdueNotifiedAt()).isNull();
+    }
+
+    @Test
     @DisplayName("cancelForPeriodChange() — TAKEN 은 no-op (복용 완료 기록 보존)")
     void cancelForPeriodChange_taken_isNoOp() {
         DoseLog log = DoseLog.of(1L, 2L, FIXED_NOW);

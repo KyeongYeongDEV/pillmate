@@ -32,4 +32,15 @@ interface DoseLogJpaRepository extends JpaRepository<DoseLog, Long> {
             """)
     int markRemindedIfStatus(@Param("id") Long id, @Param("now") Instant now,
                              @Param("status") DoseStatus status);
+
+    List<DoseLog> findByStatusAndScheduledAtBetweenAndOverdueNotifiedAtIsNull(DoseStatus status, Instant from, Instant to);
+
+    // 조건부 원자 클레임 — markRemindedIfStatus 와 동일 패턴 (지연 알림 중복발송 원천 차단)
+    @Modifying
+    @Query("""
+            UPDATE DoseLog d SET d.overdueNotifiedAt = :now
+            WHERE d.id = :id AND d.overdueNotifiedAt IS NULL AND d.status = :status
+            """)
+    int markOverdueNotifiedIfStatus(@Param("id") Long id, @Param("now") Instant now,
+                                    @Param("status") DoseStatus status);
 }

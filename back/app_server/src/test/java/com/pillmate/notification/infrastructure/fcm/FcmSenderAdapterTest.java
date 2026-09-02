@@ -146,6 +146,35 @@ class FcmSenderAdapterTest {
         assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("group-activity");
     }
 
+    // ─── T-BE-GROUP-CARE-NUDGE: DOSE_NUDGE + "channel" 명시 오버라이드 ─────────
+
+    @Test
+    @DisplayName("type=DOSE_NUDGE → channel 'dose-reminder' (넛지는 항상 당사자 대상, 높은 우선순위)")
+    void toMessage_doseNudgeType_usesDoseReminderChannel() throws Exception {
+        Message message = sentMessageFor(commandWithType("DOSE_NUDGE"));
+
+        assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("dose-reminder");
+    }
+
+    @Test
+    @DisplayName("type=DOSE_OVERDUE + channel 명시 없음(그룹 수신자) → 'group-activity'")
+    void toMessage_doseOverdueWithoutChannelOverride_usesGroupActivity() throws Exception {
+        Message message = sentMessageFor(commandWithType("DOSE_OVERDUE"));
+
+        assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("group-activity");
+    }
+
+    @Test
+    @DisplayName("type=DOSE_OVERDUE + data.channel='dose-reminder'(당사자 자가 알림) → 명시 채널 우선")
+    void toMessage_doseOverdueWithChannelOverride_usesExplicitChannel() throws Exception {
+        NotificationCommand command = new NotificationCommand(1L, 7L, "fcm-token-abcdef", "제목", "본문",
+                Map.of("route", "/home", "type", "DOSE_OVERDUE", "channel", "dose-reminder"));
+
+        Message message = sentMessageFor(command);
+
+        assertThat(channelIdOf(androidConfigOf(message))).isEqualTo("dose-reminder");
+    }
+
     // ─── T-BE-NOTIFICATION-BATCH: sendAll(sendEach 배치) ─────────────────────
 
     private NotificationCommand command(Long notificationId, String token) {

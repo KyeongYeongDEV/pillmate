@@ -34,7 +34,9 @@ public class FcmSenderAdapter implements NotificationSenderPort {
     private static final String CHANNEL_DOSE_REMINDER = "dose-reminder";
     private static final String CHANNEL_GROUP_ACTIVITY = "group-activity";
     private static final String DATA_KEY_TYPE = "type";
+    private static final String DATA_KEY_CHANNEL = "channel";
     private static final String TYPE_DOSE_REMINDER = "DOSE_REMINDER";
+    private static final String TYPE_DOSE_NUDGE = "DOSE_NUDGE";
 
     private final FirebaseMessagingProvider messagingProvider;
     private final Counter sentCounter;
@@ -164,9 +166,19 @@ public class FcmSenderAdapter implements NotificationSenderPort {
                 .build();
     }
 
+    // "channel" 명시 오버라이드 우선 (동일 type 이 수신자에 따라 채널이 갈리는 경우 — 예: DOSE_OVERDUE 자가/그룹).
+    // 없으면 type 기반 기본 규칙 (DOSE_REMINDER, DOSE_NUDGE = 높은 우선순위 채널).
     private String resolveChannelId(Map<String, String> data) {
-        String type = data == null ? null : data.get(DATA_KEY_TYPE);
-        return TYPE_DOSE_REMINDER.equals(type) ? CHANNEL_DOSE_REMINDER : CHANNEL_GROUP_ACTIVITY;
+        if (data == null) {
+            return CHANNEL_GROUP_ACTIVITY;
+        }
+        String explicit = data.get(DATA_KEY_CHANNEL);
+        if (explicit != null) {
+            return explicit;
+        }
+        String type = data.get(DATA_KEY_TYPE);
+        boolean highPriority = TYPE_DOSE_REMINDER.equals(type) || TYPE_DOSE_NUDGE.equals(type);
+        return highPriority ? CHANNEL_DOSE_REMINDER : CHANNEL_GROUP_ACTIVITY;
     }
 
     private boolean isBlankToken(String token) {
