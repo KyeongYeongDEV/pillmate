@@ -2,6 +2,8 @@ export type NotificationType =
   | 'DOSE_TAKEN'
   | 'DOSE_MISSED'
   | 'DOSE_CANCELED'
+  | 'DOSE_OVERDUE'
+  | 'DOSE_NUDGE'
   | 'DDI_CRITICAL'
   | 'PRESCRIPTION_NEW'
   | 'WEEKLY_REPORT';
@@ -15,5 +17,6 @@ export interface NotificationItem {
   body: string;
   status: NotificationStatus;
   doseLogId: number | null;
+  actorUserId: number | null;
   createdAt: string;
 }

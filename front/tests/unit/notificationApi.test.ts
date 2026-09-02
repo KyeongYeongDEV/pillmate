@@ -1,17 +1,19 @@
 import { notificationApiSlice, markReadInList } from '@/store/slices/notificationApi';
 import { notificationMeta, notificationRoute, unreadCount } from '@/lib/notificationMeta';
+import { canNudge, nudgeSuccessMessage, nudgeErrorMessage } from '@/lib/nudge';
 import { relativeTime } from '@/utils/relativeTime';
 import type { NotificationItem } from '@/types/notification';
 
 const item = (over: Partial<NotificationItem> = {}): NotificationItem => ({
   id: 1, type: 'DOSE_TAKEN', title: '복약 완료', body: '아침약을 드셨어요',
-  status: 'SENT', doseLogId: null, createdAt: '2026-06-14T08:00:00Z', ...over,
+  status: 'SENT', doseLogId: null, actorUserId: null, createdAt: '2026-06-14T08:00:00Z', ...over,
 });
 
 describe('notificationApi — 엔드포인트', () => {
-  it('getNotifications / markRead 존재', () => {
+  it('getNotifications / markRead / nudgeDose 존재', () => {
     expect(notificationApiSlice.endpoints).toHaveProperty('getNotifications');
     expect(notificationApiSlice.endpoints).toHaveProperty('markRead');
+    expect(notificationApiSlice.endpoints).toHaveProperty('nudgeDose');
   });
 
   it('markRead — initiate(id) thunk 반환', () => {
@@ -60,6 +62,51 @@ describe('notificationMeta / route / unreadCount', () => {
   it('unreadCount — READ 제외', () => {
     const items = [item({ status: 'SENT' }), item({ id: 2, status: 'READ' }), item({ id: 3, status: 'PENDING' })];
     expect(unreadCount(items)).toBe(2);
+  });
+});
+
+describe('canNudge — 넛지 버튼 표시 조건', () => {
+  const me = 7;
+  const overdueByOther = () => item({ type: 'DOSE_OVERDUE', doseLogId: 42, actorUserId: 9 });
+
+  it('다른 그룹원의 DOSE_OVERDUE → 표시', () => {
+    expect(canNudge(overdueByOther(), me)).toBe(true);
+  });
+
+  it('내 자신의 미복용(actorUserId === 나)은 넛지 불가', () => {
+    expect(canNudge(item({ type: 'DOSE_OVERDUE', doseLogId: 42, actorUserId: me }), me)).toBe(false);
+  });
+
+  it('DOSE_OVERDUE 아닌 타입은 불가', () => {
+    expect(canNudge(item({ type: 'DOSE_NUDGE', doseLogId: 42, actorUserId: 9 }), me)).toBe(false);
+    expect(canNudge(item({ type: 'DOSE_MISSED', doseLogId: 42, actorUserId: 9 }), me)).toBe(false);
+  });
+
+  it('doseLogId 없으면 불가', () => {
+    expect(canNudge(item({ type: 'DOSE_OVERDUE', doseLogId: null, actorUserId: 9 }), me)).toBe(false);
+  });
+
+  it('actorUserId 없거나 현재 userId 없으면 불가', () => {
+    expect(canNudge(item({ type: 'DOSE_OVERDUE', doseLogId: 42, actorUserId: null }), me)).toBe(false);
+    expect(canNudge(overdueByOther(), null)).toBe(false);
+  });
+});
+
+describe('nudge 응답/에러 → 토스트 메시지 매핑', () => {
+  it('200 alreadyNotified=false → 전송 성공 문구', () => {
+    expect(nudgeSuccessMessage({ alreadyNotified: false })).toBe('약 드시라고 알림을 보냈어요');
+  });
+  it('200 alreadyNotified=true → 이미 전달 문구', () => {
+    expect(nudgeSuccessMessage({ alreadyNotified: true })).toBe('이미 복약 알림이 전달됐어요');
+  });
+  it('429/409/403 → 상태별 문구', () => {
+    expect(nudgeErrorMessage(429)).toBe('방금 알림을 보냈어요. 잠시 후 다시 시도해 주세요.');
+    expect(nudgeErrorMessage(409)).toBe('이미 복용한 약이에요.');
+    expect(nudgeErrorMessage(403)).toBe('알림을 보낼 권한이 없어요.');
+  });
+  it('알 수 없는 상태 → 폴백 문구', () => {
+    expect(nudgeErrorMessage(500)).toBe('알림을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
+    expect(nudgeErrorMessage(undefined)).toBe('알림을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
   });
 });
 

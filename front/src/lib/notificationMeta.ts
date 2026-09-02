@@ -13,6 +13,8 @@ const META: Record<NotificationType, NotificationMeta> = {
   DOSE_TAKEN: { icon: 'check-circle', color: colors.statusPositive },
   DOSE_MISSED: { icon: 'alert-circle', color: colors.statusNegative },
   DOSE_CANCELED: { icon: 'rotate-ccw', color: colors.labelAlternative },
+  DOSE_OVERDUE: { icon: 'clock', color: colors.statusCautionary },
+  DOSE_NUDGE: { icon: 'bell', color: colors.primaryBase },
   DDI_CRITICAL: { icon: 'alert-triangle', color: colors.statusNegative },
   PRESCRIPTION_NEW: { icon: 'file-text', color: colors.primaryBase },
   WEEKLY_REPORT: { icon: 'bar-chart-2', color: colors.statusCautionary },

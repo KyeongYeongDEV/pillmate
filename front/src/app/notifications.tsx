@@ -1,25 +1,68 @@
-import { View, Pressable, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, Pressable, Text, StyleSheet, FlatList, ActivityIndicator, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { scale, colors, typography, space, radius } from "@/styles/tokens";
-import { useGetNotificationsQuery, useMarkReadMutation, useMarkReadAllMutation } from "@/store/slices/notificationApi";
+import {
+  useGetNotificationsQuery,
+  useMarkReadMutation,
+  useMarkReadAllMutation,
+  useNudgeDoseMutation,
+} from "@/store/slices/notificationApi";
 import { notificationRoute } from "@/lib/notificationMeta";
+import { nudgeSuccessMessage, nudgeErrorMessage } from "@/lib/nudge";
 import NotificationRow from "@/components/notification/NotificationRow";
 import type { NotificationItem } from "@/types/notification";
+import { getCurrentUserId } from "@/lib/auth/storage";
 import { safeBack } from "@/lib/router/safeBack";
+
+const TOAST_DURATION_MS = 2600;
 
 export default function NotificationsScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useGetNotificationsQuery();
   const [markRead] = useMarkReadMutation();
   const [markReadAll, { isLoading: readAllLoading }] = useMarkReadAllMutation();
+  const [nudgeDose] = useNudgeDoseMutation();
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [nudgingId, setNudgingId] = useState<number | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
   const hasUnread = (data ?? []).some(n => n.status !== 'READ');
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUserId().then(id => { if (active) setCurrentUserId(id); });
+    return () => { active = false; };
+  }, []);
 
   const onPress = (item: NotificationItem) => {
     if (item.status !== 'READ') markRead(item.id);
     const route = notificationRoute(item);
     if (route) router.push(route as any);
   };
+
+  const onNudge = async (item: NotificationItem) => {
+    if (item.doseLogId == null || nudgingId != null) return;
+    setNudgingId(item.doseLogId);
+    try {
+      const result = await nudgeDose(item.doseLogId).unwrap();
+      showToast(nudgeSuccessMessage(result));
+    } catch (err) {
+      showToast(nudgeErrorMessage(extractStatus(err)));
+    } finally {
+      setNudgingId(null);
+    }
+  };
+
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(TOAST_DURATION_MS - 360),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => setToastMsg(null));
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -43,6 +86,11 @@ export default function NotificationsScreen() {
         )}
       </View>
       {renderBody()}
+      {toastMsg && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
+          <Text style={styles.toastTxt}>{toastMsg}</Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 
@@ -54,7 +102,15 @@ export default function NotificationsScreen() {
       <FlatList
         data={data}
         keyExtractor={keyOf}
-        renderItem={({ item }) => <NotificationRow item={item} onPress={onPress} />}
+        renderItem={({ item }) => (
+          <NotificationRow
+            item={item}
+            onPress={onPress}
+            currentUserId={currentUserId}
+            onNudge={onNudge}
+            nudging={nudgingId != null && nudgingId === item.doseLogId}
+          />
+        )}
         ItemSeparatorComponent={Separator}
         showsVerticalScrollIndicator={false}
         refreshing={isFetching}
@@ -66,6 +122,14 @@ export default function NotificationsScreen() {
 
 const keyOf = (n: NotificationItem) => String(n.id);
 const Separator = () => <View style={styles.separator} />;
+
+function extractStatus(err: unknown): number | undefined {
+  if (err != null && typeof err === 'object' && 'status' in err) {
+    const status = (err as { status: unknown }).status;
+    if (typeof status === 'number') return status;
+  }
+  return undefined;
+}
 
 function CenterState({ text, actionLabel, onPress }: { text: string; actionLabel?: string; onPress?: () => void }) {
   return (
@@ -98,4 +162,10 @@ const styles = StyleSheet.create({
     paddingVertical: space.s12, paddingHorizontal: space.s24, alignItems: 'center', marginTop: space.s8,
   },
   ctaTxt: { ...typography.headline1, color: colors.staticWhite },
+  toast: {
+    position: 'absolute', bottom: space.s32, alignSelf: 'center',
+    backgroundColor: 'rgba(23,23,25,0.88)', borderRadius: radius.r20,
+    paddingHorizontal: space.s20, paddingVertical: space.s12, maxWidth: '85%',
+  },
+  toastTxt: { ...typography.label2, color: colors.bgNormal, fontWeight: '600', textAlign: 'center' },
 });
