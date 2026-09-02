@@ -123,5 +123,5 @@ QA-Gemini 가 T008+T009 QA 검증 위임 받고 자율 판단으로:
 ## 참조
 
 - `medical-safety.md` — 의료 데이터는 본 룰의 P0 적용 대상
-- `.cmux/prompts/{be-dev,fe-dev,qa-claude,qa-gemini}.md` — 모든 prompt 에 본 룰 인용
+- 구현/QA 서브에이전트 디스패치 시 spec 에 본 룰을 인용해 전달 (메인 세션이 직접 편집할 때도 동일 적용)
 - `CLAUDE.md` — 절대 규칙 #6 으로 등재 (2026-05-25)

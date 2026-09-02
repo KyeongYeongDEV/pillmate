@@ -44,7 +44,7 @@ CTO 가 새 task spec 작성 직전 — 다음 4가지 산출물을 받기 위�
 
 ### 선례 (비슷한 작업)
 - `git log --grep "유사 키워드"` — commit `abc123` 사례
-- `.cmux/specs/T-OCR-FIX2.md` — 유사 정규화 패턴
+- `docs/architecture/ocr-improvement-journal.md` — 유사 정규화 패턴 이력
 ```
 
 ## 절대 금지
@@ -85,5 +85,5 @@ READ-ONLY 강제. 수정 X."
 
 ## 참고
 
-- CTO 룰 `.cmux/prompts/cto.md` — Researcher 호출 의무 시점 명시
-- 비슷한 read-only agent: `qa-claude.md`, `qa-gemini.md`
+- 메인 세션이 spec 작성 전, 코드 구조·컨벤션·영향 파일 조사가 필요할 때 Agent 툴로 호출
+- `CLAUDE.md` 작업 모델 — 단일세션 + 온디맨드 서브에이전트

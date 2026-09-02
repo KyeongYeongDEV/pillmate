@@ -82,5 +82,5 @@ description: 유료 SaaS 출시 전 보안 종합 점검 워크플로우 (13개 
 
 - `.claude/rules/common/medical-safety.md`, `db-safety.md` — 의료·DB P0 규칙
 - `.claude/rules/common/cost-aware.md` — 비용/rate limit
-- 이전 감사: `.cmux/messages/*/outbox/T-AUDIT-*.json`
+- 이전 감사 이력: git log / docs 참조
 - 메모리: `project_deploy_security_checklist`, `project_deploy_image_cdn`

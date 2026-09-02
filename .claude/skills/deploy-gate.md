@@ -29,6 +29,7 @@
 - [ ] Android `app.json` `expo.android.allowBackup: false` 반영된 APK 배포 (2026-07-13 ADV 발견 — 콜드캐시 AsyncStorage 에 복약/처방 정보 평문 저장, Expo 기본값 true 면 Google 자동백업으로 기기 밖 유출 가능. `T-FE-COLD-CACHE-FIX-R2` 에서 코드 반영, **재빌드 확인 필수**)
 
 ## G4. 데이터/DB
+- [x] **prod 마스터 데이터 적재 확인**: drugs/drug_master/drug_alias/drug_interactions/drug_embeddings 건수 = 로컬 (2026-07-13 사고: drugs 0건 채로 배포되어 검색·OCR매칭·병용금기 전부 빈 결과 — 사용자 발견. pg_dump 이관으로 해소, 47,021/67,682/656,774 일치 검증)
 - [ ] 시드 시퀀스 정합: 모든 테이블 `setval(seq, max(id))` 점검 스크립트 1회 (users_id_seq desync 사고 재발 방지)
 - [ ] Flyway 전체 마이그레이션 클린 DB 리허설 (`validate` + 신규 DB up)
 - [ ] dose_logs 파티션: 다음 달 파티션 존재 확인

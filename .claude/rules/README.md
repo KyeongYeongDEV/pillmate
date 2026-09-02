@@ -20,7 +20,7 @@ rules/
 │   ├── secret-safety.md     ★ 2026-07-07 신규 — 시크릿 노출 금지 (P0)
 │   ├── verification-evidence.md ★ 2026-07-07 신규 — DONE 은 실측 증거 의무
 │   ├── qa-risk-tiers.md     ★ 2026-07-07 신규 — 리스크 기반 2단계 QA
-│   ├── context-hygiene.md   ★ 2026-07-07 신규 — 패널 컨텍스트 clear 강제
+│   ├── context-hygiene.md   ★ 2026-07-07 신규 — compact/clear + 서브에이전트 위임(2026-09-02 단일세션)
 │   ├── scope-discipline.md  ★ 2026-07-07 신규 — 무관코드·anti-revival·동시편집 금지
 │   └── clean-code.md
 ├── java/               # Spring Boot 백엔드

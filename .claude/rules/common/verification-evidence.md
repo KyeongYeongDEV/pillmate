@@ -26,4 +26,4 @@
 
 ## 참조
 - `.claude/rules/common/tdd-cycle.md` — 테스트 우선 (본 룰은 그 위의 "런타임 증거" 레이어)
-- `.cmux/prompts/fe-dev.md`, `be-dev.md` — 패널별 검증 의무 인용
+- 구현 서브에이전트(fastapi-ai-engineer·spring-boot-architect·general-purpose 등)에도 본 증거 의무를 spec 에 명시해 전달한다

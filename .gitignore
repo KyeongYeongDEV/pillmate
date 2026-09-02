@@ -131,7 +131,6 @@ back/.drug_image_cache_failures.jsonl
 back/.bkit/
 .agents/
 .codex/
-.cmux/.last-backup-path
 
 # ==============================
 # 기타 빌드/런타임 산물
@@ -147,14 +146,6 @@ back/.interactions_checkpoint.json
 *.swp
 *.bak
 
-# ==============================
-# CMUX 멀티에이전트 런타임
-# ==============================
-.cmux/messages/
-.cmux/logs/
-.cmux/.runtime/
-.cmux/specs/
-.cmux/local/
 worktrees/
 
 # ==============================

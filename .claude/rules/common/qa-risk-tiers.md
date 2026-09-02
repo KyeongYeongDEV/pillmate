@@ -32,6 +32,9 @@
 3. **커밋 게이트**: 커밋 묶음에 Tier 1 변경이 하나라도 포함되면 게이트에서 트리오 리포트 존재 확인.
 4. 트리오 FAIL → 수정 → 해당 항목만 재검증 (전체 재실행 아님).
 
+## 실행 방식 (2026-09-02 단일세션 모델)
+- 트리오(Reviewer + QA-Claude + ⚔️Adversarial)는 상시 패널이 아니라 **필요 시 Agent 툴로 서브에이전트 호출**한다. Tier 1 변경이면 메인 세션이 리뷰/QA/adversarial 서브에이전트를 띄워 병렬 검증 후, 결과를 교차확인하고 커밋한다.
+- Adversarial 은 "어떻게 깨지나/우회되나" 시나리오 + 마지막 줄 `ADV_<TASK>_PASS|FAIL`.
+
 ## 참조
-- `.cmux/prompts/reviewer.md`, `qa-claude.md`, `adversarial.md`
 - `.claude/rules/common/verification-evidence.md` — Tier 무관 공통 증거 의무
