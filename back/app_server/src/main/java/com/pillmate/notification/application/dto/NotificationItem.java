@@ -13,6 +13,7 @@ public record NotificationItem(
         String body,
         NotificationStatus status,
         Long doseLogId,
+        Long actorUserId,
         Instant createdAt
 ) {
     public static NotificationItem from(Notification notification) {
@@ -23,6 +24,7 @@ public record NotificationItem(
                 notification.getBody(),
                 notification.getStatus(),
                 notification.getDoseLogId(),
+                notification.getActorUserId(),
                 notification.getCreatedAt()
         );
     }
