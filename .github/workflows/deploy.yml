@@ -104,10 +104,28 @@ jobs:
           DEPLOY_ROOT="${DEPLOY_ROOT_VAR:-/opt/pillmate}"
           BACK_DIR="$DEPLOY_ROOT/back"
           mkdir -p "$BACK_DIR/secrets"
-          umask 077
-          echo "$FIREBASE_CREDENTIALS_JSON_B64" | base64 -d > "$BACK_DIR/secrets/firebase-service-account.json"
-          chmod 600 "$BACK_DIR/secrets/firebase-service-account.json"
-          echo "✓ firebase-service-account.json written"
+          CRED="$BACK_DIR/secrets/firebase-service-account.json"
+          # 시크릿 미등록(빈 값)이면 서버의 기존 키를 보존하고 넘어간다.
+          # (2026-09-04: 조건부 실행 제거 후 빈 시크릿에 base64 -d 가 깨져 배포 실패. 기존 키로 FCM 정상 동작 중)
+          if [ -z "${FIREBASE_CREDENTIALS_JSON_B64:-}" ]; then
+            if [ -s "$CRED" ]; then
+              echo "✓ FIREBASE_CREDENTIALS_JSON_B64 미설정 — 서버의 기존 자격증명 유지"
+            else
+              echo "::warning::FIREBASE_CREDENTIALS_JSON_B64 미설정 + 서버에 자격증명 없음 — FCM 푸시 비활성 상태로 기동됩니다"
+            fi
+          else
+            umask 077
+            TMP="$(mktemp)"
+            if echo "$FIREBASE_CREDENTIALS_JSON_B64" | base64 -d > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+              mv "$TMP" "$CRED"
+              chmod 600 "$CRED"
+              echo "✓ firebase-service-account.json written"
+            else
+              rm -f "$TMP"
+              echo "::error::FIREBASE_CREDENTIALS_JSON_B64 디코딩 실패 — 값이 유효한 base64 인지 확인하세요"
+              exit 1
+            fi
+          fi
 
       # ── 무중단 배포 ────────────────────────────────────────────────
       # deploy.sh 가 workspace → /opt/pillmate/back rsync 후 blue-green 전환.
