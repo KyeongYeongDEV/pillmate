@@ -51,7 +51,6 @@ jobs:
           ACME_EMAIL: ${{ vars.ACME_EMAIL }}
           AWS_REGION: ${{ vars.AWS_REGION }}
           S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
-          NOTIFICATION_PROVIDER: ${{ vars.PILLMATE_NOTIFICATION_PROVIDER }}
           DEPLOY_ROOT_VAR: ${{ vars.DEPLOY_ROOT }}
         run: |
           set -euo pipefail
@@ -73,7 +72,10 @@ jobs:
           # 비시크릿 Variables
           AWS_REGION=${AWS_REGION:-ap-northeast-2}
           S3_BUCKET_NAME=${S3_BUCKET_NAME:-pillmate-prescriptions}
-          PILLMATE_NOTIFICATION_PROVIDER=${NOTIFICATION_PROVIDER:-fcm}
+          # 푸시 알림은 상시 활성 — vars 를 읽지 않고 fcm 으로 고정한다.
+          # (2026-09-03: 어딘가 등록된 vars.PILLMATE_NOTIFICATION_PROVIDER=log 가 매 배포마다 푸시를 끄던 사고.
+          #  런너 로그의 조건 평가 `vars... != 'log'` → false 로 확정. 끄려면 이 줄을 직접 log 로 바꿀 것.)
+          PILLMATE_NOTIFICATION_PROVIDER=fcm
           FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase-service-account.json
           # 시크릿 — 키명은 docker-compose.prod.yml env_file 직접주입 대상과 정확히 일치해야 함
           # (KAKAO_REST_API_KEY: 로컬 back/.env 의 KAKAO_OAUTH_KEY 와 다른 이름이니 혼동 금지)
@@ -92,10 +94,8 @@ jobs:
           chmod 600 "$BACK_DIR/.env.prod"
           echo "✓ .env.prod written: $(wc -l < "$BACK_DIR/.env.prod") lines, perms $(stat -c%a "$BACK_DIR/.env.prod" 2>/dev/null || stat -f%Lp "$BACK_DIR/.env.prod")"
 
-      # ── FCM 자격증명 (provider 가 log 로 명시되지 않은 한 배치) ────
-      # 위 .env.prod 기본값이 fcm 이므로, 변수 미설정 시에도 자격증명이 있어야 푸시가 동작한다.
+      # ── FCM 자격증명 — provider 를 fcm 으로 고정했으므로 항상 배치 ────
       - name: Write Firebase credentials (FCM only)
-        if: ${{ vars.PILLMATE_NOTIFICATION_PROVIDER != 'log' }}
         env:
           FIREBASE_CREDENTIALS_JSON_B64: ${{ secrets.FIREBASE_CREDENTIALS_JSON_B64 }}
           DEPLOY_ROOT_VAR: ${{ vars.DEPLOY_ROOT }}
