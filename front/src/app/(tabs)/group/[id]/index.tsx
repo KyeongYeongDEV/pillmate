@@ -14,6 +14,7 @@ import { scale, colors, space, radius, typography, shadows } from '@/styles/toke
 import { useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
+import { GROUP_DETAIL_REFRESH } from '@/lib/query/refreshOptions';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
 
@@ -24,18 +25,11 @@ const ROLE_TINTS: Record<string, string> = {
   GUARDIAN: colors.guardianBlue,
 };
 
-// 자동 최신화 — 진입/포커스 시 refetch + 7초 polling(시뮬레이터 등 FCM 미지원 기기 대비, 실기기는 FCM 즉시 반영). pull-to-refresh(#50)·FCM invalidate 와 병행.
-const AUTO_REFRESH_OPTIONS = {
-  refetchOnMountOrArgChange: true,
-  refetchOnFocus: true,
-  pollingInterval: 7_000,
-} as const;
-
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
   const dispatch = useDispatch();
-  const { data: detail, isLoading, isError, refetch: refetchDetail } = useGetGroupDetailQuery(groupId, AUTO_REFRESH_OPTIONS);
+  const { data: detail, isLoading, isError, refetch: refetchDetail } = useGetGroupDetailQuery(groupId, GROUP_DETAIL_REFRESH);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
   const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
   const [refreshing, setRefreshing] = useState(false);

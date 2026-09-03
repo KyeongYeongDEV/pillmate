@@ -10,9 +10,10 @@ import { scale, colors, space, radius, shadows } from '@/styles/tokens';
 import TabHeader from '@/components/navigation/TabHeader';
 import { useGetMyGroupsQuery, usePinGroupMutation, useUnpinGroupMutation } from '@/store/slices/caregroupApi';
 import GroupCard from '@/components/group/GroupCard';
+import { GROUP_LIST_REFRESH } from '@/lib/query/refreshOptions';
 
 export default function GroupScreen() {
-  const { data: groups = [], isLoading, isError } = useGetMyGroupsQuery();
+  const { data: groups = [], isLoading, isError } = useGetMyGroupsQuery(undefined, GROUP_LIST_REFRESH);
   const [pinGroup] = usePinGroupMutation();
   const [unpinGroup] = useUnpinGroupMutation();
 

@@ -15,6 +15,7 @@ import { userApiSlice } from './slices/userApi';
 import { notificationApiSlice } from './slices/notificationApi';
 import { authApiSlice } from './slices/authApi';
 import { persistConfig, cacheDateTagMiddleware } from './persistConfig';
+import { appStateFocusListener } from './appStateListener';
 
 const rootReducer = combineReducers({
   prescriptionFlow,
@@ -65,7 +66,7 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-setupListeners(store.dispatch);
+setupListeners(store.dispatch, appStateFocusListener);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
