@@ -32,6 +32,8 @@ export function notificationRoute(item: NotificationItem): string | null {
   return null;
 }
 
+// status 는 발송 파이프라인 상태(PENDING 대기 → SENT 발송됨 → FAILED 실패 → READ 읽음)다.
+// 사용자에게 전달되지 않은 PENDING/FAILED 까지 세면 목록엔 없는 유령 배지가 남는다 — SENT 만 집계.
 export function unreadCount(items: NotificationItem[]): number {
-  return items.filter(n => n.status !== 'READ').length;
+  return items.filter(n => n.status === 'SENT').length;
 }

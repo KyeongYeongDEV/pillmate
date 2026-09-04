@@ -59,9 +59,15 @@ describe('notificationMeta / route / unreadCount', () => {
     expect(notificationRoute(item({ type: 'WEEKLY_REPORT', doseLogId: null }))).toBeNull();
   });
 
-  it('unreadCount — READ 제외', () => {
-    const items = [item({ status: 'SENT' }), item({ id: 2, status: 'READ' }), item({ id: 3, status: 'PENDING' })];
+  it('unreadCount — 발송된(SENT) 것만 집계, READ 제외', () => {
+    const items = [item({ status: 'SENT' }), item({ id: 2, status: 'READ' }), item({ id: 3, status: 'SENT' })];
     expect(unreadCount(items)).toBe(2);
+  });
+
+  // 미발송(PENDING)·실패(FAILED)는 사용자에게 도달하지 않아 목록에서 인지 불가 — 배지에 세면 유령 배지가 된다
+  it('unreadCount — PENDING/FAILED 는 제외', () => {
+    const items = [item({ status: 'PENDING' }), item({ id: 2, status: 'FAILED' })];
+    expect(unreadCount(items)).toBe(0);
   });
 });
 
