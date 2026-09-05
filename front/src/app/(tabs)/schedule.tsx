@@ -24,6 +24,7 @@ const LEGEND: [string, string][] = [
   ['전체 복용', colors.statusPositive],
   ['일부 미복용', colors.statusCautionary],
   ['미복용', colors.statusNegative],
+  ['복용 예정', colors.primaryBase],
 ];
 
 const PAST_DATE_LOCKED_MSG = '지난 날짜의 복약 기록은 수정할 수 없어요';
@@ -216,7 +217,10 @@ const styles = StyleSheet.create({
     width: scale(32), height: scale(32), borderRadius: radius.r8,
     backgroundColor: colors.fillNormal, alignItems: 'center', justifyContent: 'center',
   },
-  legend: { flexDirection: 'row', gap: space.s16, paddingHorizontal: space.s16, marginTop: space.s14, marginBottom: space.s12 },
+  legend: {
+    flexDirection: 'row', flexWrap: 'wrap', columnGap: space.s16, rowGap: space.s8,
+    paddingHorizontal: space.s16, marginTop: space.s14, marginBottom: space.s12,
+  },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: scale(6), height: scale(6), borderRadius: scale(3) },
   legendText: { fontSize: scale(12), color: colors.labelAlternative },

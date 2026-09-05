@@ -10,13 +10,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,10 +31,13 @@ import static org.mockito.BDDMockito.then;
 class GetMonthScheduleUseCaseTest {
 
     @Mock ScheduleMonthQueryPort scheduleMonthQueryPort;
-    @InjectMocks GetMonthScheduleService sut;
 
     private static final Long PATIENT_ID = 1L;
     private static final YearMonth JUNE = YearMonth.of(2026, 6);
+
+    // KST 2026-06-15 12:00 (UTC 2026-06-15T03:00) — "오늘"
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-06-15T03:00:00Z"), ZoneOffset.UTC);
 
     @BeforeEach
     void setUp() {
@@ -45,6 +49,10 @@ class GetMonthScheduleUseCaseTest {
         UserContext.clear();
     }
 
+    private GetMonthScheduleService sut() {
+        return new GetMonthScheduleService(scheduleMonthQueryPort, FIXED_CLOCK);
+    }
+
     @Test
     @DisplayName("KST 월 경계 — 6월 조회 시 from=5/31 15:00Z(=KST 6/1 00:00), to=6/30 15:00Z(=KST 7/1 00:00)")
     void execute_queriesWithKstMonthRange() {
@@ -53,7 +61,7 @@ class GetMonthScheduleUseCaseTest {
                 .willReturn(List.of());
 
         // when
-        sut.execute(JUNE);
+        sut().execute(JUNE);
 
         // then
         ArgumentCaptor<Instant> fromCaptor = ArgumentCaptor.forClass(Instant.class);
@@ -76,7 +84,7 @@ class GetMonthScheduleUseCaseTest {
                 ));
 
         // when
-        MonthScheduleResponse response = sut.execute(JUNE);
+        MonthScheduleResponse response = sut().execute(JUNE);
 
         // then
         assertThat(response.month()).isEqualTo("2026-06");
@@ -94,9 +102,29 @@ class GetMonthScheduleUseCaseTest {
         given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
                 .willReturn(List.of());
 
-        MonthScheduleResponse response = sut.execute(JUNE);
+        MonthScheduleResponse response = sut().execute(JUNE);
 
         assertThat(response.days()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("KST 오늘(6/15) 이후 미래 날짜 + 미복용 → UPCOMING, 오늘/과거는 기존 규칙 유지")
+    void execute_mapsFutureDateAsUpcoming() {
+        // given — FIXED_CLOCK 기준 KST 오늘은 6/15
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
+                .willReturn(List.of(
+                        new DayDoseCount(LocalDate.of(2026, 6, 14), 4, 0),
+                        new DayDoseCount(LocalDate.of(2026, 6, 15), 4, 0),
+                        new DayDoseCount(LocalDate.of(2026, 6, 20), 4, 0)
+                ));
+
+        // when
+        MonthScheduleResponse response = sut().execute(JUNE);
+
+        // then
+        assertThat(response.days().get(0).adherence()).isEqualTo("MISS");
+        assertThat(response.days().get(1).adherence()).isEqualTo("MISS");
+        assertThat(response.days().get(2).adherence()).isEqualTo("UPCOMING");
     }
 
     @Test
@@ -108,7 +136,7 @@ class GetMonthScheduleUseCaseTest {
                 .willReturn(List.of());
 
         // when
-        MonthScheduleResponse response = sut.execute(JUNE);
+        MonthScheduleResponse response = sut().execute(JUNE);
 
         // then
         assertThat(response.days()).isEmpty();

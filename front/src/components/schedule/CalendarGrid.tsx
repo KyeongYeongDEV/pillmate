@@ -7,6 +7,7 @@ const DOT_COLOR: Record<AdherenceLevel, string> = {
   full: colors.statusPositive,
   partial: colors.statusCautionary,
   miss: colors.statusNegative,
+  upcoming: colors.primaryBase,
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -59,7 +60,7 @@ function DayCell({ dateStr, col, isSelected, isToday, adherence, onPress }: DayC
         <Text style={[styles.numText, numColor]}>{day}</Text>
       </View>
       {adherence
-        ? <View style={[styles.dot, { backgroundColor: DOT_COLOR[adherence] }]} />
+        ? <View testID={`adherence-dot-${dateStr}`} style={[styles.dot, { backgroundColor: DOT_COLOR[adherence] }]} />
         : <View style={styles.dotPlaceholder} />}
     </Pressable>
   );

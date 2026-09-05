@@ -17,6 +17,20 @@ describe('toAdherenceMap — /schedules/month 응답 변환', () => {
     });
   });
 
+  it('UPCOMING(미래 날짜 미복용) → upcoming', () => {
+    const map = toAdherenceMap({
+      month: '2026-06',
+      days: [
+        { date: '2026-06-30', totalCount: 4, takenCount: 0, adherence: 'UPCOMING' },
+        { date: '2026-06-29', totalCount: 4, takenCount: 4, adherence: 'FULL' },
+      ],
+    });
+    expect(map).toEqual({
+      '2026-06-30': 'upcoming',
+      '2026-06-29': 'full',
+    });
+  });
+
   it('days 빈 배열 → 빈 맵', () => {
     expect(toAdherenceMap({ month: '2026-06', days: [] })).toEqual({});
   });

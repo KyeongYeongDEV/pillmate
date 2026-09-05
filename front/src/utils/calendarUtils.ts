@@ -3,7 +3,7 @@ import type { MedSlot } from '@/types/schedule';
 const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-export type AdherenceLevel = 'full' | 'partial' | 'miss';
+export type AdherenceLevel = 'full' | 'partial' | 'miss' | 'upcoming';
 
 export function deriveAdherence(slots: MedSlot[]): AdherenceLevel | null {
   if (slots.length === 0) return null;

@@ -8,7 +8,7 @@ export interface MonthAdherenceDay {
   date: string;
   totalCount: number;
   takenCount: number;
-  adherence: 'FULL' | 'PARTIAL' | 'MISS';
+  adherence: 'FULL' | 'PARTIAL' | 'MISS' | 'UPCOMING';
 }
 
 export interface MonthScheduleResponse {

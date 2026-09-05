@@ -132,3 +132,30 @@ describe('CalendarGrid', () => {
     expect(onSelectDate).toHaveBeenCalledWith('2026-06-12');
   });
 });
+
+describe('CalendarGrid 준수도 점 색 (upcoming 포함 4색)', () => {
+  const ADHERENCE = {
+    '2026-06-10': 'full',
+    '2026-06-11': 'partial',
+    '2026-06-09': 'miss',
+    '2026-06-30': 'upcoming',
+  } as const;
+
+  function dotColor(dateStr: string): string {
+    render(<CalendarGrid {...GRID_BASE} adherenceByDate={ADHERENCE} />);
+    return StyleSheet.flatten(screen.getByTestId(`adherence-dot-${dateStr}`).props.style).backgroundColor;
+  }
+
+  it('upcoming(복용 예정) → 파랑 primaryBase', () => {
+    expect(dotColor('2026-06-30')).toBe(colors.primaryBase);
+  });
+
+  it('miss(미복용) → 빨강 유지 — 미래 날짜와 구분', () => {
+    expect(dotColor('2026-06-09')).toBe(colors.statusNegative);
+  });
+
+  it('full → 초록, partial → 주황 회귀 없음', () => {
+    expect(dotColor('2026-06-10')).toBe(colors.statusPositive);
+    expect(dotColor('2026-06-11')).toBe(colors.statusCautionary);
+  });
+});
