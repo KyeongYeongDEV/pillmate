@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 
 // 그룹원 → 당사자 수동 넛지 ("약 챙기라고 알려드려요"). ACTIVE 그룹원만, PENDING dose 만,
-// (dose,발신자) 쌍 10분 쿨다운 + 당사자(수신자) 단위 10분 총량 캡 1건 (스팸 방지).
+// (dose,발신자) 쌍 5분 쿨다운 + 당사자(수신자) 단위 5분 총량 캡 1건 (스팸 방지).
 @Service
 @RequiredArgsConstructor
 public class SendDoseNudgeService {
 
-    private static final Duration COOLDOWN = Duration.ofMinutes(10);
+    private static final Duration COOLDOWN = Duration.ofMinutes(5);
     private static final String ROUTE_HOME = "/home";
     private static final String CHANNEL_DOSE_REMINDER = "dose-reminder";
 

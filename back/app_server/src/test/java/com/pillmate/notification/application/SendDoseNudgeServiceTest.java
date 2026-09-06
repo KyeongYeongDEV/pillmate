@@ -96,13 +96,13 @@ class SendDoseNudgeServiceTest {
     }
 
     @Test
-    @DisplayName("쿨다운 중(10분 이내 재요청) — NUDGE_COOLDOWN_ACTIVE (429)")
+    @DisplayName("쿨다운 중(5분 이내 재요청) — NUDGE_COOLDOWN_ACTIVE (429)")
     void nudge_whenCooldownActive_throwsCooldownActive() {
         DoseLog doseLog = pendingDoseLog();
         Schedule schedule = scheduleOf(GROUP_ID);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(10)))
+        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(5)))
                 .willReturn(false);
 
         assertThatThrownBy(() -> sut.nudge(DOSE_LOG_ID, FROM_USER_ID))
@@ -122,9 +122,9 @@ class SendDoseNudgeServiceTest {
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(10)))
+        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
-        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(10)))
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
         given(userRepository.findById(FROM_USER_ID)).willReturn(Optional.of(fromUser));
         given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
@@ -156,9 +156,9 @@ class SendDoseNudgeServiceTest {
         Schedule schedule = scheduleOf(GROUP_ID);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(10)))
+        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
-        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(10)))
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
                 .willReturn(false);
 
         NudgeResponse response = sut.nudge(DOSE_LOG_ID, FROM_USER_ID);

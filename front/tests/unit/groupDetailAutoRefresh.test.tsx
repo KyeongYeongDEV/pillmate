@@ -26,6 +26,7 @@ jest.mock('@/store/slices/caregroupApi', () => ({
   })),
   useIssueInviteCodeMutation: () => [jest.fn(), {}],
   useLeaveGroupMutation: () => [jest.fn(), {}],
+  useNudgeMemberMutation: () => [jest.fn(), {}],
   caregroupApiSlice: { util: { invalidateTags: jest.fn() } },
 }));
 

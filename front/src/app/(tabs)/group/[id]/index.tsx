@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl,
+  View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -11,7 +11,10 @@ import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
+import {
+  useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation,
+  useNudgeMemberMutation, caregroupApiSlice,
+} from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
 import { getCurrentUserId } from '@/lib/auth/storage';
@@ -26,6 +29,24 @@ const ROLE_TINTS: Record<string, string> = {
   GUARDIAN: colors.guardianBlue,
 };
 
+const NUDGE_TOAST_DURATION_MS = 2600;
+const NUDGE_SUCCESS_SENT = '약 챙기라고 알림을 보냈어요';
+const NUDGE_SUCCESS_ALREADY = '이미 다른 분이 방금 알림을 보냈어요';
+const NUDGE_NO_DOSE = '지금은 챙길 복약이 없어요';
+const NUDGE_FORBIDDEN = '재촉할 수 없어요';
+
+function nudgeErrorToastMessage(status: number | undefined): string {
+  return status === 409 ? NUDGE_NO_DOSE : NUDGE_FORBIDDEN;
+}
+
+function extractErrorStatus(err: unknown): number | undefined {
+  if (err != null && typeof err === 'object' && 'status' in err) {
+    const status = (err as { status: unknown }).status;
+    if (typeof status === 'number') return status;
+  }
+  return undefined;
+}
+
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
@@ -33,7 +54,18 @@ export default function GroupDetailScreen() {
   const { data: detail, isLoading, isError, refetch: refetchDetail } = useGetGroupDetailQuery(groupId, GROUP_DETAIL_REFRESH);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
   const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
+  const [nudgeMember] = useNudgeMemberMutation();
   const [refreshing, setRefreshing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [nudgingUserId, setNudgingUserId] = useState<number | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUserId().then(uid => { if (active) setCurrentUserId(uid); });
+    return () => { active = false; };
+  }, []);
 
   // 본인은 체크 가능한 정식 복약 탭으로 — 읽기 전용 사본을 보여 주면 "왜 체크가 안 되지" 혼란을 준다.
   const handleMemberPress = useCallback(async (member: GroupMember) => {
@@ -47,6 +79,29 @@ export default function GroupDetailScreen() {
       params: { id: String(groupId), userId: String(memberUserId), name: member.name },
     } as any);
   }, [groupId]);
+
+  const showNudgeToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(NUDGE_TOAST_DURATION_MS - 360),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => setToastMsg(null));
+  }, [toastOpacity]);
+
+  const handleNudge = useCallback(async (member: GroupMember) => {
+    if (nudgingUserId != null) return;
+    const memberUserId = Number(member.id);
+    setNudgingUserId(memberUserId);
+    try {
+      const result = await nudgeMember({ groupId, userId: memberUserId }).unwrap();
+      showNudgeToast(result.alreadyNotified ? NUDGE_SUCCESS_ALREADY : NUDGE_SUCCESS_SENT);
+    } catch (err) {
+      showNudgeToast(nudgeErrorToastMessage(extractErrorStatus(err)));
+    } finally {
+      setNudgingUserId(null);
+    }
+  }, [nudgeMember, groupId, nudgingUserId, showNudgeToast]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -185,6 +240,8 @@ export default function GroupDetailScreen() {
               member={memberViewToGroupMember(m)}
               isFirst={i === 0}
               onPress={handleMemberPress}
+              onNudge={m.userId === currentUserId ? undefined : handleNudge}
+              nudging={nudgingUserId === m.userId}
             />
           ))}
         </View>
@@ -232,6 +289,11 @@ export default function GroupDetailScreen() {
           )}
         </Pressable>
       </ScrollView>
+      {toastMsg && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
+          <Text style={styles.toastTxt}>{toastMsg}</Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -330,4 +392,10 @@ const styles = StyleSheet.create({
   },
   leaveBtnDisabled: { opacity: 0.6 },
   leaveBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.statusNegative },
+  toast: {
+    position: 'absolute', bottom: space.s32, alignSelf: 'center',
+    backgroundColor: 'rgba(23,23,25,0.88)', borderRadius: radius.r20,
+    paddingHorizontal: space.s20, paddingVertical: space.s12, maxWidth: '85%',
+  },
+  toastTxt: { fontSize: scale(13), fontWeight: '600', color: colors.bgNormal, textAlign: 'center' },
 });

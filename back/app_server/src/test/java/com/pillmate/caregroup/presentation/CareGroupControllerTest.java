@@ -8,6 +8,7 @@ import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
@@ -15,6 +16,7 @@ import com.pillmate.caregroup.application.dto.ShareSettingView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.notification.application.dto.NudgeResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,6 +57,7 @@ class CareGroupControllerTest {
     @MockitoBean GetGroupDetailUseCase getGroupDetailUseCase;
     @MockitoBean LeaveGroupUseCase leaveGroupUseCase;
     @MockitoBean MedicationShareService medicationShareService;
+    @MockitoBean SendMemberNudgeService sendMemberNudgeService;
 
     @Test
     @DisplayName("POST /groups → 200 + 생성된 그룹")
@@ -210,4 +213,52 @@ class CareGroupControllerTest {
     }
 
     private record UpdateShareSettingRequestBody(Boolean enabled) {}
+
+    @Test
+    @DisplayName("POST /groups/{groupId}/members/{userId}/nudge → 200 + 위임 결과")
+    void nudgeMember_returns200() throws Exception {
+        given(sendMemberNudgeService.nudge(GROUP_ID, VIEWER_ID, USER_ID))
+                .willReturn(new NudgeResponse(false));
+
+        mockMvc.perform(post("/groups/" + GROUP_ID + "/members/" + VIEWER_ID + "/nudge")
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.alreadyNotified").value(false));
+    }
+
+    @Test
+    @DisplayName("POST /groups/{groupId}/members/{userId}/nudge — 호출자 비멤버면 403")
+    void nudgeMember_callerNotMember_returns403() throws Exception {
+        given(sendMemberNudgeService.nudge(GROUP_ID, VIEWER_ID, USER_ID))
+                .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
+
+        mockMvc.perform(post("/groups/" + GROUP_ID + "/members/" + VIEWER_ID + "/nudge")
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("POST /groups/{groupId}/members/{userId}/nudge — 대상이 자기자신/비멤버면 400")
+    void nudgeMember_invalidTarget_returns400() throws Exception {
+        given(sendMemberNudgeService.nudge(GROUP_ID, VIEWER_ID, USER_ID))
+                .willThrow(new PillmateException(ErrorCode.NUDGE_TARGET_INVALID));
+
+        mockMvc.perform(post("/groups/" + GROUP_ID + "/members/" + VIEWER_ID + "/nudge")
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_044"));
+    }
+
+    @Test
+    @DisplayName("POST /groups/{groupId}/members/{userId}/nudge — 놓친 복약 없으면 409")
+    void nudgeMember_noOverdueDose_returns409() throws Exception {
+        given(sendMemberNudgeService.nudge(GROUP_ID, VIEWER_ID, USER_ID))
+                .willThrow(new PillmateException(ErrorCode.NUDGE_NO_OVERDUE_DOSE));
+
+        mockMvc.perform(post("/groups/" + GROUP_ID + "/members/" + VIEWER_ID + "/nudge")
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PILL_045"));
+    }
 }

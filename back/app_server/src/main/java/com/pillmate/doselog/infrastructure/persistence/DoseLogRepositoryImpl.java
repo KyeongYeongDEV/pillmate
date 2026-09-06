@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,5 +71,15 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     @Transactional
     public int markOverdueNotifiedIfPending(Long doseLogId, Instant now) {
         return jpa.markOverdueNotifiedIfStatus(doseLogId, now, DoseStatus.PENDING);
+    }
+
+    @Override
+    public Optional<DoseLog> findEarliestOverduePendingByScheduleIds(
+            Long patientId, Collection<Long> scheduleIds, Instant now) {
+        if (scheduleIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return jpa.findFirstByPatientIdAndScheduleIdInAndStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
+                patientId, scheduleIds, DoseStatus.PENDING, now);
     }
 }

@@ -8,7 +8,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 interface DoseLogJpaRepository extends JpaRepository<DoseLog, Long> {
 
@@ -43,4 +45,7 @@ interface DoseLogJpaRepository extends JpaRepository<DoseLog, Long> {
             """)
     int markOverdueNotifiedIfStatus(@Param("id") Long id, @Param("now") Instant now,
                                     @Param("status") DoseStatus status);
+
+    Optional<DoseLog> findFirstByPatientIdAndScheduleIdInAndStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
+            Long patientId, Collection<Long> scheduleIds, DoseStatus status, Instant scheduledAtInclusive);
 }

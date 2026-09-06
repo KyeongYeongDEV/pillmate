@@ -16,6 +16,15 @@ export interface UpdateShareSettingArgs {
   enabled: boolean;
 }
 
+export interface NudgeMemberArgs {
+  groupId: number;
+  userId: number;
+}
+
+export interface NudgeMemberResult {
+  alreadyNotified: boolean;
+}
+
 export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
 
 export const updateShareSettingRequest = ({ groupId, viewerUserId, enabled }: UpdateShareSettingArgs) => ({
@@ -106,6 +115,11 @@ export const caregroupApiSlice = createApi({
         }
       },
     }),
+    nudgeMember: build.mutation<NudgeMemberResult, NudgeMemberArgs>({
+      query: ({ groupId, userId }) => ({ url: `/groups/${groupId}/members/${userId}/nudge`, method: 'POST' }),
+      transformResponse: (response: ApiEnvelope<NudgeMemberResult>) =>
+        response?.data ?? { alreadyNotified: false },
+    }),
   }),
 });
 
@@ -120,5 +134,6 @@ export const {
   useJoinGroupMutation,
   useGetShareSettingsQuery,
   useUpdateShareSettingMutation,
+  useNudgeMemberMutation,
 } = caregroupApiSlice;
 

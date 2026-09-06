@@ -21,4 +21,8 @@ public interface DoseLogRepository {
     int markRemindedIfPending(Long doseLogId, Instant now);
     List<DoseLog> findPendingOverdueNotNotifiedBetween(Instant fromInclusive, Instant toInclusive);
     int markOverdueNotifiedIfPending(Long doseLogId, Instant now);
+
+    // 그룹 멤버 카드 직접 넛지용 — 주어진 스케줄 범위(호출측이 그룹 소속으로 이미 필터링) 안에서
+    // 가장 오래 놓친(scheduledAt 오름차순 1건) PENDING dose. 없으면 empty.
+    Optional<DoseLog> findEarliestOverduePendingByScheduleIds(Long patientId, Collection<Long> scheduleIds, Instant now);
 }

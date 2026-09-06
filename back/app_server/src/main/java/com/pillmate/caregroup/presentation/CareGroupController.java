@@ -8,6 +8,7 @@ import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
@@ -20,6 +21,7 @@ import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
 import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
+import com.pillmate.notification.application.dto.NudgeResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +52,7 @@ public class CareGroupController {
     private final GetGroupDetailUseCase getGroupDetailUseCase;
     private final LeaveGroupUseCase leaveGroupUseCase;
     private final MedicationShareService medicationShareService;
+    private final SendMemberNudgeService sendMemberNudgeService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -133,6 +136,14 @@ public class CareGroupController {
         Long userId = UserContext.get();
         ShareSettingUpdateResponse response =
                 medicationShareService.updateShareSetting(groupId, userId, viewerUserId, request.enabled());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/{groupId}/members/{userId}/nudge")
+    public ResponseEntity<ApiResponse<NudgeResponse>> nudgeMember(
+            @PathVariable Long groupId, @PathVariable Long userId) {
+        Long callerUserId = UserContext.get();
+        NudgeResponse response = sendMemberNudgeService.nudge(groupId, userId, callerUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
