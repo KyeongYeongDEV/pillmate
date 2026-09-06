@@ -29,6 +29,7 @@ import { useKstToday } from '@/hooks/useKstToday';
 import { useDoseStreak } from '@/hooks/useDoseStreak';
 import DoseStatusRow from '@/components/home/DoseStatusRow';
 import NotificationBell from '@/components/home/NotificationBell';
+import PushPermissionBanner from '@/components/home/PushPermissionBanner';
 import BootSkeleton from '@/components/common/BootSkeleton';
 
 // 콜드 스타트 SWR 재검증은 유지하되, 웜 네비게이션(탭 재진입)마다 3중 재fetch 되는 부수효과는 완화 (CTO 결정).
@@ -150,6 +151,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <PushPermissionBanner />
+
         {/* 오늘의 복약 */}
         <View style={styles.section}>
           <View style={styles.sectionRow}>
