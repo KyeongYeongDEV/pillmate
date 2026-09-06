@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
-import type { MyGroupSummary, GroupDetailResponse, InviteCodeView } from '@/types/caregroup';
+import type { MyGroupSummary, GroupDetailResponse, InviteCodeView, ShareSettingView } from '@/types/caregroup';
 
 export interface CreateGroupResponse {
   groupId: number;
@@ -10,12 +10,31 @@ export interface CreateGroupResponse {
   inviteCode?: string;
 }
 
+export interface UpdateShareSettingArgs {
+  groupId: number;
+  viewerUserId: number;
+  enabled: boolean;
+}
+
+export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
+
+export const updateShareSettingRequest = ({ groupId, viewerUserId, enabled }: UpdateShareSettingArgs) => ({
+  url: `/groups/${groupId}/share-settings/${viewerUserId}`,
+  method: 'PUT' as const,
+  body: { enabled },
+});
+
+export function applyShareToggle(list: ShareSettingView[], viewerUserId: number, enabled: boolean): void {
+  const target = list.find((s) => s.userId === viewerUserId);
+  if (target) target.shared = enabled;
+}
+
 const JOIN_TIMEOUT_MS = 10_000;
 
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
-  tagTypes: ['Group', 'GroupDetail', 'Activity'],
+  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings'],
   endpoints: (build) => ({
     getMyGroups: build.query<MyGroupSummary[], void>({
       query: () => '/groups',
@@ -67,6 +86,26 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<{ groupId: number }>) => response?.data?.groupId ?? 0,
       invalidatesTags: ['Group'],
     }),
+    getShareSettings: build.query<ShareSettingView[], number>({
+      query: (groupId) => shareSettingsUrl(groupId),
+      transformResponse: (response: ApiEnvelope<ShareSettingView[]>) => response?.data ?? [],
+      providesTags: (_result, _error, groupId) => [{ type: 'ShareSettings', id: groupId }],
+    }),
+    updateShareSetting: build.mutation<void, UpdateShareSettingArgs>({
+      query: (args) => updateShareSettingRequest(args),
+      async onQueryStarted({ groupId, viewerUserId, enabled }, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          caregroupApiSlice.util.updateQueryData('getShareSettings', groupId, (draft) => {
+            applyShareToggle(draft, viewerUserId, enabled);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+    }),
   }),
 });
 
@@ -79,5 +118,7 @@ export const {
   useCreateGroupMutation,
   useLeaveGroupMutation,
   useJoinGroupMutation,
+  useGetShareSettingsQuery,
+  useUpdateShareSettingMutation,
 } = caregroupApiSlice;
 

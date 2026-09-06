@@ -6,14 +6,18 @@ import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
 import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
+import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
+import com.pillmate.caregroup.application.dto.ShareSettingView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
+import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
 import jakarta.validation.Valid;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,6 +49,7 @@ public class CareGroupController {
     private final UnpinGroupUseCase unpinGroupUseCase;
     private final GetGroupDetailUseCase getGroupDetailUseCase;
     private final LeaveGroupUseCase leaveGroupUseCase;
+    private final MedicationShareService medicationShareService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -111,5 +117,22 @@ public class CareGroupController {
         Long userId = UserContext.get();
         leaveGroupUseCase.leave(groupId, userId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{groupId}/share-settings")
+    public ResponseEntity<ApiResponse<List<ShareSettingView>>> getShareSettings(@PathVariable Long groupId) {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(medicationShareService.getShareSettings(groupId, userId)));
+    }
+
+    @PutMapping("/{groupId}/share-settings/{viewerUserId}")
+    public ResponseEntity<ApiResponse<ShareSettingUpdateResponse>> updateShareSetting(
+            @PathVariable Long groupId,
+            @PathVariable Long viewerUserId,
+            @RequestBody @Valid UpdateShareSettingRequest request) {
+        Long userId = UserContext.get();
+        ShareSettingUpdateResponse response =
+                medicationShareService.updateShareSetting(groupId, userId, viewerUserId, request.enabled());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

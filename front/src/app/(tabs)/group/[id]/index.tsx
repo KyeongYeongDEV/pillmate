@@ -116,7 +116,10 @@ export default function GroupDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <Header title="케어 그룹" />
+      <Header
+        title="케어 그룹"
+        onSettings={() => router.push(`/group/${groupId}/share-settings` as any)}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -233,7 +236,7 @@ export default function GroupDetailScreen() {
   );
 }
 
-function Header({ title }: { title: string }) {
+function Header({ title, onSettings }: { title: string; onSettings?: () => void }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -245,7 +248,18 @@ function Header({ title }: { title: string }) {
         <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
-      <View style={{ width: scale(24) }} />
+      {onSettings ? (
+        <Pressable
+          onPress={onSettings}
+          accessibilityLabel="알약 정보 공유 설정"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Feather name="share-2" size={scale(22)} color={colors.labelNormal} />
+        </Pressable>
+      ) : (
+        <View style={{ width: scale(24) }} />
+      )}
     </View>
   );
 }

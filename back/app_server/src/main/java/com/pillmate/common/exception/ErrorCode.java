@@ -17,6 +17,7 @@ public enum ErrorCode {
     GROUP_INVITE_CODE_EXPIRED("PILL_013", "만료된 초대 코드입니다."),
     GROUP_INVITE_CODE_USED("PILL_014", "이미 사용된 초대 코드입니다."),
     GROUP_ALREADY_MEMBER("PILL_015", "이미 그룹에 가입되어 있습니다."),
+    MEDICATION_SHARE_INVALID_TARGET("PILL_017", "공유 대상이 유효하지 않습니다. 본인이거나 그룹 멤버가 아닙니다."),
     PRESCRIPTION_NOT_FOUND("PILL_020", "처방전을 찾을 수 없습니다."),
     PRESCRIPTION_DRUG_NOT_MATCHED("PILL_021", "처방전 약품을 식약처 DB에서 찾을 수 없습니다."),
     PRESCRIPTION_ITEMS_EMPTY("PILL_022", "처방 약 목록이 비어 있습니다."),

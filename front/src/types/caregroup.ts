@@ -27,6 +27,13 @@ export interface InviteCodeView {
   expiresAt: string;
 }
 
+export interface ShareSettingView {
+  userId: number;
+  name: string;
+  role: string;
+  shared: boolean;
+}
+
 export interface ActivityView {
   actorName: string;
   activityType: string;
