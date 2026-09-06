@@ -1,5 +1,6 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotView;
@@ -39,16 +40,28 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
     );
 
     private final ScheduleDayQueryPort scheduleDayQueryPort;
+    private final CareGroupGuard careGroupGuard;
+
+    @Override
+    public DayScheduleResponse execute(LocalDate date) {
+        return execute(date, null);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public DayScheduleResponse execute(LocalDate date) {
-        Long patientId = UserContext.get();
-        List<DayScheduleProjection> rows = scheduleDayQueryPort.findByPatientAndDate(patientId, date);
+    public DayScheduleResponse execute(LocalDate date, Long patientId) {
+        Long resolvedPatientId = resolvePatientId(patientId);
+        List<DayScheduleProjection> rows = scheduleDayQueryPort.findByPatientAndDate(resolvedPatientId, date);
         Map<Long, String> resolvedLabels = resolvePrescriptionLabels(rows);
         List<SlotView> slots = mergeToSlots(rows, resolvedLabels);
         int doneCount = (int) slots.stream().filter(slot -> "done".equals(slot.state())).count();
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
+    }
+
+    private Long resolvePatientId(Long patientId) {
+        Long targetPatientId = patientId != null ? patientId : UserContext.get();
+        careGroupGuard.requirePatientAccessible(targetPatientId);
+        return targetPatientId;
     }
 
     // 카드 표시용 처방전 이름 우선순위: ①사용자 label(non-blank) 그대로 ②없으면 'M월 D일 약봉투'

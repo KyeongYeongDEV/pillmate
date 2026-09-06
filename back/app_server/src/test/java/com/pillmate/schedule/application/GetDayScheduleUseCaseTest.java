@@ -1,5 +1,8 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotView;
@@ -19,13 +22,17 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 @DisplayName("GetDayScheduleUseCase — 처방전(약봉투) 단위 행 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class GetDayScheduleUseCaseTest {
 
     @Mock ScheduleDayQueryPort scheduleDayQueryPort;
+    @Mock CareGroupGuard careGroupGuard;
     @InjectMocks GetDayScheduleService sut;
 
     private static final Long PATIENT_ID = 1L;
@@ -39,6 +46,38 @@ class GetDayScheduleUseCaseTest {
     @AfterEach
     void tearDown() {
         UserContext.clear();
+    }
+
+    @Test
+    @DisplayName("patientId 지정(같은 그룹 구성원) → 가드 통과 후 해당 patientId 로 조회")
+    void execute_withPatientId_sameGroup_returnsMemberSchedule() {
+        // given
+        Long memberId = 5L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+
+        // when
+        DayScheduleResponse response = sut.execute(TODAY, memberId);
+
+        // then
+        then(careGroupGuard).should().requirePatientAccessible(memberId);
+        assertThat(response.totalCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("patientId 지정(비그룹원) → GROUP_ACCESS_DENIED 로 차단, 조회 자체가 실행되지 않음")
+    void execute_withPatientId_notSharedGroup_throwsGroupAccessDenied() {
+        // given
+        Long strangerId = 999L;
+        willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(careGroupGuard).requirePatientAccessible(strangerId);
+
+        // when & then
+        assertThatThrownBy(() -> sut.execute(TODAY, strangerId))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+        then(scheduleDayQueryPort).shouldHaveNoInteractions();
     }
 
     @Test
@@ -215,6 +254,7 @@ class GetDayScheduleUseCaseTest {
         // then
         assertThat(response.slots()).isEmpty();
         assertThat(response.totalCount()).isZero();
+        then(careGroupGuard).should().requirePatientAccessible(99L);
     }
 
     @Test

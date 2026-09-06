@@ -7,4 +7,6 @@ import java.time.LocalDate;
 public interface GetDayScheduleUseCase {
 
     DayScheduleResponse execute(LocalDate date);
+
+    DayScheduleResponse execute(LocalDate date, Long patientId);
 }

@@ -6,4 +6,6 @@ import java.time.YearMonth;
 
 public interface GetMonthScheduleUseCase {
     MonthScheduleResponse execute(YearMonth month);
+
+    MonthScheduleResponse execute(YearMonth month, Long patientId);
 }

@@ -1,5 +1,6 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.MonthScheduleResponse;
 import com.pillmate.schedule.application.dto.MonthScheduleResponse.DayAdherenceView;
@@ -24,17 +25,29 @@ public class GetMonthScheduleService implements GetMonthScheduleUseCase {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final ScheduleMonthQueryPort scheduleMonthQueryPort;
+    private final CareGroupGuard careGroupGuard;
     private final Clock clock;
 
     @Override
-    @Transactional(readOnly = true)
     public MonthScheduleResponse execute(YearMonth month) {
-        Long patientId = UserContext.get();
+        return execute(month, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MonthScheduleResponse execute(YearMonth month, Long patientId) {
+        Long resolvedPatientId = resolvePatientId(patientId);
         Instant from = kstMonthStart(month);
         Instant to = kstMonthStart(month.plusMonths(1));
         LocalDate today = LocalDate.now(clock.withZone(KST));
-        List<DayDoseCount> counts = scheduleMonthQueryPort.findDailyDoseCounts(patientId, from, to);
+        List<DayDoseCount> counts = scheduleMonthQueryPort.findDailyDoseCounts(resolvedPatientId, from, to);
         return new MonthScheduleResponse(month.toString(), counts.stream().map(count -> toView(count, today)).toList());
+    }
+
+    private Long resolvePatientId(Long patientId) {
+        Long targetPatientId = patientId != null ? patientId : UserContext.get();
+        careGroupGuard.requirePatientAccessible(targetPatientId);
+        return targetPatientId;
     }
 
     private Instant kstMonthStart(YearMonth month) {

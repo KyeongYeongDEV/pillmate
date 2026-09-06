@@ -1,5 +1,8 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.common.exception.ErrorCode;
+import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.MonthScheduleResponse;
 import com.pillmate.schedule.application.port.ScheduleMonthQueryPort;
@@ -21,16 +24,19 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 @DisplayName("GetMonthScheduleUseCase — 월 복약 현황 집계 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class GetMonthScheduleUseCaseTest {
 
     @Mock ScheduleMonthQueryPort scheduleMonthQueryPort;
+    @Mock CareGroupGuard careGroupGuard;
 
     private static final Long PATIENT_ID = 1L;
     private static final YearMonth JUNE = YearMonth.of(2026, 6);
@@ -50,7 +56,7 @@ class GetMonthScheduleUseCaseTest {
     }
 
     private GetMonthScheduleService sut() {
-        return new GetMonthScheduleService(scheduleMonthQueryPort, FIXED_CLOCK);
+        return new GetMonthScheduleService(scheduleMonthQueryPort, careGroupGuard, FIXED_CLOCK);
     }
 
     @Test
@@ -141,5 +147,37 @@ class GetMonthScheduleUseCaseTest {
         // then
         assertThat(response.days()).isEmpty();
         then(scheduleMonthQueryPort).should().findDailyDoseCounts(eq(99L), any(), any());
+        then(careGroupGuard).should().requirePatientAccessible(99L);
+    }
+
+    @Test
+    @DisplayName("patientId 지정(같은 그룹 구성원) → 가드 통과 후 해당 patientId 로 조회")
+    void execute_withPatientId_sameGroup_returnsMemberSchedule() {
+        // given
+        Long memberId = 5L;
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(memberId), any(), any()))
+                .willReturn(List.of());
+
+        // when
+        MonthScheduleResponse response = sut().execute(JUNE, memberId);
+
+        // then
+        then(careGroupGuard).should().requirePatientAccessible(memberId);
+        assertThat(response.days()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("patientId 지정(비그룹원) → GROUP_ACCESS_DENIED 로 차단, 조회 자체가 실행되지 않음")
+    void execute_withPatientId_notSharedGroup_throwsGroupAccessDenied() {
+        // given
+        Long strangerId = 999L;
+        willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(careGroupGuard).requirePatientAccessible(strangerId);
+
+        // when & then
+        assertThatThrownBy(() -> sut().execute(JUNE, strangerId))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+        then(scheduleMonthQueryPort).shouldHaveNoInteractions();
     }
 }

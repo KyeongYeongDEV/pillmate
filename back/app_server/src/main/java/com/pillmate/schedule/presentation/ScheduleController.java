@@ -115,13 +115,15 @@ public class ScheduleController {
 
     @GetMapping("/day")
     public ResponseEntity<ApiResponse<DayScheduleResponse>> getDay(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.success(getDayScheduleUseCase.execute(date)));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long patientId) {
+        return ResponseEntity.ok(ApiResponse.success(getDayScheduleUseCase.execute(date, patientId)));
     }
 
     @GetMapping("/month")
     public ResponseEntity<ApiResponse<MonthScheduleResponse>> getMonth(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
-        return ResponseEntity.ok(ApiResponse.success(getMonthScheduleUseCase.execute(month)));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) Long patientId) {
+        return ResponseEntity.ok(ApiResponse.success(getMonthScheduleUseCase.execute(month, patientId)));
     }
 }

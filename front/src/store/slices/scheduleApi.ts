@@ -26,6 +26,20 @@ export function toAdherenceMap(
   return map;
 }
 
+export interface MemberDayScheduleArg {
+  date: string;
+  patientId: number;
+}
+
+export interface MemberMonthScheduleArg {
+  month: string;
+  patientId: number;
+}
+
+function emptyScheduleDay(date: string): ScheduleDay {
+  return { date, totalCount: 0, doneCount: 0, slots: [] };
+}
+
 export const MOCK_SCHEDULE: ScheduleDay = {
   date: '2025-11-24',
   totalCount: 6,
@@ -55,6 +69,24 @@ export const scheduleApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<MonthScheduleResponse>) =>
         toAdherenceMap(response?.data),
       providesTags: ['MonthSchedule'],
+    }),
+
+    // 그룹 구성원 조회 전용(읽기). 본인 조회와 엔드포인트를 분리해 캐시 키·디스크 저장 대상이 섞이지 않게 한다.
+    getMemberDaySchedule: build.query<ScheduleDay, MemberDayScheduleArg>({
+      query: ({ date, patientId }) => `/schedules/day?date=${date}&patientId=${patientId}`,
+      transformResponse: (
+        response: ApiEnvelope<ScheduleDay>,
+        _meta,
+        arg: MemberDayScheduleArg,
+      ) => response?.data ?? emptyScheduleDay(arg.date),
+      providesTags: (_r, _e, { patientId }) => [{ type: 'Schedule', id: `member-${patientId}` }],
+    }),
+
+    getMemberMonthAdherence: build.query<Record<string, AdherenceLevel>, MemberMonthScheduleArg>({
+      query: ({ month, patientId }) => `/schedules/month?month=${month}&patientId=${patientId}`,
+      transformResponse: (response: ApiEnvelope<MonthScheduleResponse>) =>
+        toAdherenceMap(response?.data),
+      providesTags: (_r, _e, { patientId }) => [{ type: 'MonthSchedule', id: `member-${patientId}` }],
     }),
 
     getPrescriptionSlots: build.query<SlotEditView[], number>({
@@ -115,6 +147,8 @@ export const scheduleApiSlice = createApi({
 export const {
   useGetDayScheduleQuery,
   useGetMonthAdherenceQuery,
+  useGetMemberDayScheduleQuery,
+  useGetMemberMonthAdherenceQuery,
   useGetPrescriptionSlotsQuery,
   useUpdateScheduleTimeMutation,
   useAddPrescriptionSlotMutation,

@@ -12,6 +12,8 @@ import com.pillmate.schedule.application.ListSchedulesUseCase;
 import com.pillmate.schedule.application.RemovePrescriptionSlotUseCase;
 import com.pillmate.schedule.application.UpdatePrescriptionPeriodUseCase;
 import com.pillmate.schedule.application.UpdateScheduleUseCase;
+import com.pillmate.schedule.application.dto.DayScheduleResponse;
+import com.pillmate.schedule.application.dto.MonthScheduleResponse;
 import com.pillmate.schedule.application.dto.ScheduleResponse;
 import com.pillmate.schedule.application.dto.SlotEditView;
 import com.pillmate.schedule.domain.model.TimeOfDay;
@@ -26,10 +28,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
@@ -168,5 +172,87 @@ class ScheduleControllerTest {
                         .header("X-User-Id", "99"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("PILL_016"));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/day patientId 미지정 → 200, execute(date, null) 호출")
+    void getDay_withoutPatientId_returns200() throws Exception {
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), isNull()))
+                .willReturn(new DayScheduleResponse(LocalDate.of(2026, 6, 21), 0, 0, List.of()));
+
+        mockMvc.perform(get("/schedules/day")
+                        .param("date", "2026-06-21")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(0));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/day patientId 지정(같은 그룹) → 200, execute(date, patientId) 호출")
+    void getDay_withPatientId_sameGroup_returns200() throws Exception {
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(5L)))
+                .willReturn(new DayScheduleResponse(LocalDate.of(2026, 6, 21), 1, 0, List.of()));
+
+        mockMvc.perform(get("/schedules/day")
+                        .param("date", "2026-06-21")
+                        .param("patientId", "5")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/day patientId 지정(비그룹원) → 403 GROUP_ACCESS_DENIED")
+    void getDay_withPatientId_notSharedGroup_returns403() throws Exception {
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(999L)))
+                .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
+
+        mockMvc.perform(get("/schedules/day")
+                        .param("date", "2026-06-21")
+                        .param("patientId", "999")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/month patientId 미지정 → 200, execute(month, null) 호출")
+    void getMonth_withoutPatientId_returns200() throws Exception {
+        given(getMonthScheduleUseCase.execute(eq(YearMonth.of(2026, 6)), isNull()))
+                .willReturn(new MonthScheduleResponse("2026-06", List.of()));
+
+        mockMvc.perform(get("/schedules/month")
+                        .param("month", "2026-06")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2026-06"));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/month patientId 지정(같은 그룹) → 200, execute(month, patientId) 호출")
+    void getMonth_withPatientId_sameGroup_returns200() throws Exception {
+        given(getMonthScheduleUseCase.execute(eq(YearMonth.of(2026, 6)), eq(5L)))
+                .willReturn(new MonthScheduleResponse("2026-06", List.of()));
+
+        mockMvc.perform(get("/schedules/month")
+                        .param("month", "2026-06")
+                        .param("patientId", "5")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2026-06"));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/month patientId 지정(비그룹원) → 403 GROUP_ACCESS_DENIED")
+    void getMonth_withPatientId_notSharedGroup_returns403() throws Exception {
+        given(getMonthScheduleUseCase.execute(eq(YearMonth.of(2026, 6)), eq(999L)))
+                .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
+
+        mockMvc.perform(get("/schedules/month")
+                        .param("month", "2026-06")
+                        .param("patientId", "999")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
     }
 }

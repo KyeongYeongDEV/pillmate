@@ -14,6 +14,7 @@ import { scale, colors, space, radius, typography, shadows } from '@/styles/toke
 import { useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation, caregroupApiSlice } from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
 import { safeBack } from '@/lib/router/safeBack';
+import { getCurrentUserId } from '@/lib/auth/storage';
 import { GROUP_DETAIL_REFRESH } from '@/lib/query/refreshOptions';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
@@ -33,6 +34,19 @@ export default function GroupDetailScreen() {
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
   const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
   const [refreshing, setRefreshing] = useState(false);
+
+  // 본인은 체크 가능한 정식 복약 탭으로 — 읽기 전용 사본을 보여 주면 "왜 체크가 안 되지" 혼란을 준다.
+  const handleMemberPress = useCallback(async (member: GroupMember) => {
+    const memberUserId = Number(member.id);
+    if (memberUserId === await getCurrentUserId()) {
+      router.push('/(tabs)/schedule' as any);
+      return;
+    }
+    router.push({
+      pathname: '/group/[id]/member/[userId]',
+      params: { id: String(groupId), userId: String(memberUserId), name: member.name },
+    } as any);
+  }, [groupId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -167,6 +181,7 @@ export default function GroupDetailScreen() {
               key={m.userId}
               member={memberViewToGroupMember(m)}
               isFirst={i === 0}
+              onPress={handleMemberPress}
             />
           ))}
         </View>
