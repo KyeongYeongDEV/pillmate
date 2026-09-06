@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Icon from '@/components/common/Icon';
 import { scale, colors, space } from '@/styles/tokens';
-import { MFDS_SOURCE } from '@/lib/constants';
+import { MFDS_SOURCE, MEDICATION_DETAIL_MASK } from '@/lib/constants';
 import type { MedSlot } from '@/types/schedule';
 
 interface Props {
@@ -13,15 +13,26 @@ interface Props {
   readOnly?: boolean;
 }
 
+// 그룹원 화면에서 알약정보(L2) 공유 권한이 없으면 백엔드가 prescriptionName 을
+// MEDICATION_DETAIL_MASK 로, items 를 빈 배열로 내려준다 — 복용여부(L1)는 그대로 유지.
+function isMedicationMasked(slot: MedSlot): boolean {
+  return slot.prescriptionName === MEDICATION_DETAIL_MASK || slot.items.length === 0;
+}
+
+function buildMaskedLabel(drugCount?: number): string {
+  return drugCount ? `${drugCount}개 · ${MEDICATION_DETAIL_MASK}` : MEDICATION_DETAIL_MASK;
+}
+
 function MedTimeRow({ slot, isFirst, onPress, onPrescriptionPress, readOnly }: Props) {
   const done = slot.state === 'done';
   const now  = !readOnly && slot.state === 'now';
+  const masked = isMedicationMasked(slot);
   const handleCheckPress  = useCallback(() => onPress?.(slot), [onPress, slot]);
   const handlePrescriptionPress = useCallback(
     () => onPrescriptionPress?.(slot),
     [onPrescriptionPress, slot],
   );
-  const canNavigate = !!slot.prescriptionId && !!onPrescriptionPress;
+  const canNavigate = !masked && !!slot.prescriptionId && !!onPrescriptionPress;
 
   const circleEl = (
     <View
@@ -44,7 +55,14 @@ function MedTimeRow({ slot, isFirst, onPress, onPrescriptionPress, readOnly }: P
       </View>
       <View style={styles.divider} />
       <View style={styles.itemsCol}>
-        {slot.prescriptionName ? (
+        {masked ? (
+          <View style={styles.maskedRow}>
+            <Icon name="lock" size={scale(12)} color={colors.labelAssistive} />
+            <Text style={styles.maskedText} numberOfLines={1}>
+              {buildMaskedLabel(slot.drugCount)}
+            </Text>
+          </View>
+        ) : slot.prescriptionName ? (
           canNavigate ? (
             <Pressable onPress={handlePrescriptionPress} accessibilityRole="link">
               <Text
@@ -64,7 +82,7 @@ function MedTimeRow({ slot, isFirst, onPress, onPrescriptionPress, readOnly }: P
             <Text key={i} style={[styles.item, done && styles.muted, done && styles.strike]}>{it}</Text>
           ))
         )}
-        <Text style={styles.source}>출처: {MFDS_SOURCE}</Text>
+        {!masked && <Text style={styles.source}>출처: {MFDS_SOURCE}</Text>}
       </View>
       {onPress ? (
         <Pressable
@@ -104,6 +122,8 @@ const styles = StyleSheet.create({
   itemsCol: { flex: 1, gap: 1 },
   item: { fontSize: scale(14), fontWeight: '500', color: colors.labelNormal, lineHeight: scale(20) },
   source: { fontSize: scale(10), color: colors.labelAssistive, marginTop: 3 },
+  maskedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  maskedText: { fontSize: scale(14), fontWeight: '500', color: colors.labelAssistive, lineHeight: scale(20) },
   circle: {
     width: scale(32), height: scale(32), borderRadius: scale(16),
     borderWidth: 1.5, borderColor: colors.line,

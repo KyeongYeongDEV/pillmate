@@ -31,8 +31,9 @@ class MedicationShareGrantRepositoryImpl implements MedicationShareGrantReposito
     }
 
     @Override
-    public boolean existsByOwnerUserIdAndViewerUserId(Long ownerUserId, Long viewerUserId) {
-        return jpa.existsByOwnerUserIdAndViewerUserId(ownerUserId, viewerUserId);
+    public boolean existsByCareGroupIdAndOwnerUserIdAndViewerUserId(
+            Long careGroupId, Long ownerUserId, Long viewerUserId) {
+        return jpa.existsByCareGroupIdAndOwnerUserIdAndViewerUserId(careGroupId, ownerUserId, viewerUserId);
     }
 
     @Override

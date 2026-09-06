@@ -1,10 +1,12 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import com.pillmate.notification.application.port.CareGroupLookupPort;
@@ -61,6 +63,8 @@ class SendGroupDoseNotificationServiceTest {
     @Mock RecipientCachePort recipientCachePort;
     @Mock com.pillmate.notification.application.port.PrescriptionSummaryPort prescriptionSummaryPort;
     @Mock CareGroupLookupPort careGroupLookupPort;
+    @Mock MedicationShareService medicationShareService;
+    @Mock CareGroupGuard careGroupGuard;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
 
@@ -243,6 +247,7 @@ class SendGroupDoseNotificationServiceTest {
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
                         LocalDate.of(2026, 6, 21), "저녁약")));
+        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -275,6 +280,7 @@ class SendGroupDoseNotificationServiceTest {
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
                         LocalDate.of(2026, 6, 21), "   ")));
+        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -551,6 +557,143 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(captor.getValue()).hasSize(2);
         assertThat(captor.getValue().get(1).userId()).isEqualTo(MEMBER_ID);
         assertThat(captor.getValue().get(1).token()).isEqualTo("ExponentPushToken[abc]");
+    }
+
+    // ─── T-BE-NOTIFICATION-L2-LEAK: 그룹 알림 라벨 L2 게이팅 ──────────────────────
+
+    @Test
+    @DisplayName("L2 공유 권한 없는 수신자 — 처방전 라벨 없는 제네릭 본문(약봉투 이름 유출 차단)")
+    void notify_recipientWithoutGrant_getsGenericBodyWithoutLabel() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
+        User actor = User.dummy("홍길동");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
+        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
+        given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
+                new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
+                        LocalDate.of(2026, 6, 21), "우울증약")));
+        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(false);
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        String body = captor.getValue().get(0).getBody();
+        assertThat(body).doesNotContain("우울증약");
+        assertThat(body).contains("홍길동");
+        assertThat(body).contains("복약을 완료했어요");
+    }
+
+    @Test
+    @DisplayName("같은 이벤트 — 수신자별 grant 여부에 따라 서로 다른 본문(grant=라벨 포함, no-grant=제네릭)")
+    void notify_mixedGrants_perRecipientDifferentBody() {
+        Long MEMBER_WITH_GRANT = 3L;
+        Long MEMBER_WITHOUT_GRANT = 4L;
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID),
+                membershipOf(GROUP_ID, MEMBER_WITH_GRANT),
+                membershipOf(GROUP_ID, MEMBER_WITHOUT_GRANT)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_WITH_GRANT, MEMBER_WITHOUT_GRANT))).willReturn(List.of(
+                memberWithToken(MEMBER_WITH_GRANT, "ExponentPushToken[a]"),
+                memberWithToken(MEMBER_WITHOUT_GRANT, "ExponentPushToken[b]")));
+        given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
+                new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
+                        LocalDate.of(2026, 6, 21), "혈압약")));
+        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_WITH_GRANT)).willReturn(true);
+        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_WITHOUT_GRANT)).willReturn(false);
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        var bodyByRecipient = captor.getValue().stream()
+                .collect(java.util.stream.Collectors.toMap(Notification::getRecipientUserId, Notification::getBody));
+        assertThat(bodyByRecipient.get(MEMBER_WITH_GRANT)).contains("혈압약");
+        assertThat(bodyByRecipient.get(MEMBER_WITHOUT_GRANT)).doesNotContain("혈압약");
+    }
+
+    // ─── T-BE-NOTIFICATION-L2-LEAK: notify-group IDOR (sendForCaller) ────────────
+
+    @Test
+    @DisplayName("sendForCaller — 호출자가 그 케어그룹 ACTIVE 멤버 아니면 403, group_notified_at 변경 없음(DoS 방지)")
+    void sendForCaller_whenCallerNotGroupMember_throws403AndDoesNotMarkGroupNotified() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(careGroupGuard).requireAccessible(GROUP_ID);
+
+        assertThatThrownBy(() -> sut.sendForCaller(DOSE_LOG_ID, MEMBER_ID))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+
+        verify(doseLogRepository, never()).save(any());
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).sendAll(anyList());
+    }
+
+    @Test
+    @DisplayName("sendForCaller — 호출자가 ACTIVE 멤버면 정상 발송(기존 send 로직 동일)")
+    void sendForCaller_whenCallerIsGroupMember_proceedsNormally() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
+
+        sut.sendForCaller(DOSE_LOG_ID, ACTOR_ID);
+
+        verify(notificationSenderPort).sendAll(anyList());
+        org.mockito.Mockito.verify(careGroupGuard).requireAccessible(GROUP_ID);
+    }
+
+    @Test
+    @DisplayName("sendForCaller — 솔로(careGroupId null) 스케줄인데 호출자가 본인이 아니면 403")
+    void sendForCaller_soloSchedule_whenCallerNotPatient_throws403() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(null);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> sut.sendForCaller(DOSE_LOG_ID, MEMBER_ID))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+
+        verify(doseLogRepository, never()).save(any());
+        verify(careGroupGuard, never()).requireAccessible(any());
+    }
+
+    @Test
+    @DisplayName("sendForCaller — 솔로(careGroupId null) 스케줄이고 호출자가 본인이면 통과(발송 대상 없어 스킵)")
+    void sendForCaller_soloSchedule_whenCallerIsPatient_proceeds() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(null);
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
+        sut.sendForCaller(DOSE_LOG_ID, ACTOR_ID);
+
+        verify(doseLogRepository).save(any(DoseLog.class));
+        verify(notificationSenderPort, never()).sendAll(anyList());
     }
 
     private User memberWithToken(Long id, String token) {

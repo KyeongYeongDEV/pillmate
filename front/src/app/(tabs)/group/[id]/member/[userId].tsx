@@ -54,15 +54,15 @@ export default function MemberScheduleScreen() {
     data: scheduleDay, error: dayError,
     isLoading: dayLoading, isFetching: dayFetching, refetch: refetchDay,
   } = useGetMemberDayScheduleQuery(
-    { date: selectedDate, patientId },
-    { skip: !Number.isFinite(patientId) },
+    { date: selectedDate, patientId, groupId },
+    { skip: !Number.isFinite(patientId) || !Number.isFinite(groupId) },
   );
   const {
     data: monthAdherence, error: monthError,
     isLoading: monthLoading, isFetching: monthFetching, refetch: refetchMonth,
   } = useGetMemberMonthAdherenceQuery(
-    { month: toMonthString(displayYear, displayMonth), patientId },
-    { skip: !Number.isFinite(patientId) },
+    { month: toMonthString(displayYear, displayMonth), patientId, groupId },
+    { skip: !Number.isFinite(patientId) || !Number.isFinite(groupId) },
   );
 
   const memberName = useMemo(

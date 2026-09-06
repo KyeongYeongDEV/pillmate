@@ -101,6 +101,49 @@ describe('MedTimeRow readOnly (#147 과거/미래 날짜)', () => {
   });
 });
 
+// 그룹원 캘린더의 알약정보(L2) 마스킹 — 복약여부(L1)는 그대로, 무슨 약인지만 가려진다.
+describe('MedTimeRow — L2(알약 정보) 마스킹', () => {
+  const MASKED_SLOT: MedSlot = {
+    id: 'morning', time: '08:00', label: '아침', state: 'wait',
+    items: [], drugCount: 2, prescriptionName: '약 정보 비공개', doseLogId: 201,
+  };
+
+  it('prescriptionName 이 마스킹 라벨이면 약 이름 대신 개수 포함 비공개 문구를 보여준다', () => {
+    render(<MedTimeRow slot={MASKED_SLOT} isFirst readOnly />);
+    expect(screen.getByText('2개 · 약 정보 비공개')).toBeTruthy();
+  });
+
+  it('items 가 빈 배열이고 drugCount 가 없으면 개수 없이 비공개 문구만 보여준다', () => {
+    const slot: MedSlot = { ...MASKED_SLOT, drugCount: undefined };
+    render(<MedTimeRow slot={slot} isFirst readOnly />);
+    expect(screen.getByText('약 정보 비공개')).toBeTruthy();
+  });
+
+  it('마스킹 시 출처 표시를 하지 않는다 — 근거 없는 정보 표시 금지(의료 안전)', () => {
+    render(<MedTimeRow slot={MASKED_SLOT} isFirst readOnly />);
+    expect(screen.queryByText(/식품의약품안전처/)).toBeNull();
+  });
+
+  it('마스킹 시 시간·라벨(L1)은 그대로 보인다', () => {
+    render(<MedTimeRow slot={MASKED_SLOT} isFirst readOnly />);
+    expect(screen.getByText('08:00')).toBeTruthy();
+    expect(screen.getByText('아침')).toBeTruthy();
+  });
+
+  it('마스킹 슬롯은 처방전 상세로 링크되지 않는다', () => {
+    const slot: MedSlot = { ...MASKED_SLOT, prescriptionId: 55 };
+    const onPrescriptionPress = jest.fn();
+    render(<MedTimeRow slot={slot} isFirst readOnly onPrescriptionPress={onPrescriptionPress} />);
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('마스킹 아닌 일반 슬롯은 기존처럼 약 이름을 그대로 보여준다 — 회귀 방지', () => {
+    render(<MedTimeRow slot={DONE_SLOT} isFirst />);
+    expect(screen.getByText('암로디핀 5mg')).toBeTruthy();
+    expect(screen.queryByText('약 정보 비공개')).toBeNull();
+  });
+});
+
 const GRID_BASE = {
   year: 2026, month: 6,
   selectedDate: '2026-06-12', today: '2026-06-12',

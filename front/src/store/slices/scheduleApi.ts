@@ -29,11 +29,13 @@ export function toAdherenceMap(
 export interface MemberDayScheduleArg {
   date: string;
   patientId: number;
+  groupId: number;
 }
 
 export interface MemberMonthScheduleArg {
   month: string;
   patientId: number;
+  groupId: number;
 }
 
 function emptyScheduleDay(date: string): ScheduleDay {
@@ -73,20 +75,27 @@ export const scheduleApiSlice = createApi({
 
     // 그룹 구성원 조회 전용(읽기). 본인 조회와 엔드포인트를 분리해 캐시 키·디스크 저장 대상이 섞이지 않게 한다.
     getMemberDaySchedule: build.query<ScheduleDay, MemberDayScheduleArg>({
-      query: ({ date, patientId }) => `/schedules/day?date=${date}&patientId=${patientId}`,
+      // groupId 필수 — 없으면 서버가 fail-closed 로 알약정보(L2)를 무조건 마스킹한다.
+      query: ({ date, patientId, groupId }) =>
+        `/schedules/day?date=${date}&patientId=${patientId}&groupId=${groupId}`,
       transformResponse: (
         response: ApiEnvelope<ScheduleDay>,
         _meta,
         arg: MemberDayScheduleArg,
       ) => response?.data ?? emptyScheduleDay(arg.date),
-      providesTags: (_r, _e, { patientId }) => [{ type: 'Schedule', id: `member-${patientId}` }],
+      providesTags: (_r, _e, { patientId, groupId }) => [
+        { type: 'Schedule', id: `member-${groupId}-${patientId}` },
+      ],
     }),
 
     getMemberMonthAdherence: build.query<Record<string, AdherenceLevel>, MemberMonthScheduleArg>({
-      query: ({ month, patientId }) => `/schedules/month?month=${month}&patientId=${patientId}`,
+      query: ({ month, patientId, groupId }) =>
+        `/schedules/month?month=${month}&patientId=${patientId}&groupId=${groupId}`,
       transformResponse: (response: ApiEnvelope<MonthScheduleResponse>) =>
         toAdherenceMap(response?.data),
-      providesTags: (_r, _e, { patientId }) => [{ type: 'MonthSchedule', id: `member-${patientId}` }],
+      providesTags: (_r, _e, { patientId, groupId }) => [
+        { type: 'MonthSchedule', id: `member-${groupId}-${patientId}` },
+      ],
     }),
 
     getPrescriptionSlots: build.query<SlotEditView[], number>({

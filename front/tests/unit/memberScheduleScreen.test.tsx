@@ -19,7 +19,7 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => false },
 }));
 
-jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null }));
 
 jest.mock('@/store/slices/scheduleApi', () => ({
   useGetMemberDayScheduleQuery: jest.fn(),
@@ -36,6 +36,12 @@ const mockGroupDetail = useGetGroupDetailQuery as unknown as jest.Mock;
 const SLOT: MedSlot = {
   id: 'morning', time: '08:00', label: '아침', state: 'wait',
   items: ['암로디핀 5mg'], doseLogId: 11,
+};
+
+// L2(알약 정보) 공유 권한이 없을 때 서버가 내려주는 마스킹 슬롯 형태.
+const MASKED_SLOT: MedSlot = {
+  id: 'morning', time: '08:00', label: '아침', state: 'done',
+  items: [], drugCount: 2, prescriptionName: '약 정보 비공개', doseLogId: 11,
 };
 
 function setup(options: {
@@ -100,6 +106,20 @@ describe('구성원 복약 캘린더 화면', () => {
     );
   });
 
+  // groupId 를 안 보내면 서버가 fail-closed 로 무조건 마스킹한다 — 권한 있어도 약 이름이 안 보이게 되는 회귀 방지.
+  it('라우트의 groupId(id 파라미터)를 일별/월별 조회에 함께 보낸다', () => {
+    setup({ params: { id: '3', userId: '7', name: '박순자' } });
+    render(<MemberScheduleScreen />);
+    expect(mockDayQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ patientId: 7, groupId: 3 }),
+      expect.anything(),
+    );
+    expect(mockMonthQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ patientId: 7, groupId: 3 }),
+      expect.anything(),
+    );
+  });
+
   it('복약 체크 버튼이 없다 — 남의 기록은 읽기 전용', () => {
     setup({ slots: [SLOT] });
     render(<MemberScheduleScreen />);
@@ -130,6 +150,14 @@ describe('구성원 복약 캘린더 화면', () => {
     setup({ dayError: { status: 500 } });
     render(<MemberScheduleScreen />);
     expect(screen.getByText('복약 정보를 불러올 수 없어요')).toBeTruthy();
+  });
+
+  it('L2 마스킹 슬롯은 약 이름 대신 "N개 · 약 정보 비공개"를 보여주고 복약 완료 카운트(L1)는 그대로 반영한다', () => {
+    setup({ slots: [MASKED_SLOT] });
+    render(<MemberScheduleScreen />);
+    expect(screen.getByText('2개 · 약 정보 비공개')).toBeTruthy();
+    expect(screen.queryByText('암로디핀 5mg')).toBeNull();
+    expect(screen.getByText('복약 1 / 1 완료')).toBeTruthy();
   });
 
   it('해당 날짜에 복약이 없으면 빈 안내', () => {

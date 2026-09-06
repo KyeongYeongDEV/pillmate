@@ -13,7 +13,8 @@ public interface MedicationShareGrantRepository {
 
     List<MedicationShareGrant> findByCareGroupIdAndOwnerUserId(Long careGroupId, Long ownerUserId);
 
-    boolean existsByOwnerUserIdAndViewerUserId(Long ownerUserId, Long viewerUserId);
+    boolean existsByCareGroupIdAndOwnerUserIdAndViewerUserId(
+            Long careGroupId, Long ownerUserId, Long viewerUserId);
 
     void deleteByCareGroupIdAndOwnerUserIdAndViewerUserId(Long careGroupId, Long ownerUserId, Long viewerUserId);
 }

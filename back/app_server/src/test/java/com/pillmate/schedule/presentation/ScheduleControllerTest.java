@@ -175,9 +175,9 @@ class ScheduleControllerTest {
     }
 
     @Test
-    @DisplayName("GET /schedules/day patientId 미지정 → 200, execute(date, null) 호출")
+    @DisplayName("GET /schedules/day patientId 미지정 → 200, execute(date, null, null) 호출")
     void getDay_withoutPatientId_returns200() throws Exception {
-        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), isNull()))
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), isNull(), isNull()))
                 .willReturn(new DayScheduleResponse(LocalDate.of(2026, 6, 21), 0, 0, List.of()));
 
         mockMvc.perform(get("/schedules/day")
@@ -188,9 +188,9 @@ class ScheduleControllerTest {
     }
 
     @Test
-    @DisplayName("GET /schedules/day patientId 지정(같은 그룹) → 200, execute(date, patientId) 호출")
+    @DisplayName("GET /schedules/day patientId 지정(같은 그룹) → 200, execute(date, patientId, null) 호출")
     void getDay_withPatientId_sameGroup_returns200() throws Exception {
-        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(5L)))
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(5L), isNull()))
                 .willReturn(new DayScheduleResponse(LocalDate.of(2026, 6, 21), 1, 0, List.of()));
 
         mockMvc.perform(get("/schedules/day")
@@ -202,9 +202,24 @@ class ScheduleControllerTest {
     }
 
     @Test
+    @DisplayName("GET /schedules/day patientId+groupId 지정 → 200, execute(date, patientId, groupId) 호출 (L2 판정 배선)")
+    void getDay_withPatientIdAndGroupId_returns200() throws Exception {
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(5L), eq(7L)))
+                .willReturn(new DayScheduleResponse(LocalDate.of(2026, 6, 21), 1, 0, List.of()));
+
+        mockMvc.perform(get("/schedules/day")
+                        .param("date", "2026-06-21")
+                        .param("patientId", "5")
+                        .param("groupId", "7")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(1));
+    }
+
+    @Test
     @DisplayName("GET /schedules/day patientId 지정(비그룹원) → 403 GROUP_ACCESS_DENIED")
     void getDay_withPatientId_notSharedGroup_returns403() throws Exception {
-        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(999L)))
+        given(getDayScheduleUseCase.execute(eq(LocalDate.of(2026, 6, 21)), eq(999L), isNull()))
                 .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
 
         mockMvc.perform(get("/schedules/day")
@@ -254,5 +269,20 @@ class ScheduleControllerTest {
                         .header("X-User-Id", "1"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("GET /schedules/month groupId 동봉해도 200 (month 는 L1만이라 판정에 미사용, 계약 일관성용 파라미터)")
+    void getMonth_withGroupId_isAcceptedButUnused() throws Exception {
+        given(getMonthScheduleUseCase.execute(eq(YearMonth.of(2026, 6)), eq(5L)))
+                .willReturn(new MonthScheduleResponse("2026-06", List.of()));
+
+        mockMvc.perform(get("/schedules/month")
+                        .param("month", "2026-06")
+                        .param("patientId", "5")
+                        .param("groupId", "7")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2026-06"));
     }
 }

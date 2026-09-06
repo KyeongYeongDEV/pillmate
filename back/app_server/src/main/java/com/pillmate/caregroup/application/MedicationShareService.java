@@ -56,17 +56,27 @@ public class MedicationShareService {
     }
 
     /**
-     * L2(알약 정보) 열람 가능 여부 — 본인이거나 owner 가 명시적으로 공유를 허용한 경우만 true.
+     * L2(알약 정보) 열람 가능 여부 — 본인이거나, 같은 그룹에서 owner 가 viewer 에게
+     * 명시적으로 공유를 허용했고 둘 다 그 그룹의 ACTIVE 멤버인 경우만 true.
+     * 그룹 단위 판정이므로 다른 그룹의 grant 는 적용되지 않는다(크로스그룹 차단).
      */
     @Transactional(readOnly = true)
-    public boolean canViewMedicationDetail(Long ownerUserId, Long viewerUserId) {
+    public boolean canViewMedicationDetail(Long careGroupId, Long ownerUserId, Long viewerUserId) {
         if (ownerUserId == null || viewerUserId == null) {
             return false;
         }
         if (ownerUserId.equals(viewerUserId)) {
             return true;
         }
-        return medicationShareGrantRepository.existsByOwnerUserIdAndViewerUserId(ownerUserId, viewerUserId);
+        if (careGroupId == null || !isActiveMember(careGroupId, ownerUserId) || !isActiveMember(careGroupId, viewerUserId)) {
+            return false;
+        }
+        return medicationShareGrantRepository.existsByCareGroupIdAndOwnerUserIdAndViewerUserId(
+                careGroupId, ownerUserId, viewerUserId);
+    }
+
+    private boolean isActiveMember(Long careGroupId, Long userId) {
+        return membershipRepository.existsByCareGroupIdAndUserId(careGroupId, userId);
     }
 
     private void requireActiveMember(Long groupId, Long userId) {

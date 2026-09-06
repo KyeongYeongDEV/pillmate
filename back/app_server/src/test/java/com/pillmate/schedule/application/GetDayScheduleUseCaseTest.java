@@ -1,5 +1,6 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
@@ -33,6 +34,7 @@ class GetDayScheduleUseCaseTest {
 
     @Mock ScheduleDayQueryPort scheduleDayQueryPort;
     @Mock CareGroupGuard careGroupGuard;
+    @Mock MedicationShareService medicationShareService;
     @InjectMocks GetDayScheduleService sut;
 
     private static final Long PATIENT_ID = 1L;
@@ -430,6 +432,80 @@ class GetDayScheduleUseCaseTest {
         SlotView slot = sut.execute(TODAY).slots().get(0);
 
         assertThat(slot.label()).isEqualTo("09:30");
+    }
+
+    // ─── T-BE-L2-MASKING — 알약 정보(L2) 마스킹 배선 ───────────────────────────
+
+    @Test
+    @DisplayName("본인 조회 — 약 이름/처방전 이름 그대로 노출, medicationShareService 호출 없음")
+    void execute_selfView_neverMasked() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY, null, null);
+
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.items()).containsExactly("타이레놀");
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
+        then(medicationShareService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("타인 조회 + groupId 없음 → 안전하게 L2 마스킹, L1(상태/시간/개수)은 유지")
+    void execute_otherPatient_withoutGroupId_masksMedicationDetail() {
+        Long memberId = 5L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, null);
+
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.items()).isEmpty();
+        assertThat(slot.pillColors()).isEmpty();
+        assertThat(slot.prescriptionName()).isEqualTo("약 정보 비공개");
+        assertThat(slot.state()).isEqualTo("done");
+        assertThat(slot.time()).isEqualTo("08:00");
+        assertThat(slot.drugCount()).isEqualTo(1);
+        assertThat(response.totalCount()).isEqualTo(1);
+        assertThat(response.doneCount()).isEqualTo(1);
+        then(medicationShareService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("타인 조회 + groupId 있음 + L2 권한 없음 → 마스킹")
+    void execute_otherPatient_withGroupId_noPermission_masksMedicationDetail() {
+        Long memberId = 5L;
+        Long groupId = 7L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+        given(medicationShareService.canViewMedicationDetail(groupId, memberId, PATIENT_ID)).willReturn(false);
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
+
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.items()).isEmpty();
+        assertThat(slot.prescriptionName()).isEqualTo("약 정보 비공개");
+    }
+
+    @Test
+    @DisplayName("타인 조회 + groupId 있음 + L2 권한 있음 → 약 이름/처방전 이름 노출")
+    void execute_otherPatient_withGroupId_hasPermission_showsMedicationDetail() {
+        Long memberId = 5L;
+        Long groupId = 7L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
+        );
+        given(medicationShareService.canViewMedicationDetail(groupId, memberId, PATIENT_ID)).willReturn(true);
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
+
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.items()).containsExactly("타이레놀");
+        assertThat(slot.pillColors()).containsExactly("#fff");
+        assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
     }
 
     // ─── Fixtures ────────────────────────────────────────────────────────────

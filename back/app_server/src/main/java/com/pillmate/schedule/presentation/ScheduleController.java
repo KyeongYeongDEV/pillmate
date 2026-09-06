@@ -116,14 +116,18 @@ public class ScheduleController {
     @GetMapping("/day")
     public ResponseEntity<ApiResponse<DayScheduleResponse>> getDay(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) Long patientId) {
-        return ResponseEntity.ok(ApiResponse.success(getDayScheduleUseCase.execute(date, patientId)));
+            @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) Long groupId) {
+        return ResponseEntity.ok(ApiResponse.success(getDayScheduleUseCase.execute(date, patientId, groupId)));
     }
 
+    // groupId 는 day 엔드포인트와의 호출 계약 일관성을 위해 받는다. month 는 날짜별 adherence(L1)만
+    // 반환하므로 L2 판정 대상이 없어 groupId 를 사용하지 않는다.
     @GetMapping("/month")
     public ResponseEntity<ApiResponse<MonthScheduleResponse>> getMonth(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
-            @RequestParam(required = false) Long patientId) {
+            @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) Long groupId) {
         return ResponseEntity.ok(ApiResponse.success(getMonthScheduleUseCase.execute(month, patientId)));
     }
 }

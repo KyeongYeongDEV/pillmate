@@ -1,5 +1,6 @@
 package com.pillmate.schedule.application;
 
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
@@ -38,22 +39,33 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
             TimeOfDay.EVENING.defaultTime(), "저녁",
             TimeOfDay.BEDTIME.defaultTime(), "취침 전"
     );
+    private static final String MEDICATION_DETAIL_MASK = "약 정보 비공개";
 
     private final ScheduleDayQueryPort scheduleDayQueryPort;
     private final CareGroupGuard careGroupGuard;
+    private final MedicationShareService medicationShareService;
 
     @Override
     public DayScheduleResponse execute(LocalDate date) {
-        return execute(date, null);
+        return execute(date, null, null);
+    }
+
+    @Override
+    public DayScheduleResponse execute(LocalDate date, Long patientId) {
+        return execute(date, patientId, null);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DayScheduleResponse execute(LocalDate date, Long patientId) {
+    public DayScheduleResponse execute(LocalDate date, Long patientId, Long groupId) {
+        Long viewerUserId = UserContext.get();
         Long resolvedPatientId = resolvePatientId(patientId);
         List<DayScheduleProjection> rows = scheduleDayQueryPort.findByPatientAndDate(resolvedPatientId, date);
         Map<Long, String> resolvedLabels = resolvePrescriptionLabels(rows);
         List<SlotView> slots = mergeToSlots(rows, resolvedLabels);
+        if (shouldMaskMedicationDetail(resolvedPatientId, viewerUserId, groupId)) {
+            slots = slots.stream().map(this::maskMedicationDetail).toList();
+        }
         int doneCount = (int) slots.stream().filter(slot -> "done".equals(slot.state())).count();
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
     }
@@ -62,6 +74,26 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
         Long targetPatientId = patientId != null ? patientId : UserContext.get();
         careGroupGuard.requirePatientAccessible(targetPatientId);
         return targetPatientId;
+    }
+
+    // L2(알약 정보) 마스킹 여부 — 본인 조회는 항상 공개, 타인 조회는 groupId 기준 공유 판정.
+    // groupId 없이 타인 조회하면 안전하게 마스킹(fail-closed).
+    private boolean shouldMaskMedicationDetail(Long patientId, Long viewerUserId, Long groupId) {
+        if (patientId.equals(viewerUserId)) {
+            return false;
+        }
+        if (groupId == null) {
+            return true;
+        }
+        return !medicationShareService.canViewMedicationDetail(groupId, patientId, viewerUserId);
+    }
+
+    private SlotView maskMedicationDetail(SlotView slot) {
+        return new SlotView(
+                slot.id(), slot.time(), slot.label(), slot.state(),
+                List.of(), slot.doseLogId(), slot.doseLogIds(), slot.customTime(),
+                slot.drugCount(), List.of(), slot.prescriptionId(), MEDICATION_DETAIL_MASK
+        );
     }
 
     // 카드 표시용 처방전 이름 우선순위: ①사용자 label(non-blank) 그대로 ②없으면 'M월 D일 약봉투'

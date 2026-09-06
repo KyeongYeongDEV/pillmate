@@ -181,29 +181,70 @@ class MedicationShareServiceTest {
     }
 
     @Test
-    @DisplayName("canViewMedicationDetail — 본인이면 조회 없이 true")
+    @DisplayName("canViewMedicationDetail — 본인이면 조회 없이 true (그룹 무관)")
     void canViewMedicationDetail_self_true() {
-        boolean result = sut.canViewMedicationDetail(OWNER_ID, OWNER_ID);
+        boolean result = sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, OWNER_ID);
 
         assertThat(result).isTrue();
         then(medicationShareGrantRepository).shouldHaveNoInteractions();
+        then(membershipRepository).shouldHaveNoInteractions();
     }
 
     @Test
-    @DisplayName("canViewMedicationDetail — grant 존재하면 true")
+    @DisplayName("canViewMedicationDetail — 같은 그룹에 grant 존재 + 둘 다 ACTIVE면 true")
     void canViewMedicationDetail_grantExists_true() {
-        given(medicationShareGrantRepository.existsByOwnerUserIdAndViewerUserId(OWNER_ID, VIEWER_ID))
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
+        given(medicationShareGrantRepository
+                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
                 .willReturn(true);
 
-        assertThat(sut.canViewMedicationDetail(OWNER_ID, VIEWER_ID)).isTrue();
+        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isTrue();
     }
 
     @Test
     @DisplayName("canViewMedicationDetail — grant 없으면 false")
     void canViewMedicationDetail_noGrant_false() {
-        given(medicationShareGrantRepository.existsByOwnerUserIdAndViewerUserId(OWNER_ID, VIEWER_ID))
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
+        given(medicationShareGrantRepository
+                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
                 .willReturn(false);
 
-        assertThat(sut.canViewMedicationDetail(OWNER_ID, VIEWER_ID)).isFalse();
+        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
+    }
+
+    @Test
+    @DisplayName("canViewMedicationDetail — 다른 그룹(grant 는 A그룹에만) 조회는 false (크로스그룹 차단, P1-3)")
+    void canViewMedicationDetail_crossGroup_false() {
+        Long otherGroupId = 2L;
+        given(membershipRepository.existsByCareGroupIdAndUserId(otherGroupId, OWNER_ID)).willReturn(true);
+        given(membershipRepository.existsByCareGroupIdAndUserId(otherGroupId, VIEWER_ID)).willReturn(true);
+        given(medicationShareGrantRepository
+                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(otherGroupId, OWNER_ID, VIEWER_ID))
+                .willReturn(false);
+
+        assertThat(sut.canViewMedicationDetail(otherGroupId, OWNER_ID, VIEWER_ID)).isFalse();
+        then(medicationShareGrantRepository).should(never())
+                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID);
+    }
+
+    @Test
+    @DisplayName("canViewMedicationDetail — viewer 가 그룹 탈퇴(LEFT) 상태면 grant 존재해도 false (P1-5)")
+    void canViewMedicationDetail_viewerLeftGroup_false() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(false);
+
+        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
+        then(medicationShareGrantRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("canViewMedicationDetail — owner 가 그룹 탈퇴(LEFT) 상태면 grant 존재해도 false (P1-5)")
+    void canViewMedicationDetail_ownerLeftGroup_false() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(false);
+
+        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
+        then(medicationShareGrantRepository).shouldHaveNoInteractions();
     }
 }

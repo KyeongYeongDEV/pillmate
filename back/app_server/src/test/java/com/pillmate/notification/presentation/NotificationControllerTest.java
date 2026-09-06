@@ -32,6 +32,23 @@ class NotificationControllerTest {
     }
 
     @Test
+    @DisplayName("notify-group 정상 요청(케어그룹 ACTIVE 멤버) → 200")
+    void notifyGroup_validCaller_returns200() throws Exception {
+        mockMvc.perform(post("/dose-logs/5/notify-group").header("X-User-Id", "2"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("notify-group — 호출자가 해당 doseLog 의 케어그룹 멤버 아니면 403 (IDOR 차단)")
+    void notifyGroup_callerNotGroupMember_returns403() throws Exception {
+        willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(sendGroupDoseNotificationService).sendForCaller(5L, 2L);
+
+        mockMvc.perform(post("/dose-logs/5/notify-group").header("X-User-Id", "2"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("비 ACTIVE 그룹원 → 403")
     void nudge_notGroupMember_returns403() throws Exception {
         willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))

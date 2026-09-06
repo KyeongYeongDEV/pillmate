@@ -57,26 +57,28 @@ describe('scheduleApi — 구성원(patientId) 조회 엔드포인트', () => {
     expect(scheduleApiSlice.endpoints).toHaveProperty('getMemberMonthAdherence');
   });
 
-  it('getMemberDaySchedule — URL 에 date + patientId 가 붙는다', async () => {
+  it('getMemberDaySchedule — URL 에 date + patientId + groupId 가 붙는다', async () => {
     const store = makeStore();
     await store.dispatch(
       (scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({
         date: '2026-08-20',
         patientId: 7,
+        groupId: 3,
       }),
     );
-    expect(requestedUrls()).toContain('/schedules/day?date=2026-08-20&patientId=7');
+    expect(requestedUrls()).toContain('/schedules/day?date=2026-08-20&patientId=7&groupId=3');
   });
 
-  it('getMemberMonthAdherence — URL 에 month + patientId 가 붙는다', async () => {
+  it('getMemberMonthAdherence — URL 에 month + patientId + groupId 가 붙는다', async () => {
     const store = makeStore();
     await store.dispatch(
       (scheduleApiSlice.endpoints.getMemberMonthAdherence as any).initiate({
         month: '2026-08',
         patientId: 7,
+        groupId: 3,
       }),
     );
-    expect(requestedUrls()).toContain('/schedules/month?month=2026-08&patientId=7');
+    expect(requestedUrls()).toContain('/schedules/month?month=2026-08&patientId=7&groupId=3');
   });
 
   it('본인 조회(getDaySchedule) URL 에는 patientId 가 붙지 않는다 — 기존 동작 회귀 방지', async () => {
@@ -89,8 +91,8 @@ describe('scheduleApi — 구성원(patientId) 조회 엔드포인트', () => {
   it('patientId 별로 캐시 키가 분리된다 — 다른 사람 데이터 혼입 금지', async () => {
     const store = makeStore();
     await Promise.all([
-      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7 })),
-      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 9 })),
+      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7, groupId: 3 })),
+      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 9, groupId: 3 })),
     ]);
     const keys = Object.keys((store.getState() as any).scheduleApi.queries);
     expect(keys).toHaveLength(2);
@@ -98,11 +100,23 @@ describe('scheduleApi — 구성원(patientId) 조회 엔드포인트', () => {
     expect(keys.some(k => k.includes('9'))).toBe(true);
   });
 
+  it('같은 patientId 라도 groupId 가 다르면 캐시 키가 분리된다', async () => {
+    const store = makeStore();
+    await Promise.all([
+      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7, groupId: 3 })),
+      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7, groupId: 5 })),
+    ]);
+    const keys = Object.keys((store.getState() as any).scheduleApi.queries);
+    expect(keys).toHaveLength(2);
+    expect(requestedUrls()).toContain('/schedules/day?date=2026-08-20&patientId=7&groupId=3');
+    expect(requestedUrls()).toContain('/schedules/day?date=2026-08-20&patientId=7&groupId=5');
+  });
+
   it('본인 캐시 키와 구성원 캐시 키가 서로 다르다', async () => {
     const store = makeStore();
     await Promise.all([
       store.dispatch((scheduleApiSlice.endpoints.getDaySchedule as any).initiate('2026-08-20')),
-      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7 })),
+      store.dispatch((scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({ date: '2026-08-20', patientId: 7, groupId: 3 })),
     ]);
     const keys = Object.keys((store.getState() as any).scheduleApi.queries);
     expect(keys).toHaveLength(2);
@@ -116,6 +130,7 @@ describe('scheduleApi — 구성원(patientId) 조회 엔드포인트', () => {
       (scheduleApiSlice.endpoints.getMemberDaySchedule as any).initiate({
         date: '2026-08-20',
         patientId: 7,
+        groupId: 3,
       }),
     );
     expect(result.data).toEqual({ date: '2026-08-20', totalCount: 0, doneCount: 0, slots: [] });

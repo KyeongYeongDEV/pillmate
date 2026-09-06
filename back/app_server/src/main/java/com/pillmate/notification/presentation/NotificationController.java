@@ -23,7 +23,7 @@ public class NotificationController {
     @PostMapping("/{doseLogId}/notify-group")
     public ResponseEntity<ApiResponse<Void>> notifyGroup(@PathVariable Long doseLogId) {
         Long actorUserId = UserContext.get();
-        sendGroupDoseNotificationService.send(doseLogId, actorUserId);
+        sendGroupDoseNotificationService.sendForCaller(doseLogId, actorUserId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 

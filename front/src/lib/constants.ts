@@ -24,3 +24,6 @@ export const NAME_MAX_LENGTH = 20;
 
 // 최근 검색 — 화면 표시는 최신 6개만(저장은 8개, lib/search/recentSearches.ts)
 export const RECENT_SEARCHES_DISPLAY_COUNT = 6;
+
+// 그룹원 복약 상세(L2) 마스킹 라벨 — 백엔드 GetDayScheduleService.MEDICATION_DETAIL_MASK 와 반드시 일치
+export const MEDICATION_DETAIL_MASK = '약 정보 비공개';

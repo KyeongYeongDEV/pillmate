@@ -1,9 +1,11 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.doselog.domain.model.DoseLog;
 import com.pillmate.doselog.domain.model.DoseStatus;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
@@ -46,8 +48,12 @@ public class SendGroupDoseNotificationService {
     private final RecipientCachePort recipientCachePort;
     private final PrescriptionSummaryPort prescriptionSummaryPort;
     private final CareGroupLookupPort careGroupLookupPort;
+    private final MedicationShareService medicationShareService;
+    private final CareGroupGuard careGroupGuard;
     private final Clock clock;
 
+    // 백그라운드 폴러(NotifyDueGroupDosesService) 전용 — doseLogId 는 폴러 자신의 쿼리 결과이므로
+    // 호출자 신원 검증 불필요(요청 컨텍스트 자체가 없음). 외부 HTTP 진입점은 반드시 sendForCaller 사용.
     public void send(Long doseLogId, Long actorUserId) {
         DoseLog doseLog = findDoseLog(doseLogId);
         if (doseLog.isGroupNotified()) {
@@ -70,6 +76,31 @@ public class SendGroupDoseNotificationService {
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
         dispatchAll(saved, groupRecipients);
+    }
+
+    // 외부 HTTP 진입점(NotificationController) 전용 — doseLogId 는 사용자 입력(IDOR 가능)이므로
+    // 발송 전 호출자가 실제로 이 doseLog 의 케어그룹 소속인지 검증한다. 실패 시 markGroupNotified 도
+    // 일어나지 않아야 하므로(DoS 방지) send() 호출보다 먼저 확인한다.
+    public void sendForCaller(Long doseLogId, Long callerUserId) {
+        requireCallerAuthorized(doseLogId, callerUserId);
+        send(doseLogId, callerUserId);
+    }
+
+    private void requireCallerAuthorized(Long doseLogId, Long callerUserId) {
+        DoseLog doseLog = findDoseLog(doseLogId);
+        Schedule schedule = findSchedule(doseLog.getScheduleId());
+        Long careGroupId = schedule.getCareGroupId();
+        if (careGroupId != null) {
+            careGroupGuard.requireAccessible(careGroupId);
+            return;
+        }
+        requireCallerIsPatient(doseLog, callerUserId);
+    }
+
+    private void requireCallerIsPatient(DoseLog doseLog, Long callerUserId) {
+        if (callerUserId == null || !callerUserId.equals(doseLog.getPatientId())) {
+            throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
+        }
     }
 
     private void markGroupNotified(DoseLog doseLog) {
@@ -163,15 +194,27 @@ public class SendGroupDoseNotificationService {
         Long prescriptionId = schedule.getPrescriptionId();
         String prescriptionName = resolvePrescriptionName(prescriptionId);
         Long careGroupId = schedule.getCareGroupId();
+        Long patientId = doseLog.getPatientId();
         String actorName = resolveActorName(actorUserId);
         String groupName = resolveGroupName(careGroupId);
         return recipientIds.stream()
                 .filter(id -> !id.equals(actorUserId))
-                .filter(id -> !id.equals(doseLog.getPatientId()))
+                .filter(id -> !id.equals(patientId))
                 .map(recipientId -> buildOne(
-                        isMissed, recipientId, actorUserId, careGroupId, doseLog.getId(),
-                        prescriptionId, prescriptionName, actorName, groupName))
+                        isMissed, recipientId, actorUserId, careGroupId, doseLog.getId(), prescriptionId,
+                        resolveVisibleLabel(prescriptionName, careGroupId, patientId, recipientId),
+                        actorName, groupName))
                 .toList();
+    }
+
+    // L2(알약 정보) 공유 권한 없는 수신자에게는 처방전 라벨(사용자 지정 이름)을 노출하지 않는다 —
+    // 그룹 알림(푸시·목록)이 /schedules/day 마스킹을 우회하는 유출 경로가 되지 않도록 동일 정책 적용.
+    private String resolveVisibleLabel(String prescriptionName, Long careGroupId, Long patientId, Long recipientId) {
+        if (prescriptionName == null) {
+            return null;
+        }
+        boolean canViewLabel = medicationShareService.canViewMedicationDetail(careGroupId, patientId, recipientId);
+        return canViewLabel ? prescriptionName : null;
     }
 
     private Notification buildOne(boolean isMissed, Long recipientId, Long actorUserId, Long careGroupId,

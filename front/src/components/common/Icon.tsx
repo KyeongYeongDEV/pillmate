@@ -11,7 +11,8 @@ export type IconName =
   | 'bell'
   | 'chevronDown'
   | 'sparkles'
-  | 'check';
+  | 'check'
+  | 'lock';
 
 interface IconProps {
   name: IconName;
@@ -31,6 +32,7 @@ const ICON_MAP: Record<IconName, { lib: Lib; icon: string }> = {
   chevronDown: { lib: 'feather',  icon: 'chevron-down' },
   sparkles:    { lib: 'ionicons', icon: 'sparkles' },
   check:       { lib: 'ionicons', icon: 'checkmark' },
+  lock:        { lib: 'feather',  icon: 'lock' },
 };
 
 function Icon({ name, size = 24, color = '#000' }: IconProps) {
