@@ -1,5 +1,6 @@
 package com.pillmate.doselog.application;
 
+import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.doselog.application.dto.DoseLogResponse;
 import com.pillmate.doselog.domain.repository.DoseLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +15,11 @@ import java.util.List;
 public class GetDoseHistoryUseCase {
 
     private final DoseLogRepository doseLogRepository;
+    private final CareGroupGuard careGroupGuard;
 
     @Transactional(readOnly = true)
     public List<DoseLogResponse> getHistory(Long patientId, Instant from, Instant to) {
+        careGroupGuard.requirePatientAccessible(patientId);
         return doseLogRepository.findByPatientIdAndScheduledAtBetween(patientId, from, to)
                 .stream()
                 .map(DoseLogResponse::from)

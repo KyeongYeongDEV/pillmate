@@ -236,4 +236,43 @@ class CareGroupIntegrationTest {
         assertThatThrownBy(() -> leaveGroupUseCase.leave(g.getId(), outsider.getId()))
                 .isInstanceOf(PillmateException.class);
     }
+
+    // ─── T-BE-DOSELOG-HISTORY-GUARD — existsSharedGroup semantics 실검증 (mock 아닌 실 DB) ───
+
+    @Test
+    @DisplayName("existsSharedGroup — 같은 ACTIVE 그룹 구성원이면 true")
+    void existsSharedGroup_sameActiveGroup_returnsTrue() {
+        User viewer = userRepository.save(User.dummy("shared-viewer"));
+        User target = userRepository.save(User.dummy("shared-target"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("shared-group", viewer.getId()));
+        membershipRepository.save(Membership.of(g.getId(), viewer.getId(), MemberRole.ADMIN, null));
+        membershipRepository.save(Membership.of(g.getId(), target.getId(), MemberRole.PATIENT, viewer.getId()));
+
+        assertThat(membershipRepository.existsSharedGroup(viewer.getId(), target.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("existsSharedGroup — target 이 그룹을 탈퇴(status=LEFT)하면 false")
+    void existsSharedGroup_targetLeftGroup_returnsFalse() {
+        User viewer = userRepository.save(User.dummy("left-viewer"));
+        User target = userRepository.save(User.dummy("left-target"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("left-group", viewer.getId()));
+        membershipRepository.save(Membership.of(g.getId(), viewer.getId(), MemberRole.ADMIN, null));
+        membershipRepository.save(Membership.of(g.getId(), target.getId(), MemberRole.PATIENT, viewer.getId()));
+
+        leaveGroupUseCase.leave(g.getId(), target.getId());
+
+        assertThat(membershipRepository.existsSharedGroup(viewer.getId(), target.getId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("existsSharedGroup — 애초에 공유 그룹이 없으면 false")
+    void existsSharedGroup_noSharedGroup_returnsFalse() {
+        User viewer = userRepository.save(User.dummy("nogroup-viewer"));
+        User stranger = userRepository.save(User.dummy("nogroup-stranger"));
+        CareGroup g = careGroupRepository.save(CareGroup.create("nogroup-group", viewer.getId()));
+        membershipRepository.save(Membership.of(g.getId(), viewer.getId(), MemberRole.ADMIN, null));
+
+        assertThat(membershipRepository.existsSharedGroup(viewer.getId(), stranger.getId())).isFalse();
+    }
 }
