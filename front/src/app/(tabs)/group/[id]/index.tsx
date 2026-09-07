@@ -321,7 +321,7 @@ function Header({ title, onSettings }: { title: string; onSettings?: () => void 
           accessibilityRole="button"
           hitSlop={8}
         >
-          <Feather name="share-2" size={scale(22)} color={colors.labelNormal} />
+          <Feather name="settings" size={scale(22)} color={colors.labelNormal} />
         </Pressable>
       ) : (
         <View style={{ width: scale(24) }} />
