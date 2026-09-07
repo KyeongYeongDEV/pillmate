@@ -77,17 +77,17 @@ export default React.memo(ActivityTimelineItem);
 
 const styles = StyleSheet.create({
   wrapper: { flexDirection: 'row', gap: space.s14 },
-  rail: { width: scale(14), alignItems: 'center', paddingTop: 18 },
-  line: { position: 'absolute', top: 22, bottom: -2, width: scale(2), backgroundColor: colors.line, left: 6 },
+  rail: { width: scale(14), alignItems: 'center', paddingTop: 12 },
+  line: { position: 'absolute', top: 16, bottom: -2, width: scale(2), backgroundColor: colors.line, left: 6 },
   dot: { width: scale(10), height: scale(10), borderRadius: scale(5) },
   card: {
     flex: 1, backgroundColor: colors.bgNormal,
-    borderRadius: radius.r14, padding: space.s14,
-    borderWidth: 1, borderColor: colors.line, gap: space.s8,
+    borderRadius: radius.r14, padding: space.s10,
+    borderWidth: 1, borderColor: colors.line, gap: space.s4,
   },
-  cardSpaced: { marginBottom: space.s12 },
+  cardSpaced: { marginBottom: space.s6 },
   cardLast: {},
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   headTextCol: { flex: 1 },
   actor: { fontSize: scale(13), color: colors.labelNormal },
   actorName: { fontWeight: '700' },
@@ -101,6 +101,6 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal,
-    letterSpacing: -0.15, lineHeight: scale(21),
+    letterSpacing: -0.15, lineHeight: scale(19),
   },
 });
