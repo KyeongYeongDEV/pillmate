@@ -1,16 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import MedTimeRow from '@/components/schedule/MedTimeRow';
 import BootSkeleton from '@/components/common/BootSkeleton';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import { safeBack } from '@/lib/router/safeBack';
+import { getCurrentUserId } from '@/lib/auth/storage';
 import { assignMemberColors } from '@/utils/memberColors';
 import { getKstToday } from '@/utils/calendarUtils';
 import { useGetGroupDetailQuery, useGetGroupDayScheduleQuery } from '@/store/slices/caregroupApi';
 import type { GroupMemberDayView } from '@/store/slices/caregroupApi';
+import type { MedSlot } from '@/types/schedule';
 
 const FORBIDDEN_STATUS = 403;
 const FORBIDDEN_MSG = '이 날짜의 그룹 복약 정보를 볼 수 없어요';
@@ -49,10 +51,25 @@ export default function GroupDayScheduleScreen() {
     { skip: !Number.isFinite(groupId) },
   );
 
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  useEffect(() => {
+    let active = true;
+    getCurrentUserId().then(uid => { if (active) setCurrentUserId(uid); });
+    return () => { active = false; };
+  }, []);
+
   const colorByUserId = useMemo(
     () => assignMemberColors(groupDetail?.members ?? []),
     [groupDetail],
   );
+
+  // 처방전 상세(실제 알약 정보·이미지)는 본인 소유만 열람 가능 — 백엔드가 PatientAccessGuard 로
+  // 자기 자신 외엔 그룹 공유 여부와 무관하게 무조건 차단한다. 그래서 본인 행에만 연결한다.
+  const handlePrescriptionPress = useCallback((slot: MedSlot) => {
+    if (slot.prescriptionId) {
+      router.push({ pathname: '/prescription/[id]', params: { id: String(slot.prescriptionId) } } as any);
+    }
+  }, []);
 
   if (isForbidden(error)) {
     return <NoticeScreen title={title} groupId={groupId} message={FORBIDDEN_MSG} />;
@@ -95,6 +112,7 @@ export default function GroupDayScheduleScreen() {
               member={member}
               color={colorByUserId.get(member.userId) ?? colors.fallbackGray}
               isFirst={index === 0}
+              onPrescriptionPress={member.userId === currentUserId ? handlePrescriptionPress : undefined}
             />
           ))
         )}
@@ -106,11 +124,12 @@ export default function GroupDayScheduleScreen() {
 }
 
 function MemberSection({
-  member, color, isFirst,
+  member, color, isFirst, onPrescriptionPress,
 }: {
   member: GroupMemberDayView;
   color: string;
   isFirst: boolean;
+  onPrescriptionPress?: (slot: MedSlot) => void;
 }) {
   const { schedule } = member;
   const slots = schedule.slots;
@@ -127,7 +146,13 @@ function MemberSection({
 
       <View style={styles.medCard}>
         {slots.map((slot, i) => (
-          <MedTimeRow key={`${slot.id}-${i}`} slot={slot} isFirst={i === 0} readOnly />
+          <MedTimeRow
+            key={`${slot.id}-${i}`}
+            slot={slot}
+            isFirst={i === 0}
+            readOnly
+            onPrescriptionPress={onPrescriptionPress}
+          />
         ))}
         {slots.length === 0 && <Text style={styles.emptyText}>{NO_SLOTS_MSG}</Text>}
       </View>
