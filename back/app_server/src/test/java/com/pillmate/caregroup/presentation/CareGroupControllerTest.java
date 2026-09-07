@@ -1,6 +1,7 @@
 package com.pillmate.caregroup.presentation;
 
 import com.pillmate.caregroup.application.CreateCareGroupUseCase;
+import com.pillmate.caregroup.application.GetGroupDayScheduleService;
 import com.pillmate.caregroup.application.GetGroupDetailUseCase;
 import com.pillmate.caregroup.application.GetGroupMonthScheduleService;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
@@ -12,6 +13,8 @@ import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
+import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse;
+import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse.MemberDayView;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.GroupDayView;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.MemberAdherenceView;
@@ -21,6 +24,7 @@ import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.notification.application.dto.NudgeResponse;
+import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,6 +69,7 @@ class CareGroupControllerTest {
     @MockitoBean MedicationShareService medicationShareService;
     @MockitoBean SendMemberNudgeService sendMemberNudgeService;
     @MockitoBean GetGroupMonthScheduleService getGroupMonthScheduleService;
+    @MockitoBean GetGroupDayScheduleService getGroupDayScheduleService;
 
     @Test
     @DisplayName("POST /groups → 200 + 생성된 그룹")
@@ -312,5 +317,52 @@ class CareGroupControllerTest {
                 .andExpect(jsonPath("$.error.code").value("PILL_040"));
 
         then(getGroupMonthScheduleService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/day → 200 + 구성원별 하루 스케줄")
+    void getGroupDaySchedule_returns200() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 7);
+        DayScheduleResponse schedule = new DayScheduleResponse(date, 2, 1, List.of());
+        given(getGroupDayScheduleService.execute(GROUP_ID, date))
+                .willReturn(new GroupDayScheduleResponse(date, List.of(
+                        new MemberDayView(USER_ID, "아버지", schedule))));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/day")
+                        .header("X-User-Id", USER_ID)
+                        .param("date", "2026-09-07"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.date").value("2026-09-07"))
+                .andExpect(jsonPath("$.data.members[0].userId").value(USER_ID))
+                .andExpect(jsonPath("$.data.members[0].name").value("아버지"))
+                .andExpect(jsonPath("$.data.members[0].schedule.date").value("2026-09-07"))
+                .andExpect(jsonPath("$.data.members[0].schedule.totalCount").value(2))
+                .andExpect(jsonPath("$.data.members[0].schedule.doneCount").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/day — 호출자 비멤버면 403")
+    void getGroupDaySchedule_callerNotMember_returns403() throws Exception {
+        LocalDate date = LocalDate.of(2026, 9, 7);
+        given(getGroupDayScheduleService.execute(GROUP_ID, date))
+                .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/day")
+                        .header("X-User-Id", USER_ID)
+                        .param("date", "2026-09-07"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/day — date 형식이 잘못되면 500이 아니라 400")
+    void getGroupDaySchedule_malformedDate_returns400() throws Exception {
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/day")
+                        .header("X-User-Id", USER_ID)
+                        .param("date", "2026-13-99"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_040"));
+
+        then(getGroupDayScheduleService).shouldHaveNoInteractions();
     }
 }

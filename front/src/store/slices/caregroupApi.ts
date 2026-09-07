@@ -2,6 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type { MyGroupSummary, GroupDetailResponse, InviteCodeView, ShareSettingView } from '@/types/caregroup';
+import type { ScheduleDay } from '@/types/schedule';
 
 export interface CreateGroupResponse {
   groupId: number;
@@ -40,6 +41,22 @@ interface GroupMonthScheduleResponse {
   days: { date: string; members: GroupMemberAdherence[] }[];
 }
 
+export interface GroupMemberDayView {
+  userId: number;
+  name: string;
+  schedule: ScheduleDay;
+}
+
+export interface GroupDayScheduleArg {
+  groupId: number;
+  date: string; // yyyy-MM-dd
+}
+
+interface GroupDayScheduleResponse {
+  date: string;
+  members: GroupMemberDayView[];
+}
+
 export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
 
 export const updateShareSettingRequest = ({ groupId, viewerUserId, enabled }: UpdateShareSettingArgs) => ({
@@ -58,7 +75,7 @@ const JOIN_TIMEOUT_MS = 10_000;
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
-  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings', 'GroupMonthSchedule'],
+  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings', 'GroupMonthSchedule', 'GroupDaySchedule'],
   endpoints: (build) => ({
     getMyGroups: build.query<MyGroupSummary[], void>({
       query: () => '/groups',
@@ -144,6 +161,11 @@ export const caregroupApiSlice = createApi({
       },
       providesTags: (_r, _e, { groupId }) => [{ type: 'GroupMonthSchedule', id: groupId }],
     }),
+    getGroupDaySchedule: build.query<GroupMemberDayView[], GroupDayScheduleArg>({
+      query: ({ groupId, date }) => `/groups/${groupId}/schedule/day?date=${date}`,
+      transformResponse: (response: ApiEnvelope<GroupDayScheduleResponse>) => response?.data?.members ?? [],
+      providesTags: (_r, _e, { groupId, date }) => [{ type: 'GroupDaySchedule', id: `${groupId}-${date}` }],
+    }),
   }),
 });
 
@@ -160,5 +182,6 @@ export const {
   useUpdateShareSettingMutation,
   useNudgeMemberMutation,
   useGetGroupMonthScheduleQuery,
+  useGetGroupDayScheduleQuery,
 } = caregroupApiSlice;
 

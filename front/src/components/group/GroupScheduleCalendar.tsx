@@ -61,19 +61,14 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
     setDisplayMonth(month);
   }, [displayYear, displayMonth]);
 
-  const nameByUserId = useMemo(() => new Map(members.map(m => [m.userId, m.name])), [members]);
-
   const handleMemberPress = useCallback((member: MemberView) => {
     router.push(`/group/${groupId}/member/${member.userId}?name=${encodeURIComponent(member.name)}` as any);
   }, [groupId]);
 
-  // 특정 날짜의 특정 구성원 점을 누르면 그 구성원의 개인 복약 캘린더로, 그 날짜가 바로 선택된 채로 이동한다.
-  const handleDotPress = useCallback((userId: number, dateStr: string) => {
-    const name = nameByUserId.get(userId) ?? '';
-    router.push(
-      `/group/${groupId}/member/${userId}?name=${encodeURIComponent(name)}&date=${dateStr}` as any,
-    );
-  }, [groupId, nameByUserId]);
+  // 날짜 칸 전체를 누르면 그 날짜에 그룹 구성원 전원의 복약 정보를 보여주는 화면으로 이동한다.
+  const handleDatePress = useCallback((dateStr: string) => {
+    router.push(`/group/${groupId}/day/${dateStr}` as any);
+  }, [groupId]);
 
   if (error) {
     return (
@@ -132,7 +127,7 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
               col={ci}
               members={dateStr ? adherenceByDate?.[dateStr] : undefined}
               colorByUserId={colorByUserId}
-              onDotPress={handleDotPress}
+              onDatePress={handleDatePress}
             />
           ))}
         </View>
@@ -173,17 +168,23 @@ interface DayCellProps {
   col: number;
   members?: GroupMemberAdherence[];
   colorByUserId: Map<number, string>;
-  onDotPress: (userId: number, dateStr: string) => void;
+  onDatePress: (dateStr: string) => void;
 }
 
-function DayCell({ dateStr, col, members, colorByUserId, onDotPress }: DayCellProps) {
+// 날짜 칸 전체가 눌린다 — 그날 아무 복약 기록이 없어도(빈 칸) 눌러서 이동 가능(그것도 유효한 정보).
+function DayCell({ dateStr, col, members, colorByUserId, onDatePress }: DayCellProps) {
   if (dateStr === null) return <View style={styles.cell} />;
 
   const day = parseInt(dateStr.slice(8), 10);
   const shown = members?.slice(0, MAX_DOTS_PER_CELL) ?? [];
 
   return (
-    <View style={[styles.cell, styles.dayCell]}>
+    <Pressable
+      style={[styles.cell, styles.dayCell]}
+      onPress={() => onDatePress(dateStr)}
+      accessibilityLabel={`${day}일 그룹 복약 보기`}
+      accessibilityRole="button"
+    >
       <Text style={[styles.numText, col === 0 && styles.sunText, col === 6 && styles.satText]}>{day}</Text>
       <View style={styles.dotRow}>
         {shown.map((m, i) => (
@@ -191,31 +192,24 @@ function DayCell({ dateStr, col, members, colorByUserId, onDotPress }: DayCellPr
             key={`${m.userId}-${i}`}
             color={colorByUserId.get(m.userId) ?? colors.fallbackGray}
             adherence={m.adherence}
-            onPress={() => onDotPress(m.userId, dateStr)}
           />
         ))}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 interface MemberDotProps {
   color: string;
   adherence: GroupMemberAdherence['adherence'];
-  onPress: () => void;
 }
 
-// 점 자체는 작아 히트영역을 hitSlop 으로 넓혀 탭하기 쉽게 한다 — 눌러진 그 구성원·그 날짜의
-// 개인 복약 캘린더 화면으로 이동(약봉투 정보 포함, 기존 화면 그대로 재사용).
-function MemberDot({ color, adherence, onPress }: MemberDotProps) {
+// 점은 순수 표시용 — "색 = 사람, 형태/투명도 = 복약 상태" 를 나타낼 뿐 자체 탭 대상은 아니다(날짜 칸이 탭 대상).
+function MemberDot({ color, adherence }: MemberDotProps) {
   const shape = adherence === 'MISS'
     ? [styles.dot, styles.dotHollow, { borderColor: color }]
     : [styles.dot, { backgroundColor: color, opacity: ADHERENCE_OPACITY[adherence] }];
-  return (
-    <Pressable onPress={onPress} hitSlop={6} accessibilityLabel="구성원 복약 상세 보기" accessibilityRole="button">
-      <View style={shape} />
-    </Pressable>
-  );
+  return <View style={shape} />;
 }
 
 const DOT_SIZE = scale(6);

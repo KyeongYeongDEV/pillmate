@@ -64,7 +64,7 @@ describe('GroupScheduleCalendar', () => {
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/group/3/member/7'));
   });
 
-  it('날짜의 구성원 점을 누르면 그 구성원+그 날짜로 개인 복약 화면 이동한다', async () => {
+  it('날짜 칸 전체를 누르면 그 날짜의 그룹 복약 화면으로 이동한다', async () => {
     const [y, m] = getKstToday().split('-').map(Number);
     const dateStr = `${toMonthString(y, m)}-01`;
     mockQuery.mockReturnValue({
@@ -76,11 +76,23 @@ describe('GroupScheduleCalendar', () => {
     render(<GroupScheduleCalendar groupId={3} members={MEMBERS} />);
     await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
 
-    fireEvent.press(screen.getByLabelText('구성원 복약 상세 보기'));
+    fireEvent.press(screen.getByLabelText('1일 그룹 복약 보기'));
 
     const [url] = mockPush.mock.calls[0];
-    expect(url).toContain('/group/3/member/7');
-    expect(url).toContain(`date=${dateStr}`);
+    expect(url).toBe(`/group/3/day/${dateStr}`);
+  });
+
+  it('복약 기록이 없는 빈 날짜 칸도 눌러서 이동할 수 있다', async () => {
+    const [y, m] = getKstToday().split('-').map(Number);
+    const dateStr = `${toMonthString(y, m)}-02`;
+    mockQuery.mockReturnValue({ data: {}, error: undefined, refetch: jest.fn() });
+
+    render(<GroupScheduleCalendar groupId={3} members={MEMBERS} />);
+    await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
+
+    fireEvent.press(screen.getByLabelText('2일 그룹 복약 보기'));
+
+    expect(mockPush).toHaveBeenCalledWith(`/group/3/day/${dateStr}`);
   });
 
   it('에러 시 안내문과 재시도 버튼을 보여준다', () => {
