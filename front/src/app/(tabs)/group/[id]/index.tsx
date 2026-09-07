@@ -10,6 +10,8 @@ import AvatarStack from '@/components/common/AvatarStack';
 import MemberCard from '@/components/group/MemberCard';
 import InviteCodeCard from '@/components/group/InviteCodeCard';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
+import GroupScheduleCalendar from '@/components/group/GroupScheduleCalendar';
+import { assignMemberColors } from '@/utils/memberColors';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import {
   useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation,
@@ -21,13 +23,6 @@ import { getCurrentUserId } from '@/lib/auth/storage';
 import { GROUP_DETAIL_REFRESH } from '@/lib/query/refreshOptions';
 import type { GroupMember } from '@/types/group';
 import type { MemberView } from '@/types/caregroup';
-
-const ROLE_TINTS: Record<string, string> = {
-  '환자': colors.patientOrange,
-  '보호자': colors.guardianBlue,
-  PATIENT: colors.patientOrange,
-  GUARDIAN: colors.guardianBlue,
-};
 
 const NUDGE_TOAST_DURATION_MS = 2600;
 const NUDGE_SUCCESS_SENT = '약 챙기라고 알림을 보냈어요';
@@ -168,6 +163,8 @@ export default function GroupDetailScreen() {
   }
 
   const memberNames = detail.members.map(m => m.name);
+  // 구성원 목록의 아바타 색과 그룹 복약 스케줄러 캘린더의 색을 동일하게 맞춘다 — 뷰어 표시순서와 무관한 고유색.
+  const colorByUserId = assignMemberColors(detail.members);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -238,7 +235,9 @@ export default function GroupDetailScreen() {
           {sortSelfFirst(detail.members, currentUserId).map((m, i) => (
             <MemberCard
               key={m.userId}
-              member={memberViewToGroupMember(m, m.userId === currentUserId)}
+              member={memberViewToGroupMember(
+                m, m.userId === currentUserId, colorByUserId.get(m.userId) ?? colors.fallbackGray,
+              )}
               isFirst={i === 0}
               onPress={handleMemberPress}
               onNudge={m.userId === currentUserId ? undefined : handleNudge}
@@ -246,6 +245,10 @@ export default function GroupDetailScreen() {
             />
           ))}
         </View>
+
+        {/* 그룹 복약 스케줄러 */}
+        <Text style={styles.sectionLabel}>그룹 복약 스케줄러</Text>
+        <GroupScheduleCalendar groupId={groupId} members={detail.members} />
 
         {/* 활동 타임라인 (상단 5건) */}
         <View style={styles.activityHeader}>
@@ -338,14 +341,14 @@ function sortSelfFirst(members: MemberView[], currentUserId: number | null): Mem
   return copy;
 }
 
-function memberViewToGroupMember(m: MemberView, isMe: boolean): GroupMember {
+function memberViewToGroupMember(m: MemberView, isMe: boolean, tint: string): GroupMember {
   const roleLabel = m.role === 'PATIENT' ? '환자' : m.role === 'GUARDIAN' ? '보호자' : m.role;
   return {
     id: String(m.userId),
     name: m.name,
     sub: roleLabel,
     role: roleLabel as GroupMember['role'],
-    tint: ROLE_TINTS[m.role] ?? colors.fallbackGray,
+    tint,
     online: false,
     isMe,
   };

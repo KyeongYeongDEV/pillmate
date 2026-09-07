@@ -25,6 +25,21 @@ export interface NudgeMemberResult {
   alreadyNotified: boolean;
 }
 
+export interface GroupMemberAdherence {
+  userId: number;
+  adherence: 'FULL' | 'PARTIAL' | 'MISS' | 'UPCOMING';
+}
+
+export interface GroupMonthScheduleArg {
+  groupId: number;
+  month: string; // 'yyyy-MM'
+}
+
+interface GroupMonthScheduleResponse {
+  month: string;
+  days: { date: string; members: GroupMemberAdherence[] }[];
+}
+
 export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
 
 export const updateShareSettingRequest = ({ groupId, viewerUserId, enabled }: UpdateShareSettingArgs) => ({
@@ -43,7 +58,7 @@ const JOIN_TIMEOUT_MS = 10_000;
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
-  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings'],
+  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings', 'GroupMonthSchedule'],
   endpoints: (build) => ({
     getMyGroups: build.query<MyGroupSummary[], void>({
       query: () => '/groups',
@@ -120,6 +135,15 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<NudgeMemberResult>) =>
         response?.data ?? { alreadyNotified: false },
     }),
+    getGroupMonthSchedule: build.query<Record<string, GroupMemberAdherence[]>, GroupMonthScheduleArg>({
+      query: ({ groupId, month }) => `/groups/${groupId}/schedule/month?month=${month}`,
+      transformResponse: (response: ApiEnvelope<GroupMonthScheduleResponse>) => {
+        const map: Record<string, GroupMemberAdherence[]> = {};
+        for (const day of response?.data?.days ?? []) map[day.date] = day.members;
+        return map;
+      },
+      providesTags: (_r, _e, { groupId }) => [{ type: 'GroupMonthSchedule', id: groupId }],
+    }),
   }),
 });
 
@@ -135,5 +159,6 @@ export const {
   useGetShareSettingsQuery,
   useUpdateShareSettingMutation,
   useNudgeMemberMutation,
+  useGetGroupMonthScheduleQuery,
 } = caregroupApiSlice;
 

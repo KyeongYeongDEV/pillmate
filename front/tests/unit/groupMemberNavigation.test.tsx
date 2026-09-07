@@ -19,6 +19,7 @@ jest.mock('@/hooks/useCountdown', () => ({
 jest.mock('@/components/common/AvatarStack', () => () => null);
 jest.mock('@/components/group/InviteCodeCard', () => () => null);
 jest.mock('@/components/group/ActivityTimelineItem', () => () => null);
+jest.mock('@/components/group/GroupScheduleCalendar', () => () => null);
 
 jest.mock('@/lib/auth/storage', () => ({ getCurrentUserId: jest.fn() }));
 

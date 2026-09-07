@@ -2,6 +2,7 @@ package com.pillmate.caregroup.presentation;
 
 import com.pillmate.caregroup.application.CreateCareGroupUseCase;
 import com.pillmate.caregroup.application.GetGroupDetailUseCase;
+import com.pillmate.caregroup.application.GetGroupMonthScheduleService;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
 import com.pillmate.caregroup.application.LeaveGroupUseCase;
@@ -12,6 +13,7 @@ import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
+import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
 import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
@@ -24,6 +26,7 @@ import com.pillmate.common.security.UserContext;
 import com.pillmate.notification.application.dto.NudgeResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +57,7 @@ public class CareGroupController {
     private final LeaveGroupUseCase leaveGroupUseCase;
     private final MedicationShareService medicationShareService;
     private final SendMemberNudgeService sendMemberNudgeService;
+    private final GetGroupMonthScheduleService getGroupMonthScheduleService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -145,5 +150,12 @@ public class CareGroupController {
         Long callerUserId = UserContext.get();
         NudgeResponse response = sendMemberNudgeService.nudge(groupId, userId, callerUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{groupId}/schedule/month")
+    public ResponseEntity<ApiResponse<GroupMonthScheduleResponse>> getGroupMonthSchedule(
+            @PathVariable Long groupId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+        return ResponseEntity.ok(ApiResponse.success(getGroupMonthScheduleService.execute(groupId, month)));
     }
 }

@@ -2,6 +2,7 @@ package com.pillmate.caregroup.presentation;
 
 import com.pillmate.caregroup.application.CreateCareGroupUseCase;
 import com.pillmate.caregroup.application.GetGroupDetailUseCase;
+import com.pillmate.caregroup.application.GetGroupMonthScheduleService;
 import com.pillmate.caregroup.application.IssueInviteCodeUseCase;
 import com.pillmate.caregroup.application.JoinGroupUseCase;
 import com.pillmate.caregroup.application.LeaveGroupUseCase;
@@ -11,6 +12,9 @@ import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
+import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
+import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.GroupDayView;
+import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.MemberAdherenceView;
 import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
 import com.pillmate.caregroup.application.dto.ShareSettingView;
 import com.pillmate.caregroup.domain.model.MemberRole;
@@ -26,6 +30,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.mockito.BDDMockito.then;
@@ -58,6 +64,7 @@ class CareGroupControllerTest {
     @MockitoBean LeaveGroupUseCase leaveGroupUseCase;
     @MockitoBean MedicationShareService medicationShareService;
     @MockitoBean SendMemberNudgeService sendMemberNudgeService;
+    @MockitoBean GetGroupMonthScheduleService getGroupMonthScheduleService;
 
     @Test
     @DisplayName("POST /groups → 200 + 생성된 그룹")
@@ -260,5 +267,50 @@ class CareGroupControllerTest {
                         .header("X-User-Id", USER_ID))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("PILL_045"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/month → 200 + 구성원별 날짜별 adherence")
+    void getGroupMonthSchedule_returns200() throws Exception {
+        YearMonth month = YearMonth.of(2026, 9);
+        LocalDate day1 = LocalDate.of(2026, 9, 1);
+        given(getGroupMonthScheduleService.execute(GROUP_ID, month))
+                .willReturn(new GroupMonthScheduleResponse("2026-09", List.of(
+                        new GroupDayView(day1, List.of(new MemberAdherenceView(USER_ID, "FULL"))))));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/month")
+                        .header("X-User-Id", USER_ID)
+                        .param("month", "2026-09"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2026-09"))
+                .andExpect(jsonPath("$.data.days[0].date").value("2026-09-01"))
+                .andExpect(jsonPath("$.data.days[0].members[0].userId").value(USER_ID))
+                .andExpect(jsonPath("$.data.days[0].members[0].adherence").value("FULL"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/month — 호출자 비멤버면 403")
+    void getGroupMonthSchedule_callerNotMember_returns403() throws Exception {
+        YearMonth month = YearMonth.of(2026, 9);
+        given(getGroupMonthScheduleService.execute(GROUP_ID, month))
+                .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/month")
+                        .header("X-User-Id", USER_ID)
+                        .param("month", "2026-09"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/schedule/month — month 형식이 잘못되면 500이 아니라 400")
+    void getGroupMonthSchedule_malformedMonth_returns400() throws Exception {
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/schedule/month")
+                        .header("X-User-Id", USER_ID)
+                        .param("month", "2026-13"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_040"));
+
+        then(getGroupMonthScheduleService).shouldHaveNoInteractions();
     }
 }
