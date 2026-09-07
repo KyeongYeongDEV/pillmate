@@ -38,15 +38,25 @@ function isForbidden(error: unknown): boolean {
   return (error as { status?: number } | undefined)?.status === FORBIDDEN_STATUS;
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// 그룹 캘린더에서 특정 날짜를 눌러 진입한 경우 그 날짜를 초기 선택값으로 쓴다. 없거나 형식이 이상하면 오늘.
+function resolveInitialDate(date?: string): string {
+  return typeof date === 'string' && DATE_PATTERN.test(date) ? date : getKstToday();
+}
+
 export default function MemberScheduleScreen() {
-  const { id, userId, name } = useLocalSearchParams<{ id: string; userId: string; name?: string }>();
+  const { id, userId, name, date } = useLocalSearchParams<{
+    id: string; userId: string; name?: string; date?: string;
+  }>();
   const groupId = Number(id);
   const patientId = Number(userId);
   const today = useKstToday();
+  const initialDate = useMemo(() => resolveInitialDate(date), [date]);
 
-  const [displayYear, setDisplayYear] = useState(() => Number(getKstToday().slice(0, 4)));
-  const [displayMonth, setDisplayMonth] = useState(() => Number(getKstToday().slice(5, 7)));
-  const [selectedDate, setSelectedDate] = useState(() => getKstToday());
+  const [displayYear, setDisplayYear] = useState(() => Number(initialDate.slice(0, 4)));
+  const [displayMonth, setDisplayMonth] = useState(() => Number(initialDate.slice(5, 7)));
+  const [selectedDate, setSelectedDate] = useState(() => initialDate);
   const [pickerVisible, setPickerVisible] = useState(false);
 
   const { data: groupDetail } = useGetGroupDetailQuery(groupId, { skip: !Number.isFinite(groupId) });

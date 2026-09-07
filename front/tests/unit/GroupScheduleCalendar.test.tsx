@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import GroupScheduleCalendar from '@/components/group/GroupScheduleCalendar';
 import { useGetGroupMonthScheduleQuery } from '@/store/slices/caregroupApi';
 import { getCurrentUserId } from '@/lib/auth/storage';
+import { getKstToday, toMonthString } from '@/utils/calendarUtils';
 import type { MemberView } from '@/types/caregroup';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
@@ -61,6 +62,25 @@ describe('GroupScheduleCalendar', () => {
     fireEvent.press(screen.getByLabelText('박순자 복약 보기'));
 
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/group/3/member/7'));
+  });
+
+  it('날짜의 구성원 점을 누르면 그 구성원+그 날짜로 개인 복약 화면 이동한다', async () => {
+    const [y, m] = getKstToday().split('-').map(Number);
+    const dateStr = `${toMonthString(y, m)}-01`;
+    mockQuery.mockReturnValue({
+      data: { [dateStr]: [{ userId: 7, adherence: 'FULL' }] },
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    render(<GroupScheduleCalendar groupId={3} members={MEMBERS} />);
+    await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
+
+    fireEvent.press(screen.getByLabelText('구성원 복약 상세 보기'));
+
+    const [url] = mockPush.mock.calls[0];
+    expect(url).toContain('/group/3/member/7');
+    expect(url).toContain(`date=${dateStr}`);
   });
 
   it('에러 시 안내문과 재시도 버튼을 보여준다', () => {

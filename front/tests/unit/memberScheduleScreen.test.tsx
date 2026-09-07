@@ -192,4 +192,22 @@ describe('구성원 복약 캘린더 화면', () => {
     render(<MemberScheduleScreen />);
     expect(screen.getByText('재시도')).toBeTruthy();
   });
+
+  // 그룹 복약 스케줄러 캘린더에서 특정 날짜의 점을 눌러 들어온 경우 — 오늘이 아니라 그 날짜가 바로 선택돼야 한다.
+  it('date 파라미터가 있으면 그 날짜를 초기 선택 날짜로 쓴다 (그룹 캘린더에서 진입)', () => {
+    setup({ params: { id: '3', userId: '7', name: '박순자', date: '2026-07-15' } });
+    render(<MemberScheduleScreen />);
+    expect(mockDayQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2026-07-15', patientId: 7, groupId: 3 }),
+      expect.anything(),
+    );
+  });
+
+  it('date 파라미터 형식이 이상하면 무시하고 오늘 날짜를 쓴다', () => {
+    setup({ params: { id: '3', userId: '7', name: '박순자', date: 'not-a-date' } });
+    render(<MemberScheduleScreen />);
+    const [[arg]] = mockDayQuery.mock.calls;
+    expect(arg.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(arg.date).not.toBe('not-a-date');
+  });
 });
