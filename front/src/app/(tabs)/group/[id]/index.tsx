@@ -231,13 +231,13 @@ export default function GroupDetailScreen() {
           />
         </View>
 
-        {/* 구성원 */}
+        {/* 구성원 — 본인을 맨 위로 */}
         <Text style={styles.sectionLabel}>구성원 {detail.members.length}명</Text>
         <View style={styles.listCard}>
-          {detail.members.map((m, i) => (
+          {sortSelfFirst(detail.members, currentUserId).map((m, i) => (
             <MemberCard
               key={m.userId}
-              member={memberViewToGroupMember(m)}
+              member={memberViewToGroupMember(m, m.userId === currentUserId)}
               isFirst={i === 0}
               onPress={handleMemberPress}
               onNudge={m.userId === currentUserId ? undefined : handleNudge}
@@ -326,7 +326,18 @@ function Header({ title, onSettings }: { title: string; onSettings?: () => void 
   );
 }
 
-function memberViewToGroupMember(m: MemberView): GroupMember {
+// 본인을 목록 맨 위로 — 나머지는 기존 순서(서버 반환 순) 유지.
+function sortSelfFirst(members: MemberView[], currentUserId: number | null): MemberView[] {
+  if (currentUserId == null) return members;
+  const selfIndex = members.findIndex(m => m.userId === currentUserId);
+  if (selfIndex <= 0) return members;
+  const copy = [...members];
+  const [self] = copy.splice(selfIndex, 1);
+  copy.unshift(self);
+  return copy;
+}
+
+function memberViewToGroupMember(m: MemberView, isMe: boolean): GroupMember {
   const roleLabel = m.role === 'PATIENT' ? '환자' : m.role === 'GUARDIAN' ? '보호자' : m.role;
   return {
     id: String(m.userId),
@@ -335,6 +346,7 @@ function memberViewToGroupMember(m: MemberView): GroupMember {
     role: roleLabel as GroupMember['role'],
     tint: ROLE_TINTS[m.role] ?? colors.fallbackGray,
     online: false,
+    isMe,
   };
 }
 

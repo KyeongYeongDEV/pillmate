@@ -28,13 +28,14 @@ function MemberCard({ member, isFirst, onPress, onNudge, nudging = false }: Prop
           {member.online && <View style={styles.onlineDot} />}
         </View>
         <View style={styles.info}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{member.name}</Text>
-            {member.isMe && <View style={styles.meBadge}><Text style={styles.meBadgeText}>나</Text></View>}
-          </View>
+          <Text style={styles.name}>{member.name}</Text>
         </View>
       </Pressable>
-      {onNudge && (
+      {member.isMe ? (
+        <View style={styles.nudgeBtn}>
+          <View style={styles.meBadge}><Text style={styles.meBadgeText}>나</Text></View>
+        </View>
+      ) : onNudge ? (
         <Pressable
           style={styles.nudgeBtn}
           onPress={() => onNudge(member)}
@@ -49,7 +50,7 @@ function MemberCard({ member, isFirst, onPress, onNudge, nudging = false }: Prop
             <Feather name="bell" size={scale(18)} color={colors.labelAlternative} />
           )}
         </Pressable>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.statusPositive, borderWidth: 2, borderColor: colors.staticWhite,
   },
   info: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   name: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
   meBadge: {
     paddingHorizontal: space.s6, paddingVertical: 2,
