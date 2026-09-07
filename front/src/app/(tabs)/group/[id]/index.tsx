@@ -215,12 +215,13 @@ export default function GroupDetailScreen() {
               )}
             </Pressable>
             <Pressable
-              style={styles.scanIconBtn}
+              style={styles.scanBtn}
               onPress={() => router.push('/group/scan' as any)}
-              accessibilityLabel="QR 스캔으로 가입"
+              accessibilityLabel="QR촬영"
               accessibilityRole="button"
             >
-              <Feather name="maximize" size={scale(20)} color={colors.labelNormal} />
+              <Feather name="maximize" size={scale(18)} color={colors.labelNormal} />
+              <Text style={styles.scanBtnText}>QR촬영</Text>
             </Pressable>
           </View>
 
@@ -381,11 +382,14 @@ const styles = StyleSheet.create({
   inviteBtnDisabled: { opacity: 0.6 },
   inviteBtnIssued: { backgroundColor: colors.fillNormal },
   inviteBtnIssuedText: { fontSize: scale(14), fontWeight: '600', color: colors.labelAlternative },
-  scanIconBtn: {
-    width: scale(42), height: scale(42), borderRadius: radius.r10,
-    alignItems: 'center', justifyContent: 'center',
+  scanBtn: {
+    flex: 1,
+    height: scale(42), borderRadius: radius.r10,
+    flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: space.s6,
     backgroundColor: colors.fillNormal,
   },
+  scanBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.labelNormal },
   sectionLabel: { fontSize: scale(11), fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
   listCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
