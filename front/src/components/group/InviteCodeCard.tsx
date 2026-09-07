@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { scale, colors, space, radius, fontFamily } from '@/styles/tokens';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -13,7 +12,6 @@ function formatCountdown(seconds: number): string {
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
-const EMPTY_ICON_SIZE = 28;
 
 interface InviteCodeCardProps {
   inviteCode: InviteCodeView | null | undefined;
@@ -29,21 +27,7 @@ function InviteCodeCard({ inviteCode, onExpire }: InviteCodeCardProps) {
   }, [inviteCode]);
 
   if (!inviteCode) {
-    return (
-      <View
-        style={styles.emptyCard}
-        accessibilityLabel="초대 코드 없음"
-        accessibilityRole="summary"
-      >
-        <View style={styles.emptyIconWrap}>
-          <Feather name="maximize" size={EMPTY_ICON_SIZE} color={colors.labelAssistive} />
-        </View>
-        <View style={styles.emptyTextCol}>
-          <Text style={styles.emptyTitle}>아직 발급된 초대가 없어요</Text>
-          <Text style={styles.emptyCaption}>위 초대하기를 누르면 코드와 QR이 생성돼요</Text>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   const expiryText = remainingSeconds > 0
@@ -91,26 +75,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     gap: space.s8,
   },
-  emptyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.s12,
-    backgroundColor: colors.bgNormal,
-    borderRadius: radius.r14,
-    paddingVertical: space.s14,
-    paddingHorizontal: space.s14,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.line,
-  },
-  emptyIconWrap: {
-    width: scale(40), height: scale(40), borderRadius: radius.r10,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.fillNormal,
-  },
-  emptyTextCol: { flex: 1, gap: 2 },
-  emptyTitle: { fontSize: scale(14), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  emptyCaption: { fontSize: scale(12), color: colors.labelAlternative, lineHeight: scale(17) },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   label: { fontSize: scale(11), color: colors.labelAlternative, fontWeight: '600', letterSpacing: 0.04 },
   code: {

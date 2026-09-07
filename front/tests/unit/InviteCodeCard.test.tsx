@@ -19,19 +19,13 @@ describe('InviteCodeCard', () => {
     expect(screen.getByText('복사')).toBeTruthy();
   });
 
-  it('inviteCode=null — 크래시 없음 + fallback UI 렌더', () => {
+  it('inviteCode=null — 크래시 없음 + 아무것도 렌더하지 않음', () => {
     expect(() => render(<InviteCodeCard inviteCode={null} />)).not.toThrow();
   });
 
-  it('inviteCode=null — fallback 안내 텍스트 렌더 (신규 디자인)', () => {
-    render(<InviteCodeCard inviteCode={null} />);
-    expect(screen.getByText('아직 발급된 초대가 없어요')).toBeTruthy();
-    expect(screen.getByText('위 초대하기를 누르면 코드와 QR이 생성돼요')).toBeTruthy();
-  });
-
-  it('inviteCode=null — 빈 상태 a11y label 존재', () => {
-    render(<InviteCodeCard inviteCode={null} />);
-    expect(screen.getByLabelText('초대 코드 없음')).toBeTruthy();
+  it('inviteCode=null — 빈 상태 UI 없이 null 렌더 (초대하기 버튼만 남김)', () => {
+    const { toJSON } = render(<InviteCodeCard inviteCode={null} />);
+    expect(toJSON()).toBeNull();
   });
 
   it('inviteCode=undefined — 크래시 없음', () => {
