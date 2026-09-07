@@ -24,6 +24,9 @@ import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.notification.application.dto.NudgeResponse;
+import com.pillmate.prescription.application.GetSharedPrescriptionUseCase;
+import com.pillmate.prescription.application.dto.SharedPrescriptionResponse;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -55,6 +59,7 @@ class CareGroupControllerTest {
     private static final Long USER_ID = 7L;
     private static final Long GROUP_ID = 42L;
     private static final Long VIEWER_ID = 8L;
+    private static final Long PRESCRIPTION_ID = 1L;
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
@@ -70,6 +75,7 @@ class CareGroupControllerTest {
     @MockitoBean SendMemberNudgeService sendMemberNudgeService;
     @MockitoBean GetGroupMonthScheduleService getGroupMonthScheduleService;
     @MockitoBean GetGroupDayScheduleService getGroupDayScheduleService;
+    @MockitoBean GetSharedPrescriptionUseCase getSharedPrescriptionUseCase;
 
     @Test
     @DisplayName("POST /groups → 200 + 생성된 그룹")
@@ -364,5 +370,38 @@ class CareGroupControllerTest {
                 .andExpect(jsonPath("$.error.code").value("PILL_040"));
 
         then(getGroupDayScheduleService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/prescriptions/{prescriptionId} → 200 + 공유 약 정보")
+    void getSharedPrescription_returns200() throws Exception {
+        SharedPrescriptionResponse.SharedDrugDetail drug = new SharedPrescriptionResponse.SharedDrugDetail(
+                "메트포르민정", "메트포르민정500밀리그램", "KD-999",
+                new BigDecimal("1.00"), "정", 3, 7,
+                "https://img.test/m.png", List.of());
+        given(getSharedPrescriptionUseCase.execute(GROUP_ID, PRESCRIPTION_ID, USER_ID))
+                .willReturn(new SharedPrescriptionResponse(
+                        PRESCRIPTION_ID, VIEWER_ID, LocalDate.of(2026, 6, 1), "복약 A",
+                        PrescriptionStatus.ONGOING, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
+                        15, 0.5, 0.9, List.of(drug)));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/prescriptions/" + PRESCRIPTION_ID)
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ownerUserId").value(VIEWER_ID))
+                .andExpect(jsonPath("$.data.drugs[0].matchedDrugName").value("메트포르민정500밀리그램"))
+                .andExpect(jsonPath("$.data.drugs[0].matchedKdCode").value("KD-999"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{groupId}/prescriptions/{prescriptionId} — 공유 권한 없으면 403")
+    void getSharedPrescription_notGranted_returns403() throws Exception {
+        given(getSharedPrescriptionUseCase.execute(GROUP_ID, PRESCRIPTION_ID, USER_ID))
+                .willThrow(new PillmateException(ErrorCode.MEDICATION_SHARE_NOT_GRANTED));
+
+        mockMvc.perform(get("/groups/" + GROUP_ID + "/prescriptions/" + PRESCRIPTION_ID)
+                        .header("X-User-Id", USER_ID))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_046"));
     }
 }

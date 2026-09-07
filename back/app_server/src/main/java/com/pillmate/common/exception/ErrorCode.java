@@ -36,6 +36,7 @@ public enum ErrorCode {
     NUDGE_COOLDOWN_ACTIVE("PILL_043", "방금 알림을 보냈어요. 잠시 후 다시 시도해 주세요."),
     NUDGE_TARGET_INVALID("PILL_044", "재촉 대상이 유효하지 않습니다. 본인이거나 그룹 멤버가 아닙니다."),
     NUDGE_NO_OVERDUE_DOSE("PILL_045", "지금은 재촉할 복약이 없어요."),
+    MEDICATION_SHARE_NOT_GRANTED("PILL_046", "이 구성원이 약 정보를 공유하지 않았어요."),
     OCR_UPSTREAM_TIMEOUT("PILL_050", "OCR 서비스 응답 시간이 초과되었습니다."),
     OCR_UPSTREAM_FAILED("PILL_051", "OCR 서비스 호출에 실패했습니다."),
     OCR_REQUEST_INVALID("PILL_052", "OCR 요청이 잘못되었습니다."),

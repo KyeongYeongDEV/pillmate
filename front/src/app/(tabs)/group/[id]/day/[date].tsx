@@ -63,13 +63,19 @@ export default function GroupDayScheduleScreen() {
     [groupDetail],
   );
 
-  // 처방전 상세(실제 알약 정보·이미지)는 본인 소유만 열람 가능 — 백엔드가 PatientAccessGuard 로
-  // 자기 자신 외엔 그룹 공유 여부와 무관하게 무조건 차단한다. 그래서 본인 행에만 연결한다.
-  const handlePrescriptionPress = useCallback((slot: MedSlot) => {
-    if (slot.prescriptionId) {
+  // 본인 행은 편집 가능한 개인 상세로, 타인 행은 약 정보만 담긴 읽기 전용 공유 화면으로 보낸다.
+  // 권한 없는(마스킹된) 슬롯은 MedTimeRow 가 canNavigate=false 로 이미 눌리지 않게 막으므로
+  // 모든 행에 핸들러를 넘겨도 타인 상세로 새지 않는다(핵심 회귀 방지).
+  const handlePrescriptionPress = useCallback((slot: MedSlot, member: GroupMemberDayView) => {
+    if (!slot.prescriptionId) return;
+    if (member.userId === currentUserId) {
       router.push({ pathname: '/prescription/[id]', params: { id: String(slot.prescriptionId) } } as any);
+      return;
     }
-  }, []);
+    router.push(
+      `/group/${groupId}/prescription/${slot.prescriptionId}?name=${encodeURIComponent(member.name)}` as any,
+    );
+  }, [currentUserId, groupId]);
 
   if (isForbidden(error)) {
     return <NoticeScreen title={title} groupId={groupId} message={FORBIDDEN_MSG} />;
@@ -112,7 +118,7 @@ export default function GroupDayScheduleScreen() {
               member={member}
               color={colorByUserId.get(member.userId) ?? colors.fallbackGray}
               isFirst={index === 0}
-              onPrescriptionPress={member.userId === currentUserId ? handlePrescriptionPress : undefined}
+              onPrescriptionPress={(slot) => handlePrescriptionPress(slot, member)}
             />
           ))
         )}

@@ -158,9 +158,9 @@ describe('그룹 날짜별 복약 화면', () => {
     expect(screen.queryByText('복약 0 / 0 완료')).toBeNull();
   });
 
-  // 처방전 상세는 본인 소유만 열람 가능(PatientAccessGuard, 그룹공유와 무관하게 타인 차단) —
-  // 그래서 본인 행만 눌리게 하고 다른 구성원 행은 절대 눌리지 않아야 한다(회귀 시 타인 상세로 새는 P1).
-  it('본인의 처방전 이름만 눌려서 상세로 이동하고, 다른 구성원 것은 눌리지 않는다', async () => {
+  // 본인 행은 편집 가능한 개인 상세로, 약 정보 공유 권한이 있어 이름이 보이는 타인 행은 읽기 전용
+  // 공유 화면으로 간다. 라우팅이 뒤바뀌면 남의 편집 화면으로 새거나 본인 것이 안 열리는 회귀(P1).
+  it('본인 행은 개인 상세로, 권한 있는 타인 행은 공유 화면으로 이동한다', async () => {
     const ownPrescriptionSlot: MedSlot = {
       id: 'morning', time: '08:00', label: '아침', state: 'done',
       items: ['암로디핀 5mg'], doseLogId: 11, prescriptionId: 61, prescriptionName: '9월 정기약(고혈압)',
@@ -186,6 +186,28 @@ describe('그룹 날짜별 복약 화면', () => {
 
     mockPush.mockClear();
     fireEvent.press(screen.getByText('9월 당뇨약'));
+    const target = mockPush.mock.calls[0][0];
+    expect(target).toContain('/group/3/prescription/62');
+    expect(target).toContain(`name=${encodeURIComponent('테스트유저2')}`);
+  });
+
+  // 권한 없는(마스킹된) 슬롯은 이름이 뜨더라도 눌리지 않아야 한다 — 모든 행에 핸들러를 넘겨도
+  // MedTimeRow 가 canNavigate=false 로 막는다. 회귀 시 타인 처방전으로 새는 P1.
+  it('권한 없는(마스킹된) 타인 슬롯은 prescriptionId 가 있어도 눌리지 않는다', async () => {
+    const maskedSlotWithId: MedSlot = {
+      id: 'evening', time: '20:00', label: '저녁', state: 'wait',
+      items: [], drugCount: 2, prescriptionId: 99, prescriptionName: '약 정보 비공개',
+    };
+    setup({
+      currentUserId: 1,
+      members: [
+        { userId: 2, name: '테스트유저2', schedule: { date: '2026-09-07', totalCount: 1, doneCount: 0, slots: [maskedSlotWithId] } },
+      ],
+    });
+    render(<GroupDayScheduleScreen />);
+    await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
+
+    fireEvent.press(screen.getByText('2개 · 약 정보 비공개'));
     expect(mockPush).not.toHaveBeenCalled();
   });
 });

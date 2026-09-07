@@ -26,6 +26,8 @@ import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.notification.application.dto.NudgeResponse;
+import com.pillmate.prescription.application.GetSharedPrescriptionUseCase;
+import com.pillmate.prescription.application.dto.SharedPrescriptionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -62,6 +64,7 @@ public class CareGroupController {
     private final SendMemberNudgeService sendMemberNudgeService;
     private final GetGroupMonthScheduleService getGroupMonthScheduleService;
     private final GetGroupDayScheduleService getGroupDayScheduleService;
+    private final GetSharedPrescriptionUseCase getSharedPrescriptionUseCase;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateGroupResponse>> create(
@@ -168,5 +171,14 @@ public class CareGroupController {
             @PathVariable Long groupId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.success(getGroupDayScheduleService.execute(groupId, date)));
+    }
+
+    @GetMapping("/{groupId}/prescriptions/{prescriptionId}")
+    public ResponseEntity<ApiResponse<SharedPrescriptionResponse>> getSharedPrescription(
+            @PathVariable Long groupId,
+            @PathVariable Long prescriptionId) {
+        Long userId = UserContext.get();
+        return ResponseEntity.ok(ApiResponse.success(
+                getSharedPrescriptionUseCase.execute(groupId, prescriptionId, userId)));
     }
 }

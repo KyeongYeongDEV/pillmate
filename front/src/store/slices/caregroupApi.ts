@@ -3,6 +3,7 @@ import { createPillmateBaseQuery } from '@/lib/api/baseQuery';
 import type { ApiEnvelope } from '@/lib/api/client';
 import type { MyGroupSummary, GroupDetailResponse, InviteCodeView, ShareSettingView } from '@/types/caregroup';
 import type { ScheduleDay } from '@/types/schedule';
+import type { PrescriptionDetailDrug, NutrientNote } from '@/types/prescription';
 
 export interface CreateGroupResponse {
   groupId: number;
@@ -57,6 +58,31 @@ interface GroupDayScheduleResponse {
   members: GroupMemberDayView[];
 }
 
+// 공유받은 약봉투의 약 한 줄 — 개인용 상세와 같은 필드에 영양소 메모만 더해진다(약 정보만 공유).
+export interface SharedPrescriptionDrug extends PrescriptionDetailDrug {
+  nutrientNotes?: NutrientNote[] | null;
+}
+
+// 약 정보 공유 권한이 있는 구성원이 읽는 읽기 전용 뷰 — 처방전 원본 사진·메모·증상·AI 인사이트는 없다.
+export interface SharedPrescriptionView {
+  id: number;
+  ownerUserId: number;
+  prescribedAt: string;
+  label: string | null;
+  status: 'ONGOING' | 'COMPLETED';
+  periodStart: string | null;
+  periodEnd: string | null;
+  daysRemaining: number | null;
+  progressRate: number | null;
+  adherenceRate: number | null;
+  drugs: SharedPrescriptionDrug[];
+}
+
+export interface SharedPrescriptionArg {
+  groupId: number;
+  prescriptionId: number;
+}
+
 export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
 
 export const updateShareSettingRequest = ({ groupId, viewerUserId, enabled }: UpdateShareSettingArgs) => ({
@@ -75,7 +101,7 @@ const JOIN_TIMEOUT_MS = 10_000;
 export const caregroupApiSlice = createApi({
   reducerPath: 'caregroupApi',
   baseQuery: createPillmateBaseQuery(),
-  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings', 'GroupMonthSchedule', 'GroupDaySchedule'],
+  tagTypes: ['Group', 'GroupDetail', 'Activity', 'ShareSettings', 'GroupMonthSchedule', 'GroupDaySchedule', 'SharedPrescription'],
   endpoints: (build) => ({
     getMyGroups: build.query<MyGroupSummary[], void>({
       query: () => '/groups',
@@ -166,6 +192,13 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<GroupDayScheduleResponse>) => response?.data?.members ?? [],
       providesTags: (_r, _e, { groupId, date }) => [{ type: 'GroupDaySchedule', id: `${groupId}-${date}` }],
     }),
+    getSharedPrescription: build.query<SharedPrescriptionView | null, SharedPrescriptionArg>({
+      query: ({ groupId, prescriptionId }) => `/groups/${groupId}/prescriptions/${prescriptionId}`,
+      transformResponse: (response: ApiEnvelope<SharedPrescriptionView>) => response?.data ?? null,
+      providesTags: (_r, _e, { groupId, prescriptionId }) => [
+        { type: 'SharedPrescription', id: `${groupId}-${prescriptionId}` },
+      ],
+    }),
   }),
 });
 
@@ -183,5 +216,6 @@ export const {
   useNudgeMemberMutation,
   useGetGroupMonthScheduleQuery,
   useGetGroupDayScheduleQuery,
+  useGetSharedPrescriptionQuery,
 } = caregroupApiSlice;
 
