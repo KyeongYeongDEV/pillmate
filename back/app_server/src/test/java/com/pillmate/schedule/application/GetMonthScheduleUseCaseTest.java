@@ -63,7 +63,7 @@ class GetMonthScheduleUseCaseTest {
     @DisplayName("KST 월 경계 — 6월 조회 시 from=5/31 15:00Z(=KST 6/1 00:00), to=6/30 15:00Z(=KST 7/1 00:00)")
     void execute_queriesWithKstMonthRange() {
         // given
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any(), any()))
                 .willReturn(List.of());
 
         // when
@@ -72,17 +72,19 @@ class GetMonthScheduleUseCaseTest {
         // then
         ArgumentCaptor<Instant> fromCaptor = ArgumentCaptor.forClass(Instant.class);
         ArgumentCaptor<Instant> toCaptor = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<LocalDate> todayCaptor = ArgumentCaptor.forClass(LocalDate.class);
         then(scheduleMonthQueryPort).should()
-                .findDailyDoseCounts(eq(PATIENT_ID), fromCaptor.capture(), toCaptor.capture());
+                .findDailyDoseCounts(eq(PATIENT_ID), fromCaptor.capture(), toCaptor.capture(), todayCaptor.capture());
         assertThat(fromCaptor.getValue()).isEqualTo(Instant.parse("2026-05-31T15:00:00Z"));
         assertThat(toCaptor.getValue()).isEqualTo(Instant.parse("2026-06-30T15:00:00Z"));
+        assertThat(todayCaptor.getValue()).isEqualTo(LocalDate.of(2026, 6, 15));
     }
 
     @Test
     @DisplayName("날짜별 adherence 판정 — 4/4 FULL, 2/4 PARTIAL, 0/4 MISS")
     void execute_mapsAdherencePerDay() {
         // given
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any(), any()))
                 .willReturn(List.of(
                         new DayDoseCount(LocalDate.of(2026, 6, 1), 4, 4),
                         new DayDoseCount(LocalDate.of(2026, 6, 2), 4, 2),
@@ -105,7 +107,7 @@ class GetMonthScheduleUseCaseTest {
     @Test
     @DisplayName("dose_logs 없는 월 — days 빈 배열 (FE dot 미표시)")
     void execute_whenNoLogs_returnsEmptyDays() {
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any(), any()))
                 .willReturn(List.of());
 
         MonthScheduleResponse response = sut().execute(JUNE);
@@ -117,7 +119,7 @@ class GetMonthScheduleUseCaseTest {
     @DisplayName("KST 오늘(6/15) 이후 미래 날짜 + 미복용 → UPCOMING, 오늘/과거는 기존 규칙 유지")
     void execute_mapsFutureDateAsUpcoming() {
         // given — FIXED_CLOCK 기준 KST 오늘은 6/15
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(PATIENT_ID), any(), any(), any()))
                 .willReturn(List.of(
                         new DayDoseCount(LocalDate.of(2026, 6, 14), 4, 0),
                         new DayDoseCount(LocalDate.of(2026, 6, 15), 4, 0),
@@ -138,7 +140,7 @@ class GetMonthScheduleUseCaseTest {
     void execute_usesUserContextAsPatientId() {
         // given
         UserContext.set(99L);
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(99L), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(99L), any(), any(), any()))
                 .willReturn(List.of());
 
         // when
@@ -146,7 +148,7 @@ class GetMonthScheduleUseCaseTest {
 
         // then
         assertThat(response.days()).isEmpty();
-        then(scheduleMonthQueryPort).should().findDailyDoseCounts(eq(99L), any(), any());
+        then(scheduleMonthQueryPort).should().findDailyDoseCounts(eq(99L), any(), any(), any());
         then(careGroupGuard).should().requirePatientAccessible(99L);
     }
 
@@ -155,7 +157,7 @@ class GetMonthScheduleUseCaseTest {
     void execute_withPatientId_sameGroup_returnsMemberSchedule() {
         // given
         Long memberId = 5L;
-        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(memberId), any(), any()))
+        given(scheduleMonthQueryPort.findDailyDoseCounts(eq(memberId), any(), any(), any()))
                 .willReturn(List.of());
 
         // when

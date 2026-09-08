@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ScheduleMonthQueryPort {
 
-    List<DayDoseCount> findDailyDoseCounts(Long patientId, Instant fromInclusive, Instant toExclusive);
+    List<DayDoseCount> findDailyDoseCounts(Long patientId, Instant fromInclusive, Instant toExclusive, LocalDate today);
 
     record DayDoseCount(
             LocalDate date,

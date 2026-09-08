@@ -62,13 +62,17 @@ class ScheduleMonthQueryAdapterIntegrationTest {
     private static final Instant JUNE_FROM = Instant.parse("2026-05-31T15:00:00Z");
     private static final Instant JUNE_TO   = Instant.parse("2026-06-30T15:00:00Z");
 
+    // 회귀 스위트의 "오늘"을 6월 마지막 날로 고정 — 과거/오늘 구간(dose_logs 기반)만 검증하는
+    // 기존 테스트가 미래 합성 로직의 영향을 받지 않도록 한다.
+    private static final LocalDate JUNE_LAST_DAY = LocalDate.of(2026, 6, 30);
+
     @Test
     @DisplayName("날짜별 total/taken 집계 — TAKEN 2 + PENDING 1 인 날은 (3, 2)")
     void findDailyDoseCounts_aggregatesPerKstDate() {
         // given
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
         Long patientId = insertUser("month-patient");
-        Long scheduleId = insertSchedule(patientId);
+        Long scheduleId = insertSchedule(patientId, "2026-01-01", "2026-12-31");
         // KST 2026-06-05: TAKEN 2건 + PENDING 1건
         insertDoseLog(scheduleId, patientId, "2026-06-04 23:00:00+00", "TAKEN");   // KST 6/5 08:00
         insertDoseLog(scheduleId, patientId, "2026-06-05 03:30:00+00", "TAKEN");   // KST 6/5 12:30
@@ -76,7 +80,7 @@ class ScheduleMonthQueryAdapterIntegrationTest {
 
         // when
         List<DayDoseCount> result =
-                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO);
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, JUNE_LAST_DAY);
 
         // then
         assertThat(result).hasSize(1);
@@ -91,13 +95,13 @@ class ScheduleMonthQueryAdapterIntegrationTest {
         // given
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
         Long patientId = insertUser("boundary-patient");
-        Long scheduleId = insertSchedule(patientId);
+        Long scheduleId = insertSchedule(patientId, "2026-01-01", "2026-12-31");
         insertDoseLog(scheduleId, patientId, "2026-05-31 15:00:00+00", "TAKEN"); // KST 6/1 00:00 → 포함
         insertDoseLog(scheduleId, patientId, "2026-05-31 14:59:00+00", "TAKEN"); // KST 5/31 23:59 → 제외
 
         // when
         List<DayDoseCount> result =
-                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO);
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, JUNE_LAST_DAY);
 
         // then
         assertThat(result).hasSize(1);
@@ -112,18 +116,95 @@ class ScheduleMonthQueryAdapterIntegrationTest {
         entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
         Long patientId = insertUser("me");
         Long otherId = insertUser("other");
-        Long mySchedule = insertSchedule(patientId);
-        Long otherSchedule = insertSchedule(otherId);
+        Long mySchedule = insertSchedule(patientId, "2026-01-01", "2026-12-31");
+        Long otherSchedule = insertSchedule(otherId, "2026-01-01", "2026-12-31");
         insertDoseLog(mySchedule, patientId, "2026-06-05 03:30:00+00", "TAKEN");
         insertDoseLog(otherSchedule, otherId, "2026-06-05 03:30:00+00", "TAKEN");
 
         // when
         List<DayDoseCount> result =
-                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO);
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, JUNE_LAST_DAY);
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).totalCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("#134 — 오늘 등록한 미래 스케줄은 dose_log 없이도 totalCount 에 즉시 반영")
+    void findDailyDoseCounts_futureScheduleWithoutDoseLog_isSynthesizedFromSchedules() {
+        // given — 오늘(KST 6/10) 3일짜리 새 약봉투 스케줄 등록, 자정 배치는 아직 오늘치만 생성
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+        Long patientId = insertUser("future-patient");
+        LocalDate today = LocalDate.of(2026, 6, 10);
+        insertSchedule(patientId, "2026-06-10", "2026-06-12");
+
+        // when
+        List<DayDoseCount> result =
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, today);
+
+        // then — 6/11, 6/12 는 dose_log 가 전혀 없지만 schedules 기반으로 합성되어야 함
+        assertThat(result).extracting(DayDoseCount::date)
+                .containsExactly(LocalDate.of(2026, 6, 11), LocalDate.of(2026, 6, 12));
+        assertThat(result).allSatisfy(count -> {
+            assertThat(count.totalCount()).isEqualTo(1);
+            assertThat(count.takenCount()).isEqualTo(0);
+        });
+    }
+
+    @Test
+    @DisplayName("#134 — 그 날짜에 기존 스케줄이 전혀 없었다가 방금 하나 생기면 결과에 새로 나타남")
+    void findDailyDoseCounts_newFutureDateWithNoPriorSchedule_appearsInResult() {
+        // given — 다른 활성 스케줄이 전혀 없는 미래 날짜에 오늘 막 등록
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+        Long patientId = insertUser("new-future-patient");
+        LocalDate today = LocalDate.of(2026, 6, 10);
+        insertSchedule(patientId, "2026-06-20", "2026-06-20");
+
+        // when
+        List<DayDoseCount> result =
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, today);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).date()).isEqualTo(LocalDate.of(2026, 6, 20));
+        assertThat(result.get(0).totalCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("#134 — end_date 지난 스케줄은 그 날짜 이후 미래 구간에 카운트되지 않음")
+    void findDailyDoseCounts_pastEndDate_excludedFromFutureSynthesis() {
+        // given — 스케줄이 6/12 에 종료, 오늘은 6/10
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+        Long patientId = insertUser("ended-patient");
+        LocalDate today = LocalDate.of(2026, 6, 10);
+        insertSchedule(patientId, "2026-06-01", "2026-06-12");
+
+        // when
+        List<DayDoseCount> result =
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, today);
+
+        // then — 6/11, 6/12 는 포함, 6/13 이후(end_date 지남)는 미포함
+        assertThat(result).extracting(DayDoseCount::date)
+                .containsExactly(LocalDate.of(2026, 6, 11), LocalDate.of(2026, 6, 12));
+    }
+
+    @Test
+    @DisplayName("#134 — 오늘 날짜는 dose_log 유무와 무관하게 항상 dose_logs 소스(합성 대상 아님)")
+    void findDailyDoseCounts_todayUsesDoseLogSourceEvenWithoutDoseLog() {
+        // given — 오늘(6/10) 활성 스케줄은 있지만 아직 dose_log 미생성(배치 전 타이밍 가정)
+        entityManager.createNativeQuery("SET TIME ZONE 'UTC'").executeUpdate();
+        Long patientId = insertUser("today-no-log-patient");
+        LocalDate today = LocalDate.of(2026, 6, 10);
+        insertSchedule(patientId, "2026-06-10", "2026-06-12");
+
+        // when
+        List<DayDoseCount> result =
+                scheduleMonthQueryPort.findDailyDoseCounts(patientId, JUNE_FROM, JUNE_TO, today);
+
+        // then — 오늘(6/10)은 dose_log 가 없으므로 결과에 없어야 함(합성 대상 아님), 미래만 합성됨
+        assertThat(result).extracting(DayDoseCount::date)
+                .containsExactly(LocalDate.of(2026, 6, 11), LocalDate.of(2026, 6, 12));
     }
 
     private Long insertUser(String name) {
@@ -149,14 +230,16 @@ class ScheduleMonthQueryAdapterIntegrationTest {
                 .getSingleResult()).longValue();
     }
 
-    private Long insertSchedule(Long patientId) {
+    private Long insertSchedule(Long patientId, String startDate, String endDate) {
         return ((Number) entityManager.createNativeQuery(
                 "INSERT INTO schedules (care_group_id, patient_id, drug_id, time_of_day, custom_time, " +
                 "start_date, end_date, active, created_by, created_at) " +
-                "VALUES (:g, :p, :d, 'MORNING', '08:00', '2026-01-01', '2026-12-31', true, :p, NOW()) RETURNING id")
+                "VALUES (:g, :p, :d, 'MORNING', '08:00', CAST(:sd AS date), CAST(:ed AS date), true, :p, NOW()) RETURNING id")
                 .setParameter("g", insertCareGroup())
                 .setParameter("p", patientId)
                 .setParameter("d", insertDrug())
+                .setParameter("sd", startDate)
+                .setParameter("ed", endDate)
                 .getSingleResult()).longValue();
     }
 

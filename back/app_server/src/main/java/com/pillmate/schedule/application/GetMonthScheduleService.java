@@ -40,7 +40,7 @@ public class GetMonthScheduleService implements GetMonthScheduleUseCase {
         Instant from = kstMonthStart(month);
         Instant to = kstMonthStart(month.plusMonths(1));
         LocalDate today = LocalDate.now(clock.withZone(KST));
-        List<DayDoseCount> counts = scheduleMonthQueryPort.findDailyDoseCounts(resolvedPatientId, from, to);
+        List<DayDoseCount> counts = scheduleMonthQueryPort.findDailyDoseCounts(resolvedPatientId, from, to, today);
         return new MonthScheduleResponse(month.toString(), counts.stream().map(count -> toView(count, today)).toList());
     }
 
