@@ -1,6 +1,6 @@
 package com.pillmate.schedule.application;
 
-import com.pillmate.caregroup.application.MedicationShareService;
+import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.schedule.application.dto.DayScheduleResponse;
@@ -16,10 +16,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +45,7 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
 
     private final ScheduleDayQueryPort scheduleDayQueryPort;
     private final CareGroupGuard careGroupGuard;
-    private final MedicationShareService medicationShareService;
+    private final MembershipRepository membershipRepository;
 
     @Override
     public DayScheduleResponse execute(LocalDate date) {
@@ -63,9 +65,7 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
         List<DayScheduleProjection> rows = scheduleDayQueryPort.findByPatientAndDate(resolvedPatientId, date);
         Map<Long, String> resolvedLabels = resolvePrescriptionLabels(rows);
         List<SlotView> slots = mergeToSlots(rows, resolvedLabels);
-        if (shouldMaskMedicationDetail(resolvedPatientId, viewerUserId, groupId)) {
-            slots = slots.stream().map(this::maskMedicationDetail).toList();
-        }
+        slots = applyMasking(slots, rows, resolvedPatientId, viewerUserId, groupId);
         int doneCount = (int) slots.stream().filter(slot -> "done".equals(slot.state())).count();
         return new DayScheduleResponse(date, slots.size(), doneCount, slots);
     }
@@ -76,16 +76,60 @@ public class GetDayScheduleService implements GetDayScheduleUseCase {
         return targetPatientId;
     }
 
-    // L2(알약 정보) 마스킹 여부 — 본인 조회는 항상 공개, 타인 조회는 groupId 기준 공유 판정.
-    // groupId 없이 타인 조회하면 안전하게 마스킹(fail-closed).
-    private boolean shouldMaskMedicationDetail(Long patientId, Long viewerUserId, Long groupId) {
+    // L2(알약 정보) 마스킹 — 약봉투(처방전) 단위 판정. 본인 조회는 항상 공개.
+    // 타인 조회는 슬롯의 prescriptionId 별로 공유 여부를 따져 슬롯 단위로 마스킹한다.
+    private List<SlotView> applyMasking(List<SlotView> slots, List<DayScheduleProjection> rows,
+                                         Long patientId, Long viewerUserId, Long groupId) {
         if (patientId.equals(viewerUserId)) {
-            return false;
+            return slots;
         }
-        if (groupId == null) {
+        Set<Long> maskedPrescriptionIds = resolveMaskedPrescriptionIds(rows, patientId, viewerUserId, groupId);
+        return slots.stream()
+                .map(slot -> shouldMaskSlot(slot, maskedPrescriptionIds) ? maskMedicationDetail(slot) : slot)
+                .toList();
+    }
+
+    // 레거시 행(prescriptionId 없음)은 공유 개념이 없으므로 타인 조회 시 항상 마스킹 유지(fail-closed).
+    private boolean shouldMaskSlot(SlotView slot, Set<Long> maskedPrescriptionIds) {
+        if (slot.prescriptionId() == null) {
             return true;
         }
-        return !medicationShareService.canViewMedicationDetail(groupId, patientId, viewerUserId);
+        return maskedPrescriptionIds.contains(slot.prescriptionId());
+    }
+
+    private Set<Long> resolveMaskedPrescriptionIds(List<DayScheduleProjection> rows,
+                                                     Long patientId, Long viewerUserId, Long groupId) {
+        Set<Long> masked = new HashSet<>();
+        for (DayScheduleProjection row : rows) {
+            if (row.prescriptionId() == null) {
+                continue;
+            }
+            if (!canViewPrescriptionSlot(viewerUserId, patientId, row.prescriptionCareGroupId(),
+                    row.sharedWithGroup(), groupId)) {
+                masked.add(row.prescriptionId());
+            }
+        }
+        return masked;
+    }
+
+    // groupId 없이 타인 조회하면 안전하게 마스킹(fail-closed). 요청 groupId 와 약봉투 소속 그룹이
+    // 다르면 공유 켬이어도 차단(크로스그룹 차단). 둘 다 그 그룹 ACTIVE 멤버여야 최종 공개.
+    private boolean canViewPrescriptionSlot(Long viewerUserId, Long patientId, Long prescriptionCareGroupId,
+                                             Boolean sharedWithGroup, Long requestGroupId) {
+        if (requestGroupId == null) {
+            return false;
+        }
+        if (prescriptionCareGroupId == null || !Boolean.TRUE.equals(sharedWithGroup)) {
+            return false;
+        }
+        if (!prescriptionCareGroupId.equals(requestGroupId)) {
+            return false;
+        }
+        return isActiveMember(prescriptionCareGroupId, patientId) && isActiveMember(prescriptionCareGroupId, viewerUserId);
+    }
+
+    private boolean isActiveMember(Long careGroupId, Long userId) {
+        return membershipRepository.existsByCareGroupIdAndUserId(careGroupId, userId);
     }
 
     private SlotView maskMedicationDetail(SlotView slot) {

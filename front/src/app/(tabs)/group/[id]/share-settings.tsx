@@ -5,30 +5,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import Avatar from '@/components/common/Avatar';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
-import { useGetShareSettingsQuery, useUpdateShareSettingMutation } from '@/store/slices/caregroupApi';
+import {
+  useGetShareablePrescriptionsQuery,
+  useUpdatePrescriptionShareMutation,
+  type ShareablePrescriptionView,
+} from '@/store/slices/caregroupApi';
 import { safeBack } from '@/lib/router/safeBack';
-import type { ShareSettingView } from '@/types/caregroup';
 
-const ROLE_TINTS: Record<string, string> = {
-  '환자': colors.patientOrange,
-  '보호자': colors.guardianBlue,
-  PATIENT: colors.patientOrange,
-  GUARDIAN: colors.guardianBlue,
-};
+function formatDate(dateStr: string): string {
+  const [y, m, d] = dateStr.slice(0, 10).split('-');
+  return `${y}.${m}.${d}`;
+}
 
-function roleLabel(role: string): string {
-  if (role === 'PATIENT') return '환자';
-  if (role === 'GUARDIAN') return '보호자';
-  return role;
+function prescriptionLabel(item: ShareablePrescriptionView): string {
+  return item.label ?? `약봉투 #${item.prescriptionId}`;
 }
 
 export default function ShareSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = Number(id);
-  const { data: members, isLoading, isError, error, refetch } = useGetShareSettingsQuery(groupId);
-  const [updateShareSetting] = useUpdateShareSettingMutation();
+  const { data: prescriptions, isLoading, isError, error, refetch } = useGetShareablePrescriptionsQuery(groupId);
+  const [updatePrescriptionShare] = useUpdatePrescriptionShareMutation();
   const [pending, setPending] = useState<number[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,17 +39,17 @@ export default function ShareSettingsScreen() {
     }
   }, [refetch]);
 
-  const handleToggle = useCallback(async (viewerUserId: number, enabled: boolean) => {
-    if (pending.includes(viewerUserId)) return;
-    setPending((p) => [...p, viewerUserId]);
+  const handleToggle = useCallback(async (prescriptionId: number, enabled: boolean) => {
+    if (pending.includes(prescriptionId)) return;
+    setPending((p) => [...p, prescriptionId]);
     try {
-      await updateShareSetting({ groupId, viewerUserId, enabled }).unwrap();
+      await updatePrescriptionShare({ groupId, prescriptionId, enabled }).unwrap();
     } catch (e: any) {
       Alert.alert('공유 설정 변경 실패', e?.data?.error?.message ?? '잠시 후 다시 시도해 주세요');
     } finally {
-      setPending((p) => p.filter((memberId) => memberId !== viewerUserId));
+      setPending((p) => p.filter((pid) => pid !== prescriptionId));
     }
-  }, [pending, updateShareSetting, groupId]);
+  }, [pending, updatePrescriptionShare, groupId]);
 
   if (isLoading) {
     return (
@@ -76,7 +74,7 @@ export default function ShareSettingsScreen() {
     );
   }
 
-  const list = members ?? [];
+  const list = prescriptions ?? [];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -87,20 +85,20 @@ export default function ShareSettingsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryBase} />}
       >
-        <Text style={styles.intro}>켠 구성원만 내 약 이름을 볼 수 있어요.</Text>
+        <Text style={styles.intro}>켠 약봉투는 이 그룹의 모든 구성원이 이름·용량을 볼 수 있어요.</Text>
 
         {list.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>공유할 구성원이 없어요</Text>
+            <Text style={styles.emptyText}>현재 복용중인 약봉투가 없어요</Text>
           </View>
         ) : (
           <View style={styles.listCard}>
-            {list.map((member, i) => (
+            {list.map((item, i) => (
               <ShareRow
-                key={member.userId}
-                member={member}
+                key={item.prescriptionId}
+                item={item}
                 isFirst={i === 0}
-                disabled={pending.includes(member.userId)}
+                disabled={pending.includes(item.prescriptionId)}
                 onToggle={handleToggle}
               />
             ))}
@@ -112,29 +110,28 @@ export default function ShareSettingsScreen() {
 }
 
 function ShareRow({
-  member, isFirst, disabled, onToggle,
+  item, isFirst, disabled, onToggle,
 }: {
-  member: ShareSettingView;
+  item: ShareablePrescriptionView;
   isFirst: boolean;
   disabled: boolean;
-  onToggle: (viewerUserId: number, enabled: boolean) => void;
+  onToggle: (prescriptionId: number, enabled: boolean) => void;
 }) {
-  const label = roleLabel(member.role);
+  const name = prescriptionLabel(item);
   return (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
-      <Avatar name={member.name[0]} tint={ROLE_TINTS[member.role] ?? colors.fallbackGray} size={scale(44)} />
       <View style={styles.info}>
-        <Text style={styles.name}>{member.name}</Text>
-        <Text style={styles.role}>{label}</Text>
+        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <Text style={styles.date}>{formatDate(item.prescribedAt)}</Text>
       </View>
       <Switch
-        value={member.shared}
+        value={item.shared}
         disabled={disabled}
-        onValueChange={(next) => onToggle(member.userId, next)}
+        onValueChange={(next) => onToggle(item.prescriptionId, next)}
         trackColor={{ true: colors.primaryBase, false: colors.lineSolidNorm }}
         thumbColor={colors.staticWhite}
         ios_backgroundColor={colors.lineSolidNorm}
-        accessibilityLabel={`${member.name}에게 약 정보 공유`}
+        accessibilityLabel={`${name} 그룹에 공유`}
       />
     </View>
   );
@@ -181,7 +178,7 @@ const styles = StyleSheet.create({
   borderTop: { borderTopWidth: 1, borderTopColor: colors.line },
   info: { flex: 1 },
   name: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  role: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 2 },
+  date: { fontSize: scale(12), color: colors.labelAlternative, marginTop: 2 },
   emptyBox: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
     borderWidth: 1, borderColor: colors.line, paddingVertical: space.s40, alignItems: 'center',

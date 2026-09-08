@@ -63,6 +63,9 @@ public class Prescription {
     @Column
     private Instant deletedAt;
 
+    @Column(nullable = false)
+    private boolean sharedWithGroup;
+
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescribedDrug> drugs = new ArrayList<>();
 
@@ -153,6 +156,14 @@ public class Prescription {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public void shareWithGroup() {
+        this.sharedWithGroup = true;
+    }
+
+    public void unshareFromGroup() {
+        this.sharedWithGroup = false;
     }
 
     private boolean hasLowConfidenceDrug() {

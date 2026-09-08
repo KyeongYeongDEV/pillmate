@@ -1,28 +1,31 @@
 package com.pillmate.caregroup.application;
 
-import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
-import com.pillmate.caregroup.application.dto.ShareSettingView;
-import com.pillmate.caregroup.domain.model.MedicationShareGrant;
-import com.pillmate.caregroup.domain.model.MemberRole;
-import com.pillmate.caregroup.domain.model.Membership;
-import com.pillmate.caregroup.domain.repository.MedicationShareGrantRepository;
+import com.pillmate.caregroup.application.dto.ShareablePrescriptionView;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
-import com.pillmate.user.domain.model.User;
-import com.pillmate.user.domain.repository.UserRepository;
+import com.pillmate.prescription.application.PrescriptionViewAssembler;
+import com.pillmate.prescription.application.port.DrugLookupPort;
+import com.pillmate.prescription.application.port.NutrientDepletionPort;
+import com.pillmate.prescription.application.port.PrescriptionPeriodPort;
+import com.pillmate.prescription.domain.model.Prescription;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
+import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,221 +33,182 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
-@DisplayName("MedicationShareService — 알약 정보(L2) 공유 판정/설정 단위 테스트")
+@DisplayName("MedicationShareService — 약봉투(처방전) 단위 그룹 공유 판정/설정 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class MedicationShareServiceTest {
 
     private static final Long GROUP_ID = 1L;
+    private static final Long OTHER_GROUP_ID = 2L;
     private static final Long OWNER_ID = 10L;
-    private static final Long VIEWER_ID = 20L;
+    private static final Long PRESCRIPTION_ID = 100L;
+    // 오늘=2026-08-20
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse("2026-08-20T09:00:00Z"), ZoneOffset.UTC);
 
+    @Mock PrescriptionRepository prescriptionRepository;
     @Mock MembershipRepository membershipRepository;
-    @Mock MedicationShareGrantRepository medicationShareGrantRepository;
-    @Mock UserRepository userRepository;
+    @Mock DrugLookupPort drugLookupPort;
+    @Mock NutrientDepletionPort nutrientDepletionPort;
+    @Mock PrescriptionPeriodPort prescriptionPeriodPort;
 
     private MedicationShareService sut;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
-        sut = new MedicationShareService(membershipRepository, medicationShareGrantRepository, userRepository, FIXED_CLOCK);
+        PrescriptionViewAssembler assembler = new PrescriptionViewAssembler(drugLookupPort, nutrientDepletionPort);
+        sut = new MedicationShareService(
+                prescriptionRepository, membershipRepository, assembler, prescriptionPeriodPort, FIXED_CLOCK);
     }
 
+    // ─── getShareablePrescriptions ──────────────────────────────────────────
+
     @Test
-    @DisplayName("getShareSettings — 비멤버 요청자는 GROUP_ACCESS_DENIED")
-    void getShareSettings_nonMemberOwner_throws() {
+    @DisplayName("getShareablePrescriptions — 비멤버 요청자는 GROUP_ACCESS_DENIED")
+    void getShareablePrescriptions_nonMemberOwner_throws() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(false);
 
-        assertThatThrownBy(() -> sut.getShareSettings(GROUP_ID, OWNER_ID))
+        assertThatThrownBy(() -> sut.getShareablePrescriptions(GROUP_ID, OWNER_ID))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+        then(prescriptionRepository).shouldHaveNoInteractions();
     }
 
     @Test
-    @DisplayName("getShareSettings — 본인 제외 그룹 멤버 목록 + 공유 여부 표기")
-    void getShareSettings_returnsOtherMembersWithSharedFlag() {
+    @DisplayName("getShareablePrescriptions — ONGOING 약봉투만 반환, COMPLETED 는 제외")
+    void getShareablePrescriptions_returnsOnlyOngoing() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
-                Membership.of(GROUP_ID, OWNER_ID, MemberRole.ADMIN, null),
-                Membership.of(GROUP_ID, VIEWER_ID, MemberRole.PATIENT, OWNER_ID)
-        ));
-        given(medicationShareGrantRepository.findByCareGroupIdAndOwnerUserId(GROUP_ID, OWNER_ID))
-                .willReturn(List.of(MedicationShareGrant.of(GROUP_ID, OWNER_ID, VIEWER_ID, FIXED_CLOCK)));
-        given(userRepository.findById(VIEWER_ID)).willReturn(Optional.of(User.dummy("아버지")));
+        Prescription ongoing = prescription(1L, OWNER_ID, GROUP_ID, LocalDate.of(2026, 8, 1), false, "감기약");
+        Prescription completed = prescription(2L, OWNER_ID, GROUP_ID, LocalDate.of(2026, 1, 1), true, "지난약");
+        given(prescriptionRepository.findAllByPatientIdAndCareGroupId(OWNER_ID, GROUP_ID))
+                .willReturn(List.of(ongoing, completed));
+        given(prescriptionPeriodPort.fetchStatsByPrescriptionIds(List.of(1L, 2L))).willReturn(Map.of());
 
-        List<ShareSettingView> result = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        List<ShareablePrescriptionView> result = sut.getShareablePrescriptions(GROUP_ID, OWNER_ID);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).userId()).isEqualTo(VIEWER_ID);
-        assertThat(result.get(0).name()).isEqualTo("아버지");
-        assertThat(result.get(0).role()).isEqualTo("PATIENT");
+        assertThat(result.get(0).prescriptionId()).isEqualTo(1L);
+        assertThat(result.get(0).label()).isEqualTo("감기약");
+        assertThat(result.get(0).status()).isEqualTo(PrescriptionStatus.ONGOING);
+    }
+
+    @Test
+    @DisplayName("getShareablePrescriptions — 각 약봉투의 공유 여부(shared) 그대로 노출")
+    void getShareablePrescriptions_exposesSharedFlag() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        Prescription shared = prescription(1L, OWNER_ID, GROUP_ID, LocalDate.of(2026, 8, 1), true, null);
+        given(prescriptionRepository.findAllByPatientIdAndCareGroupId(OWNER_ID, GROUP_ID))
+                .willReturn(List.of(shared));
+        given(prescriptionPeriodPort.fetchStatsByPrescriptionIds(List.of(1L))).willReturn(Map.of());
+
+        List<ShareablePrescriptionView> result = sut.getShareablePrescriptions(GROUP_ID, OWNER_ID);
+
         assertThat(result.get(0).shared()).isTrue();
     }
 
     @Test
-    @DisplayName("getShareSettings — 공유 안 한 멤버는 shared=false")
-    void getShareSettings_notShared_falseFlag() {
+    @DisplayName("getShareablePrescriptions — 이 그룹 소속 약봉투만 조회(repository 에 groupId 그대로 위임)")
+    void getShareablePrescriptions_queriesOnlyThisGroup() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
-                Membership.of(GROUP_ID, OWNER_ID, MemberRole.ADMIN, null),
-                Membership.of(GROUP_ID, VIEWER_ID, MemberRole.PATIENT, OWNER_ID)
-        ));
-        given(medicationShareGrantRepository.findByCareGroupIdAndOwnerUserId(GROUP_ID, OWNER_ID))
-                .willReturn(List.of());
-        given(userRepository.findById(VIEWER_ID)).willReturn(Optional.of(User.dummy("아버지")));
+        given(prescriptionRepository.findAllByPatientIdAndCareGroupId(OWNER_ID, GROUP_ID)).willReturn(List.of());
 
-        List<ShareSettingView> result = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        sut.getShareablePrescriptions(GROUP_ID, OWNER_ID);
 
-        assertThat(result.get(0).shared()).isFalse();
+        then(prescriptionRepository).should().findAllByPatientIdAndCareGroupId(OWNER_ID, GROUP_ID);
+        then(prescriptionRepository).should(never()).findAllByPatientIdAndCareGroupId(OWNER_ID, OTHER_GROUP_ID);
+    }
+
+    // ─── updatePrescriptionShare ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("updatePrescriptionShare — enabled=true, 소유자 본인+이 그룹 소속 약봉투면 공유 켜고 저장")
+    void updatePrescriptionShare_enable_saves() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        Prescription prescription = prescription(PRESCRIPTION_ID, OWNER_ID, GROUP_ID, LocalDate.of(2026, 8, 1), false, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(java.util.Optional.of(prescription));
+
+        sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, true);
+
+        ArgumentCaptor<Prescription> captor = ArgumentCaptor.forClass(Prescription.class);
+        then(prescriptionRepository).should().save(captor.capture());
+        assertThat(captor.getValue().isSharedWithGroup()).isTrue();
     }
 
     @Test
-    @DisplayName("updateShareSetting — enabled=true, grant 없으면 새로 저장")
-    void updateShareSetting_enableWhenAbsent_saves() {
+    @DisplayName("updatePrescriptionShare — enabled=false, 공유 끄고 저장")
+    void updatePrescriptionShare_disable_saves() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
-        given(medicationShareGrantRepository
-                .findByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
-                .willReturn(Optional.empty());
+        Prescription prescription = prescription(PRESCRIPTION_ID, OWNER_ID, GROUP_ID, LocalDate.of(2026, 8, 1), true, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(java.util.Optional.of(prescription));
 
-        ShareSettingUpdateResponse response = sut.updateShareSetting(GROUP_ID, OWNER_ID, VIEWER_ID, true);
+        sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, false);
 
-        assertThat(response.userId()).isEqualTo(VIEWER_ID);
-        assertThat(response.shared()).isTrue();
-        ArgumentCaptor<MedicationShareGrant> captor = ArgumentCaptor.forClass(MedicationShareGrant.class);
-        then(medicationShareGrantRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getCareGroupId()).isEqualTo(GROUP_ID);
-        assertThat(captor.getValue().getOwnerUserId()).isEqualTo(OWNER_ID);
-        assertThat(captor.getValue().getViewerUserId()).isEqualTo(VIEWER_ID);
+        ArgumentCaptor<Prescription> captor = ArgumentCaptor.forClass(Prescription.class);
+        then(prescriptionRepository).should().save(captor.capture());
+        assertThat(captor.getValue().isSharedWithGroup()).isFalse();
     }
 
     @Test
-    @DisplayName("updateShareSetting — enabled=true, 이미 grant 있으면 멱등(중복 저장 없음)")
-    void updateShareSetting_enableWhenAlreadyGranted_isIdempotent() {
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
-        given(medicationShareGrantRepository
-                .findByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
-                .willReturn(Optional.of(MedicationShareGrant.of(GROUP_ID, OWNER_ID, VIEWER_ID, FIXED_CLOCK)));
-
-        sut.updateShareSetting(GROUP_ID, OWNER_ID, VIEWER_ID, true);
-
-        then(medicationShareGrantRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
-    }
-
-    @Test
-    @DisplayName("updateShareSetting — enabled=false, 요청자 owner 조건으로만 삭제 (남의 grant 삭제 불가 구조)")
-    void updateShareSetting_disable_deletesWithOwnerCondition() {
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
-
-        ShareSettingUpdateResponse response = sut.updateShareSetting(GROUP_ID, OWNER_ID, VIEWER_ID, false);
-
-        assertThat(response.shared()).isFalse();
-        then(medicationShareGrantRepository).should()
-                .deleteByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID);
-    }
-
-    @Test
-    @DisplayName("updateShareSetting — 비멤버 요청자는 GROUP_ACCESS_DENIED, grant 미변경")
-    void updateShareSetting_nonMemberOwner_throws() {
+    @DisplayName("updatePrescriptionShare — 비멤버 요청자는 GROUP_ACCESS_DENIED, 약봉투 조회 자체 미실행")
+    void updatePrescriptionShare_nonMemberOwner_throws() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(false);
 
-        assertThatThrownBy(() -> sut.updateShareSetting(GROUP_ID, OWNER_ID, VIEWER_ID, true))
+        assertThatThrownBy(() -> sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, true))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
+        then(prescriptionRepository).shouldHaveNoInteractions();
     }
 
     @Test
-    @DisplayName("updateShareSetting — 자기 자신을 대상으로 하면 MEDICATION_SHARE_INVALID_TARGET")
-    void updateShareSetting_targetSelf_throws() {
+    @DisplayName("updatePrescriptionShare — 존재하지 않는 약봉투는 PRESCRIPTION_NOT_FOUND")
+    void updatePrescriptionShare_notFound_throws() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> sut.updateShareSetting(GROUP_ID, OWNER_ID, OWNER_ID, true))
+        assertThatThrownBy(() -> sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, true))
                 .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEDICATION_SHARE_INVALID_TARGET);
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRESCRIPTION_NOT_FOUND);
+        then(prescriptionRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
-    @DisplayName("updateShareSetting — viewer 가 그룹 비멤버면 MEDICATION_SHARE_INVALID_TARGET")
-    void updateShareSetting_viewerNotMember_throws() {
+    @DisplayName("updatePrescriptionShare — 남의 약봉투를 토글하려 하면 PATIENT_ACCESS_DENIED, 저장 없음")
+    void updatePrescriptionShare_notOwner_throws() {
+        Long strangerOwnerId = 999L;
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(false);
+        Prescription othersPrescription =
+                prescription(PRESCRIPTION_ID, strangerOwnerId, GROUP_ID, LocalDate.of(2026, 8, 1), false, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(java.util.Optional.of(othersPrescription));
 
-        assertThatThrownBy(() -> sut.updateShareSetting(GROUP_ID, OWNER_ID, VIEWER_ID, true))
+        assertThatThrownBy(() -> sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, true))
                 .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEDICATION_SHARE_INVALID_TARGET);
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
+        then(prescriptionRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
-    @DisplayName("canViewMedicationDetail — 본인이면 조회 없이 true (그룹 무관)")
-    void canViewMedicationDetail_self_true() {
-        boolean result = sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, OWNER_ID);
-
-        assertThat(result).isTrue();
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
-        then(membershipRepository).shouldHaveNoInteractions();
-    }
-
-    @Test
-    @DisplayName("canViewMedicationDetail — 같은 그룹에 grant 존재 + 둘 다 ACTIVE면 true")
-    void canViewMedicationDetail_grantExists_true() {
+    @DisplayName("updatePrescriptionShare — 크로스그룹 차단: 다른 그룹 소속 약봉투를 이 groupId 로 토글 시도하면 PATIENT_ACCESS_DENIED")
+    void updatePrescriptionShare_crossGroupPrescription_throws() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
-        given(medicationShareGrantRepository
-                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
-                .willReturn(true);
+        Prescription otherGroupPrescription =
+                prescription(PRESCRIPTION_ID, OWNER_ID, OTHER_GROUP_ID, LocalDate.of(2026, 8, 1), false, null);
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(java.util.Optional.of(otherGroupPrescription));
 
-        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isTrue();
+        assertThatThrownBy(() -> sut.updatePrescriptionShare(GROUP_ID, OWNER_ID, PRESCRIPTION_ID, true))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
+        then(prescriptionRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
     }
 
-    @Test
-    @DisplayName("canViewMedicationDetail — grant 없으면 false")
-    void canViewMedicationDetail_noGrant_false() {
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
-        given(medicationShareGrantRepository
-                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID))
-                .willReturn(false);
+    // ─── Fixtures ────────────────────────────────────────────────────────────
 
-        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
-    }
-
-    @Test
-    @DisplayName("canViewMedicationDetail — 다른 그룹(grant 는 A그룹에만) 조회는 false (크로스그룹 차단, P1-3)")
-    void canViewMedicationDetail_crossGroup_false() {
-        Long otherGroupId = 2L;
-        given(membershipRepository.existsByCareGroupIdAndUserId(otherGroupId, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(otherGroupId, VIEWER_ID)).willReturn(true);
-        given(medicationShareGrantRepository
-                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(otherGroupId, OWNER_ID, VIEWER_ID))
-                .willReturn(false);
-
-        assertThat(sut.canViewMedicationDetail(otherGroupId, OWNER_ID, VIEWER_ID)).isFalse();
-        then(medicationShareGrantRepository).should(never())
-                .existsByCareGroupIdAndOwnerUserIdAndViewerUserId(GROUP_ID, OWNER_ID, VIEWER_ID);
-    }
-
-    @Test
-    @DisplayName("canViewMedicationDetail — viewer 가 그룹 탈퇴(LEFT) 상태면 grant 존재해도 false (P1-5)")
-    void canViewMedicationDetail_viewerLeftGroup_false() {
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(false);
-
-        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
-    }
-
-    @Test
-    @DisplayName("canViewMedicationDetail — owner 가 그룹 탈퇴(LEFT) 상태면 grant 존재해도 false (P1-5)")
-    void canViewMedicationDetail_ownerLeftGroup_false() {
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(false);
-
-        assertThat(sut.canViewMedicationDetail(GROUP_ID, OWNER_ID, VIEWER_ID)).isFalse();
-        then(medicationShareGrantRepository).shouldHaveNoInteractions();
+    private Prescription prescription(Long id, Long patientId, Long careGroupId,
+                                       LocalDate prescribedAt, boolean sharedWithGroup, String label) {
+        Prescription p = Prescription.create(patientId, "prescriptions/uuid.jpg", prescribedAt, label, null);
+        ReflectionTestUtils.setField(p, "id", id);
+        ReflectionTestUtils.setField(p, "careGroupId", careGroupId);
+        if (sharedWithGroup) {
+            p.shareWithGroup();
+        }
+        return p;
     }
 }

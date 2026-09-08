@@ -18,8 +18,7 @@ import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
-import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
-import com.pillmate.caregroup.application.dto.ShareSettingView;
+import com.pillmate.caregroup.application.dto.ShareablePrescriptionView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
 import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
@@ -135,20 +134,21 @@ public class CareGroupController {
     }
 
     @GetMapping("/{groupId}/share-settings")
-    public ResponseEntity<ApiResponse<List<ShareSettingView>>> getShareSettings(@PathVariable Long groupId) {
+    public ResponseEntity<ApiResponse<List<ShareablePrescriptionView>>> getShareablePrescriptions(
+            @PathVariable Long groupId) {
         Long userId = UserContext.get();
-        return ResponseEntity.ok(ApiResponse.success(medicationShareService.getShareSettings(groupId, userId)));
+        return ResponseEntity.ok(
+                ApiResponse.success(medicationShareService.getShareablePrescriptions(groupId, userId)));
     }
 
-    @PutMapping("/{groupId}/share-settings/{viewerUserId}")
-    public ResponseEntity<ApiResponse<ShareSettingUpdateResponse>> updateShareSetting(
+    @PutMapping("/{groupId}/share-settings/{prescriptionId}")
+    public ResponseEntity<ApiResponse<Void>> updatePrescriptionShare(
             @PathVariable Long groupId,
-            @PathVariable Long viewerUserId,
+            @PathVariable Long prescriptionId,
             @RequestBody @Valid UpdateShareSettingRequest request) {
         Long userId = UserContext.get();
-        ShareSettingUpdateResponse response =
-                medicationShareService.updateShareSetting(groupId, userId, viewerUserId, request.enabled());
-        return ResponseEntity.ok(ApiResponse.success(response));
+        medicationShareService.updatePrescriptionShare(groupId, userId, prescriptionId, request.enabled());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @PostMapping("/{groupId}/members/{userId}/nudge")

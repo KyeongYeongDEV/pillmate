@@ -1,122 +1,87 @@
 package com.pillmate.caregroup.application;
 
-import com.pillmate.caregroup.application.dto.ShareSettingUpdateResponse;
-import com.pillmate.caregroup.application.dto.ShareSettingView;
-import com.pillmate.caregroup.domain.model.MedicationShareGrant;
-import com.pillmate.caregroup.domain.model.Membership;
-import com.pillmate.caregroup.domain.repository.MedicationShareGrantRepository;
+import com.pillmate.caregroup.application.dto.ShareablePrescriptionView;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
-import com.pillmate.user.domain.repository.UserRepository;
+import com.pillmate.prescription.application.PrescriptionViewAssembler;
+import com.pillmate.prescription.application.PrescriptionViewAssembler.PeriodRange;
+import com.pillmate.prescription.application.port.PrescriptionPeriodPort;
+import com.pillmate.prescription.application.port.PrescriptionPeriodPort.PeriodStats;
+import com.pillmate.prescription.domain.model.Prescription;
+import com.pillmate.prescription.domain.model.PrescriptionStatus;
+import com.pillmate.prescription.domain.repository.PrescriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
- * 알약 정보(L2) 공유 권한 판정/설정.
+ * 알약 정보(L2) 공유 설정 — 약봉투(처방전) 단위 그룹 공유 토글.
  * L1(복약 여부)은 CareGroupGuard.requirePatientAccessible 로 별도 공개 — 본 서비스와 무관.
  */
 @Service
 @RequiredArgsConstructor
 public class MedicationShareService {
 
+    private final PrescriptionRepository prescriptionRepository;
     private final MembershipRepository membershipRepository;
-    private final MedicationShareGrantRepository medicationShareGrantRepository;
-    private final UserRepository userRepository;
+    private final PrescriptionViewAssembler assembler;
+    private final PrescriptionPeriodPort prescriptionPeriodPort;
     private final Clock clock;
 
+    // 이 그룹에서 "현재 복용중(ONGOING)"인 내 약봉투 목록 + 각각의 공유 여부.
     @Transactional(readOnly = true)
-    public List<ShareSettingView> getShareSettings(Long groupId, Long ownerUserId) {
+    public List<ShareablePrescriptionView> getShareablePrescriptions(Long groupId, Long ownerUserId) {
         requireActiveMember(groupId, ownerUserId);
-        Set<Long> sharedViewerIds = findSharedViewerIds(groupId, ownerUserId);
-        return otherActiveMembers(groupId, ownerUserId).stream()
-                .map(member -> toShareSettingView(member, sharedViewerIds))
+        List<Prescription> mine = prescriptionRepository.findAllByPatientIdAndCareGroupId(ownerUserId, groupId);
+        Map<Long, PeriodStats> statsMap = prescriptionPeriodPort
+                .fetchStatsByPrescriptionIds(mine.stream().map(Prescription::getId).toList());
+        LocalDate today = LocalDate.now(clock);
+        return mine.stream()
+                .map(p -> toShareableView(p, statsMap.get(p.getId()), today))
+                .filter(v -> v.status() == PrescriptionStatus.ONGOING)
                 .toList();
     }
 
+    // 약봉투 하나의 공유 on/off. 소유자 본인 + 그 약봉투가 정확히 이 groupId 소속인지 반드시 확인
+    // (다른 그룹 약봉투를 이 groupId 로 토글 못 하게, 남의 약봉투를 못 건드리게 — 둘 다 필수 방어).
     @Transactional
-    public ShareSettingUpdateResponse updateShareSetting(
-            Long groupId, Long ownerUserId, Long viewerUserId, boolean enabled) {
+    public void updatePrescriptionShare(Long groupId, Long ownerUserId, Long prescriptionId, boolean enabled) {
         requireActiveMember(groupId, ownerUserId);
-        requireValidViewer(groupId, ownerUserId, viewerUserId);
-
+        Prescription prescription = prescriptionRepository.findById(prescriptionId)
+                .orElseThrow(() -> new PillmateException(ErrorCode.PRESCRIPTION_NOT_FOUND));
+        requireOwnPrescriptionInGroup(prescription, ownerUserId, groupId);
         if (enabled) {
-            grantIfAbsent(groupId, ownerUserId, viewerUserId);
+            prescription.shareWithGroup();
         } else {
-            medicationShareGrantRepository.deleteByCareGroupIdAndOwnerUserIdAndViewerUserId(
-                    groupId, ownerUserId, viewerUserId);
+            prescription.unshareFromGroup();
         }
-        return new ShareSettingUpdateResponse(viewerUserId, enabled);
+        prescriptionRepository.save(prescription);
     }
 
-    /**
-     * L2(알약 정보) 열람 가능 여부 — 본인이거나, 같은 그룹에서 owner 가 viewer 에게
-     * 명시적으로 공유를 허용했고 둘 다 그 그룹의 ACTIVE 멤버인 경우만 true.
-     * 그룹 단위 판정이므로 다른 그룹의 grant 는 적용되지 않는다(크로스그룹 차단).
-     */
-    @Transactional(readOnly = true)
-    public boolean canViewMedicationDetail(Long careGroupId, Long ownerUserId, Long viewerUserId) {
-        if (ownerUserId == null || viewerUserId == null) {
-            return false;
-        }
-        if (ownerUserId.equals(viewerUserId)) {
-            return true;
-        }
-        if (careGroupId == null || !isActiveMember(careGroupId, ownerUserId) || !isActiveMember(careGroupId, viewerUserId)) {
-            return false;
-        }
-        return medicationShareGrantRepository.existsByCareGroupIdAndOwnerUserIdAndViewerUserId(
-                careGroupId, ownerUserId, viewerUserId);
+    private ShareablePrescriptionView toShareableView(Prescription p, PeriodStats stats, LocalDate today) {
+        PeriodRange period = assembler.resolvePeriod(p.getPrescribedAt(), stats);
+        PrescriptionStatus status = assembler.resolveStatus(today, period.end());
+        return new ShareablePrescriptionView(
+                p.getId(), p.getLabel(), p.getPrescribedAt(), p.isSharedWithGroup(), status);
     }
 
-    private boolean isActiveMember(Long careGroupId, Long userId) {
-        return membershipRepository.existsByCareGroupIdAndUserId(careGroupId, userId);
+    private void requireOwnPrescriptionInGroup(Prescription prescription, Long ownerUserId, Long groupId) {
+        boolean isOwner = prescription.getPatientId().equals(ownerUserId);
+        boolean isThisGroup = groupId.equals(prescription.getCareGroupId());
+        if (!isOwner || !isThisGroup) {
+            throw new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED);
+        }
     }
 
     private void requireActiveMember(Long groupId, Long userId) {
         if (!membershipRepository.existsByCareGroupIdAndUserId(groupId, userId)) {
             throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
         }
-    }
-
-    private void requireValidViewer(Long groupId, Long ownerUserId, Long viewerUserId) {
-        if (ownerUserId.equals(viewerUserId) || !membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerUserId)) {
-            throw new PillmateException(ErrorCode.MEDICATION_SHARE_INVALID_TARGET);
-        }
-    }
-
-    private void grantIfAbsent(Long groupId, Long ownerUserId, Long viewerUserId) {
-        boolean alreadyGranted = medicationShareGrantRepository
-                .findByCareGroupIdAndOwnerUserIdAndViewerUserId(groupId, ownerUserId, viewerUserId)
-                .isPresent();
-        if (!alreadyGranted) {
-            medicationShareGrantRepository.save(MedicationShareGrant.of(groupId, ownerUserId, viewerUserId, clock));
-        }
-    }
-
-    private List<Membership> otherActiveMembers(Long groupId, Long ownerUserId) {
-        return membershipRepository.findByCareGroupId(groupId).stream()
-                .filter(member -> !member.getUserId().equals(ownerUserId))
-                .toList();
-    }
-
-    private Set<Long> findSharedViewerIds(Long groupId, Long ownerUserId) {
-        return medicationShareGrantRepository.findByCareGroupIdAndOwnerUserId(groupId, ownerUserId).stream()
-                .map(MedicationShareGrant::getViewerUserId)
-                .collect(Collectors.toSet());
-    }
-
-    private ShareSettingView toShareSettingView(Membership member, Set<Long> sharedViewerIds) {
-        String name = userRepository.findById(member.getUserId())
-                .map(user -> user.getName())
-                .orElse("멤버");
-        return new ShareSettingView(
-                member.getUserId(), name, member.getRole().name(), sharedViewerIds.contains(member.getUserId()));
     }
 }

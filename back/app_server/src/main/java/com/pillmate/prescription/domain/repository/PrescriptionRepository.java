@@ -9,5 +9,6 @@ public interface PrescriptionRepository {
     Prescription save(Prescription prescription);
     Optional<Prescription> findById(Long id);
     List<Prescription> findAllByPatientId(Long patientId);
+    List<Prescription> findAllByPatientIdAndCareGroupId(Long patientId, Long careGroupId);
     Optional<Prescription> findLatestByPatientId(Long patientId);
 }

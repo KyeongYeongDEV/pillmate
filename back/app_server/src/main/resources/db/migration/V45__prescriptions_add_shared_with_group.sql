@@ -1,0 +1,1 @@
+ALTER TABLE prescriptions ADD COLUMN shared_with_group BOOLEAN NOT NULL DEFAULT FALSE;

@@ -1,6 +1,5 @@
 package com.pillmate.notification.application;
 
-import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
@@ -63,7 +62,6 @@ class SendGroupDoseNotificationServiceTest {
     @Mock RecipientCachePort recipientCachePort;
     @Mock com.pillmate.notification.application.port.PrescriptionSummaryPort prescriptionSummaryPort;
     @Mock CareGroupLookupPort careGroupLookupPort;
-    @Mock MedicationShareService medicationShareService;
     @Mock CareGroupGuard careGroupGuard;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
@@ -246,8 +244,7 @@ class SendGroupDoseNotificationServiceTest {
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "저녁약")));
-        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
+                        LocalDate.of(2026, 6, 21), "저녁약", GROUP_ID, true)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -279,8 +276,7 @@ class SendGroupDoseNotificationServiceTest {
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "   ")));
-        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
+                        LocalDate.of(2026, 6, 21), "   ", GROUP_ID, true)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -559,11 +555,11 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(captor.getValue().get(1).token()).isEqualTo("ExponentPushToken[abc]");
     }
 
-    // ─── T-BE-NOTIFICATION-L2-LEAK: 그룹 알림 라벨 L2 게이팅 ──────────────────────
+    // ─── T-BE-NOTIFICATION-L2-LEAK: 그룹 알림 라벨 L2 게이팅 (약봉투 단위 그룹 공유) ──
 
     @Test
-    @DisplayName("L2 공유 권한 없는 수신자 — 처방전 라벨 없는 제네릭 본문(약봉투 이름 유출 차단)")
-    void notify_recipientWithoutGrant_getsGenericBodyWithoutLabel() {
+    @DisplayName("약봉투 공유 꺼짐 — 처방전 라벨 없는 제네릭 본문(약봉투 이름 유출 차단)")
+    void notify_prescriptionNotShared_getsGenericBodyWithoutLabel() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
@@ -578,8 +574,7 @@ class SendGroupDoseNotificationServiceTest {
         given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "우울증약")));
-        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(false);
+                        LocalDate.of(2026, 6, 21), "우울증약", GROUP_ID, false)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -592,10 +587,10 @@ class SendGroupDoseNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("같은 이벤트 — 수신자별 grant 여부에 따라 서로 다른 본문(grant=라벨 포함, no-grant=제네릭)")
-    void notify_mixedGrants_perRecipientDifferentBody() {
-        Long MEMBER_WITH_GRANT = 3L;
-        Long MEMBER_WITHOUT_GRANT = 4L;
+    @DisplayName("약봉투 공유 켜짐 — 그룹 전체 수신자에게 동일하게 라벨 포함 본문(그룹 단위 공유, 수신자별 차등 없음)")
+    void notify_prescriptionShared_allRecipientsSeeLabel() {
+        Long MEMBER_2 = 3L;
+        Long MEMBER_3 = 4L;
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
 
@@ -603,17 +598,15 @@ class SendGroupDoseNotificationServiceTest {
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
         given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
                 membershipOf(GROUP_ID, ACTOR_ID),
-                membershipOf(GROUP_ID, MEMBER_WITH_GRANT),
-                membershipOf(GROUP_ID, MEMBER_WITHOUT_GRANT)));
+                membershipOf(GROUP_ID, MEMBER_2),
+                membershipOf(GROUP_ID, MEMBER_3)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_WITH_GRANT, MEMBER_WITHOUT_GRANT))).willReturn(List.of(
-                memberWithToken(MEMBER_WITH_GRANT, "ExponentPushToken[a]"),
-                memberWithToken(MEMBER_WITHOUT_GRANT, "ExponentPushToken[b]")));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_2, MEMBER_3))).willReturn(List.of(
+                memberWithToken(MEMBER_2, "ExponentPushToken[a]"),
+                memberWithToken(MEMBER_3, "ExponentPushToken[b]")));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "혈압약")));
-        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_WITH_GRANT)).willReturn(true);
-        given(medicationShareService.canViewMedicationDetail(GROUP_ID, ACTOR_ID, MEMBER_WITHOUT_GRANT)).willReturn(false);
+                        LocalDate.of(2026, 6, 21), "혈압약", GROUP_ID, true)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -621,8 +614,32 @@ class SendGroupDoseNotificationServiceTest {
         verify(notificationPersistenceService).saveAll(captor.capture());
         var bodyByRecipient = captor.getValue().stream()
                 .collect(java.util.stream.Collectors.toMap(Notification::getRecipientUserId, Notification::getBody));
-        assertThat(bodyByRecipient.get(MEMBER_WITH_GRANT)).contains("혈압약");
-        assertThat(bodyByRecipient.get(MEMBER_WITHOUT_GRANT)).doesNotContain("혈압약");
+        assertThat(bodyByRecipient.get(MEMBER_2)).contains("혈압약");
+        assertThat(bodyByRecipient.get(MEMBER_3)).contains("혈압약");
+    }
+
+    @Test
+    @DisplayName("크로스그룹 차단 — 약봉투가 이 스케줄의 그룹과 다른 그룹에 공유돼 있으면 라벨 노출 안 함")
+    void notify_prescriptionSharedWithDifferentGroup_hidesLabel() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
+        given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
+                new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
+                        LocalDate.of(2026, 6, 21), "혈압약", 99L, true)));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        assertThat(captor.getValue().get(0).getBody()).doesNotContain("혈압약");
     }
 
     // ─── T-BE-NOTIFICATION-L2-LEAK: notify-group IDOR (sendForCaller) ────────────
