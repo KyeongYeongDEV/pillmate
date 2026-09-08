@@ -140,9 +140,8 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
           const isMe = member.userId === currentUserId;
           if (isMe) {
             return (
-              <View key={member.userId} style={styles.legendItem}>
+              <View key={member.userId} style={styles.legendItem} accessibilityLabel={`${member.name} (나)`}>
                 <View testID={`member-swatch-${member.userId}`} style={[styles.legendSwatch, { backgroundColor: swatch }]} />
-                <Text style={styles.legendText}>{member.name} (나)</Text>
               </View>
             );
           }
@@ -155,7 +154,6 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
               accessibilityRole="button"
             >
               <View testID={`member-swatch-${member.userId}`} style={[styles.legendSwatch, { backgroundColor: swatch }]} />
-              <Text style={styles.legendText}>{member.name}</Text>
             </Pressable>
           );
         })}
@@ -249,7 +247,6 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendSwatch: { width: scale(10), height: scale(10), borderRadius: scale(5) },
-  legendText: { fontSize: scale(12), color: colors.labelAlternative },
   noticeBox: {
     padding: space.s20, borderRadius: radius.r16,
     backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.line,

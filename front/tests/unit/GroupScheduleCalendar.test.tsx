@@ -44,6 +44,13 @@ describe('GroupScheduleCalendar', () => {
     expect(swatchColor(7)).not.toBe(swatchColor(2));
   });
 
+  it('범례에는 색상 스와치만 있고 구성원 이름 텍스트는 표시하지 않는다', async () => {
+    render(<GroupScheduleCalendar groupId={3} members={MEMBERS} />);
+    await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
+    expect(screen.queryByText('박순자')).toBeNull();
+    expect(screen.queryByText('김보호')).toBeNull();
+  });
+
   it('다음 달 버튼을 누르면 다음 month 로 쿼리한다', async () => {
     render(<GroupScheduleCalendar groupId={3} members={MEMBERS} />);
     await waitFor(() => expect(mockGetCurrentUserId).toHaveBeenCalled());
