@@ -90,7 +90,8 @@ class RegisterPrescriptionWithScheduleTest {
         assertThat(sent.patientId()).isEqualTo(2L);
         assertThat(sent.requesterId()).isEqualTo(2L);
         assertThat(sent.startDate()).isEqualTo(PRESCRIBED_AT);
-        assertThat(sent.endDate()).isEqualTo(PRESCRIBED_AT.plusDays(6));
+        // endDate 미지정(무기한) → durationDays(OCR 추정치)와 무관하게 1년 상한 적용
+        assertThat(sent.endDate()).isEqualTo(PRESCRIBED_AT.plusDays(364));
         assertThat(sent.slots()).hasSize(1);
         assertThat(response.createdSchedules()).hasSize(1);
     }
@@ -180,9 +181,13 @@ class RegisterPrescriptionWithScheduleTest {
         assertThat(response.createdSchedules()).hasSize(1);
     }
 
+    // FE 는 사용자가 "무기한"을 선택했을 때만 endDate 를 비워 보낸다(review.tsx handleDurationChange).
+    // durationDays(OCR 추정치)는 이 분기와 무관 — 무기한 선택 자체가 유일한 트리거이므로 값을 바꿔가며
+    // 검증할 의미가 없다(구 버전엔 OCR durationDays 기반 추정 로직이 있었으나 "무기한이 실제로는
+    // 며칠만 등록된다"는 버그의 원인이라 제거, 대신 고정 1년으로 등록).
     @Test
-    @DisplayName("기간 미지정 + durationDays 미상 → endDate = 처방일 + 29일 (30일 기본)")
-    void register_whenPeriodAndDurationUnknown_defaultsTo30Days() {
+    @DisplayName("기간 미지정(무기한 선택) → endDate = 처방일 + 364일 (1년)")
+    void register_whenPeriodUnspecified_defaultsToOneYear() {
         // given
         given(drugLookupPort.findByKdCode("KD-001"))
                 .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", null)));
@@ -196,44 +201,8 @@ class RegisterPrescriptionWithScheduleTest {
         ArgumentCaptor<CreateScheduleCommand> captor = ArgumentCaptor.forClass(CreateScheduleCommand.class);
         verify(schedulingPort).createForPrescription(captor.capture());
         assertThat(captor.getValue().startDate()).isEqualTo(PRESCRIBED_AT);
-        assertThat(captor.getValue().endDate()).isEqualTo(PRESCRIBED_AT.plusDays(29));
+        assertThat(captor.getValue().endDate()).isEqualTo(PRESCRIBED_AT.plusDays(364));
         assertThat(captor.getValue().slots()).isNull();
-    }
-
-    @Test
-    @DisplayName("음수 durationDays → 양수 가드로 무시, DEFAULT 30일 적용")
-    void register_whenNegativeDurationDays_usesDefault30Days() {
-        // given
-        given(drugLookupPort.findByKdCode("KD-001"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", null)));
-        given(schedulingPort.createForPrescription(any())).willReturn(List.of());
-        ScheduleSpec spec = new ScheduleSpec(1L, null, null, null);
-
-        // when
-        sut.register(command(spec, -5));
-
-        // then
-        ArgumentCaptor<CreateScheduleCommand> captor = ArgumentCaptor.forClass(CreateScheduleCommand.class);
-        verify(schedulingPort).createForPrescription(captor.capture());
-        assertThat(captor.getValue().endDate()).isEqualTo(PRESCRIBED_AT.plusDays(29));
-    }
-
-    @Test
-    @DisplayName("durationDays = 0 → 양수 가드로 무시, DEFAULT 30일 적용")
-    void register_whenZeroDurationDays_usesDefault30Days() {
-        // given
-        given(drugLookupPort.findByKdCode("KD-001"))
-                .willReturn(Optional.of(new DrugLookupPort.DrugSummary(101L, "KD-001", "타이레놀", null)));
-        given(schedulingPort.createForPrescription(any())).willReturn(List.of());
-        ScheduleSpec spec = new ScheduleSpec(1L, null, null, null);
-
-        // when
-        sut.register(command(spec, 0));
-
-        // then
-        ArgumentCaptor<CreateScheduleCommand> captor = ArgumentCaptor.forClass(CreateScheduleCommand.class);
-        verify(schedulingPort).createForPrescription(captor.capture());
-        assertThat(captor.getValue().endDate()).isEqualTo(PRESCRIBED_AT.plusDays(29));
     }
 
     private RegisterPrescriptionCommand command(ScheduleSpec spec, Integer durationDays) {

@@ -42,7 +42,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RegisterPrescriptionService {
 
-    private static final int DEFAULT_MEDICATION_DAYS = 30;
+    // UpdatePrescriptionPeriodService.MAX_DAYS_AHEAD 와 동일 정책(진짜 무기한 대신 1년 상한).
+    private static final int INDEFINITE_DURATION_DAYS = 365;
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final PrescriptionRepository prescriptionRepository;
@@ -114,9 +115,11 @@ public class RegisterPrescriptionService {
             return List.of();
         }
         LocalDate startDate = spec.startDate() != null ? spec.startDate() : command.prescribedAt();
+        // endDate 없음 = 사용자가 "무기한" 선택(review.tsx handleDurationChange 참조) — 실제로
+        // 끝없는 스케줄(end_date IS NULL)은 기간 수정 등 다른 기능이 지원하지 않으므로 1년으로 등록.
         LocalDate endDate = spec.endDate() != null
                 ? spec.endDate()
-                : startDate.plusDays(medicationDays(command.items()) - 1);
+                : startDate.plusDays(INDEFINITE_DURATION_DAYS - 1);
         return schedulingPort.createForPrescription(new SchedulingPort.CreateScheduleCommand(
                 spec.careGroupId(), command.patientId(), prescriptionId, command.patientId(),
                 toSlotInputs(spec.slots()), startDate, endDate));
@@ -129,14 +132,6 @@ public class RegisterPrescriptionService {
         return slots.stream()
                 .map(slot -> new SchedulingPort.SlotInput(slot.timeOfDay(), slot.customTime()))
                 .toList();
-    }
-
-    private int medicationDays(List<DrugItem> items) {
-        return items.stream()
-                .map(DrugItem::durationDays)
-                .filter(d -> d != null && d > 0)
-                .max(Integer::compareTo)
-                .orElse(DEFAULT_MEDICATION_DAYS);
     }
 
     private void requireNonEmptyItems(List<DrugItem> items) {
