@@ -43,17 +43,17 @@ describe('DurationField', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('무기한 토글 시 null 전송', () => {
+  it('1년 토글 시 null 전송', () => {
     const onChange = jest.fn();
     render(<DurationField valueDays={7} onChange={onChange} />);
-    fireEvent.press(screen.getByLabelText('무기한'));
+    fireEvent.press(screen.getByLabelText('1년'));
     expect(onChange).toHaveBeenCalledWith(null);
   });
 
-  it('무기한 상태에서 토글 해제 시 최소 1일', () => {
+  it('1년 상태에서 토글 해제 시 최소 1일', () => {
     const onChange = jest.fn();
     render(<DurationField valueDays={null} onChange={onChange} />);
-    fireEvent.press(screen.getByLabelText('무기한'));
+    fireEvent.press(screen.getByLabelText('1년'));
     expect(onChange).toHaveBeenCalledWith(1);
   });
 

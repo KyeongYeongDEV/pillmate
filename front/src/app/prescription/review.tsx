@@ -355,7 +355,7 @@ export default function PrescriptionReviewScreen() {
             <Text style={styles.dateRangeValue}>{startDate || prescribedAt || '—'}</Text>
             <Text style={styles.dateRangeSep}>→</Text>
             <Text style={styles.dateRangeLabel}>종료</Text>
-            <Text style={styles.dateRangeValue}>{endDate || '무기한'}</Text>
+            <Text style={styles.dateRangeValue}>{endDate || '1년'}</Text>
           </View>
           <DurationField valueDays={durationDays} onChange={handleDurationChange} />
         </View>

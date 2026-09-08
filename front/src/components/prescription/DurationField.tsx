@@ -56,12 +56,12 @@ function DurationField({ valueDays, onChange }: Props) {
           onPress={toggleIndefinite}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: indefinite }}
-          accessibilityLabel="무기한"
+          accessibilityLabel="1년"
         >
           <View style={[styles.checkboxBox, indefinite && styles.checkboxBoxOn]}>
             {indefinite && <Feather name="check" size={scale(13)} color={colors.staticWhite} />}
           </View>
-          <Text style={styles.checkboxLabel}>무기한</Text>
+          <Text style={styles.checkboxLabel}>1년</Text>
         </Pressable>
       </View>
 
