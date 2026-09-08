@@ -29,7 +29,10 @@ const makeProps = (activeRouteName = 'home') => ({
     history: [],
   } as any,
   descriptors: {} as any,
-  navigation: { navigate: jest.fn() } as any,
+  navigation: {
+    navigate: jest.fn(),
+    emit: jest.fn(() => ({ defaultPrevented: false })),
+  } as any,
   insets: { bottom: 34, top: 0, left: 0, right: 0 },
 });
 
@@ -68,6 +71,43 @@ describe('CustomTabBar', () => {
     const props = makeProps('home');
     render(<CustomTabBar {...props} />);
     fireEvent.press(screen.getByLabelText('홈'));
+    await Promise.resolve();
+    expect(props.navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  // Tabs.Screen 의 listeners.tabPress 는 탭바가 tabPress 를 emit 해야만 실행된다.
+  // 이게 빠져서 그룹 탭이 목록으로 reset 되지 않고 상세 화면이 복원되던 회귀를 막는다.
+  it('탭을 누르면 해당 route.key 로 tabPress 를 emit 한다', async () => {
+    const props = makeProps('home');
+    render(<CustomTabBar {...props} />);
+    fireEvent.press(screen.getByLabelText('그룹'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(props.navigation.emit).toHaveBeenCalledWith({
+      type: 'tabPress',
+      target: 'group-4',
+      canPreventDefault: true,
+    });
+  });
+
+  it('활성 탭(그룹)을 다시 눌러도 tabPress 는 emit 된다 (목록으로 reset 되도록)', async () => {
+    const props = makeProps('group');
+    render(<CustomTabBar {...props} />);
+    fireEvent.press(screen.getByLabelText('그룹'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(props.navigation.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'tabPress', target: 'group-4' }),
+    );
+    expect(props.navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('리스너가 defaultPrevented 하면 navigate 하지 않는다', async () => {
+    const props = makeProps('home');
+    (props.navigation.emit as jest.Mock).mockReturnValue({ defaultPrevented: true });
+    render(<CustomTabBar {...props} />);
+    fireEvent.press(screen.getByLabelText('복약'));
+    await Promise.resolve();
     await Promise.resolve();
     expect(props.navigation.navigate).not.toHaveBeenCalled();
   });

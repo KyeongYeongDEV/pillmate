@@ -32,13 +32,17 @@ function TabIcon({ name, focused, label }: TabIconProps) {
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
-  const handleTabPress = useCallback(async (routeName: string, isFocused: boolean) => {
+  // 커스텀 탭바는 tabPress 를 직접 emit 해야 Tabs.Screen 의 listeners.tabPress 가 동작한다.
+  // 이게 빠져 있어서 그룹 탭의 "목록으로 reset" 리스너가 안 먹고, 탭을 누르면
+  // 스택에 남아있던 특정 그룹 상세가 그대로 복원되고 있었다.
+  const handleTabPress = useCallback(async (routeName: string, routeKey: string, isFocused: boolean) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (routeName === REGISTER_ROUTE_NAME) {
       router.push(PRESCRIPTION_LIST_PATH as any);
       return;
     }
-    if (!isFocused) navigation.navigate(routeName);
+    const event = navigation.emit({ type: 'tabPress', target: routeKey, canPreventDefault: true });
+    if (!isFocused && !event.defaultPrevented) navigation.navigate(routeName);
   }, [navigation]);
 
   const isFocused = (routeName: string) => state.routes[state.index]?.name === routeName;
@@ -54,7 +58,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={route.key}
               style={styles.tabButton}
-              onPress={() => handleTabPress(route.name, focused)}
+              onPress={() => handleTabPress(route.name, route.key, focused)}
               accessibilityLabel={tabDef.label}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
