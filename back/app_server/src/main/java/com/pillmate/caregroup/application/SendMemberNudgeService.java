@@ -15,12 +15,12 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * 그룹 멤버 카드에서 특정 멤버를 바로 재촉 — 특정 dose 를 고르지 않고, 그 멤버의 이 그룹 소속
- * 스케줄 중 가장 오래 놓친(scheduledAt 가장 이른) PENDING dose 를 찾아
- * {@link SendDoseNudgeService} 에 위임한다. 쿨다운·당사자 캡·L2 무관 발송 로직은
- * SendDoseNudgeService 를 그대로 재사용하고 여기서 재구현하지 않는다.
+ * 그룹 멤버 카드에서 특정 멤버를 바로 재촉 — 그 멤버의 이 그룹 소속 스케줄 중 가장 오래 놓친
+ * (scheduledAt 가장 이른) PENDING dose 가 있으면 그 dose 에 묶어 알리고, 없으면 스케줄과
+ * 무관한 일반 알림으로 폴백한다. {@link SendDoseNudgeService} 에 위임하고 여기서 재구현하지 않는다.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,15 +36,15 @@ public class SendMemberNudgeService {
         requireActiveMember(groupId, callerUserId);
         requireValidTarget(groupId, targetUserId, callerUserId);
 
-        DoseLog overdue = findEarliestOverduePending(groupId, targetUserId);
-        return sendDoseNudgeService.nudge(overdue.getId(), callerUserId);
+        return findEarliestOverduePending(groupId, targetUserId)
+                .map(overdue -> sendDoseNudgeService.nudge(overdue.getId(), callerUserId))
+                .orElseGet(() -> sendDoseNudgeService.nudgeGeneral(groupId, targetUserId, callerUserId));
     }
 
-    private DoseLog findEarliestOverduePending(Long groupId, Long targetUserId) {
+    private Optional<DoseLog> findEarliestOverduePending(Long groupId, Long targetUserId) {
         List<Long> scheduleIds = scheduleIdsInGroup(groupId, targetUserId);
         return doseLogRepository
-                .findEarliestOverduePendingByScheduleIds(targetUserId, scheduleIds, Instant.now(clock))
-                .orElseThrow(() -> new PillmateException(ErrorCode.NUDGE_NO_OVERDUE_DOSE));
+                .findEarliestOverduePendingByScheduleIds(targetUserId, scheduleIds, Instant.now(clock));
     }
 
     private List<Long> scheduleIdsInGroup(Long groupId, Long targetUserId) {

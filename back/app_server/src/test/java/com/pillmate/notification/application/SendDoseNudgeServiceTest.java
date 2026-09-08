@@ -168,6 +168,75 @@ class SendDoseNudgeServiceTest {
         verify(notificationSenderPort, never()).sendAll(anyList());
     }
 
+    @Test
+    @DisplayName("nudgeGeneral — 그룹 접근 가능 + 쿨다운·캡 통과 → doseLogId null 로 발송")
+    void nudgeGeneral_whenValid_sendsWithNullDoseLogId() {
+        User fromUser = userOf(FROM_USER_ID, "김철수");
+        User recipient = patientWithToken("ExponentPushToken[patient]");
+
+        given(nudgeCooldownPort.tryAcquireGeneral(PATIENT_ID, FROM_USER_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(userRepository.findById(FROM_USER_ID)).willReturn(Optional.of(fromUser));
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(recipient));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
+
+        NudgeResponse response = sut.nudgeGeneral(GROUP_ID, PATIENT_ID, FROM_USER_ID);
+
+        assertThat(response.alreadyNotified()).isFalse();
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        Notification saved = captor.getValue().get(0);
+        assertThat(saved.getRecipientUserId()).isEqualTo(PATIENT_ID);
+        assertThat(saved.getActorUserId()).isEqualTo(FROM_USER_ID);
+        assertThat(saved.getDoseLogId()).isNull();
+        verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
+    }
+
+    @Test
+    @DisplayName("nudgeGeneral — 그룹 접근 불가 → 예외 전파, 알림 생성/발송 없음")
+    void nudgeGeneral_whenGroupNotAccessible_propagatesAndSendsNothing() {
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(careGroupGuard).requireAccessible(GROUP_ID);
+
+        assertThatThrownBy(() -> sut.nudgeGeneral(GROUP_ID, PATIENT_ID, FROM_USER_ID))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
+
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).sendAll(anyList());
+    }
+
+    @Test
+    @DisplayName("nudgeGeneral — 쿨다운 중 → NUDGE_COOLDOWN_ACTIVE (429)")
+    void nudgeGeneral_whenCooldownActive_throwsCooldownActive() {
+        given(nudgeCooldownPort.tryAcquireGeneral(PATIENT_ID, FROM_USER_ID, Duration.ofMinutes(5)))
+                .willReturn(false);
+
+        assertThatThrownBy(() -> sut.nudgeGeneral(GROUP_ID, PATIENT_ID, FROM_USER_ID))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NUDGE_COOLDOWN_ACTIVE);
+
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("nudgeGeneral — 수신자 캡 소진 → FCM 미발송 + alreadyNotified=true")
+    void nudgeGeneral_whenRecipientCapExhausted_skipsFcmAndReturnsAlreadyNotified() {
+        given(nudgeCooldownPort.tryAcquireGeneral(PATIENT_ID, FROM_USER_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
+                .willReturn(false);
+
+        NudgeResponse response = sut.nudgeGeneral(GROUP_ID, PATIENT_ID, FROM_USER_ID);
+
+        assertThat(response.alreadyNotified()).isTrue();
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).sendAll(anyList());
+    }
+
     private User userOf(Long id, String name) {
         User user = User.dummy(name);
         ReflectionTestUtils.setField(user, "id", id);

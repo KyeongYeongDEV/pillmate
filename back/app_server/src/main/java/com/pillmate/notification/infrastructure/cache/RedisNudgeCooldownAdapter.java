@@ -14,6 +14,7 @@ public class RedisNudgeCooldownAdapter implements NudgeCooldownPort {
 
     private static final String KEY_PREFIX = "nudge:";
     private static final String RECIPIENT_CAP_KEY_PREFIX = "nudge-recipient:";
+    private static final String GENERAL_KEY_PREFIX = "nudge-general:";
 
     private final StringRedisTemplate redisTemplate;
 
@@ -29,11 +30,21 @@ public class RedisNudgeCooldownAdapter implements NudgeCooldownPort {
         return Boolean.TRUE.equals(acquired);
     }
 
+    @Override
+    public boolean tryAcquireGeneral(Long recipientUserId, Long fromUserId, Duration ttl) {
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(generalKey(recipientUserId, fromUserId), "1", ttl);
+        return Boolean.TRUE.equals(acquired);
+    }
+
     private String key(Long doseLogId, Long fromUserId) {
         return KEY_PREFIX + doseLogId + ":" + fromUserId;
     }
 
     private String recipientCapKey(Long patientId) {
         return RECIPIENT_CAP_KEY_PREFIX + patientId;
+    }
+
+    private String generalKey(Long recipientUserId, Long fromUserId) {
+        return GENERAL_KEY_PREFIX + recipientUserId + ":" + fromUserId;
     }
 }

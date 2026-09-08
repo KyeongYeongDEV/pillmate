@@ -28,9 +28,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @DisplayName("SendMemberNudgeService — 그룹 멤버 카드에서 특정 멤버 바로 재촉")
 @ExtendWith(MockitoExtension.class)
@@ -97,8 +99,8 @@ class SendMemberNudgeServiceTest {
     }
 
     @Test
-    @DisplayName("놓친(overdue) PENDING dose 없음 — NUDGE_NO_OVERDUE_DOSE (409)")
-    void nudge_whenNoOverduePending_throwsNoOverdueDose() {
+    @DisplayName("놓친(overdue) PENDING dose 없음 — 스케줄 무관 일반 넛지로 폴백")
+    void nudge_whenNoOverduePending_fallsBackToGeneralNudge() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, CALLER_ID)).willReturn(true);
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, TARGET_ID)).willReturn(true);
         given(scheduleRepository.findAllByPatientId(TARGET_ID))
@@ -106,29 +108,32 @@ class SendMemberNudgeServiceTest {
         given(doseLogRepository.findEarliestOverduePendingByScheduleIds(
                 eq(TARGET_ID), anyCollection(), eq(FIXED_NOW)))
                 .willReturn(Optional.empty());
+        given(sendDoseNudgeService.nudgeGeneral(GROUP_ID, TARGET_ID, CALLER_ID))
+                .willReturn(new NudgeResponse(false));
 
-        assertThatThrownBy(() -> sut.nudge(GROUP_ID, TARGET_ID, CALLER_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NUDGE_NO_OVERDUE_DOSE);
+        NudgeResponse response = sut.nudge(GROUP_ID, TARGET_ID, CALLER_ID);
 
-        then(sendDoseNudgeService).shouldHaveNoInteractions();
+        assertThat(response.alreadyNotified()).isFalse();
+        then(sendDoseNudgeService).should().nudgeGeneral(GROUP_ID, TARGET_ID, CALLER_ID);
+        then(sendDoseNudgeService).should(never()).nudge(anyLong(), anyLong());
     }
 
     @Test
-    @DisplayName("대상이 이 그룹 소속 스케줄이 전혀 없음(다른 그룹 스케줄만 있음) — 빈 scheduleIds 로 조회 후 NUDGE_NO_OVERDUE_DOSE")
-    void nudge_whenTargetHasNoScheduleInThisGroup_throwsNoOverdueDose() {
+    @DisplayName("대상이 이 그룹 소속 스케줄이 전혀 없음(다른 그룹 스케줄만 있음) — 빈 scheduleIds 로 조회 후 일반 넛지로 폴백")
+    void nudge_whenTargetHasNoScheduleInThisGroup_fallsBackToGeneralNudge() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, CALLER_ID)).willReturn(true);
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, TARGET_ID)).willReturn(true);
         given(scheduleRepository.findAllByPatientId(TARGET_ID))
                 .willReturn(List.of(scheduleOf(SCHEDULE_ID_IN_OTHER_GROUP, OTHER_GROUP_ID)));
         given(doseLogRepository.findEarliestOverduePendingByScheduleIds(eq(TARGET_ID), eq(List.of()), eq(FIXED_NOW)))
                 .willReturn(Optional.empty());
+        given(sendDoseNudgeService.nudgeGeneral(GROUP_ID, TARGET_ID, CALLER_ID))
+                .willReturn(new NudgeResponse(false));
 
-        assertThatThrownBy(() -> sut.nudge(GROUP_ID, TARGET_ID, CALLER_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NUDGE_NO_OVERDUE_DOSE);
+        NudgeResponse response = sut.nudge(GROUP_ID, TARGET_ID, CALLER_ID);
 
-        then(sendDoseNudgeService).shouldHaveNoInteractions();
+        assertThat(response.alreadyNotified()).isFalse();
+        then(sendDoseNudgeService).should().nudgeGeneral(GROUP_ID, TARGET_ID, CALLER_ID);
     }
 
     @Test

@@ -9,4 +9,7 @@ public interface NudgeCooldownPort {
 
     // 당사자(수신자) 단위 총량 캡 — true = 이 TTL 동안 첫 발송(FCM 진행) / false = 이미 다른 발신자·dose 로 알림 받음(FCM 생략)
     boolean acquireRecipientCap(Long patientId, Duration ttl);
+
+    // 일반(비-dose) 넛지 쿨다운 — recipientUserId+fromUserId 쌍 당 TTL 동안 재요청 차단.
+    boolean tryAcquireGeneral(Long recipientUserId, Long fromUserId, Duration ttl);
 }

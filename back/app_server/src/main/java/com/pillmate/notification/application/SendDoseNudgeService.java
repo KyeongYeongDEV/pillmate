@@ -62,6 +62,29 @@ public class SendDoseNudgeService {
         return new NudgeResponse(false);
     }
 
+    // 스케줄과 무관한 일반 넛지 — 놓친(overdue) dose 가 없어도 "약 챙기라고 알려드려요" 를 보낸다.
+    public NudgeResponse nudgeGeneral(Long groupId, Long recipientUserId, Long fromUserId) {
+        careGroupGuard.requireAccessible(groupId);
+        requireGeneralCooldownAvailable(recipientUserId, fromUserId);
+
+        if (!nudgeCooldownPort.acquireRecipientCap(recipientUserId, COOLDOWN)) {
+            return new NudgeResponse(true);
+        }
+
+        Notification notification = Notification.doseNudge(
+                recipientUserId, fromUserId, groupId, null, resolveActorName(fromUserId));
+        Notification saved = notificationPersistenceService.saveAll(List.of(notification)).get(0);
+        List<Long> sentIds = notificationSenderPort.sendAll(List.of(toCommand(saved)));
+        markSentAll(sentIds);
+        return new NudgeResponse(false);
+    }
+
+    private void requireGeneralCooldownAvailable(Long recipientUserId, Long fromUserId) {
+        if (!nudgeCooldownPort.tryAcquireGeneral(recipientUserId, fromUserId, COOLDOWN)) {
+            throw new PillmateException(ErrorCode.NUDGE_COOLDOWN_ACTIVE);
+        }
+    }
+
     private void requirePending(DoseLog doseLog) {
         if (doseLog.getStatus() != DoseStatus.PENDING) {
             throw new PillmateException(ErrorCode.DOSE_LOG_ALREADY_CHECKED);
