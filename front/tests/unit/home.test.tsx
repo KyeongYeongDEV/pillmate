@@ -15,18 +15,22 @@ jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 
 jest.mock('@/store/hooks', () => ({ useAppSelector: () => ({}) }));
 
+const mockRefetchFeed = jest.fn().mockResolvedValue(undefined);
+const mockRefetchInsights = jest.fn().mockResolvedValue(undefined);
+const mockRefetchSchedule = jest.fn().mockResolvedValue(undefined);
+
 jest.mock('@/store/slices/activityApi', () => ({
-  useGetRecentActivityQuery: () => ({ data: [], isLoading: false, isError: false }),
+  useGetRecentActivityQuery: () => ({ data: [], isLoading: false, isError: false, refetch: mockRefetchFeed }),
 }));
 
 jest.mock('@/store/slices/caregroupApi', () => ({ useGetMyGroupsQuery: jest.fn() }));
 
 jest.mock('@/store/slices/prescriptionApi', () => ({
-  useGetActiveWithInsightsQuery: () => ({ data: [] }),
+  useGetActiveWithInsightsQuery: () => ({ data: [], refetch: mockRefetchInsights }),
 }));
 
 jest.mock('@/store/slices/scheduleApi', () => ({
-  useGetDayScheduleQuery: () => ({ data: { slots: [] } }),
+  useGetDayScheduleQuery: () => ({ data: { slots: [] }, refetch: mockRefetchSchedule }),
 }));
 
 jest.mock('@/hooks/useSlotPress', () => ({ useSlotPress: () => jest.fn() }));
@@ -41,9 +45,13 @@ jest.mock('@/components/home/NotificationBell', () => () => null);
 const mockGroups = useGetMyGroupsQuery as jest.Mock;
 
 // selectFromResult 옵션을 실제로 실행해 컴포넌트의 파생 로직까지 검증
+const mockRefetchGroups = jest.fn().mockResolvedValue(undefined);
+
 function mockGroupsData(groups: Array<{ groupId: number; pinned: boolean }>) {
-  mockGroups.mockImplementation((_arg: unknown, options?: { selectFromResult?: (r: { data: typeof groups }) => unknown }) =>
-    options?.selectFromResult ? options.selectFromResult({ data: groups }) : { data: groups });
+  mockGroups.mockImplementation((_arg: unknown, options?: { selectFromResult?: (r: { data: typeof groups }) => object }) => ({
+    ...(options?.selectFromResult ? options.selectFromResult({ data: groups }) : { data: groups }),
+    refetch: mockRefetchGroups,
+  }));
 }
 
 describe('HomeScreen 고정 그룹 알림 헤더 링크', () => {
@@ -67,5 +75,27 @@ describe('HomeScreen 고정 그룹 알림 헤더 링크', () => {
     mockGroupsData([{ groupId: 7, pinned: false }]);
     render(<HomeScreen />);
     expect(screen.queryByLabelText('알림 보러가기')).toBeNull();
+  });
+});
+
+describe('HomeScreen 아래로 당겨서 새로고침', () => {
+  beforeEach(() => {
+    mockRefetchGroups.mockClear();
+    mockRefetchFeed.mockClear();
+    mockRefetchInsights.mockClear();
+    mockRefetchSchedule.mockClear();
+  });
+
+  it('당겨서 새로고침하면 오늘 일정·그룹·인사이트·활동 피드를 모두 재조회한다', async () => {
+    mockGroupsData([{ groupId: 7, pinned: true }]);
+    render(<HomeScreen />);
+
+    const scrollView = screen.UNSAFE_getByType(require('react-native').ScrollView);
+    await scrollView.props.refreshControl.props.onRefresh();
+
+    expect(mockRefetchSchedule).toHaveBeenCalledTimes(1);
+    expect(mockRefetchGroups).toHaveBeenCalledTimes(1);
+    expect(mockRefetchInsights).toHaveBeenCalledTimes(1);
+    expect(mockRefetchFeed).toHaveBeenCalledTimes(1);
   });
 });

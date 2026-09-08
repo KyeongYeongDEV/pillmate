@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Pressable,
+  View, Text, ScrollView, StyleSheet, Pressable, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -41,12 +41,12 @@ export default function HomeScreen() {
   const handleSettingsPress = useMemo(() => () => router.push('/(tabs)/my' as any), []);
   const pressSlot = useSlotPress();
 
-  const { pinnedGroupId } = useGetMyGroupsQuery(undefined, {
+  const { pinnedGroupId, refetch: refetchGroups } = useGetMyGroupsQuery(undefined, {
     selectFromResult: ({ data }) => ({ pinnedGroupId: data?.find(g => g.pinned)?.groupId }),
     refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
   });
 
-  const { data: feed = [], isLoading: feedLoading, isError: feedError } =
+  const { data: feed = [], isLoading: feedLoading, isError: feedError, refetch: refetchFeed } =
     useGetRecentActivityQuery(
       pinnedGroupId != null ? { groupId: pinnedGroupId, limit: 10 } : skipToken,
       {
@@ -56,7 +56,7 @@ export default function HomeScreen() {
       },
     );
 
-  const { data: insightList = [] } = useGetActiveWithInsightsQuery(undefined, {
+  const { data: insightList = [], refetch: refetchInsights } = useGetActiveWithInsightsQuery(undefined, {
     refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
   });
   const rotateIndex = useRotatingIndex(insightList.length, INSIGHT_ROTATE_INTERVAL_MS);
@@ -66,6 +66,23 @@ export default function HomeScreen() {
   const {
     data: scheduleDay, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule,
   } = useGetDayScheduleQuery(today, { refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC });
+
+  const [refreshing, setRefreshing] = useState(false);
+  // pinnedGroupId 가 없으면 feed 쿼리가 skipToken 상태라 refetch 가 무의미(호출은 안전하지만
+  // 결과가 없음) — 개별 실패가 나머지 새로고침을 막지 않도록 각각 catch.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchSchedule().catch(() => {}),
+        refetchGroups().catch(() => {}),
+        refetchInsights().catch(() => {}),
+        refetchFeed().catch(() => {}),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchSchedule, refetchGroups, refetchInsights, refetchFeed]);
   // fulfilled 이전(로딩·에러)에는 "없어요" 확정 문구를 절대 띄우지 않는다 — 오프라인/첫실행에 오늘 복약 스킵 유도 위험(의료 P0).
   const scheduleReady = scheduleDay !== undefined;
   const rawSlots = scheduleDay?.slots ?? [];
@@ -150,6 +167,7 @@ export default function HomeScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryBase} />}
       >
         <PushPermissionBanner />
 
