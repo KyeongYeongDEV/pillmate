@@ -37,4 +37,9 @@ public class CareGroup {
         g.updatedAt = Instant.now();
         return g;
     }
+
+    public void rename(String newName) {
+        this.name = newName;
+        this.updatedAt = Instant.now();
+    }
 }

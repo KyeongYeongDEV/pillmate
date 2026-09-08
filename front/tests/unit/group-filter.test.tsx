@@ -3,25 +3,25 @@ import { applyGroupFilter } from '@/lib/groupFilter';
 
 const G_PATIENT: MyGroupSummary = {
   groupId: 1, name: '아빠 그룹', role: 'PATIENT',
-  memberCount: 3, membersPreview: ['아', '엄', '나'],
+  memberCount: 3, membersPreview: [{ userId: 1, name: '아' }, { userId: 2, name: '엄' }, { userId: 3, name: '나' }],
   lastActivity: null, unreadCount: 0, pinned: false,
 };
 
 const G_GUARDIAN: MyGroupSummary = {
   groupId: 2, name: '할머니 댁', role: 'GUARDIAN',
-  memberCount: 3, membersPreview: ['할', '엄', '나'],
+  memberCount: 3, membersPreview: [{ userId: 1, name: '할' }, { userId: 2, name: '엄' }, { userId: 3, name: '나' }],
   lastActivity: null, unreadCount: 0, pinned: true,
 };
 
 const G_ADMIN: MyGroupSummary = {
   groupId: 3, name: '우리 가족', role: 'ADMIN',
-  memberCount: 2, membersPreview: ['나', '동'],
+  memberCount: 2, membersPreview: [{ userId: 1, name: '나' }, { userId: 2, name: '동' }],
   lastActivity: null, unreadCount: 0, pinned: false,
 };
 
 const G_PRIVATE: MyGroupSummary = {
   groupId: 4, name: '내 복약', role: 'ADMIN',
-  memberCount: 1, membersPreview: ['나'],
+  memberCount: 1, membersPreview: [{ userId: 1, name: '나' }],
   lastActivity: null, unreadCount: 0, pinned: false,
 };
 

@@ -4,7 +4,7 @@ import type { MyGroupSummary } from '@/types/caregroup';
 
 const baseGroup: MyGroupSummary = {
   groupId: 1, name: '할머니 댁', role: 'GUARDIAN',
-  memberCount: 3, membersPreview: ['엄', '딸', '아들'],
+  memberCount: 3, membersPreview: [{ userId: 1, name: '엄' }, { userId: 2, name: '딸' }, { userId: 3, name: '아들' }],
   lastActivity: null, unreadCount: 0, pinned: false,
 };
 

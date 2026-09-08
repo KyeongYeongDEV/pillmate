@@ -196,6 +196,11 @@ export const caregroupApiSlice = createApi({
       query: (groupId) => ({ url: `/groups/${groupId}/membership`, method: 'DELETE' }),
       invalidatesTags: ['Group'],
     }),
+    renameGroup: build.mutation<void, { groupId: number; name: string }>({
+      query: ({ groupId, name }) => ({ url: `/groups/${groupId}`, method: 'PATCH', body: { name } }),
+      // 이름은 목록(Group)과 상세(GroupDetail) 양쪽에 보이므로 둘 다 무효화한다.
+      invalidatesTags: (_result, _error, { groupId }) => [{ type: 'GroupDetail', id: groupId }, 'Group'],
+    }),
     joinGroup: build.mutation<number, string>({
       query: (code) => ({ url: `/groups/join/${code}`, method: 'POST', timeout: JOIN_TIMEOUT_MS }),
       transformResponse: (response: ApiEnvelope<{ groupId: number }>) => response?.data?.groupId ?? 0,
@@ -286,6 +291,7 @@ export const {
   useIssueInviteCodeMutation,
   useCreateGroupMutation,
   useLeaveGroupMutation,
+  useRenameGroupMutation,
   useJoinGroupMutation,
   useGetShareSettingsQuery,
   useUpdateMemberShareMutation,

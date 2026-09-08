@@ -8,11 +8,14 @@ public record MyGroupSummary(
         String name,
         String role,
         int memberCount,
-        List<String> membersPreview,
+        List<MemberPreview> membersPreview,
         LastActivitySummary lastActivity,
         int unreadCount,
         boolean pinned
 ) {
+    // 목록에서도 상세와 동일한 구성원 고유색을 쓰려면 userId 가 필요하다(색 배정 기준이 userId).
+    public record MemberPreview(Long userId, String name) {}
+
     public record LastActivitySummary(
             String summary,
             String activityType,

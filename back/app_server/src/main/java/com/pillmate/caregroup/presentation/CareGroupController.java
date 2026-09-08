@@ -10,6 +10,7 @@ import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.RenameCareGroupService;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
@@ -21,6 +22,7 @@ import com.pillmate.caregroup.application.dto.MyGroupSummary;
 import com.pillmate.caregroup.application.dto.ShareSettingsView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
+import com.pillmate.caregroup.presentation.dto.RenameGroupRequest;
 import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
@@ -33,6 +35,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -57,6 +60,7 @@ public class CareGroupController {
     private final ListMyGroupsUseCase listMyGroupsUseCase;
     private final PinGroupUseCase pinGroupUseCase;
     private final UnpinGroupUseCase unpinGroupUseCase;
+    private final RenameCareGroupService renameCareGroupService;
     private final GetGroupDetailUseCase getGroupDetailUseCase;
     private final LeaveGroupUseCase leaveGroupUseCase;
     private final MedicationShareService medicationShareService;
@@ -124,6 +128,15 @@ public class CareGroupController {
     public ResponseEntity<ApiResponse<GroupDetailResponse>> getDetail(@PathVariable Long groupId) {
         Long userId = UserContext.get();
         return ResponseEntity.ok(ApiResponse.success(getGroupDetailUseCase.detail(groupId, userId)));
+    }
+
+    @PatchMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<Void>> renameGroup(
+            @PathVariable Long groupId,
+            @RequestBody @Valid RenameGroupRequest request) {
+        Long userId = UserContext.get();
+        renameCareGroupService.rename(groupId, userId, request.name());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{groupId}/membership")

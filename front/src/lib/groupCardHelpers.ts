@@ -59,6 +59,6 @@ export function getActivityLabel(activityType: string | undefined): string {
 
 export function composeGroupDesc(group: MyGroupSummary): string {
   if (isPersonalGroup(group)) return '본인만 · 비공개';
-  const preview = group.membersPreview.slice(0, 3).join('·');
+  const preview = group.membersPreview.slice(0, 3).map(member => member.name).join('·');
   return preview ? `${group.memberCount}명 · ${preview}` : `${group.memberCount}명`;
 }

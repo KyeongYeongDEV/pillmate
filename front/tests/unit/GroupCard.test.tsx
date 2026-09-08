@@ -2,18 +2,37 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import GroupCard from '@/components/group/GroupCard';
 import type { MyGroupSummary } from '@/types/caregroup';
+import { assignMemberColors } from '@/utils/memberColors';
 
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null }));
-jest.mock('@/components/common/AvatarStack', () => () => null);
+
+const avatarStackProps: { names?: string[]; tints?: string[] }[] = [];
+jest.mock('@/components/common/AvatarStack', () => (props: any) => {
+  avatarStackProps.push(props);
+  return null;
+});
 
 const GROUP: MyGroupSummary = {
   groupId: 1, name: '할머니 댁', role: '보호자',
-  memberCount: 3, membersPreview: ['박', '김', '이'],
+  memberCount: 3, membersPreview: [{ userId: 1, name: '박' }, { userId: 2, name: '김' }, { userId: 3, name: '이' }],
   lastActivity: { summary: '아침약 복용', activityType: 'DOSE_TAKEN', severity: 'INFO', occurredAt: new Date(Date.now() - 5 * 60_000).toISOString() },
   unreadCount: 0, pinned: false,
 };
 
 describe('GroupCard', () => {
+  beforeEach(() => { avatarStackProps.length = 0; });
+
+  // 목록과 상세가 같은 색을 쓰는지 — 상세 화면이 쓰는 assignMemberColors 결과와 직접 대조한다.
+  it('아바타 색이 상세 화면의 구성원 고유색과 동일하다', () => {
+    render(<GroupCard group={GROUP} onPress={jest.fn()} onPinToggle={jest.fn()} />);
+    const expected = assignMemberColors(GROUP.membersPreview);
+    expect(avatarStackProps[0].names).toEqual(['박', '김', '이']);
+    expect(avatarStackProps[0].tints).toEqual([
+      expected.get(1), expected.get(2), expected.get(3),
+    ]);
+    expect(new Set(avatarStackProps[0].tints).size).toBe(3);
+  });
+
   it('그룹명 렌더', () => {
     render(<GroupCard group={GROUP} onPress={jest.fn()} onPinToggle={jest.fn()} />);
     expect(screen.getByText('할머니 댁')).toBeTruthy();

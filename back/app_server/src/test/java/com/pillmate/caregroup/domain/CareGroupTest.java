@@ -67,4 +67,16 @@ class CareGroupTest {
 
         assertThat(m.isAdmin()).isTrue();
     }
+
+    @Test
+    @DisplayName("rename() 하면 이름이 바뀌고 updatedAt이 갱신된다")
+    void rename_changesNameAndUpdatedAt() {
+        CareGroup group = CareGroup.create("우리 가족", 1L);
+        Instant beforeRename = group.getUpdatedAt();
+
+        group.rename("새 가족 이름");
+
+        assertThat(group.getName()).isEqualTo("새 가족 이름");
+        assertThat(group.getUpdatedAt()).isAfterOrEqualTo(beforeRename);
+    }
 }

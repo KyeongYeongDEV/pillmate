@@ -10,6 +10,7 @@ import com.pillmate.caregroup.application.LeaveGroupUseCase;
 import com.pillmate.caregroup.application.ListMyGroupsUseCase;
 import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.application.PinGroupUseCase;
+import com.pillmate.caregroup.application.RenameCareGroupService;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
@@ -47,6 +48,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -70,6 +72,7 @@ class CareGroupControllerTest {
     @MockitoBean ListMyGroupsUseCase listMyGroupsUseCase;
     @MockitoBean PinGroupUseCase pinGroupUseCase;
     @MockitoBean UnpinGroupUseCase unpinGroupUseCase;
+    @MockitoBean RenameCareGroupService renameCareGroupService;
     @MockitoBean GetGroupDetailUseCase getGroupDetailUseCase;
     @MockitoBean LeaveGroupUseCase leaveGroupUseCase;
     @MockitoBean MedicationShareService medicationShareService;
@@ -149,6 +152,62 @@ class CareGroupControllerTest {
 
         then(leaveGroupUseCase).should().leave(GROUP_ID, USER_ID);
     }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId} → 200 + 이름 변경 위임")
+    void renameGroup_returns200() throws Exception {
+        mockMvc.perform(patch("/groups/" + GROUP_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RenameGroupRequestBody("새 가족 이름"))))
+                .andExpect(status().isOk());
+
+        then(renameCareGroupService).should().rename(GROUP_ID, USER_ID, "새 가족 이름");
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId} name 공백이면 400 (INVALID_REQUEST)")
+    void renameGroup_returns400_whenNameBlank() throws Exception {
+        mockMvc.perform(patch("/groups/" + GROUP_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RenameGroupRequestBody(" "))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_040"));
+
+        then(renameCareGroupService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId} name 101자면 400 (INVALID_REQUEST)")
+    void renameGroup_returns400_whenNameTooLong() throws Exception {
+        String tooLong = "가".repeat(101);
+
+        mockMvc.perform(patch("/groups/" + GROUP_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RenameGroupRequestBody(tooLong))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_040"));
+
+        then(renameCareGroupService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId} — 비구성원이면 403")
+    void renameGroup_nonMember_returns403() throws Exception {
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(renameCareGroupService).rename(GROUP_ID, USER_ID, "새 가족 이름");
+
+        mockMvc.perform(patch("/groups/" + GROUP_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RenameGroupRequestBody("새 가족 이름"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    private record RenameGroupRequestBody(String name) {}
 
     @Test
     @DisplayName("GET /groups/{groupId}/share-settings → 200 + 구성원별·약봉투별 공유 설정 목록")

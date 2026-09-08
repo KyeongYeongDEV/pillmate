@@ -5,6 +5,7 @@ import AvatarStack from '@/components/common/AvatarStack';
 import Avatar from '@/components/common/Avatar';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import { resolveEventStyle, isPersonalGroup, composeGroupDesc, getActivityLabel } from '@/lib/groupCardHelpers';
+import { assignMemberColors } from '@/utils/memberColors';
 import type { MyGroupSummary } from '@/types/caregroup';
 
 interface GroupCardProps {
@@ -21,6 +22,12 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
   const desc = composeGroupDesc(group);
   const eventStyle = resolveEventStyle(group.lastActivity?.activityType);
   const hasUnread = group.unreadCount > 0;
+  // 상세 화면과 동일한 구성원 고유색 — 서버가 userId 오름차순으로 잘라 보내므로 순위가 일치한다.
+  const colorByUserId = assignMemberColors(group.membersPreview);
+  const memberNames = group.membersPreview.map(member => member.name);
+  const memberTints = group.membersPreview.map(
+    member => colorByUserId.get(member.userId) ?? colors.fallbackGray,
+  );
 
   return (
     <Pressable
@@ -34,8 +41,8 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
     >
       <View style={styles.avatarCol}>
         {personal
-          ? <Avatar name={group.membersPreview[0]?.[0] ?? '나'} tint={PERSONAL_AVATAR_TINT} size={scale(44)} />
-          : <AvatarStack names={group.membersPreview} size={scale(28)} />}
+          ? <Avatar name={group.membersPreview[0]?.name?.[0] ?? '나'} tint={PERSONAL_AVATAR_TINT} size={scale(44)} />
+          : <AvatarStack names={memberNames} tints={memberTints} size={scale(28)} />}
       </View>
 
       <View style={styles.contentCol}>

@@ -72,6 +72,30 @@ class ListMyGroupsUseCaseTest {
     }
 
     @Test
+    @DisplayName("membersPreview 는 userId 오름차순 상위 N 명 — 목록 색이 상세 색과 어긋나지 않게")
+    void list_membersPreviewSortedByUserIdAscending() {
+        Membership my20 = Membership.of(20L, 1L, MemberRole.ADMIN, null);
+        given(membershipRepository.findByUserId(1L)).willReturn(List.of(my20));
+        CareGroup g20 = CareGroup.create("정렬 확인", 1L);
+        setId(g20, 20L);
+        given(careGroupRepository.findAllById(List.of(20L))).willReturn(List.of(g20));
+        // 저장소가 임의 순서(9, 3, 7, 1)로 돌려줘도 미리보기는 1, 3, 7 이어야 한다.
+        given(membershipRepository.findByCareGroupId(20L)).willReturn(List.of(
+                Membership.of(20L, 9L, MemberRole.PATIENT, 1L),
+                Membership.of(20L, 3L, MemberRole.GUARDIAN, 1L),
+                Membership.of(20L, 7L, MemberRole.PATIENT, 1L),
+                Membership.of(20L, 1L, MemberRole.ADMIN, null)));
+        given(userRepository.findById(anyLong())).willReturn(Optional.of(User.dummy("멤버")));
+        given(activityFeedRepository.findByActorSince(anyLong(), any(), anyInt())).willReturn(List.of());
+
+        MyGroupSummary summary = sut.listMyGroups(1L).get(0);
+
+        assertThat(summary.membersPreview()).extracting(MyGroupSummary.MemberPreview::userId)
+                .containsExactly(1L, 3L, 7L);
+        assertThat(summary.memberCount()).isEqualTo(4);
+    }
+
+    @Test
     @DisplayName("멤버십 없으면 빈 리스트")
     void list_whenNoMembership_returnsEmpty() {
         given(membershipRepository.findByUserId(99L)).willReturn(List.of());

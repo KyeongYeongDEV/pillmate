@@ -73,4 +73,12 @@ describe('그룹 구성원 탭 → 복약 캘린더 이동', () => {
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/(tabs)/schedule'));
   });
+
+  it('헤더의 그룹 설정 아이콘을 탭하면 설정 화면으로 이동한다', () => {
+    render(<GroupDetailScreen />);
+
+    fireEvent.press(screen.getByLabelText('그룹 설정'));
+
+    expect(mockPush).toHaveBeenCalledWith('/group/3/settings');
+  });
 });

@@ -4,6 +4,7 @@ import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
 import com.pillmate.caregroup.application.dto.MyGroupSummary.LastActivitySummary;
+import com.pillmate.caregroup.application.dto.MyGroupSummary.MemberPreview;
 import com.pillmate.caregroup.domain.model.CareGroup;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.CareGroupRepository;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -50,7 +52,7 @@ public class ListMyGroupsUseCase {
     private MyGroupSummary toSummary(Membership my, CareGroup group) {
         Long groupId = my.getCareGroupId();
         List<Membership> allMembers = membershipRepository.findByCareGroupId(groupId);
-        List<String> preview = membersPreview(allMembers);
+        List<MemberPreview> preview = membersPreview(allMembers);
         return new MyGroupSummary(
                 groupId,
                 group == null ? "(unknown)" : group.getName(),
@@ -63,11 +65,19 @@ public class ListMyGroupsUseCase {
         );
     }
 
-    private List<String> membersPreview(List<Membership> members) {
+    // userId 오름차순으로 정렬한 뒤 앞에서 자른다 — 프론트의 고유색 배정이 "전체 구성원을 userId
+    // 오름차순 정렬한 순위"를 쓰므로, 가장 작은 userId 들만 미리보기에 담아야 목록의 색이
+    // 상세 화면의 색과 정확히 일치한다(임의 순서로 자르면 순위가 어긋나 색이 달라진다).
+    private List<MemberPreview> membersPreview(List<Membership> members) {
         return members.stream()
+                .sorted(Comparator.comparing(Membership::getUserId))
                 .limit(MEMBERS_PREVIEW_LIMIT)
-                .map(m -> userRepository.findById(m.getUserId()).map(u -> u.getName()).orElse("멤버"))
+                .map(m -> new MemberPreview(m.getUserId(), resolveMemberName(m.getUserId())))
                 .toList();
+    }
+
+    private String resolveMemberName(Long userId) {
+        return userRepository.findById(userId).map(u -> u.getName()).orElse("멤버");
     }
 
     private LastActivitySummary latestActivity(List<Membership> members) {

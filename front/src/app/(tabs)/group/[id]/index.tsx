@@ -14,7 +14,7 @@ import GroupScheduleCalendar from '@/components/group/GroupScheduleCalendar';
 import { assignMemberColors } from '@/utils/memberColors';
 import { scale, colors, space, radius, typography, shadows } from '@/styles/tokens';
 import {
-  useGetGroupDetailQuery, useIssueInviteCodeMutation, useLeaveGroupMutation,
+  useGetGroupDetailQuery, useIssueInviteCodeMutation,
   useNudgeMemberMutation, caregroupApiSlice,
 } from '@/store/slices/caregroupApi';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -48,7 +48,6 @@ export default function GroupDetailScreen() {
   const dispatch = useDispatch();
   const { data: detail, isLoading, isError, refetch: refetchDetail } = useGetGroupDetailQuery(groupId, GROUP_DETAIL_REFRESH);
   const [issueInviteCode, { isLoading: isIssuing }] = useIssueInviteCodeMutation();
-  const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
   const [nudgeMember] = useNudgeMemberMutation();
   const [refreshing, setRefreshing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -122,30 +121,10 @@ export default function GroupDetailScreen() {
     dispatch(caregroupApiSlice.util.invalidateTags([{ type: 'GroupDetail', id: groupId }]));
   }, [dispatch, groupId]);
 
-  const confirmLeave = useCallback(async () => {
-    try {
-      await leaveGroup(groupId).unwrap();
-      router.replace('/(tabs)/group');
-    } catch (e: any) {
-      Alert.alert('그룹 나가기 실패', e?.data?.error?.message ?? e?.message ?? '잠시 후 다시 시도해 주세요');
-    }
-  }, [leaveGroup, groupId]);
-
-  const handleLeave = useCallback(() => {
-    Alert.alert(
-      '그룹 나가기',
-      '이 그룹에서 나가시겠어요? 나가면 이 그룹의 복약 정보·알림을 더 이상 받을 수 없어요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '나가기', style: 'destructive', onPress: confirmLeave },
-      ],
-    );
-  }, [confirmLeave]);
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <Header title="케어 그룹" />
+        <Header title="케어 그룹" groupId={groupId} />
         <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />
       </SafeAreaView>
     );
@@ -154,7 +133,7 @@ export default function GroupDetailScreen() {
   if (isError || !detail) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <Header title="케어 그룹" />
+        <Header title="케어 그룹" groupId={groupId} />
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>그룹 정보를 불러올 수 없어요</Text>
         </View>
@@ -174,7 +153,7 @@ export default function GroupDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <Header title="케어 그룹" />
+      <Header title="케어 그룹" groupId={groupId} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -283,24 +262,6 @@ export default function GroupDetailScreen() {
             <Text style={styles.emptyText}>최근 활동이 없어요</Text>
           )}
         </View>
-
-        <Pressable
-          style={[styles.leaveBtn, isLeaving && styles.leaveBtnDisabled]}
-          onPress={handleLeave}
-          disabled={isLeaving}
-          accessibilityLabel="그룹 나가기"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: isLeaving, busy: isLeaving }}
-        >
-          {isLeaving ? (
-            <ActivityIndicator size="small" color={colors.statusNegative} />
-          ) : (
-            <>
-              <Feather name="log-out" size={scale(18)} color={colors.statusNegative} />
-              <Text style={styles.leaveBtnText}>그룹 나가기</Text>
-            </>
-          )}
-        </Pressable>
       </ScrollView>
       {toastMsg && (
         <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
@@ -311,7 +272,7 @@ export default function GroupDetailScreen() {
   );
 }
 
-function Header({ title }: { title: string }) {
+function Header({ title, groupId }: { title: string; groupId: number }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -323,7 +284,14 @@ function Header({ title }: { title: string }) {
         <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
-      <View style={{ width: scale(24) }} />
+      <Pressable
+        onPress={() => router.push(`/group/${groupId}/settings` as any)}
+        accessibilityLabel="그룹 설정"
+        accessibilityRole="button"
+        hitSlop={8}
+      >
+        <Feather name="settings" size={scale(24)} color={colors.labelNormal} />
+      </Pressable>
     </View>
   );
 }
@@ -402,13 +370,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
   errorText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center' },
-  leaveBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.s6,
-    height: scale(48), borderRadius: radius.r12,
-    backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.statusNegative,
-  },
-  leaveBtnDisabled: { opacity: 0.6 },
-  leaveBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.statusNegative },
   toast: {
     position: 'absolute', bottom: space.s32, alignSelf: 'center',
     backgroundColor: 'rgba(23,23,25,0.88)', borderRadius: radius.r20,
