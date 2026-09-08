@@ -47,3 +47,20 @@ describe('MemberCard — 재촉(넛지) 벨 아이콘', () => {
     expect(onNudge).not.toHaveBeenCalled();
   });
 });
+
+describe('MemberCard — 본인 행의 알약 정보 공유 설정 아이콘', () => {
+  const ME: GroupMember = { ...MEMBER, isMe: true };
+
+  it('본인 행이면 벨 대신 설정 아이콘이 렌더된다', () => {
+    render(<MemberCard member={ME} onPress={jest.fn()} onSettingsPress={jest.fn()} />);
+    expect(screen.getByLabelText('알약 정보 공유 설정')).toBeTruthy();
+    expect(screen.queryByLabelText('박순자 재촉하기')).toBeNull();
+  });
+
+  it('설정 아이콘 탭 → onSettingsPress 호출', () => {
+    const onSettingsPress = jest.fn();
+    render(<MemberCard member={ME} onPress={jest.fn()} onSettingsPress={onSettingsPress} />);
+    fireEvent.press(screen.getByLabelText('알약 정보 공유 설정'));
+    expect(onSettingsPress).toHaveBeenCalledTimes(1);
+  });
+});

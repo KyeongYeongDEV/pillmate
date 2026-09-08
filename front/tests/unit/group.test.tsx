@@ -1,17 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import MemberCard from '@/components/group/MemberCard';
 import ActivityItem from '@/components/group/ActivityItem';
-import type { GroupMember, GroupActivity } from '@/types/group';
-
-const PATIENT: GroupMember = {
-  id: '1', name: '박순자', sub: '환자 · 만 72세', role: '환자',
-  tint: '#FF7B2E', online: true,
-};
-const GUARDIAN: GroupMember = {
-  id: '2', name: '김민지', sub: '딸 · 본인', role: '보호자',
-  tint: '#0066FF', online: true, isMe: true,
-};
+import type { GroupActivity } from '@/types/group';
 
 const DONE_ACTIVITY: GroupActivity = {
   id: '1', who: '박순자', whoLabel: '할머니', tint: '#FF7B2E',
@@ -24,28 +14,7 @@ const AI_ACTIVITY: GroupActivity = {
   detail: '지난 7일 중 3일 빠뜨리셨어요.', cta: '알림 조정',
 };
 
-describe('MemberCard', () => {
-  it('이름 + 서브텍스트 렌더', () => {
-    render(<MemberCard member={PATIENT} isFirst />);
-    expect(screen.getByText('박순자')).toBeTruthy();
-    expect(screen.getByText('환자 · 만 72세')).toBeTruthy();
-  });
-
-  it('환자 역할 뱃지 렌더', () => {
-    render(<MemberCard member={PATIENT} isFirst />);
-    expect(screen.getByText('환자')).toBeTruthy();
-  });
-
-  it('나 뱃지 렌더 (isMe)', () => {
-    render(<MemberCard member={GUARDIAN} isFirst />);
-    expect(screen.getByText('나')).toBeTruthy();
-  });
-
-  it('보호자 역할 렌더', () => {
-    render(<MemberCard member={GUARDIAN} isFirst />);
-    expect(screen.getByText('보호자')).toBeTruthy();
-  });
-});
+// MemberCard 자체 테스트는 tests/unit/MemberCard.test.tsx 로 이전·최신화됨(이 블록은 중복+낡음 — 제거).
 
 describe('ActivityItem', () => {
   it('done 활동 — 제목 렌더', () => {

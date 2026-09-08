@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
-import { scale, colors, space, radius } from '@/styles/tokens';
+import { scale, colors, space } from '@/styles/tokens';
 import type { GroupMember } from '@/types/group';
 
 interface Props {
@@ -10,11 +10,13 @@ interface Props {
   isFirst?: boolean;
   onPress?: (member: GroupMember) => void;
   onNudge?: (member: GroupMember) => void;
+  onSettingsPress?: () => void;
   nudging?: boolean;
 }
 
 // onNudge 가 없으면(호출자가 본인 행에는 넘기지 않음) 벨 영역 자체를 렌더하지 않는다 — 자기 자신 재촉 불가.
-function MemberCard({ member, isFirst, onPress, onNudge, nudging = false }: Props) {
+// 본인 행은 그 자리에 알약 정보 공유 설정 아이콘을 대신 놓는다(기존 헤더 우측상단 설정 아이콘을 여기로 이동).
+function MemberCard({ member, isFirst, onPress, onNudge, onSettingsPress, nudging = false }: Props) {
   return (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
       <Pressable
@@ -32,9 +34,16 @@ function MemberCard({ member, isFirst, onPress, onNudge, nudging = false }: Prop
         </View>
       </Pressable>
       {member.isMe ? (
-        <View style={styles.nudgeBtn}>
-          <View style={styles.meBadge}><Text style={styles.meBadgeText}>나</Text></View>
-        </View>
+        <Pressable
+          style={styles.nudgeBtn}
+          onPress={onSettingsPress}
+          disabled={!onSettingsPress}
+          accessibilityLabel="알약 정보 공유 설정"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Feather name="settings" size={scale(18)} color={colors.labelAlternative} />
+        </Pressable>
       ) : onNudge ? (
         <Pressable
           style={styles.nudgeBtn}
@@ -78,9 +87,4 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { fontSize: scale(15), fontWeight: '700', color: colors.labelNormal, letterSpacing: -0.01 },
-  meBadge: {
-    paddingHorizontal: space.s6, paddingVertical: 2,
-    backgroundColor: colors.fillStrong, borderRadius: radius.r4,
-  },
-  meBadgeText: { fontSize: scale(10), color: colors.labelAlternative, fontWeight: '600' },
 });

@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/lib/auth/storage';
 import { buildCalendarRows, toMonthString, prevMonth, nextMonth, getKstToday } from '@/utils/calendarUtils';
 import { assignMemberColors } from '@/utils/memberColors';
 import { useGetGroupMonthScheduleQuery, type GroupMemberAdherence } from '@/store/slices/caregroupApi';
+import { GROUP_SCHEDULE_REFRESH } from '@/lib/query/refreshOptions';
 import type { MemberView } from '@/types/caregroup';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -43,7 +44,7 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
     data: adherenceByDate, error, refetch,
   } = useGetGroupMonthScheduleQuery(
     { groupId, month: toMonthString(displayYear, displayMonth) },
-    { skip: !Number.isFinite(groupId) },
+    { skip: !Number.isFinite(groupId), ...GROUP_SCHEDULE_REFRESH },
   );
 
   const colorByUserId = useMemo(() => assignMemberColors(members), [members]);

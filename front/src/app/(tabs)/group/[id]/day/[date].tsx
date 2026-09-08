@@ -11,6 +11,7 @@ import { getCurrentUserId } from '@/lib/auth/storage';
 import { assignMemberColors } from '@/utils/memberColors';
 import { getKstToday } from '@/utils/calendarUtils';
 import { useGetGroupDetailQuery, useGetGroupDayScheduleQuery } from '@/store/slices/caregroupApi';
+import { GROUP_SCHEDULE_REFRESH } from '@/lib/query/refreshOptions';
 import type { GroupMemberDayView } from '@/store/slices/caregroupApi';
 import type { MedSlot } from '@/types/schedule';
 
@@ -48,7 +49,7 @@ export default function GroupDayScheduleScreen() {
     data: members, error, isLoading, isFetching, refetch,
   } = useGetGroupDayScheduleQuery(
     { groupId, date: targetDate },
-    { skip: !Number.isFinite(groupId) },
+    { skip: !Number.isFinite(groupId), ...GROUP_SCHEDULE_REFRESH },
   );
 
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
