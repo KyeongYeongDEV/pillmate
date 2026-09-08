@@ -19,9 +19,6 @@ class PrescriptionRepositoryImpl implements PrescriptionRepository {
     @Override public List<Prescription> findAllByPatientId(Long patientId) {
         return jpa.findAllByPatientIdAndDeletedAtIsNull(patientId);
     }
-    @Override public List<Prescription> findAllByPatientIdAndCareGroupId(Long patientId, Long careGroupId) {
-        return jpa.findAllByPatientIdAndCareGroupIdAndDeletedAtIsNull(patientId, careGroupId);
-    }
     @Override public Optional<Prescription> findLatestByPatientId(Long patientId) {
         return jpa.findFirstByPatientIdAndDeletedAtIsNullOrderByPrescribedAtDescIdDesc(patientId);
     }

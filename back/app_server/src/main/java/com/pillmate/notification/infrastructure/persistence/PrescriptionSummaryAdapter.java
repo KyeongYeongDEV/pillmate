@@ -19,7 +19,6 @@ class PrescriptionSummaryAdapter implements PrescriptionSummaryPort {
     private static final String SUMMARY_SQL = """
             SELECT p.prescribed_at,
                    p.label,
-                   p.care_group_id,
                    p.shared_with_group
             FROM prescriptions p
             WHERE p.id = :pid
@@ -42,12 +41,7 @@ class PrescriptionSummaryAdapter implements PrescriptionSummaryPort {
     private PrescriptionSummary toSummary(Tuple row) {
         LocalDate prescribedAt = ((Date) row.get("prescribed_at")).toLocalDate();
         String label = (String) row.get("label");
-        Long careGroupId = toLong(row.get("care_group_id"));
         boolean sharedWithGroup = Boolean.TRUE.equals(row.get("shared_with_group"));
-        return new PrescriptionSummary(prescribedAt, label, careGroupId, sharedWithGroup);
-    }
-
-    private Long toLong(Object value) {
-        return value == null ? null : ((Number) value).longValue();
+        return new PrescriptionSummary(prescribedAt, label, sharedWithGroup);
     }
 }

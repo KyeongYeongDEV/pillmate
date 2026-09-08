@@ -1,6 +1,6 @@
 package com.pillmate.prescription.application;
 
-import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.prescription.application.PrescriptionViewAssembler.PeriodRange;
@@ -21,7 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 케어그룹에 공유된 약봉투(처방전)의 알약 정보 조회 — 약봉투 단위 공유 설정(L2 권한)만 신뢰한다.
+ * 케어그룹에 공유된 약봉투(처방전)의 알약 정보 조회 — 구성원축(누구에게)과 약봉투축(어느 약봉투를)
+ * 두 축이 모두 켜져 있어야 열람을 허용한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class GetSharedPrescriptionUseCase {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionViewAssembler assembler;
     private final PrescriptionPeriodPort prescriptionPeriodPort;
-    private final MembershipRepository membershipRepository;
+    private final MedicationShareService medicationShareService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -58,17 +59,15 @@ public class GetSharedPrescriptionUseCase {
                 .orElseThrow(() -> new PillmateException(ErrorCode.PRESCRIPTION_NOT_FOUND));
     }
 
-    // 약봉투(처방전) 단위 공유 판정 — 본인이거나, 그 약봉투가 정확히 groupId 에 공유 켠 상태이고
-    // owner·viewer 둘 다 그 그룹 ACTIVE 멤버인 경우만 허용(크로스그룹 차단).
+    // 2축 AND 판정 — 본인이거나, 약봉투축(공유 켬)과 구성원축(owner→viewer grant) 이 둘 다
+    // 성립해야 허용한다. 구성원축 판정(멤버십·크로스그룹 차단 포함)은 MedicationShareService 에 위임.
     private void requireShared(Long groupId, Prescription prescription, Long viewerUserId) {
         Long ownerUserId = prescription.getPatientId();
         if (viewerUserId.equals(ownerUserId)) {
             return;
         }
         boolean allowed = prescription.isSharedWithGroup()
-                && groupId.equals(prescription.getCareGroupId())
-                && membershipRepository.existsByCareGroupIdAndUserId(groupId, ownerUserId)
-                && membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerUserId);
+                && medicationShareService.isMemberGranted(groupId, ownerUserId, viewerUserId);
         if (!allowed) {
             throw new PillmateException(ErrorCode.MEDICATION_SHARE_NOT_GRANTED);
         }

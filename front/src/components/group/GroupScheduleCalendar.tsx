@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { scale, colors, space, radius } from '@/styles/tokens';
-import { getCurrentUserId } from '@/lib/auth/storage';
 import { buildCalendarRows, toMonthString, prevMonth, nextMonth, getKstToday } from '@/utils/calendarUtils';
 import { assignMemberColors } from '@/utils/memberColors';
 import { useGetGroupMonthScheduleQuery, type GroupMemberAdherence } from '@/store/slices/caregroupApi';
@@ -19,9 +18,9 @@ const RETRY_LABEL = '재시도';
 // 그래야 "색 = 사람" 매핑이 날짜·상태와 무관하게 항상 성립한다.
 const ADHERENCE_OPACITY: Record<GroupMemberAdherence['adherence'], number> = {
   FULL: 1,
-  PARTIAL: 0.5,
+  PARTIAL: 0.8,
   MISS: 1,
-  UPCOMING: 0.28,
+  UPCOMING: 0.65,
 };
 
 export interface GroupScheduleCalendarProps {
@@ -32,13 +31,6 @@ export interface GroupScheduleCalendarProps {
 export default function GroupScheduleCalendar({ groupId, members }: GroupScheduleCalendarProps) {
   const [displayYear, setDisplayYear] = useState(() => Number(getKstToday().slice(0, 4)));
   const [displayMonth, setDisplayMonth] = useState(() => Number(getKstToday().slice(5, 7)));
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getCurrentUserId().then(uid => { if (active) setCurrentUserId(uid); });
-    return () => { active = false; };
-  }, []);
 
   const {
     data: adherenceByDate, error, refetch,
@@ -61,10 +53,6 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
     setDisplayYear(year);
     setDisplayMonth(month);
   }, [displayYear, displayMonth]);
-
-  const handleMemberPress = useCallback((member: MemberView) => {
-    router.push(`/group/${groupId}/member/${member.userId}?name=${encodeURIComponent(member.name)}` as any);
-  }, [groupId]);
 
   // 날짜 칸 전체를 누르면 그 날짜에 그룹 구성원 전원의 복약 정보를 보여주는 화면으로 이동한다.
   const handleDatePress = useCallback((dateStr: string) => {
@@ -133,31 +121,6 @@ export default function GroupScheduleCalendar({ groupId, members }: GroupSchedul
           ))}
         </View>
       ))}
-
-      <View style={styles.legend}>
-        {members.map((member) => {
-          const swatch = colorByUserId.get(member.userId) ?? colors.fallbackGray;
-          const isMe = member.userId === currentUserId;
-          if (isMe) {
-            return (
-              <View key={member.userId} style={styles.legendItem} accessibilityLabel={`${member.name} (나)`}>
-                <View testID={`member-swatch-${member.userId}`} style={[styles.legendSwatch, { backgroundColor: swatch }]} />
-              </View>
-            );
-          }
-          return (
-            <Pressable
-              key={member.userId}
-              style={styles.legendItem}
-              onPress={() => handleMemberPress(member)}
-              accessibilityLabel={`${member.name} 복약 보기`}
-              accessibilityRole="button"
-            >
-              <View testID={`member-swatch-${member.userId}`} style={[styles.legendSwatch, { backgroundColor: swatch }]} />
-            </Pressable>
-          );
-        })}
-      </View>
     </View>
   );
 }
@@ -211,7 +174,7 @@ function MemberDot({ color, adherence }: MemberDotProps) {
   return <View style={shape} />;
 }
 
-const DOT_SIZE = scale(6);
+const DOT_SIZE = scale(7);
 
 const styles = StyleSheet.create({
   card: {
@@ -241,12 +204,6 @@ const styles = StyleSheet.create({
   },
   dot: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2 },
   dotHollow: { backgroundColor: 'transparent', borderWidth: 1 },
-  legend: {
-    flexDirection: 'row', flexWrap: 'wrap', columnGap: space.s14, rowGap: space.s8,
-    paddingHorizontal: space.s16, paddingTop: space.s14,
-  },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendSwatch: { width: scale(10), height: scale(10), borderRadius: scale(5) },
   noticeBox: {
     padding: space.s20, borderRadius: radius.r16,
     backgroundColor: colors.bgNormal, borderWidth: 1, borderColor: colors.line,

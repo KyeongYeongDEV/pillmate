@@ -1,6 +1,6 @@
 package com.pillmate.prescription.application;
 
-import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.prescription.application.dto.NutrientNote;
@@ -34,6 +34,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -56,7 +57,7 @@ class GetSharedPrescriptionUseCaseTest {
     @Mock DrugLookupPort drugLookupPort;
     @Mock NutrientDepletionPort nutrientDepletionPort;
     @Mock PrescriptionPeriodPort prescriptionPeriodPort;
-    @Mock MembershipRepository membershipRepository;
+    @Mock MedicationShareService medicationShareService;
 
     private GetSharedPrescriptionUseCase sut;
 
@@ -68,7 +69,7 @@ class GetSharedPrescriptionUseCaseTest {
         lenient().when(nutrientDepletionPort.findByDrugIds(anyCollection())).thenReturn(Map.of());
         PrescriptionViewAssembler assembler = new PrescriptionViewAssembler(drugLookupPort, nutrientDepletionPort);
         sut = new GetSharedPrescriptionUseCase(
-                prescriptionRepository, assembler, prescriptionPeriodPort, membershipRepository, FIXED_CLOCK);
+                prescriptionRepository, assembler, prescriptionPeriodPort, medicationShareService, FIXED_CLOCK);
     }
 
     @Test
@@ -82,6 +83,7 @@ class GetSharedPrescriptionUseCaseTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEDICATION_SHARE_NOT_GRANTED);
 
         then(drugLookupPort).should(never()).findByIds(anyCollection());
+        then(medicationShareService).should(never()).isMemberGranted(any(), any(), any());
     }
 
     @Test
@@ -94,17 +96,16 @@ class GetSharedPrescriptionUseCaseTest {
 
         assertThat(response.id()).isEqualTo(PRESCRIPTION_ID);
         assertThat(response.ownerUserId()).isEqualTo(OWNER_ID);
-        then(membershipRepository).shouldHaveNoInteractions();
+        then(medicationShareService).shouldHaveNoInteractions();
     }
 
     @Test
-    @DisplayName("공유 켜짐 + 둘 다 ACTIVE 멤버인 뷰어 — 약 이름/용량/알약 이미지/kdCode/영양소 노트 매핑")
+    @DisplayName("공유 켜짐 + 구성원축 grant 있는 뷰어 — 약 이름/용량/알약 이미지/kdCode/영양소 노트 매핑")
     void execute_sharedViewer_mapsDrugDetail() {
         Prescription p = prescription(OWNER_ID, GROUP_ID, true);
         p.addDrug(matchedDrug(101L, "메트포르민정"));
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(true);
+        given(medicationShareService.isMemberGranted(GROUP_ID, OWNER_ID, VIEWER_ID)).willReturn(true);
         given(drugLookupPort.findByIds(List.of(101L)))
                 .willReturn(Map.of(101L, new DrugSummary(101L, "KD-999", "메트포르민정500밀리그램", "https://img.test/m.png")));
         given(nutrientDepletionPort.findByDrugIds(List.of(101L)))
@@ -123,29 +124,16 @@ class GetSharedPrescriptionUseCaseTest {
     }
 
     @Test
-    @DisplayName("크로스그룹 차단 — 약봉투 소속 그룹과 요청 groupId 다르면 공유 켬이어도 거부")
-    void execute_crossGroup_throws() {
-        Long otherGroupId = 99L;
-        Prescription p = prescription(OWNER_ID, otherGroupId, true);
+    @DisplayName("구성원축 미승인(크로스그룹·탈퇴 포함) — 약봉투 공유 켬이어도 거부, 판정은 isMemberGranted 위임")
+    void execute_memberNotGranted_throws() {
+        Prescription p = prescription(OWNER_ID, GROUP_ID, true);
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(medicationShareService.isMemberGranted(GROUP_ID, OWNER_ID, VIEWER_ID)).willReturn(false);
 
         assertThatThrownBy(() -> sut.execute(GROUP_ID, PRESCRIPTION_ID, VIEWER_ID))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEDICATION_SHARE_NOT_GRANTED);
         then(drugLookupPort).should(never()).findByIds(anyCollection());
-    }
-
-    @Test
-    @DisplayName("공유 켜짐이지만 viewer 가 그룹 비멤버(탈퇴 포함) — 거부")
-    void execute_viewerNotActiveMember_throws() {
-        Prescription p = prescription(OWNER_ID, GROUP_ID, true);
-        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, VIEWER_ID)).willReturn(false);
-
-        assertThatThrownBy(() -> sut.execute(GROUP_ID, PRESCRIPTION_ID, VIEWER_ID))
-                .isInstanceOf(PillmateException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEDICATION_SHARE_NOT_GRANTED);
     }
 
     @Test
@@ -157,7 +145,7 @@ class GetSharedPrescriptionUseCaseTest {
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRESCRIPTION_NOT_FOUND);
 
-        then(membershipRepository).shouldHaveNoInteractions();
+        then(medicationShareService).shouldHaveNoInteractions();
     }
 
     @Test

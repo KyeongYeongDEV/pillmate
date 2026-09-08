@@ -12,13 +12,33 @@ export interface CreateGroupResponse {
   inviteCode?: string;
 }
 
-// 내가 등록한 약봉투 중 그룹에 공유 가능한 것 하나 — 서버가 ONGOING 만 내려준다.
-export interface ShareablePrescriptionView {
+// 이 그룹에서 내 약 이름을 볼 수 있으려면 구성원 스위치와 약봉투 스위치가 모두 켜져야 한다(AND).
+export interface ShareMemberSetting {
+  userId: number;
+  name: string;
+  role: string;
+  shared: boolean;
+}
+
+export interface SharePrescriptionSetting {
   prescriptionId: number;
   label: string | null;
   prescribedAt: string;
   shared: boolean;
   status: 'ONGOING' | 'COMPLETED';
+}
+
+export interface ShareSettingsView {
+  members: ShareMemberSetting[];
+  prescriptions: SharePrescriptionSetting[];
+}
+
+const EMPTY_SHARE_SETTINGS: ShareSettingsView = { members: [], prescriptions: [] };
+
+export interface UpdateMemberShareArgs {
+  groupId: number;
+  viewerUserId: number;
+  enabled: boolean;
 }
 
 export interface UpdatePrescriptionShareArgs {
@@ -94,18 +114,33 @@ export interface SharedPrescriptionArg {
 
 export const shareSettingsUrl = (groupId: number) => `/groups/${groupId}/share-settings`;
 
-export const updatePrescriptionShareRequest = ({ groupId, prescriptionId, enabled }: UpdatePrescriptionShareArgs) => ({
-  url: `/groups/${groupId}/share-settings/${prescriptionId}`,
+export const updateMemberShareRequest = ({ groupId, viewerUserId, enabled }: UpdateMemberShareArgs) => ({
+  url: `/groups/${groupId}/share-settings/members/${viewerUserId}`,
   method: 'PUT' as const,
   body: { enabled },
 });
 
+export const updatePrescriptionShareRequest = ({ groupId, prescriptionId, enabled }: UpdatePrescriptionShareArgs) => ({
+  url: `/groups/${groupId}/share-settings/prescriptions/${prescriptionId}`,
+  method: 'PUT' as const,
+  body: { enabled },
+});
+
+export function applyMemberShareToggle(
+  view: ShareSettingsView,
+  viewerUserId: number,
+  enabled: boolean,
+): void {
+  const target = view.members.find((m) => m.userId === viewerUserId);
+  if (target) target.shared = enabled;
+}
+
 export function applyPrescriptionShareToggle(
-  list: ShareablePrescriptionView[],
+  view: ShareSettingsView,
   prescriptionId: number,
   enabled: boolean,
 ): void {
-  const target = list.find((p) => p.prescriptionId === prescriptionId);
+  const target = view.prescriptions.find((p) => p.prescriptionId === prescriptionId);
   if (target) target.shared = enabled;
 }
 
@@ -166,16 +201,36 @@ export const caregroupApiSlice = createApi({
       transformResponse: (response: ApiEnvelope<{ groupId: number }>) => response?.data?.groupId ?? 0,
       invalidatesTags: ['Group'],
     }),
-    getShareablePrescriptions: build.query<ShareablePrescriptionView[], number>({
+    getShareSettings: build.query<ShareSettingsView, number>({
       query: (groupId) => shareSettingsUrl(groupId),
-      transformResponse: (response: ApiEnvelope<ShareablePrescriptionView[]>) => response?.data ?? [],
+      transformResponse: (response: ApiEnvelope<ShareSettingsView>) => response?.data ?? EMPTY_SHARE_SETTINGS,
       providesTags: (_result, _error, groupId) => [{ type: 'ShareSettings', id: groupId }],
+    }),
+    updateMemberShare: build.mutation<void, UpdateMemberShareArgs>({
+      query: (args) => updateMemberShareRequest(args),
+      async onQueryStarted({ groupId, viewerUserId, enabled }, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          caregroupApiSlice.util.updateQueryData('getShareSettings', groupId, (draft) => {
+            applyMemberShareToggle(draft, viewerUserId, enabled);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+      // 공유 대상 구성원 변경은 그룹 구성원이 보는 복약 현황을 바꾸므로 해당 그룹의 스케줄 캐시를 무효화한다.
+      invalidatesTags: (_result, _error, { groupId }) => [
+        { type: 'GroupMonthSchedule', id: groupId },
+        { type: 'GroupDaySchedule', id: groupId },
+      ],
     }),
     updatePrescriptionShare: build.mutation<void, UpdatePrescriptionShareArgs>({
       query: (args) => updatePrescriptionShareRequest(args),
       async onQueryStarted({ groupId, prescriptionId, enabled }, { dispatch, queryFulfilled }) {
         const patch = dispatch(
-          caregroupApiSlice.util.updateQueryData('getShareablePrescriptions', groupId, (draft) => {
+          caregroupApiSlice.util.updateQueryData('getShareSettings', groupId, (draft) => {
             applyPrescriptionShareToggle(draft, prescriptionId, enabled);
           }),
         );
@@ -232,7 +287,8 @@ export const {
   useCreateGroupMutation,
   useLeaveGroupMutation,
   useJoinGroupMutation,
-  useGetShareablePrescriptionsQuery,
+  useGetShareSettingsQuery,
+  useUpdateMemberShareMutation,
   useUpdatePrescriptionShareMutation,
   useNudgeMemberMutation,
   useGetGroupMonthScheduleQuery,

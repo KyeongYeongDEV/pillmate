@@ -63,6 +63,7 @@ class SendGroupDoseNotificationServiceTest {
     @Mock com.pillmate.notification.application.port.PrescriptionSummaryPort prescriptionSummaryPort;
     @Mock CareGroupLookupPort careGroupLookupPort;
     @Mock CareGroupGuard careGroupGuard;
+    @Mock com.pillmate.caregroup.application.MedicationShareService medicationShareService;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
 
@@ -244,7 +245,8 @@ class SendGroupDoseNotificationServiceTest {
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "저녁약", GROUP_ID, true)));
+                        LocalDate.of(2026, 6, 21), "저녁약", true)));
+        given(medicationShareService.isMemberGranted(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -276,7 +278,8 @@ class SendGroupDoseNotificationServiceTest {
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "   ", GROUP_ID, true)));
+                        LocalDate.of(2026, 6, 21), "   ", true)));
+        given(medicationShareService.isMemberGranted(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(true);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -574,7 +577,7 @@ class SendGroupDoseNotificationServiceTest {
         given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "우울증약", GROUP_ID, false)));
+                        LocalDate.of(2026, 6, 21), "우울증약", false)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -606,7 +609,9 @@ class SendGroupDoseNotificationServiceTest {
                 memberWithToken(MEMBER_3, "ExponentPushToken[b]")));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "혈압약", GROUP_ID, true)));
+                        LocalDate.of(2026, 6, 21), "혈압약", true)));
+        given(medicationShareService.isMemberGranted(GROUP_ID, ACTOR_ID, MEMBER_2)).willReturn(true);
+        given(medicationShareService.isMemberGranted(GROUP_ID, ACTOR_ID, MEMBER_3)).willReturn(true);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
@@ -619,8 +624,8 @@ class SendGroupDoseNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("크로스그룹 차단 — 약봉투가 이 스케줄의 그룹과 다른 그룹에 공유돼 있으면 라벨 노출 안 함")
-    void notify_prescriptionSharedWithDifferentGroup_hidesLabel() {
+    @DisplayName("구성원축 미승인 — 약봉투축은 켜져 있어도 구성원축 grant 없는 수신자는 라벨 노출 안 함(2축 AND)")
+    void notify_prescriptionSharedButMemberNotGranted_hidesLabel() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
@@ -633,7 +638,8 @@ class SendGroupDoseNotificationServiceTest {
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
-                        LocalDate.of(2026, 6, 21), "혈압약", 99L, true)));
+                        LocalDate.of(2026, 6, 21), "혈압약", true)));
+        given(medicationShareService.isMemberGranted(GROUP_ID, ACTOR_ID, MEMBER_ID)).willReturn(false);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 

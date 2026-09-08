@@ -18,7 +18,7 @@ import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeResponse;
 import com.pillmate.caregroup.application.dto.MyGroupSummary;
-import com.pillmate.caregroup.application.dto.ShareablePrescriptionView;
+import com.pillmate.caregroup.application.dto.ShareSettingsView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
 import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
@@ -134,14 +134,22 @@ public class CareGroupController {
     }
 
     @GetMapping("/{groupId}/share-settings")
-    public ResponseEntity<ApiResponse<List<ShareablePrescriptionView>>> getShareablePrescriptions(
-            @PathVariable Long groupId) {
+    public ResponseEntity<ApiResponse<ShareSettingsView>> getShareSettings(@PathVariable Long groupId) {
         Long userId = UserContext.get();
-        return ResponseEntity.ok(
-                ApiResponse.success(medicationShareService.getShareablePrescriptions(groupId, userId)));
+        return ResponseEntity.ok(ApiResponse.success(medicationShareService.getShareSettings(groupId, userId)));
     }
 
-    @PutMapping("/{groupId}/share-settings/{prescriptionId}")
+    @PutMapping("/{groupId}/share-settings/members/{viewerUserId}")
+    public ResponseEntity<ApiResponse<Void>> updateMemberShare(
+            @PathVariable Long groupId,
+            @PathVariable Long viewerUserId,
+            @RequestBody @Valid UpdateShareSettingRequest request) {
+        Long userId = UserContext.get();
+        medicationShareService.updateMemberShare(groupId, userId, viewerUserId, request.enabled());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PutMapping("/{groupId}/share-settings/prescriptions/{prescriptionId}")
     public ResponseEntity<ApiResponse<Void>> updatePrescriptionShare(
             @PathVariable Long groupId,
             @PathVariable Long prescriptionId,

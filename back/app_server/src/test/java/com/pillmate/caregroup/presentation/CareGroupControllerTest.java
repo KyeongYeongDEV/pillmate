@@ -18,6 +18,8 @@ import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse.MemberDay
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.GroupDayView;
 import com.pillmate.caregroup.application.dto.GroupMonthScheduleResponse.MemberAdherenceView;
+import com.pillmate.caregroup.application.dto.ShareSettingsView;
+import com.pillmate.caregroup.application.dto.ShareSettingView;
 import com.pillmate.caregroup.application.dto.ShareablePrescriptionView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.common.exception.ErrorCode;
@@ -149,23 +151,28 @@ class CareGroupControllerTest {
     }
 
     @Test
-    @DisplayName("GET /groups/{groupId}/share-settings → 200 + 약봉투별 공유 설정 목록")
-    void getShareablePrescriptions_returns200() throws Exception {
-        given(medicationShareService.getShareablePrescriptions(GROUP_ID, USER_ID))
-                .willReturn(List.of(new ShareablePrescriptionView(
-                        PRESCRIPTION_ID, "감기약", LocalDate.of(2026, 6, 1), true, PrescriptionStatus.ONGOING)));
+    @DisplayName("GET /groups/{groupId}/share-settings → 200 + 구성원별·약봉투별 공유 설정 목록")
+    void getShareSettings_returns200() throws Exception {
+        given(medicationShareService.getShareSettings(GROUP_ID, USER_ID))
+                .willReturn(new ShareSettingsView(
+                        List.of(new ShareSettingView(VIEWER_ID, "아버지", "PATIENT", true)),
+                        List.of(new ShareablePrescriptionView(
+                                PRESCRIPTION_ID, "감기약", LocalDate.of(2026, 6, 1), true, PrescriptionStatus.ONGOING))));
 
         mockMvc.perform(get("/groups/" + GROUP_ID + "/share-settings").header("X-User-Id", USER_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].prescriptionId").value(PRESCRIPTION_ID))
-                .andExpect(jsonPath("$.data[0].label").value("감기약"))
-                .andExpect(jsonPath("$.data[0].shared").value(true));
+                .andExpect(jsonPath("$.data.members[0].userId").value(VIEWER_ID))
+                .andExpect(jsonPath("$.data.members[0].name").value("아버지"))
+                .andExpect(jsonPath("$.data.members[0].shared").value(true))
+                .andExpect(jsonPath("$.data.prescriptions[0].prescriptionId").value(PRESCRIPTION_ID))
+                .andExpect(jsonPath("$.data.prescriptions[0].label").value("감기약"))
+                .andExpect(jsonPath("$.data.prescriptions[0].shared").value(true));
     }
 
     @Test
     @DisplayName("GET /groups/{groupId}/share-settings — 비멤버 요청자는 403")
-    void getShareablePrescriptions_nonMember_returns403() throws Exception {
-        given(medicationShareService.getShareablePrescriptions(GROUP_ID, USER_ID))
+    void getShareSettings_nonMember_returns403() throws Exception {
+        given(medicationShareService.getShareSettings(GROUP_ID, USER_ID))
                 .willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED));
 
         mockMvc.perform(get("/groups/" + GROUP_ID + "/share-settings").header("X-User-Id", USER_ID))
@@ -174,9 +181,49 @@ class CareGroupControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /groups/{groupId}/share-settings/{prescriptionId} → 200")
+    @DisplayName("PUT /groups/{groupId}/share-settings/members/{viewerUserId} → 200")
+    void updateMemberShare_returns200() throws Exception {
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/members/" + VIEWER_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
+                .andExpect(status().isOk());
+
+        then(medicationShareService).should().updateMemberShare(GROUP_ID, USER_ID, VIEWER_ID, true);
+    }
+
+    @Test
+    @DisplayName("PUT /groups/{groupId}/share-settings/members/{viewerUserId} — 유효하지 않은 대상이면 400")
+    void updateMemberShare_invalidTarget_returns400() throws Exception {
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.MEDICATION_SHARE_INVALID_TARGET))
+                .given(medicationShareService).updateMemberShare(GROUP_ID, USER_ID, VIEWER_ID, true);
+
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/members/" + VIEWER_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_017"));
+    }
+
+    @Test
+    @DisplayName("PUT /groups/{groupId}/share-settings/members/{viewerUserId} — 비멤버 요청자는 403")
+    void updateMemberShare_nonMember_returns403() throws Exception {
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(medicationShareService).updateMemberShare(GROUP_ID, USER_ID, VIEWER_ID, true);
+
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/members/" + VIEWER_ID)
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    @Test
+    @DisplayName("PUT /groups/{groupId}/share-settings/prescriptions/{prescriptionId} → 200")
     void updatePrescriptionShare_returns200() throws Exception {
-        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/" + PRESCRIPTION_ID)
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/prescriptions/" + PRESCRIPTION_ID)
                         .header("X-User-Id", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
@@ -186,12 +233,12 @@ class CareGroupControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /groups/{groupId}/share-settings/{prescriptionId} — 남의/다른그룹 약봉투면 403")
+    @DisplayName("PUT /groups/{groupId}/share-settings/prescriptions/{prescriptionId} — 남의 약봉투면 403")
     void updatePrescriptionShare_notOwnPrescription_returns403() throws Exception {
         org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.PATIENT_ACCESS_DENIED))
                 .given(medicationShareService).updatePrescriptionShare(GROUP_ID, USER_ID, PRESCRIPTION_ID, true);
 
-        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/" + PRESCRIPTION_ID)
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/prescriptions/" + PRESCRIPTION_ID)
                         .header("X-User-Id", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
@@ -200,12 +247,12 @@ class CareGroupControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /groups/{groupId}/share-settings/{prescriptionId} — 비멤버 요청자는 403")
+    @DisplayName("PUT /groups/{groupId}/share-settings/prescriptions/{prescriptionId} — 비멤버 요청자는 403")
     void updatePrescriptionShare_nonMember_returns403() throws Exception {
         org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
                 .given(medicationShareService).updatePrescriptionShare(GROUP_ID, USER_ID, PRESCRIPTION_ID, true);
 
-        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/" + PRESCRIPTION_ID)
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/prescriptions/" + PRESCRIPTION_ID)
                         .header("X-User-Id", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateShareSettingRequestBody(true))))
@@ -214,9 +261,9 @@ class CareGroupControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /groups/{groupId}/share-settings/{prescriptionId} — enabled 누락이면 400 (INVALID_REQUEST)")
+    @DisplayName("PUT /groups/{groupId}/share-settings/prescriptions/{prescriptionId} — enabled 누락이면 400 (INVALID_REQUEST)")
     void updatePrescriptionShare_enabledMissing_returns400() throws Exception {
-        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/" + PRESCRIPTION_ID)
+        mockMvc.perform(put("/groups/" + GROUP_ID + "/share-settings/prescriptions/" + PRESCRIPTION_ID)
                         .header("X-User-Id", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))

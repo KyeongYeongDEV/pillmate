@@ -26,21 +26,22 @@ interface ActivityTimelineItemProps {
   item: ActivityView;
   isLast?: boolean;
   whoLabel?: string;
+  tint?: string;
 }
 
-function ActivityTimelineItem({ item, isLast, whoLabel }: ActivityTimelineItemProps) {
-  const dotColor = DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
+function ActivityTimelineItem({ item, isLast, whoLabel, tint }: ActivityTimelineItemProps) {
+  const accent = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
   const isMiss = item.activityType === 'DOSE_MISSED';
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.rail}>
         {!isLast && <View style={styles.line} />}
-        <View style={[styles.dot, { backgroundColor: dotColor }]} />
+        <View style={[styles.dot, { backgroundColor: accent }]} />
       </View>
       <View style={[styles.card, isLast ? styles.cardLast : styles.cardSpaced]}>
         <View style={styles.head}>
-          <Avatar name={item.actorName[0] ?? '?'} tint={dotColor} size={scale(28)} />
+          <Avatar name={item.actorName[0] ?? '?'} tint={accent} size={scale(28)} />
           <View style={styles.headTextCol}>
             <Text style={styles.actor}>
               <Text style={styles.actorName}>{item.actorName}</Text>

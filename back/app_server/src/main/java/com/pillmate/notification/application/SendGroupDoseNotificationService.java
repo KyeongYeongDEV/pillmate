@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
@@ -48,6 +49,7 @@ public class SendGroupDoseNotificationService {
     private final PrescriptionSummaryPort prescriptionSummaryPort;
     private final CareGroupLookupPort careGroupLookupPort;
     private final CareGroupGuard careGroupGuard;
+    private final MedicationShareService medicationShareService;
     private final Clock clock;
 
     // 백그라운드 폴러(NotifyDueGroupDosesService) 전용 — doseLogId 는 폴러 자신의 쿼리 결과이므로
@@ -192,7 +194,7 @@ public class SendGroupDoseNotificationService {
         Long prescriptionId = schedule.getPrescriptionId();
         Long careGroupId = schedule.getCareGroupId();
         Long patientId = doseLog.getPatientId();
-        String prescriptionName = resolvePrescriptionName(prescriptionId, careGroupId);
+        PrescriptionSummary summary = resolvePrescriptionSummary(prescriptionId);
         String actorName = resolveActorName(actorUserId);
         String groupName = resolveGroupName(careGroupId);
         return recipientIds.stream()
@@ -200,7 +202,7 @@ public class SendGroupDoseNotificationService {
                 .filter(id -> !id.equals(patientId))
                 .map(recipientId -> buildOne(
                         isMissed, recipientId, actorUserId, careGroupId, doseLog.getId(), prescriptionId,
-                        prescriptionName, actorName, groupName))
+                        resolveVisibleLabel(summary, careGroupId, patientId, recipientId), actorName, groupName))
                 .toList();
     }
 
@@ -227,22 +229,27 @@ public class SendGroupDoseNotificationService {
         return careGroupLookupPort.findNameById(careGroupId).orElse(null);
     }
 
-    // 알림 표시용 처방전 이름: ①사용자 label(non-blank) 그대로 ②없으면 'M월 D일 약봉투'
-    // (카드 표시 규칙과 동일 — GetDayScheduleService.resolvePrescriptionLabels 참조. 알림은 단건이라 번호 불필요)
-    // L2(알약 정보) 공유 안 된 약봉투는 그룹 알림(푸시·목록)에 라벨을 노출하지 않는다 —
-    // /schedules/day 마스킹을 우회하는 유출 경로가 되지 않도록 약봉투 단위 공유 여부를 그대로 따른다.
-    private String resolvePrescriptionName(Long prescriptionId, Long careGroupId) {
+    private PrescriptionSummary resolvePrescriptionSummary(Long prescriptionId) {
         if (prescriptionId == null) {
             return null;
         }
-        return prescriptionSummaryPort.findById(prescriptionId)
-                .filter(summary -> isSharedWithGroup(summary, careGroupId))
-                .map(this::resolveLabel)
-                .orElse(null);
+        return prescriptionSummaryPort.findById(prescriptionId).orElse(null);
     }
 
-    private boolean isSharedWithGroup(PrescriptionSummary summary, Long careGroupId) {
-        return summary.sharedWithGroup() && careGroupId != null && careGroupId.equals(summary.careGroupId());
+    // 알림 표시용 처방전 이름: ①사용자 label(non-blank) 그대로 ②없으면 'M월 D일 약봉투'
+    // (카드 표시 규칙과 동일 — GetDayScheduleService.resolvePrescriptionLabels 참조. 알림은 단건이라 번호 불필요)
+    // L2(알약 정보) 는 2축 AND — 약봉투축(sharedWithGroup)이 꺼져 있으면 즉시 차단하고,
+    // 켜져 있어도 구성원축(owner→recipient grant)이 없는 수신자에게는 라벨을 노출하지 않는다.
+    // 수신자마다 구성원축이 다르므로 그룹 알림(푸시·목록)이 /schedules/day 마스킹을 우회하는
+    // 유출 경로가 되지 않도록 수신자별로 판정한다.
+    private String resolveVisibleLabel(PrescriptionSummary summary, Long careGroupId, Long patientId, Long recipientId) {
+        if (summary == null || !summary.sharedWithGroup()) {
+            return null;
+        }
+        if (!medicationShareService.isMemberGranted(careGroupId, patientId, recipientId)) {
+            return null;
+        }
+        return resolveLabel(summary);
     }
 
     private String resolveLabel(PrescriptionSummary summary) {

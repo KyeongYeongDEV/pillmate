@@ -27,7 +27,6 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
                    s.prescription_id,
                    p.prescribed_at,
                    p.label,
-                   p.care_group_id   AS prescription_care_group_id,
                    p.shared_with_group,
                    agg.drug_names,
                    agg.pill_colors,
@@ -80,12 +79,11 @@ class ScheduleDayQueryAdapter implements ScheduleDayQueryPort {
         Long doseLogId         = toLong(row.get("dose_log_id"));
         String status          = (String) row.get("dose_status");
         String singleDrugName  = (String) row.get("single_drug_name");
-        Long prescriptionCareGroupId = toLong(row.get("prescription_care_group_id"));
         Boolean sharedWithGroup      = (Boolean) row.get("shared_with_group");
         return new DayScheduleProjection(
                 scheduleId, customTime, prescriptionId, prescribedAt,
                 drugNames, pillColors, doseLogId, status, singleDrugName, label,
-                prescriptionCareGroupId, sharedWithGroup);
+                sharedWithGroup);
     }
 
     private Long toLong(Object value) {

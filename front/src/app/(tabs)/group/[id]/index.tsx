@@ -166,6 +166,11 @@ export default function GroupDetailScreen() {
   // 구성원 목록의 아바타 색과 그룹 복약 스케줄러 캘린더의 색을 동일하게 맞춘다 — 뷰어 표시순서와 무관한 고유색.
   const colorByUserId = assignMemberColors(detail.members);
   const memberTints = detail.members.map(m => colorByUserId.get(m.userId) ?? colors.fallbackGray);
+  // 활동 피드는 PII 제거로 actor userId 가 없어 이름으로 구성원 고유색을 매칭한다.
+  // 매칭 실패(AI·시스템 활동, 탈퇴 구성원)면 undefined 를 넘겨 활동 종류별 기본색으로 폴백시킨다.
+  const tintByMemberName = new Map(
+    detail.members.map(m => [m.name, colorByUserId.get(m.userId) ?? colors.fallbackGray]),
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -271,6 +276,7 @@ export default function GroupDetailScreen() {
               key={`${item.occurredAt}-${i}`}
               item={item}
               isLast={i === arr.length - 1}
+              tint={tintByMemberName.get(item.actorName)}
             />
           ))}
           {detail.recentActivities.length === 0 && (

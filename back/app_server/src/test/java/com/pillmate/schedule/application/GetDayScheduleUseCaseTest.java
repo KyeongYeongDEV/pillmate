@@ -1,6 +1,6 @@
 package com.pillmate.schedule.application;
 
-import com.pillmate.caregroup.domain.repository.MembershipRepository;
+import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
@@ -34,7 +34,7 @@ class GetDayScheduleUseCaseTest {
 
     @Mock ScheduleDayQueryPort scheduleDayQueryPort;
     @Mock CareGroupGuard careGroupGuard;
-    @Mock MembershipRepository membershipRepository;
+    @Mock MedicationShareService medicationShareService;
     @InjectMocks GetDayScheduleService sut;
 
     private static final Long PATIENT_ID = 1L;
@@ -434,10 +434,10 @@ class GetDayScheduleUseCaseTest {
         assertThat(slot.label()).isEqualTo("09:30");
     }
 
-    // ─── T-BE-L2-MASKING — 알약 정보(L2) 마스킹 배선 (약봉투 단위 그룹 공유) ─────
+    // ─── T-BE-L2-MASKING — 알약 정보(L2) 마스킹 배선 (2축 AND: 구성원×약봉투) ─────
 
     @Test
-    @DisplayName("본인 조회 — 약 이름/처방전 이름 그대로 노출, membershipRepository 호출 없음")
+    @DisplayName("본인 조회 — 약 이름/처방전 이름 그대로 노출, medicationShareService 호출 없음")
     void execute_selfView_neverMasked() {
         given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
                 List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN"))
@@ -448,7 +448,7 @@ class GetDayScheduleUseCaseTest {
         SlotView slot = response.slots().get(0);
         assertThat(slot.items()).containsExactly("타이레놀");
         assertThat(slot.prescriptionName()).isEqualTo("6월 21일 약봉투");
-        then(membershipRepository).shouldHaveNoInteractions();
+        then(medicationShareService).shouldHaveNoInteractions();
     }
 
     @Test
@@ -457,7 +457,7 @@ class GetDayScheduleUseCaseTest {
         Long memberId = 5L;
         given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
                 List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
-                        null, 7L, true))
+                        null, true))
         );
 
         DayScheduleResponse response = sut.execute(TODAY, memberId, null);
@@ -471,18 +471,19 @@ class GetDayScheduleUseCaseTest {
         assertThat(slot.drugCount()).isEqualTo(1);
         assertThat(response.totalCount()).isEqualTo(1);
         assertThat(response.doneCount()).isEqualTo(1);
-        then(membershipRepository).shouldHaveNoInteractions();
+        then(medicationShareService).shouldHaveNoInteractions();
     }
 
     @Test
-    @DisplayName("타인 조회 + groupId 있음 + 해당 약봉투 공유 꺼짐 → 마스킹")
-    void execute_otherPatient_withGroupId_notShared_masksMedicationDetail() {
+    @DisplayName("타인 조회 + 구성원축 OFF → 약봉투축 켜져 있어도 전체 마스킹")
+    void execute_otherPatient_memberNotGranted_masksEvenIfPrescriptionShared() {
         Long memberId = 5L;
         Long groupId = 7L;
         given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
                 List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
-                        null, groupId, false))
+                        null, true))
         );
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(false);
 
         DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
 
@@ -492,16 +493,33 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("타인 조회 + groupId 있음 + 해당 약봉투 공유 켜짐 + 둘다 ACTIVE 멤버 → 약 이름/처방전 이름 노출")
-    void execute_otherPatient_withGroupId_shared_showsMedicationDetail() {
+    @DisplayName("타인 조회 + 구성원축 ON + 약봉투축 OFF → 마스킹")
+    void execute_otherPatient_memberGrantedButPrescriptionNotShared_masksMedicationDetail() {
         Long memberId = 5L;
         Long groupId = 7L;
         given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
                 List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
-                        null, groupId, true))
+                        null, false))
         );
-        given(membershipRepository.existsByCareGroupIdAndUserId(groupId, memberId)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(groupId, PATIENT_ID)).willReturn(true);
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
+
+        SlotView slot = response.slots().get(0);
+        assertThat(slot.items()).isEmpty();
+        assertThat(slot.prescriptionName()).isEqualTo("약 정보 비공개");
+    }
+
+    @Test
+    @DisplayName("타인 조회 + 구성원축 ON + 약봉투축 ON → 공개 (care_group_id NULL 이어도 무관, 회귀 방지)")
+    void execute_otherPatient_bothGranted_showsMedicationDetail() {
+        Long memberId = 5L;
+        Long groupId = 7L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
+                        null, true))
+        );
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
 
         DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
 
@@ -512,38 +530,19 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
-    @DisplayName("타인 조회 + groupId 다른 약봉투 소속 그룹 → 공유 켜져 있어도 마스킹(크로스그룹 차단)")
-    void execute_otherPatient_crossGroup_masksEvenIfShared() {
-        Long memberId = 5L;
-        Long requestGroupId = 7L;
-        Long prescriptionOwnGroupId = 9L;
-        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
-                List.of(row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
-                        null, prescriptionOwnGroupId, true))
-        );
-
-        DayScheduleResponse response = sut.execute(TODAY, memberId, requestGroupId);
-
-        SlotView slot = response.slots().get(0);
-        assertThat(slot.prescriptionName()).isEqualTo("약 정보 비공개");
-        then(membershipRepository).shouldHaveNoInteractions();
-    }
-
-    @Test
-    @DisplayName("타인 조회 — 그날 약봉투 2개(A=공유켬, B=공유꺼짐) → A 슬롯 그대로, B 슬롯만 마스킹")
+    @DisplayName("타인 조회 + 구성원축 ON — 약봉투 A켬/B끔 → A만 공개, B만 마스킹")
     void execute_otherPatient_mixedSharedPrescriptions_masksOnlyUnshared() {
         Long memberId = 5L;
         Long groupId = 7L;
         given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
                 List.of(
                         row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
-                                null, groupId, true),
+                                null, true),
                         row(2L, LocalTime.of(19, 0), 200L, TODAY, List.of("아목시실린"), List.of("#0f0"), 10L, "TAKEN",
-                                null, groupId, false)
+                                null, false)
                 )
         );
-        given(membershipRepository.existsByCareGroupIdAndUserId(groupId, memberId)).willReturn(true);
-        given(membershipRepository.existsByCareGroupIdAndUserId(groupId, PATIENT_ID)).willReturn(true);
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
 
         DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
 
@@ -556,6 +555,75 @@ class GetDayScheduleUseCaseTest {
     }
 
     @Test
+    @DisplayName("타인 조회 + 같은 시각 A켬/B끔 머지 → B의 약 이름·라벨이 A 슬롯에 섞여 새지 않는다")
+    void execute_otherPatient_sameTimeMixedSharing_doesNotLeakUnsharedIntoMergedSlot() {
+        Long memberId = 5L;
+        Long groupId = 7L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(
+                        row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("타이레놀"), List.of("#fff"), 9L, "TAKEN",
+                                "공개약봉투", true),
+                        row(2L, LocalTime.of(8, 0), 200L, TODAY, List.of("비밀약"), List.of("#0f0"), 10L, "TAKEN",
+                                "비공개약봉투", false)
+                )
+        );
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
+
+        SlotView merged = response.slots().stream().filter(s -> s.time().equals("08:00")).findFirst().orElseThrow();
+        assertThat(merged.items()).containsExactly("타이레놀");
+        assertThat(merged.items()).doesNotContain("비밀약");
+        assertThat(merged.prescriptionName()).isEqualTo("공개약봉투");
+        assertThat(merged.prescriptionName()).doesNotContain("비공개약봉투");
+        assertThat(merged.pillColors()).containsExactly("#fff");
+        assertThat(merged.drugCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("타인 조회 + 같은 시각 전부 비공개 머지 → 슬롯 전체 마스킹")
+    void execute_otherPatient_sameTimeAllUnshared_masksWholeSlot() {
+        Long memberId = 5L;
+        Long groupId = 7L;
+        given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
+                List.of(
+                        row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("약가"), List.of("#fff"), 9L, "TAKEN",
+                                "비공개1", false),
+                        row(2L, LocalTime.of(8, 0), 200L, TODAY, List.of("약나"), List.of("#0f0"), 10L, "TAKEN",
+                                "비공개2", false)
+                )
+        );
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
+
+        DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
+
+        SlotView merged = response.slots().get(0);
+        assertThat(merged.items()).isEmpty();
+        assertThat(merged.pillColors()).isEmpty();
+        assertThat(merged.prescriptionName()).isEqualTo("약 정보 비공개");
+        assertThat(merged.drugCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("본인 조회 + 같은 시각 공유 꺼진 약봉투 → 본인에게는 전부 그대로 공개(회귀 방지)")
+    void execute_selfView_sameTimeUnshared_showsEverything() {
+        given(scheduleDayQueryPort.findByPatientAndDate(PATIENT_ID, TODAY)).willReturn(
+                List.of(
+                        row(1L, LocalTime.of(8, 0), 100L, TODAY, List.of("약가"), List.of("#fff"), 9L, "TAKEN",
+                                "내약봉투1", false),
+                        row(2L, LocalTime.of(8, 0), 200L, TODAY, List.of("약나"), List.of("#0f0"), 10L, "TAKEN",
+                                "내약봉투2", false)
+                )
+        );
+
+        DayScheduleResponse response = sut.execute(TODAY, PATIENT_ID, null);
+
+        SlotView merged = response.slots().get(0);
+        assertThat(merged.items()).containsExactly("약가", "약나");
+        assertThat(merged.prescriptionName()).contains("내약봉투1", "내약봉투2");
+    }
+
+    @Test
     @DisplayName("타인 조회 + 레거시 행(prescriptionId 없음) → 공유 개념 없어 항상 마스킹 유지(fail-closed)")
     void execute_otherPatient_legacyRow_alwaysMasked() {
         Long memberId = 5L;
@@ -563,6 +631,7 @@ class GetDayScheduleUseCaseTest {
         given(scheduleDayQueryPort.findByPatientAndDate(memberId, TODAY)).willReturn(
                 List.of(legacyRow(10L, LocalTime.of(8, 0), "타이레놀", 20L, "TAKEN"))
         );
+        given(medicationShareService.isMemberGranted(groupId, memberId, PATIENT_ID)).willReturn(true);
 
         DayScheduleResponse response = sut.execute(TODAY, memberId, groupId);
 
@@ -583,23 +652,22 @@ class GetDayScheduleUseCaseTest {
                                       LocalDate prescribedAt, List<String> drugNames, List<String> pillColors,
                                       Long doseLogId, String doseStatus, String label) {
         return row(scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors,
-                doseLogId, doseStatus, label, null, false);
+                doseLogId, doseStatus, label, false);
     }
 
     private DayScheduleProjection row(Long scheduleId, LocalTime customTime, Long prescriptionId,
                                       LocalDate prescribedAt, List<String> drugNames, List<String> pillColors,
-                                      Long doseLogId, String doseStatus, String label,
-                                      Long prescriptionCareGroupId, boolean sharedWithGroup) {
+                                      Long doseLogId, String doseStatus, String label, boolean sharedWithGroup) {
         return new DayScheduleProjection(
                 scheduleId, customTime, prescriptionId, prescribedAt, drugNames, pillColors,
-                doseLogId, doseStatus, null, label, prescriptionCareGroupId, sharedWithGroup);
+                doseLogId, doseStatus, null, label, sharedWithGroup);
     }
 
     private DayScheduleProjection legacyRow(Long scheduleId, LocalTime customTime,
                                              String singleDrugName, Long doseLogId, String doseStatus) {
         return new DayScheduleProjection(
                 scheduleId, customTime, null, null, List.of(), List.of(),
-                doseLogId, doseStatus, singleDrugName, null, null, false);
+                doseLogId, doseStatus, singleDrugName, null, false);
     }
 
     // ─── T-RX-CARD-USER-LABEL — 사용자 지정 약봉투 이름(label) 우선순위 ───────────

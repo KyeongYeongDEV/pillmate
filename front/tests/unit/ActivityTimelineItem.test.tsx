@@ -49,4 +49,9 @@ describe('ActivityTimelineItem', () => {
     render(<ActivityTimelineItem item={DONE} whoLabel="할머니" />);
     expect(screen.getByText(/할머니/)).toBeTruthy();
   });
+
+  it('tint prop 을 주면 그 색이 Avatar 에 쓰인다', () => {
+    render(<ActivityTimelineItem item={DONE} tint="#123456" />);
+    expect(screen.getByText('박').parent?.parent?.props.style.backgroundColor).toBe('#123456');
+  });
 });

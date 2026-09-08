@@ -7,5 +7,5 @@ public interface PrescriptionSummaryPort {
 
     Optional<PrescriptionSummary> findById(Long prescriptionId);
 
-    record PrescriptionSummary(LocalDate prescribedAt, String label, Long careGroupId, boolean sharedWithGroup) {}
+    record PrescriptionSummary(LocalDate prescribedAt, String label, boolean sharedWithGroup) {}
 }
