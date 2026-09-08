@@ -20,10 +20,6 @@ function formatDate(dateStr: string): string {
   return `${y}.${m}.${d}`;
 }
 
-function roleLabel(role: string): string {
-  return role === 'PATIENT' ? '환자' : role === 'GUARDIAN' ? '보호자' : role;
-}
-
 function prescriptionLabel(item: SharePrescriptionSetting): string {
   return item.label ?? `약봉투 #${item.prescriptionId}`;
 }
@@ -158,7 +154,6 @@ function MemberShareRow({
     <View style={[styles.row, !isFirst && styles.borderTop]}>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{member.name}</Text>
-        <Text style={styles.sub}>{roleLabel(member.role)}</Text>
       </View>
       <Switch
         value={member.shared}

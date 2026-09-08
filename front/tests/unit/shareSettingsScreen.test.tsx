@@ -76,13 +76,13 @@ describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션',
     expect(screen.getByText('공유할 약봉투')).toBeTruthy();
   });
 
-  it('구성원을 이름·역할과 함께 렌더한다', () => {
+  it('구성원을 이름만으로 렌더한다 (역할 표시 없음)', () => {
     setup({ data: view() });
     render(<ShareSettingsScreen />);
     expect(screen.getByText('박순자')).toBeTruthy();
-    expect(screen.getByText('환자')).toBeTruthy();
     expect(screen.getByText('김철수')).toBeTruthy();
-    expect(screen.getByText('보호자')).toBeTruthy();
+    expect(screen.queryByText('환자')).toBeNull();
+    expect(screen.queryByText('보호자')).toBeNull();
   });
 
   it('약봉투를 라벨·날짜와 함께 렌더한다', () => {
