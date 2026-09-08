@@ -41,34 +41,36 @@ export default function GroupScreen() {
     router.push('/group/create' as any);
   }, []);
 
+  const handleScan = useCallback(() => {
+    router.push('/group/scan' as any);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <TabHeader
-        title="그룹"
-        right={
-          <Pressable
-            onPress={() => router.push('/group/scan' as any)}
-            accessibilityLabel="QR 스캔으로 가입"
-            accessibilityRole="button"
-            hitSlop={8}
-          >
-            <Feather name="maximize" size={scale(22)} color={colors.labelNormal} />
-          </Pressable>
-        }
-      />
+      <TabHeader title="그룹" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 새 그룹 CTA */}
-        <Pressable
-          style={styles.ctaCard}
-          onPress={handleCreate}
-          accessibilityLabel="새 그룹 만들기"
-          accessibilityRole="button"
-        >
-          <Feather name="plus-circle" size={scale(22)} color={colors.primaryBase} />
-          <Text style={styles.ctaText}>새 그룹 만들기</Text>
-          <Feather name="chevron-right" size={scale(18)} color={colors.labelAlternative} />
-        </Pressable>
+        {/* 그룹 진입 CTA 2종 — 만들기/참여를 동등한 선택지로 1:1 배치 */}
+        <View style={styles.ctaRow}>
+          <Pressable
+            style={styles.ctaCard}
+            onPress={handleCreate}
+            accessibilityLabel="새 그룹 만들기"
+            accessibilityRole="button"
+          >
+            <Feather name="plus-circle" size={scale(20)} color={colors.primaryBase} />
+            <Text style={styles.ctaText}>새 그룹 만들기</Text>
+          </Pressable>
+          <Pressable
+            style={styles.ctaCard}
+            onPress={handleScan}
+            accessibilityLabel="QR 촬영"
+            accessibilityRole="button"
+          >
+            <Feather name="maximize" size={scale(20)} color={colors.labelNormal} />
+            <Text style={styles.ctaText}>QR 촬영</Text>
+          </Pressable>
+        </View>
 
         {isLoading && <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />}
         {isError && <ErrorPlaceholder />}
@@ -126,12 +128,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center', paddingVertical: space.s20 },
   errorBox: { margin: space.s16, padding: space.s16, borderRadius: radius.r12, backgroundColor: colors.bgNormal },
   errorText: { fontSize: scale(14), color: colors.labelAlternative, textAlign: 'center' },
+  ctaRow: { flexDirection: 'row', marginHorizontal: space.s16, gap: space.s12 },
+  // 두 CTA 는 flex:1 로 화면 폭과 무관하게 서로 1:1 동일 크기를 유지한다(높이도 동일 고정).
   ctaCard: {
-    marginHorizontal: space.s16,
-    flexDirection: 'row', alignItems: 'center', gap: space.s12,
+    flex: 1, height: scale(60),
+    flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: space.s8,
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
-    padding: space.s16, borderWidth: 1, borderColor: colors.line,
+    paddingHorizontal: space.s12, borderWidth: 1, borderColor: colors.line,
     ...shadows.small,
   },
-  ctaText: { flex: 1, fontSize: scale(15), fontWeight: '600', color: colors.primaryBase },
+  ctaText: { fontSize: scale(14), fontWeight: '600', color: colors.labelNormal, textAlign: 'center' },
 });
