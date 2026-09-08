@@ -263,7 +263,11 @@ class GetPrescriptionDetailUseCaseTest {
     @DisplayName("insight 있으면 상세 응답에 inline 포함")
     void detail_withInsights_inlinedInResponse() {
         UserContext.set(OWNER_ID);
+        // 인사이트는 모든 약이 식약처 DB 에 매칭된 약봉투에만 노출된다 — 매칭 약을 담아 적격으로 만든다.
         Prescription p = prescription(OWNER_ID, null);
+        p.addDrug(matchedDrug(101L, "타이레놀정"));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-001", "타이레놀정", null)));
         given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
         given(prescriptionInsightRepository.findByPrescriptionId(PRESCRIPTION_ID))
                 .willReturn(List.of(PrescriptionInsight.create(
@@ -288,6 +292,23 @@ class GetPrescriptionDetailUseCaseTest {
         PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
 
         assertThat(detail.insights()).isNull();
+    }
+
+    @Test
+    @DisplayName("미매칭 약(직접입력)이 섞인 처방전 — insight 가 이미 저장돼 있어도 상세 응답 insights null")
+    void detail_ineligibleForAiInsight_insightsNullEvenIfStored() {
+        UserContext.set(OWNER_ID);
+        Prescription p = prescription(OWNER_ID, null);
+        p.addDrug(matchedDrug(101L, "타이레놀정"));
+        p.addDrug(unmatchedDrug("동광나자티딘캡슐"));
+        given(prescriptionRepository.findById(PRESCRIPTION_ID)).willReturn(Optional.of(p));
+        given(drugLookupPort.findByIds(List.of(101L)))
+                .willReturn(Map.of(101L, new DrugSummary(101L, "KD-001", "타이레놀정500밀리그램", null)));
+
+        PrescriptionDetailResponse detail = sut.detail(PRESCRIPTION_ID);
+
+        assertThat(detail.insights()).isNull();
+        verify(prescriptionInsightRepository, never()).findByPrescriptionId(org.mockito.ArgumentMatchers.anyLong());
     }
 
     private Prescription prescription(Long patientId, String imageKey) {

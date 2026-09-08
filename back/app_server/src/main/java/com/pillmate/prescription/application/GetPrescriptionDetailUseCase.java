@@ -58,11 +58,15 @@ public class GetPrescriptionDetailUseCase {
                 assembler.resolveDaysRemaining(status, today, period.end()),
                 assembler.resolveProgressRate(status, today, period.start(), period.end()),
                 assembler.resolveAdherenceRate(stats),
-                resolveInsights(prescriptionId));
+                resolveInsights(prescription));
     }
 
-    private List<PrescriptionInsightView> resolveInsights(Long prescriptionId) {
-        List<PrescriptionInsightView> views = prescriptionInsightRepository.findByPrescriptionId(prescriptionId)
+    private List<PrescriptionInsightView> resolveInsights(Prescription prescription) {
+        if (!prescription.isEligibleForAiInsight()) {
+            return null;
+        }
+        List<PrescriptionInsightView> views = prescriptionInsightRepository
+                .findByPrescriptionId(prescription.getId())
                 .stream().map(PrescriptionInsightView::from).toList();
         return views.isEmpty() ? null : views;
     }

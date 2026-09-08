@@ -54,6 +54,7 @@ public class GetActivePrescriptionsWithInsightUseCase {
                 prescriptionInsightRepository.findByPrescriptionIds(activeIds);
         return prescriptionRepository.findAllByPatientId(patientId).stream()
                 .filter(prescription -> activeIds.contains(prescription.getId()))
+                .filter(Prescription::isEligibleForAiInsight)
                 .filter(prescription -> hasInsight(insightsByPrescription, prescription.getId()))
                 .sorted(Comparator.comparing(Prescription::getPrescribedAt)
                         .thenComparing(Prescription::getId).reversed())

@@ -36,15 +36,19 @@ public class GetLatestPrescriptionWithInsightUseCase {
         List<PrescribedDrug> drugs = prescription.getDrugs();
         return new LatestPrescriptionWithInsightResponse(
                 prescription.getId(), prescription.getPrescribedAt(),
-                drugs.size(), resolvePrimaryDrugName(drugs), resolveInsights(prescription.getId()));
+                drugs.size(), resolvePrimaryDrugName(drugs), resolveInsights(prescription));
     }
 
     private String resolvePrimaryDrugName(List<PrescribedDrug> drugs) {
         return drugs.isEmpty() ? null : drugs.get(0).getNameRaw();
     }
 
-    private List<PrescriptionInsightView> resolveInsights(Long prescriptionId) {
-        List<PrescriptionInsightView> views = prescriptionInsightRepository.findByPrescriptionId(prescriptionId)
+    private List<PrescriptionInsightView> resolveInsights(Prescription prescription) {
+        if (!prescription.isEligibleForAiInsight()) {
+            return null;
+        }
+        List<PrescriptionInsightView> views = prescriptionInsightRepository
+                .findByPrescriptionId(prescription.getId())
                 .stream().map(PrescriptionInsightView::from).toList();
         return views.isEmpty() ? null : views;
     }

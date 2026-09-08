@@ -105,6 +105,25 @@ class GetActivePrescriptionsWithInsightUseCaseTest {
     }
 
     @Test
+    @DisplayName("미매칭 약(직접입력)이 섞인 활성 처방전 — insight 가 있어도 목록에서 제외")
+    void loadActive_ineligibleForAiInsight_excludedEvenWithInsight() {
+        UserContext.set(OWNER_ID);
+        Prescription ineligible = prescriptionWithUnmatchedDrug(11L, LocalDate.of(2026, 6, 10));
+        Prescription eligible = prescription(12L, "아모잘탄", LocalDate.of(2026, 7, 1));
+        given(activeMedicationPort.findActivePrescriptionIds(OWNER_ID, TODAY))
+                .willReturn(Set.of(11L, 12L));
+        given(prescriptionRepository.findAllByPatientId(OWNER_ID))
+                .willReturn(List.of(ineligible, eligible));
+        given(prescriptionInsightRepository.findByPrescriptionIds(Set.of(11L, 12L)))
+                .willReturn(Map.of(11L, List.of(insight(11L)), 12L, List.of(insight(12L))));
+
+        List<LatestPrescriptionWithInsightResponse> result = sut.loadActiveForPatient(OWNER_ID);
+
+        assertThat(result).extracting(LatestPrescriptionWithInsightResponse::prescriptionId)
+                .containsExactly(12L);
+    }
+
+    @Test
     @DisplayName("복약중 처방전 없으면 빈 목록")
     void loadActive_noActive_returnsEmpty() {
         UserContext.set(OWNER_ID);
@@ -133,6 +152,17 @@ class GetActivePrescriptionsWithInsightUseCaseTest {
         ReflectionTestUtils.setField(p, "id", id);
         p.addDrug(PrescribedDrug.builder()
                 .drugId(101L).nameRaw(drugNameRaw)
+                .doseAmount(new BigDecimal("1.00")).doseUnit("정")
+                .frequency(3).durationDays(7).confidence(new BigDecimal("0.95"))
+                .build());
+        return p;
+    }
+
+    private Prescription prescriptionWithUnmatchedDrug(Long id, LocalDate prescribedAt) {
+        Prescription p = Prescription.create(OWNER_ID, null, prescribedAt);
+        ReflectionTestUtils.setField(p, "id", id);
+        p.addDrug(PrescribedDrug.builder()
+                .nameRaw("동광나자티딘캡슐")
                 .doseAmount(new BigDecimal("1.00")).doseUnit("정")
                 .frequency(3).durationDays(7).confidence(new BigDecimal("0.95"))
                 .build());

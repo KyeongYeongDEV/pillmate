@@ -25,7 +25,9 @@ public class PrescriptionInsightContextReader {
 
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public Optional<RecommendationContext> load(Long prescriptionId) {
-        return prescriptionRepository.findById(prescriptionId).map(this::toContext);
+        return prescriptionRepository.findById(prescriptionId)
+                .filter(Prescription::isEligibleForAiInsight)
+                .map(this::toContext);
     }
 
     private RecommendationContext toContext(Prescription prescription) {

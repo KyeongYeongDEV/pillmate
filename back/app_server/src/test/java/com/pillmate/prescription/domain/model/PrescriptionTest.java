@@ -182,6 +182,34 @@ class PrescriptionTest {
         assertThat(p.getSymptom()).isNull();
     }
 
+    @Test
+    @DisplayName("모든 약이 식약처 DB 에 매칭되면 isEligibleForAiInsight() = true")
+    void isEligibleForAiInsight_whenAllDrugsMatched_returnsTrue() {
+        Prescription prescription = newPrescription();
+        prescription.addDrug(drugWithConfidence(new BigDecimal("0.92")));
+        prescription.addDrug(drugWithConfidence(new BigDecimal("0.85")));
+
+        assertThat(prescription.isEligibleForAiInsight()).isTrue();
+    }
+
+    @Test
+    @DisplayName("매칭 안 된 약(직접입력)이 하나라도 있으면 isEligibleForAiInsight() = false")
+    void isEligibleForAiInsight_whenAnyDrugUnmatched_returnsFalse() {
+        Prescription prescription = newPrescription();
+        prescription.addDrug(drugWithConfidence(new BigDecimal("0.95")));
+        prescription.addDrug(unmatchedDrug(new BigDecimal("0.95")));
+
+        assertThat(prescription.isEligibleForAiInsight()).isFalse();
+    }
+
+    @Test
+    @DisplayName("약이 하나도 없으면 인사이트 근거가 없으므로 isEligibleForAiInsight() = false (fail-closed)")
+    void isEligibleForAiInsight_whenNoDrugs_returnsFalse() {
+        Prescription prescription = newPrescription();
+
+        assertThat(prescription.isEligibleForAiInsight()).isFalse();
+    }
+
     private PrescribedDrug unmatchedDrug(BigDecimal confidence) {
         return PrescribedDrug.builder()
                 .drugId(null)

@@ -89,6 +89,25 @@ class GetLatestPrescriptionWithInsightUseCaseTest {
     }
 
     @Test
+    @DisplayName("미매칭 약(직접입력)이 섞인 최신 처방전 — insight 가 이미 저장돼 있어도 insights null")
+    void loadLatest_ineligibleForAiInsight_insightsNullEvenIfStored() {
+        UserContext.set(OWNER_ID);
+        Prescription latest = prescription(OWNER_ID, "타이레놀");
+        latest.addDrug(PrescribedDrug.builder()
+                .nameRaw("동광나자티딘캡슐")
+                .doseAmount(new BigDecimal("1.00")).doseUnit("정")
+                .frequency(3).durationDays(7).confidence(new BigDecimal("0.95"))
+                .build());
+        given(prescriptionRepository.findLatestByPatientId(OWNER_ID)).willReturn(Optional.of(latest));
+
+        LatestPrescriptionWithInsightResponse response = sut.loadLatestForPatient(OWNER_ID);
+
+        assertThat(response.insights()).isNull();
+        assertThat(response.drugCount()).isEqualTo(2);
+        verify(prescriptionInsightRepository, never()).findByPrescriptionId(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
     @DisplayName("처방전 없으면 null 반환")
     void loadLatest_noPrescription_returnsNull() {
         UserContext.set(OWNER_ID);

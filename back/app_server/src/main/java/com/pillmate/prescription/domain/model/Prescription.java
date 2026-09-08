@@ -166,6 +166,14 @@ public class Prescription {
         this.sharedWithGroup = false;
     }
 
+    // 식약처 DB 에 매칭 안 된 약(직접입력)이 하나라도 있으면 AI 가 무슨 약인지 알 수 없어
+    // 상호작용·중복 판단이 통째로 틀어진다 — 그런 약봉투에는 인사이트를 만들지도 보여주지도 않는다.
+    // 약이 하나도 없는 경우도 근거가 없으므로 부적격(fail-closed). 등록은 약 1개 이상을 강제하므로
+    // (RegisterPrescriptionService.requireNonEmptyItems) 실제로는 도달하지 않는 방어적 분기다.
+    public boolean isEligibleForAiInsight() {
+        return !drugs.isEmpty() && drugs.stream().allMatch(PrescribedDrug::isMatched);
+    }
+
     private boolean hasLowConfidenceDrug() {
         return drugs.stream().anyMatch(this::isBelowMinConfidence);
     }
