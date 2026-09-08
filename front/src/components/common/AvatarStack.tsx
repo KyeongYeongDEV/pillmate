@@ -17,9 +17,12 @@ const TINTS = [
 interface AvatarStackProps {
   names: string[];
   size?: number;
+  // 구성원별 고유색(예: assignMemberColors 결과)을 names 와 같은 순서로 전달하면 그걸 쓴다.
+  // 없으면 기존 역할 기반 고정 팔레트로 폴백(예: GroupCard 미리보기처럼 userId 를 모르는 호출부).
+  tints?: string[];
 }
 
-function AvatarStack({ names, size = 36 }: AvatarStackProps) {
+function AvatarStack({ names, size = 36, tints }: AvatarStackProps) {
   const visible = names.slice(0, MAX_VISIBLE);
   const extra = names.length - MAX_VISIBLE;
   const totalWidth = visible.length * (size - OVERLAP) + OVERLAP + (extra > 0 ? size - OVERLAP : 0);
@@ -28,7 +31,7 @@ function AvatarStack({ names, size = 36 }: AvatarStackProps) {
     <View style={[styles.container, { width: totalWidth, height: size }]}>
       {visible.map((name, i) => (
         <View key={i} style={[styles.avatarWrap, { left: i * (size - OVERLAP), zIndex: MAX_VISIBLE - i }]}>
-          <Avatar name={name[0] ?? '?'} tint={TINTS[i % TINTS.length]} size={size} />
+          <Avatar name={name[0] ?? '?'} tint={tints?.[i] ?? TINTS[i % TINTS.length]} size={size} />
         </View>
       ))}
       {extra > 0 && (

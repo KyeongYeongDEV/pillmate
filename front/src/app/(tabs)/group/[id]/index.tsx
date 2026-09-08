@@ -165,6 +165,7 @@ export default function GroupDetailScreen() {
   const memberNames = detail.members.map(m => m.name);
   // 구성원 목록의 아바타 색과 그룹 복약 스케줄러 캘린더의 색을 동일하게 맞춘다 — 뷰어 표시순서와 무관한 고유색.
   const colorByUserId = assignMemberColors(detail.members);
+  const memberTints = detail.members.map(m => colorByUserId.get(m.userId) ?? colors.fallbackGray);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -181,7 +182,7 @@ export default function GroupDetailScreen() {
         {/* 그룹 카드 */}
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
-            <AvatarStack names={memberNames} size={scale(44)} />
+            <AvatarStack names={memberNames} tints={memberTints} size={scale(44)} />
             <View style={styles.heroInfo}>
               <Text style={styles.heroName}>{detail.name}</Text>
               <Text style={styles.heroSub}>{detail.memberCount}명</Text>

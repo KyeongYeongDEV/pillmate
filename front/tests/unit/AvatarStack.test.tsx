@@ -29,4 +29,12 @@ describe('AvatarStack', () => {
     const { toJSON } = render(<AvatarStack names={[]} />);
     expect(toJSON()).toBeTruthy();
   });
+
+  // tints 를 넘기면(예: assignMemberColors 결과) 구성원 목록 하단과 동일한 고유색을 써야 한다 —
+  // 안 넘기면(예: 그룹 목록 미리보기 카드) 기존 역할 기반 고정 팔레트로 폴백.
+  it('tints prop 을 넘기면 그 색을 이니셜 순서대로 그대로 쓴다', () => {
+    render(<AvatarStack names={['박', '김']} tints={['#111111', '#222222']} />);
+    expect(screen.getByText('박').parent?.parent?.props.style.backgroundColor).toBe('#111111');
+    expect(screen.getByText('김').parent?.parent?.props.style.backgroundColor).toBe('#222222');
+  });
 });
