@@ -16,8 +16,8 @@ const mockQuery = useGetGroupMonthScheduleQuery as jest.Mock;
 const mockPush = router.push as jest.Mock;
 
 const MEMBERS: MemberView[] = [
-  { userId: 7, name: '박순자', role: 'PATIENT' },
-  { userId: 2, name: '김보호', role: 'GUARDIAN' },
+  { userId: 7, name: '박순자', role: 'PATIENT', color: null },
+  { userId: 2, name: '김보호', role: 'GUARDIAN', color: null },
 ];
 
 describe('GroupScheduleCalendar', () => {

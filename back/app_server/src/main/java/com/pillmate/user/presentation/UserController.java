@@ -8,6 +8,7 @@ import com.pillmate.user.application.WithdrawUserService;
 import com.pillmate.user.application.dto.UserProfileResponse;
 import com.pillmate.user.domain.model.PushProvider;
 import com.pillmate.user.presentation.dto.RegisterPushTokenRequest;
+import com.pillmate.user.presentation.dto.UpdateColorRequest;
 import com.pillmate.user.presentation.dto.UpdateProfileRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,12 @@ public class UserController {
             @RequestBody @Valid UpdateProfileRequest request) {
         UserProfileResponse response = updateProfileService.updateName(UserContext.get(), request.name());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/color")
+    public ResponseEntity<ApiResponse<Void>> updateColor(@RequestBody @Valid UpdateColorRequest request) {
+        updateProfileService.updateColor(UserContext.get(), request.color());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping

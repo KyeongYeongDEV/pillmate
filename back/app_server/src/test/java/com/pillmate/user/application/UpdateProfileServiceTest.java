@@ -85,4 +85,43 @@ class UpdateProfileServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("updateColor — 정상 팔레트 값이면 도메인 updateColor 경유 + save")
+    void updateColor_success_saves() {
+        User user = User.ofOAuth("kakao-1", UserProvider.KAKAO, "홍길동", "hong@example.com");
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(userRepository.save(user)).willReturn(user);
+
+        sut().updateColor(USER_ID, "#26A69A");
+
+        assertThat(user.getPreferredColor()).isEqualTo("#26A69A");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    @DisplayName("updateColor — 탈퇴 계정이면 updateName 과 동일하게 ACCOUNT_WITHDRAWN, save 미호출")
+    void updateColor_withdrawnUser_throwsAccountWithdrawn() {
+        User withdrawn = User.ofOAuth("kakao-1", UserProvider.KAKAO, "홍길동", "hong@example.com");
+        withdrawn.withdraw(Instant.parse("2026-07-01T00:00:00Z"));
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(withdrawn));
+
+        assertThatThrownBy(() -> sut().updateColor(USER_ID, "#26A69A"))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ACCOUNT_WITHDRAWN);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("updateColor — 팔레트 밖의 값이면 도메인 IllegalArgumentException 전파, save 미호출")
+    void updateColor_outsidePalette_propagatesDomainException() {
+        User user = User.ofOAuth("kakao-1", UserProvider.KAKAO, "홍길동", "hong@example.com");
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> sut().updateColor(USER_ID, "#000000"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(userRepository, never()).save(any());
+    }
 }

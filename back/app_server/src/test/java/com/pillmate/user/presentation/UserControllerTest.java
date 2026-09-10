@@ -81,4 +81,27 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("PILL_092"));
     }
+
+    @Test
+    @DisplayName("PATCH /users/me/color 정상 팔레트 값 → 200")
+    void updateColor_validPaletteColor_returns200() throws Exception {
+        mockMvc.perform(patch("/users/me/color")
+                        .header("X-User-Id", "7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"color\":\"#26A69A\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /users/me/color 팔레트 밖의 값 → 400")
+    void updateColor_outsidePalette_returns400() throws Exception {
+        org.mockito.BDDMockito.willThrow(new IllegalArgumentException("colorHex must be one of the fixed palette"))
+                .given(updateProfileService).updateColor(7L, "#000000");
+
+        mockMvc.perform(patch("/users/me/color")
+                        .header("X-User-Id", "7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"color\":\"#000000\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

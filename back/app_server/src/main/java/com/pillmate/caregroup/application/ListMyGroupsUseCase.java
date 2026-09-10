@@ -72,13 +72,20 @@ public class ListMyGroupsUseCase {
         return members.stream()
                 .sorted(Comparator.comparing(Membership::getUserId))
                 .limit(MEMBERS_PREVIEW_LIMIT)
-                .map(m -> new MemberPreview(m.getUserId(), resolveMemberName(m.getUserId())))
+                .map(m -> {
+                    MemberInfo info = resolveMemberInfo(m.getUserId());
+                    return new MemberPreview(m.getUserId(), info.name(), info.color());
+                })
                 .toList();
     }
 
-    private String resolveMemberName(Long userId) {
-        return userRepository.findById(userId).map(u -> u.getName()).orElse("멤버");
+    private MemberInfo resolveMemberInfo(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> new MemberInfo(u.getName(), u.getPreferredColor()))
+                .orElse(new MemberInfo("멤버", null));
     }
+
+    private record MemberInfo(String name, String color) {}
 
     private LastActivitySummary latestActivity(List<Membership> members) {
         // 멤버별 가입(joinedAt) 시점 이후 최신 1건 — 새 그룹은 과거 활동 미노출

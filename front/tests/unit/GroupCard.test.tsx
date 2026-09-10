@@ -14,7 +14,7 @@ jest.mock('@/components/common/AvatarStack', () => (props: any) => {
 
 const GROUP: MyGroupSummary = {
   groupId: 1, name: '할머니 댁', role: '보호자',
-  memberCount: 3, membersPreview: [{ userId: 1, name: '박' }, { userId: 2, name: '김' }, { userId: 3, name: '이' }],
+  memberCount: 3, membersPreview: [{ userId: 1, name: '박', color: null }, { userId: 2, name: '김', color: null }, { userId: 3, name: '이', color: null }],
   lastActivity: { summary: '아침약 복용', activityType: 'DOSE_TAKEN', severity: 'INFO', occurredAt: new Date(Date.now() - 5 * 60_000).toISOString() },
   unreadCount: 0, pinned: false,
 };

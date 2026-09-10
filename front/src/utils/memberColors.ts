@@ -15,14 +15,18 @@ export const MEMBER_COLOR_PALETTE = [
   '#5D4037', // dark brown
 ] as const;
 
+// 사용자가 직접 고를 수 있는 고정 색 선택지 (팔레트 앞 10개).
+export const SELECTABLE_COLOR_PALETTE = MEMBER_COLOR_PALETTE.slice(0, 10);
+
 // 색 배정은 보는 사람(뷰어 표시 순서)과 무관하게 항상 같은 결과여야 한다.
 // 그래서 파라미터로 받은 배열 순서를 신뢰하지 않고 함수 내부에서 userId 오름차순으로 재정렬한 뒤 배정한다.
+// 사용자가 직접 고른 색(color)이 있으면 그 값을 그대로 쓰고, 없으면 포지션 기반 팔레트 순환으로 폴백한다.
 // 팔레트 길이를 넘으면 모듈로 순환 (실사용 그룹 규모에서는 거의 발생하지 않는다).
-export function assignMemberColors<T extends { userId: number }>(members: T[]): Map<number, string> {
+export function assignMemberColors<T extends { userId: number; color?: string | null }>(members: T[]): Map<number, string> {
   const ordered = [...members].sort((a, b) => a.userId - b.userId);
   const colorByUserId = new Map<number, string>();
   ordered.forEach((member, index) => {
-    colorByUserId.set(member.userId, MEMBER_COLOR_PALETTE[index % MEMBER_COLOR_PALETTE.length]);
+    colorByUserId.set(member.userId, member.color ?? MEMBER_COLOR_PALETTE[index % MEMBER_COLOR_PALETTE.length]);
   });
   return colorByUserId;
 }

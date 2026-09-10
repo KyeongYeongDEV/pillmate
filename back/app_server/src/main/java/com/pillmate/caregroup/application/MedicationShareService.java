@@ -50,7 +50,14 @@ public class MedicationShareService {
         requireActiveMember(groupId, ownerUserId);
         return new ShareSettingsView(
                 toMemberShareSettings(groupId, ownerUserId),
-                toShareablePrescriptions(ownerUserId));
+                toShareablePrescriptions(ownerUserId),
+                resolveMyColor(ownerUserId));
+    }
+
+    private String resolveMyColor(Long ownerUserId) {
+        return userRepository.findById(ownerUserId)
+                .map(user -> user.getPreferredColor())
+                .orElse(null);
     }
 
     // 구성원축 토글 — owner 가 groupId 안에서 viewer 에게 알약 정보 열람을 허용/회수.

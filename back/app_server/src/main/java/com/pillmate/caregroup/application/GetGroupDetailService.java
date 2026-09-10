@@ -43,14 +43,14 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
         requireMember(groupId, userId);
         CareGroup group = loadGroup(groupId);
         List<Membership> memberships = membershipRepository.findByCareGroupId(groupId);
-        Map<Long, String> nameById = loadNameMap(memberships);
+        Map<Long, UserInfo> userInfoById = loadUserInfoMap(memberships);
         return new GroupDetailResponse(
                 groupId,
                 group.getName(),
                 memberships.size(),
-                toMemberViews(memberships, nameById),
+                toMemberViews(memberships, userInfoById),
                 toInviteCodeView(groupId),
-                toRecentActivities(memberships, nameById)
+                toRecentActivities(memberships, userInfoById)
         );
     }
 
@@ -65,21 +65,23 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
                 .orElseThrow(() -> new PillmateException(ErrorCode.GROUP_NOT_FOUND));
     }
 
-    private Map<Long, String> loadNameMap(List<Membership> memberships) {
+    private Map<Long, UserInfo> loadUserInfoMap(List<Membership> memberships) {
         return memberships.stream()
                 .map(Membership::getUserId)
                 .collect(Collectors.toMap(
                         Function.identity(),
-                        id -> userRepository.findById(id).map(u -> u.getName()).orElse("멤버"),
+                        id -> userRepository.findById(id)
+                                .map(u -> new UserInfo(u.getName(), u.getPreferredColor()))
+                                .orElse(new UserInfo("멤버", null)),
                         (a, b) -> a));
     }
 
-    private List<MemberView> toMemberViews(List<Membership> memberships, Map<Long, String> nameById) {
+    private List<MemberView> toMemberViews(List<Membership> memberships, Map<Long, UserInfo> userInfoById) {
         return memberships.stream()
-                .map(m -> new MemberView(
-                        m.getUserId(),
-                        nameById.getOrDefault(m.getUserId(), "멤버"),
-                        m.getRole().name()))
+                .map(m -> {
+                    UserInfo info = userInfoById.getOrDefault(m.getUserId(), new UserInfo("멤버", null));
+                    return new MemberView(m.getUserId(), info.name(), m.getRole().name(), info.color());
+                })
                 .toList();
     }
 
@@ -93,7 +95,7 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
         return new InviteCodeView(code.getCode(), code.getExpiresAt());
     }
 
-    private List<ActivityView> toRecentActivities(List<Membership> memberships, Map<Long, String> nameById) {
+    private List<ActivityView> toRecentActivities(List<Membership> memberships, Map<Long, UserInfo> userInfoById) {
         // 멤버별 가입 시점(joinedAt) 이후 활동만 합집합 → 새 그룹은 과거 활동 미노출
         List<ActivityFeed> feeds = memberships.stream()
                 .flatMap(m -> activityFeedRepository
@@ -103,10 +105,12 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
                 .toList();
         return feeds.stream()
                 .map(f -> new ActivityView(
-                        nameById.getOrDefault(f.getActorUserId(), "멤버"),
+                        userInfoById.getOrDefault(f.getActorUserId(), new UserInfo("멤버", null)).name(),
                         f.getActivityType().name(),
                         f.getSummary(),
                         f.getOccurredAt()))
                 .toList();
     }
+
+    private record UserInfo(String name, String color) {}
 }

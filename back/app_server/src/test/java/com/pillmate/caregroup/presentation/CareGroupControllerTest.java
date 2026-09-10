@@ -216,7 +216,8 @@ class CareGroupControllerTest {
                 .willReturn(new ShareSettingsView(
                         List.of(new ShareSettingView(VIEWER_ID, "아버지", "PATIENT", true)),
                         List.of(new ShareablePrescriptionView(
-                                PRESCRIPTION_ID, "감기약", LocalDate.of(2026, 6, 1), true, PrescriptionStatus.ONGOING))));
+                                PRESCRIPTION_ID, "감기약", LocalDate.of(2026, 6, 1), true, PrescriptionStatus.ONGOING)),
+                        null));
 
         mockMvc.perform(get("/groups/" + GROUP_ID + "/share-settings").header("X-User-Id", USER_ID))
                 .andExpect(status().isOk())

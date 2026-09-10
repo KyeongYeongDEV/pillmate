@@ -6,8 +6,10 @@ import {
   useGetShareSettingsQuery,
   useUpdateMemberShareMutation,
   useUpdatePrescriptionShareMutation,
+  useUpdateMyColorMutation,
 } from '@/store/slices/caregroupApi';
 import type { ShareSettingsView } from '@/store/slices/caregroupApi';
+import { SELECTABLE_COLOR_PALETTE } from '@/utils/memberColors';
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
@@ -25,12 +27,14 @@ jest.mock('@/store/slices/caregroupApi', () => ({
   useGetShareSettingsQuery: jest.fn(),
   useUpdateMemberShareMutation: jest.fn(),
   useUpdatePrescriptionShareMutation: jest.fn(),
+  useUpdateMyColorMutation: jest.fn(),
 }));
 
 const mockParams = useLocalSearchParams as unknown as jest.Mock;
 const mockQuery = useGetShareSettingsQuery as unknown as jest.Mock;
 const mockMemberMutation = useUpdateMemberShareMutation as unknown as jest.Mock;
 const mockPrescriptionMutation = useUpdatePrescriptionShareMutation as unknown as jest.Mock;
+const mockColorMutation = useUpdateMyColorMutation as unknown as jest.Mock;
 
 const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
   members: [
@@ -40,11 +44,13 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
   prescriptions: [
     { prescriptionId: 2, label: '감기약', prescribedAt: '2026-09-01', shared: false, status: 'ONGOING' },
   ],
+  myColor: null,
   ...over,
 });
 
 let memberMutate: jest.Mock;
 let prescriptionMutate: jest.Mock;
+let colorMutate: jest.Mock;
 
 function setup(options: {
   data?: ShareSettingsView;
@@ -54,7 +60,7 @@ function setup(options: {
 } = {}) {
   mockParams.mockReturnValue({ id: '3' });
   mockQuery.mockReturnValue({
-    data: options.data ?? { members: [], prescriptions: [] },
+    data: options.data ?? { members: [], prescriptions: [], myColor: null },
     isLoading: options.isLoading ?? false,
     isError: options.isError ?? false,
     error: options.error,
@@ -62,8 +68,10 @@ function setup(options: {
   });
   memberMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
   prescriptionMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
+  colorMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
   mockMemberMutation.mockReturnValue([memberMutate, {}]);
   mockPrescriptionMutation.mockReturnValue([prescriptionMutate, {}]);
+  mockColorMutation.mockReturnValue([colorMutate, {}]);
 }
 
 describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션', () => {
@@ -141,5 +149,41 @@ describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션',
     setup({ isError: true, error: { status: 403 } });
     render(<ShareSettingsScreen />);
     expect(screen.getByText('이 그룹의 공유 설정에 접근할 수 없어요')).toBeTruthy();
+  });
+
+  it('내 색상 섹션에 선택 가능한 색 스와치 10개를 렌더한다', () => {
+    setup({ data: view() });
+    render(<ShareSettingsScreen />);
+    expect(screen.getByText('내 색상')).toBeTruthy();
+    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(10);
+    SELECTABLE_COLOR_PALETTE.forEach((color) => {
+      expect(screen.getByLabelText(`색상 ${color}`)).toBeTruthy();
+    });
+  });
+
+  it('현재 myColor 와 일치하는 스와치만 선택 표시된다', () => {
+    const myColor = SELECTABLE_COLOR_PALETTE[3];
+    setup({ data: view({ myColor }) });
+    render(<ShareSettingsScreen />);
+    expect(screen.getByLabelText(`색상 ${myColor}`).props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByLabelText(`색상 ${SELECTABLE_COLOR_PALETTE[0]}`).props.accessibilityState?.selected).toBe(false);
+  });
+
+  it('myColor 가 null 이면 어떤 스와치도 선택 표시되지 않는다', () => {
+    setup({ data: view({ myColor: null }) });
+    render(<ShareSettingsScreen />);
+    SELECTABLE_COLOR_PALETTE.forEach((color) => {
+      expect(screen.getByLabelText(`색상 ${color}`).props.accessibilityState?.selected).toBe(false);
+    });
+  });
+
+  it('스와치를 탭하면 그 색으로 updateMyColor 를 호출한다', async () => {
+    const target = SELECTABLE_COLOR_PALETTE[5];
+    setup({ data: view() });
+    render(<ShareSettingsScreen />);
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText(`색상 ${target}`));
+    });
+    expect(colorMutate).toHaveBeenCalledWith(target);
   });
 });

@@ -116,4 +116,34 @@ class UserTest {
 
         assertThat(user.getName()).isEqualTo(exactly20);
     }
+
+    @Test
+    @DisplayName("updateColor — 고정 팔레트 안의 값이면 변경 + updatedAt 갱신")
+    void updateColor_validPaletteColor_updates() {
+        User user = User.ofOAuth("kakao-123", UserProvider.KAKAO, "홍길동", "hong@example.com");
+        Instant before = user.getUpdatedAt();
+
+        user.updateColor("#26A69A");
+
+        assertThat(user.getPreferredColor()).isEqualTo("#26A69A");
+        assertThat(user.getUpdatedAt()).isAfterOrEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("updateColor — 팔레트 밖의 값이면 IllegalArgumentException")
+    void updateColor_outsidePalette_throws() {
+        User user = User.ofOAuth("kakao-123", UserProvider.KAKAO, "홍길동", "hong@example.com");
+
+        assertThatThrownBy(() -> user.updateColor("#000000"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("updateColor — null 이면 IllegalArgumentException")
+    void updateColor_null_throws() {
+        User user = User.ofOAuth("kakao-123", UserProvider.KAKAO, "홍길동", "hong@example.com");
+
+        assertThatThrownBy(() -> user.updateColor(null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

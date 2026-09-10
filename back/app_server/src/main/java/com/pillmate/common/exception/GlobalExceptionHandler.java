@@ -35,6 +35,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 도메인 검증 실패(IllegalArgumentException) — 클라이언트 입력 문제이므로 400, Sentry 전송 제외.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.INVALID_REQUEST));
+    }
+
+    /**
      * 쿼리·경로 파라미터 타입 변환 실패 (예: month=2026-13, month=notamonth) — 클라이언트 문제이므로 Sentry 전송 제외.
      * 이게 없으면 catch-all(Exception) 로 떨어져 500 + Sentry 노이즈가 됨.
      */

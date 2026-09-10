@@ -31,9 +31,10 @@ export interface SharePrescriptionSetting {
 export interface ShareSettingsView {
   members: ShareMemberSetting[];
   prescriptions: SharePrescriptionSetting[];
+  myColor: string | null;
 }
 
-const EMPTY_SHARE_SETTINGS: ShareSettingsView = { members: [], prescriptions: [] };
+const EMPTY_SHARE_SETTINGS: ShareSettingsView = { members: [], prescriptions: [], myColor: null };
 
 export interface UpdateMemberShareArgs {
   groupId: number;
@@ -280,6 +281,13 @@ export const caregroupApiSlice = createApi({
         { type: 'SharedPrescription', id: `${groupId}-${prescriptionId}` },
       ],
     }),
+    // 내 표시색은 전역(사용자) 설정이지만, 색이 바뀌면 이 슬라이스의 목록·모든 그룹 상세·현재 공유설정 캐시가
+    // 전부 갱신돼야 한다. RTK Query 는 같은 슬라이스 안에서만 태그 무효화가 동작하므로 userApi 가 아니라
+    // 여기(caregroupApi)에 두고, id 없이 타입만 지정해 그 타입의 모든 캐시(모든 groupId)를 한 번에 무효화한다.
+    updateMyColor: build.mutation<void, string>({
+      query: (color) => ({ url: '/users/me/color', method: 'PATCH', body: { color } }),
+      invalidatesTags: ['Group', 'GroupDetail', 'ShareSettings'],
+    }),
   }),
 });
 
@@ -300,5 +308,6 @@ export const {
   useGetGroupMonthScheduleQuery,
   useGetGroupDayScheduleQuery,
   useGetSharedPrescriptionQuery,
+  useUpdateMyColorMutation,
 } = caregroupApiSlice;
 

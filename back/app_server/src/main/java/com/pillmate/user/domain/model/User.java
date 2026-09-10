@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -16,6 +17,11 @@ public class User {
     private static final String WITHDRAWN_NAME = "탈퇴한 사용자";
     private static final int NAME_MIN_LENGTH = 1;
     private static final int NAME_MAX_LENGTH = 20;
+
+    // 프론트와 정확히 동일한 고정 팔레트(10색) — 구성원 고유색 개인 설정 선택지
+    private static final Set<String> SELECTABLE_COLORS = Set.of(
+            "#7E57C2", "#26A69A", "#EC407A", "#5C6BC0", "#8D6E63",
+            "#9CCC65", "#29B6F6", "#AB47BC", "#FF7043", "#78909C");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,6 +58,9 @@ public class User {
 
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
+
+    @Column(name = "preferred_color", length = 7)
+    private String preferredColor;
 
     public static User dummy(String name) {
         User user = new User();
@@ -108,6 +117,15 @@ public class User {
     public void updateName(String name) {
         requireValidName(name);
         this.name = name;
+        this.updatedAt = Instant.now();
+    }
+
+    // 구성원 고유색 변경 — 고정 팔레트(SELECTABLE_COLORS) 안의 값만 허용
+    public void updateColor(String colorHex) {
+        if (colorHex == null || !SELECTABLE_COLORS.contains(colorHex)) {
+            throw new IllegalArgumentException("colorHex must be one of the fixed palette");
+        }
+        this.preferredColor = colorHex;
         this.updatedAt = Instant.now();
     }
 

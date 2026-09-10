@@ -109,6 +109,25 @@ class MedicationShareServiceTest {
     }
 
     @Test
+    @DisplayName("getShareSettings — myColor 는 설정 전엔 null, 설정 후엔 그 값")
+    void getShareSettings_myColor_reflectsOwnerPreferredColor() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of());
+        given(prescriptionRepository.findAllByPatientId(OWNER_ID)).willReturn(List.of());
+        given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID, "나")));
+
+        ShareSettingsView withoutColor = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        assertThat(withoutColor.myColor()).isNull();
+
+        User colored = user(OWNER_ID, "나");
+        ReflectionTestUtils.setField(colored, "preferredColor", "#5C6BC0");
+        given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(colored));
+
+        ShareSettingsView withColor = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        assertThat(withColor.myColor()).isEqualTo("#5C6BC0");
+    }
+
+    @Test
     @DisplayName("getShareSettings — care_group_id 가 NULL 인 내 약봉투도 반드시 포함(회귀 방지)")
     void getShareSettings_includesPrescriptionsWithNullCareGroupId() {
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);

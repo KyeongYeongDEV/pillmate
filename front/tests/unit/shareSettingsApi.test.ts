@@ -17,14 +17,16 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
     { prescriptionId: 2, label: '감기약', prescribedAt: '2026-09-01', shared: false, status: 'ONGOING' },
     { prescriptionId: 3, label: '당뇨약', prescribedAt: '2026-09-03', shared: false, status: 'ONGOING' },
   ],
+  myColor: null,
   ...over,
 });
 
 describe('shareSettings — 엔드포인트 존재', () => {
-  it('getShareSettings / updateMemberShare / updatePrescriptionShare 등록', () => {
+  it('getShareSettings / updateMemberShare / updatePrescriptionShare / updateMyColor 등록', () => {
     expect(caregroupApiSlice.endpoints).toHaveProperty('getShareSettings');
     expect(caregroupApiSlice.endpoints).toHaveProperty('updateMemberShare');
     expect(caregroupApiSlice.endpoints).toHaveProperty('updatePrescriptionShare');
+    expect(caregroupApiSlice.endpoints).toHaveProperty('updateMyColor');
   });
 
   it('initiate 가 thunk 를 반환', () => {
@@ -58,6 +60,11 @@ describe('shareSettings — 계약 (URL·바디)', () => {
     expect(req.url).toBe('/groups/5/share-settings/prescriptions/2');
     expect(req.method).toBe('PUT');
     expect(req.body).toEqual({ enabled: true });
+  });
+
+  it('updateMyColor initiate 가 thunk 를 반환', () => {
+    const req = (caregroupApiSlice.endpoints.updateMyColor as any).initiate('#7E57C2');
+    expect(typeof req).toBe('function');
   });
 
   it('끄기 — enabled:false 전달', () => {

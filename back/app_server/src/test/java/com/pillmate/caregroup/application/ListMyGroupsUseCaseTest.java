@@ -96,6 +96,32 @@ class ListMyGroupsUseCaseTest {
     }
 
     @Test
+    @DisplayName("membersPreview 에 color 포함 — preferredColor 설정한 사용자는 그 색, 안 한 사용자는 null")
+    void list_membersPreviewIncludesColor() {
+        Membership my30 = Membership.of(30L, 1L, MemberRole.ADMIN, null);
+        given(membershipRepository.findByUserId(1L)).willReturn(List.of(my30));
+        CareGroup g30 = CareGroup.create("색상 확인", 1L);
+        setId(g30, 30L);
+        given(careGroupRepository.findAllById(List.of(30L))).willReturn(List.of(g30));
+        given(membershipRepository.findByCareGroupId(30L)).willReturn(List.of(
+                Membership.of(30L, 1L, MemberRole.ADMIN, null),
+                Membership.of(30L, 2L, MemberRole.PATIENT, 1L)));
+        User colored = User.dummy("나");
+        org.springframework.test.util.ReflectionTestUtils.setField(colored, "preferredColor", "#EC407A");
+        given(userRepository.findById(1L)).willReturn(Optional.of(colored));
+        given(userRepository.findById(2L)).willReturn(Optional.of(User.dummy("멤버2")));
+        given(activityFeedRepository.findByActorSince(anyLong(), any(), anyInt())).willReturn(List.of());
+
+        MyGroupSummary summary = sut.listMyGroups(1L).get(0);
+
+        assertThat(summary.membersPreview())
+                .extracting(MyGroupSummary.MemberPreview::userId, MyGroupSummary.MemberPreview::color)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(1L, "#EC407A"),
+                        org.assertj.core.groups.Tuple.tuple(2L, null));
+    }
+
+    @Test
     @DisplayName("멤버십 없으면 빈 리스트")
     void list_whenNoMembership_returnsEmpty() {
         given(membershipRepository.findByUserId(99L)).willReturn(List.of());

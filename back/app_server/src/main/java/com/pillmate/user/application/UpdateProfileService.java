@@ -23,6 +23,13 @@ public class UpdateProfileService {
         return toResponse(saved);
     }
 
+    @Transactional
+    public void updateColor(Long userId, String colorHex) {
+        User user = findActiveUser(userId);
+        user.updateColor(colorHex);
+        userRepository.save(user);
+    }
+
     // 탈퇴 계정은 PII 가 익명화된 상태 — 재로그인 없이 이름 변경으로 익명화가 되돌려지는 것을 방지
     private User findActiveUser(Long userId) {
         User user = userRepository.findById(userId)

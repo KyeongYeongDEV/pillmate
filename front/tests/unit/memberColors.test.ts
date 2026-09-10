@@ -1,4 +1,4 @@
-import { assignMemberColors, MEMBER_COLOR_PALETTE } from '@/utils/memberColors';
+import { assignMemberColors, MEMBER_COLOR_PALETTE, SELECTABLE_COLOR_PALETTE } from '@/utils/memberColors';
 
 describe('assignMemberColors', () => {
   it('서로 다른 userId 3명에게 서로 다른 색을 배정한다', () => {
@@ -21,5 +21,23 @@ describe('assignMemberColors', () => {
     expect(colors.size).toBe(members.length);
     // 첫 멤버와 팔레트 한 바퀴 뒤 멤버는 같은 색으로 순환된다.
     expect(colors.get(MEMBER_COLOR_PALETTE.length + 1)).toBe(colors.get(1));
+  });
+
+  it('멤버가 직접 고른 color 가 있으면 포지션 팔레트 대신 그 값을 쓴다', () => {
+    const chosen = '#123456';
+    const colors = assignMemberColors([
+      { userId: 1, color: chosen },
+      { userId: 2, color: null },
+      { userId: 3 },
+    ]);
+    expect(colors.get(1)).toBe(chosen);
+    // color 가 없는 멤버는 포지션 기반 폴백(정렬 순서 index 로).
+    expect(colors.get(2)).toBe(MEMBER_COLOR_PALETTE[1]);
+    expect(colors.get(3)).toBe(MEMBER_COLOR_PALETTE[2]);
+  });
+
+  it('SELECTABLE_COLOR_PALETTE 는 팔레트 앞 10개', () => {
+    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(10);
+    expect(SELECTABLE_COLOR_PALETTE).toEqual(MEMBER_COLOR_PALETTE.slice(0, 10));
   });
 });

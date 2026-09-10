@@ -8,6 +8,7 @@ export interface LastActivitySummary {
 export interface MemberPreview {
   userId: number;
   name: string;
+  color: string | null;
 }
 
 export interface MyGroupSummary {
@@ -27,6 +28,7 @@ export interface MemberView {
   userId: number;
   name: string;
   role: string;
+  color: string | null;
 }
 
 export interface InviteCodeView {

@@ -10,9 +10,11 @@ import {
   useGetShareSettingsQuery,
   useUpdateMemberShareMutation,
   useUpdatePrescriptionShareMutation,
+  useUpdateMyColorMutation,
   type ShareMemberSetting,
   type SharePrescriptionSetting,
 } from '@/store/slices/caregroupApi';
+import { SELECTABLE_COLOR_PALETTE } from '@/utils/memberColors';
 import { safeBack } from '@/lib/router/safeBack';
 
 function formatDate(dateStr: string): string {
@@ -30,8 +32,10 @@ export default function ShareSettingsScreen() {
   const { data, isLoading, isError, error, refetch } = useGetShareSettingsQuery(groupId);
   const [updateMemberShare] = useUpdateMemberShareMutation();
   const [updatePrescriptionShare] = useUpdatePrescriptionShareMutation();
+  const [updateMyColor] = useUpdateMyColorMutation();
   const [pendingMembers, setPendingMembers] = useState<number[]>([]);
   const [pendingPrescriptions, setPendingPrescriptions] = useState<number[]>([]);
+  const [pendingColor, setPendingColor] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -54,6 +58,18 @@ export default function ShareSettingsScreen() {
       setPendingMembers((p) => p.filter((uid) => uid !== viewerUserId));
     }
   }, [pendingMembers, updateMemberShare, groupId]);
+
+  const handleColorSelect = useCallback(async (color: string) => {
+    if (pendingColor) return;
+    setPendingColor(color);
+    try {
+      await updateMyColor(color).unwrap();
+    } catch (e: any) {
+      Alert.alert('색상 변경 실패', e?.data?.error?.message ?? '잠시 후 다시 시도해 주세요');
+    } finally {
+      setPendingColor(null);
+    }
+  }, [pendingColor, updateMyColor]);
 
   const handlePrescriptionToggle = useCallback(async (prescriptionId: number, enabled: boolean) => {
     if (pendingPrescriptions.includes(prescriptionId)) return;
@@ -103,6 +119,22 @@ export default function ShareSettingsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryBase} />}
       >
         <Text style={styles.intro}>구성원과 약봉투를 모두 켜야 상대가 그 약 이름을 볼 수 있어요.</Text>
+
+        <Text style={styles.sectionLabel}>내 색상</Text>
+        <View style={styles.colorCard}>
+          <Text style={styles.colorHint}>그룹 화면에서 나를 나타내는 색이에요.</Text>
+          <View style={styles.swatchGrid}>
+            {SELECTABLE_COLOR_PALETTE.map((color) => (
+              <ColorSwatch
+                key={color}
+                color={color}
+                selected={data?.myColor === color}
+                loading={pendingColor === color}
+                onSelect={handleColorSelect}
+              />
+            ))}
+          </View>
+        </View>
 
         <Text style={styles.sectionLabel}>공유할 구성원</Text>
         {members.length === 0 ? (
@@ -196,6 +228,32 @@ function PrescriptionShareRow({
   );
 }
 
+function ColorSwatch({
+  color, selected, loading, onSelect,
+}: {
+  color: string;
+  selected: boolean;
+  loading: boolean;
+  onSelect: (color: string) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onSelect(color)}
+      disabled={loading}
+      accessibilityRole="button"
+      accessibilityLabel={`색상 ${color}`}
+      accessibilityState={{ selected }}
+      style={[styles.swatch, { backgroundColor: color }, selected && styles.swatchSelected]}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.staticWhite} />
+      ) : selected ? (
+        <Feather name="check" size={scale(18)} color={colors.staticWhite} />
+      ) : null}
+    </Pressable>
+  );
+}
+
 function EmptyCard({ text }: { text: string }) {
   return (
     <View style={styles.emptyBox}>
@@ -242,6 +300,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line, overflow: 'hidden',
     ...shadows.small,
   },
+  colorCard: {
+    backgroundColor: colors.bgNormal, borderRadius: radius.r16,
+    borderWidth: 1, borderColor: colors.line, padding: space.s14, gap: space.s12,
+    ...shadows.small,
+  },
+  colorHint: { fontSize: scale(12), color: colors.labelAlternative },
+  swatchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s12 },
+  swatch: {
+    width: scale(40), height: scale(40), borderRadius: scale(20),
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'transparent',
+  },
+  swatchSelected: { borderColor: colors.labelNormal },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: space.s12,
     padding: space.s14,

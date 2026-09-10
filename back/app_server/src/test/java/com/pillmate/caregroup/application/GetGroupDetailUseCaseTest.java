@@ -178,6 +178,35 @@ class GetGroupDetailUseCaseTest {
         assertThat(response.recentActivities().get(0).summary()).isEqualTo("아침약 복용");
     }
 
+    @Test
+    @DisplayName("구성원 색 — preferredColor 설정한 사용자는 그 색, 설정 안 한 사용자는 null")
+    void detail_membersHaveColorFromPreferredColorOrNull() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(true);
+        given(careGroupRepository.findById(GROUP_ID)).willReturn(Optional.of(group("우리가족")));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(
+                List.of(
+                        Membership.of(GROUP_ID, USER_ID,  MemberRole.ADMIN,   null),
+                        Membership.of(GROUP_ID, MEMBER_2, MemberRole.PATIENT, USER_ID)
+                ));
+        User withColor = User.dummy("어머니");
+        ReflectionTestUtils.setField(withColor, "preferredColor", "#26A69A");
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(withColor));
+        given(userRepository.findById(MEMBER_2)).willReturn(Optional.of(User.dummy("아버지")));
+        given(inviteCodeRepository.findActiveByCareGroupId(GROUP_ID)).willReturn(Optional.empty());
+        given(activityFeedRepository.findByActorSince(any(), any(), anyInt())).willReturn(List.of());
+
+        GroupDetailResponse response = sut.detail(GROUP_ID, USER_ID);
+
+        assertThat(response.members())
+                .filteredOn(m -> m.userId().equals(USER_ID))
+                .extracting(com.pillmate.caregroup.application.dto.MemberView::color)
+                .containsExactly("#26A69A");
+        assertThat(response.members())
+                .filteredOn(m -> m.userId().equals(MEMBER_2))
+                .extracting(com.pillmate.caregroup.application.dto.MemberView::color)
+                .containsExactly((String) null);
+    }
+
     private CareGroup group(String name) {
         return CareGroup.create(name, USER_ID);
     }

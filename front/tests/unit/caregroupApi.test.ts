@@ -8,7 +8,7 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
       name: '할머니 댁',
       role: '보호자',
       memberCount: 3,
-      membersPreview: [{ userId: 1, name: '박' }, { userId: 2, name: '김' }, { userId: 3, name: '이' }],
+      membersPreview: [{ userId: 1, name: '박', color: null }, { userId: 2, name: '김', color: null }, { userId: 3, name: '이', color: null }],
       lastActivity: { summary: '아침약 복용', activityType: 'DOSE_TAKEN', severity: 'INFO', occurredAt: '2026-06-01T08:00:00Z' },
       unreadCount: 0,
       pinned: true,
@@ -21,7 +21,7 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
   it('MyGroupSummary — lastActivity null 허용', () => {
     const summary: MyGroupSummary = {
       groupId: 2, name: '아빠 그룹', role: '환자',
-      memberCount: 1, membersPreview: [{ userId: 1, name: '나' }],
+      memberCount: 1, membersPreview: [{ userId: 1, name: '나', color: null }],
       lastActivity: null, unreadCount: 0, pinned: false,
     };
     expect(summary.lastActivity).toBeNull();
@@ -32,7 +32,7 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
       groupId: 1,
       name: '할머니 댁',
       memberCount: 3,
-      members: [{ userId: 1, name: '박순자', role: '환자' }],
+      members: [{ userId: 1, name: '박순자', role: '환자', color: null }],
       inviteCode: { code: '3F9K2P', expiresAt: '2026-06-01T09:00:00Z' },
       recentActivities: [{ actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: '2026-06-01T08:00:00Z' }],
     };

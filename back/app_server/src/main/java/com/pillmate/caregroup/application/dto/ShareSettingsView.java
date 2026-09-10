@@ -8,5 +8,6 @@ import java.util.List;
  */
 public record ShareSettingsView(
         List<ShareSettingView> members,
-        List<ShareablePrescriptionView> prescriptions
+        List<ShareablePrescriptionView> prescriptions,
+        String myColor
 ) {}
