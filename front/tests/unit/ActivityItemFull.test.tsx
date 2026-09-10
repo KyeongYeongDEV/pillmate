@@ -65,4 +65,11 @@ describe('ActivityItemFull', () => {
     const { toJSON } = render(<ActivityItemFull item={TODAY} last />);
     expect(toJSON()).toBeTruthy();
   });
+
+  // tint(구성원 고유색·직접 고른 색 포함)가 있으면 활동 종류별 고정색 대신 그 색을 쓴다.
+  it('tint 를 넘기면 아바타·점 색이 활동종류 고정색 대신 그 색을 쓴다', () => {
+    render(<ActivityItemFull item={TODAY} tint="#EC407A" />);
+    const avatarBg = screen.getByText('박').parent?.parent?.props.style.backgroundColor;
+    expect(avatarBg).toBe('#EC407A');
+  });
 });

@@ -21,10 +21,11 @@ const DEFAULT_DOT = colors.labelAlternative;
 interface ActivityItemFullProps {
   item: ActivityView;
   last?: boolean;
+  tint?: string;
 }
 
-function ActivityItemFull({ item, last }: ActivityItemFullProps) {
-  const dotColor = DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
+function ActivityItemFull({ item, last, tint }: ActivityItemFullProps) {
+  const dotColor = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
   const isMiss = item.activityType === 'DOSE_MISSED';
   const time = formatTime(item.occurredAt);
 
@@ -92,18 +93,18 @@ const styles = StyleSheet.create({
   },
   cardWrap: { flex: 1, minWidth: 0 },
   cardWrapSpaced: { paddingBottom: space.s12 },
+  // 케어그룹 상세 화면의 ActivityTimelineItem 과 정확히 같은 카드 크기(패딩/간격/줄높이)를 쓴다.
   card: {
     backgroundColor: colors.bgNormal,
     borderRadius: radius.r14,
-    padding: space.s14,
-    paddingHorizontal: space.s16,
-    borderWidth: 1, borderColor: colors.line,
+    padding: space.s10,
+    borderWidth: 1, borderColor: colors.line, gap: space.s4,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   headTextCol: { flex: 1 },
   actorName: { fontSize: scale(13), fontWeight: '700', color: colors.labelNormal },
   time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6, marginTop: space.s10 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   warnBadge: {
     width: scale(16), height: scale(16), borderRadius: scale(4),
     backgroundColor: colors.red95,
@@ -111,6 +112,6 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1, fontSize: scale(15), fontWeight: '700',
-    color: colors.labelNormal, letterSpacing: -0.15, lineHeight: scale(21),
+    color: colors.labelNormal, letterSpacing: -0.15, lineHeight: scale(19),
   },
 });

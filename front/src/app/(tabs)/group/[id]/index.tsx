@@ -225,12 +225,12 @@ export default function GroupDetailScreen() {
         </View>
 
         {/* 그룹 복약 스케줄러 */}
-        <Text style={styles.sectionLabel}>그룹 복약 스케줄러</Text>
+        <Text style={styles.sectionLabel}>스케줄러</Text>
         <GroupScheduleCalendar groupId={groupId} members={detail.members} />
 
         {/* 활동 타임라인 (상단 5건) */}
         <View style={styles.activityHeader}>
-          <Text style={styles.activityTitle}>그룹 활동 (최근 일주일)</Text>
+          <Text style={styles.activityTitle}>그룹 활동</Text>
           <Pressable
             onPress={() => router.push(`/group/${groupId}/activity` as any)}
             accessibilityLabel="전체보기"

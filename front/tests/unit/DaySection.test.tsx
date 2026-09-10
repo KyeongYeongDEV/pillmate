@@ -32,4 +32,11 @@ describe('DaySection', () => {
     render(<DaySection title="오늘" items={three} />);
     expect(screen.getByText('메모 추가')).toBeTruthy();
   });
+
+  it('tintByMemberName 을 actorName 으로 매칭해 각 항목에 전달한다', () => {
+    const tintByMemberName = new Map([['박순자', '#EC407A']]);
+    render(<DaySection title="오늘" items={ITEMS} tintByMemberName={tintByMemberName} />);
+    const avatarBg = screen.getByText('박').parent?.parent?.props.style.backgroundColor;
+    expect(avatarBg).toBe('#EC407A');
+  });
 });

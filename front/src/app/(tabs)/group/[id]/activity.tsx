@@ -10,6 +10,7 @@ import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import DaySection from '@/components/group/DaySection';
 import { safeBack } from '@/lib/router/safeBack';
+import { assignMemberColors } from '@/utils/memberColors';
 import { filterByDateRange, type DateRangeFilter } from '@/lib/activityDateFilter';
 import type { ActivityView } from '@/types/caregroup';
 import type { ActivityFeedItem } from '@/types/activity';
@@ -43,6 +44,13 @@ export default function ActivityScreen() {
   );
   const grouped = useMemo(() => groupByDay(filtered), [filtered]);
 
+  // 활동 피드는 PII 제거로 actor userId 가 없어 이름으로 구성원 고유색(내가 고른 색 포함)을 매칭한다.
+  const tintByMemberName = useMemo(() => {
+    if (!detail) return new Map<string, string | undefined>();
+    const colorByUserId = assignMemberColors(detail.members);
+    return new Map(detail.members.map(m => [m.name, colorByUserId.get(m.userId)]));
+  }, [detail]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -50,12 +58,9 @@ export default function ActivityScreen() {
           <Feather name="chevron-left" size={scale(26)} color={colors.labelNormal} />
         </Pressable>
         <View style={styles.headerTitleCol}>
-          <Text style={styles.headerTitle}>가족 활동</Text>
+          <Text style={styles.headerTitle}>그룹 활동</Text>
           {detail && <Text style={styles.headerSub}>{detail.name} · {detail.memberCount}명</Text>}
         </View>
-        <Pressable accessibilityLabel="필터" accessibilityRole="button" hitSlop={8}>
-          <Feather name="filter" size={scale(20)} color={colors.labelNormal} />
-        </Pressable>
       </View>
 
       <View style={styles.tabsRow}>
@@ -76,9 +81,15 @@ export default function ActivityScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={colors.primaryBase} style={styles.loader} />}
-        {grouped.today.length > 0 && <DaySection title={`오늘 · ${formatHeader(new Date())}`} items={grouped.today} first />}
-        {grouped.yesterday.length > 0 && <DaySection title={`어제 · ${formatHeader(addDays(new Date(), -1))}`} items={grouped.yesterday} />}
-        {grouped.earlier.length > 0 && <DaySection title="이전 활동" items={grouped.earlier} />}
+        {grouped.today.length > 0 && (
+          <DaySection title={`오늘 · ${formatHeader(new Date())}`} items={grouped.today} first tintByMemberName={tintByMemberName} />
+        )}
+        {grouped.yesterday.length > 0 && (
+          <DaySection title={`어제 · ${formatHeader(addDays(new Date(), -1))}`} items={grouped.yesterday} tintByMemberName={tintByMemberName} />
+        )}
+        {grouped.earlier.length > 0 && (
+          <DaySection title="이전 활동" items={grouped.earlier} tintByMemberName={tintByMemberName} />
+        )}
         {!isLoading && filtered.length === 0 && (
           <Text style={styles.empty}>표시할 활동이 없어요</Text>
         )}
