@@ -15,8 +15,8 @@ export const MEMBER_COLOR_PALETTE = [
   '#5D4037', // dark brown
 ] as const;
 
-// 사용자가 직접 고를 수 있는 고정 색 선택지 (팔레트 앞 10개).
-export const SELECTABLE_COLOR_PALETTE = MEMBER_COLOR_PALETTE.slice(0, 10);
+// 사용자가 직접 고를 수 있는 고정 색 선택지 — 팔레트 12색 전체.
+export const SELECTABLE_COLOR_PALETTE = MEMBER_COLOR_PALETTE;
 
 // 색 배정은 보는 사람(뷰어 표시 순서)과 무관하게 항상 같은 결과여야 한다.
 // 그래서 파라미터로 받은 배열 순서를 신뢰하지 않고 함수 내부에서 userId 오름차순으로 재정렬한 뒤 배정한다.

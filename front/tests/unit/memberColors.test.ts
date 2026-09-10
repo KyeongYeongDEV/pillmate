@@ -36,8 +36,8 @@ describe('assignMemberColors', () => {
     expect(colors.get(3)).toBe(MEMBER_COLOR_PALETTE[2]);
   });
 
-  it('SELECTABLE_COLOR_PALETTE 는 팔레트 앞 10개', () => {
-    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(10);
-    expect(SELECTABLE_COLOR_PALETTE).toEqual(MEMBER_COLOR_PALETTE.slice(0, 10));
+  it('SELECTABLE_COLOR_PALETTE 는 팔레트 12색 전체', () => {
+    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(12);
+    expect(SELECTABLE_COLOR_PALETTE).toEqual(MEMBER_COLOR_PALETTE);
   });
 });

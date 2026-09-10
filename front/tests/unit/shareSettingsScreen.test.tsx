@@ -151,11 +151,11 @@ describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션',
     expect(screen.getByText('이 그룹의 공유 설정에 접근할 수 없어요')).toBeTruthy();
   });
 
-  it('내 색상 섹션에 선택 가능한 색 스와치 10개를 렌더한다', () => {
+  it('내 색상 섹션에 선택 가능한 색 스와치 12개를 렌더한다', () => {
     setup({ data: view() });
     render(<ShareSettingsScreen />);
     expect(screen.getByText('내 색상')).toBeTruthy();
-    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(10);
+    expect(SELECTABLE_COLOR_PALETTE).toHaveLength(12);
     SELECTABLE_COLOR_PALETTE.forEach((color) => {
       expect(screen.getByLabelText(`색상 ${color}`)).toBeTruthy();
     });

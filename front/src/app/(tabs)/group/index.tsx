@@ -75,10 +75,10 @@ export default function GroupScreen() {
         {isLoading && <ActivityIndicator size="large" color={colors.primaryBase} style={styles.loader} />}
         {isError && <ErrorPlaceholder />}
 
-        {/* 📌 고정됨 */}
+        {/* 즐겨찾기 */}
         {pinnedGroup && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>📌 고정됨</Text>
+            <Text style={styles.sectionLabel}>즐겨찾기</Text>
             <GroupCard
               group={pinnedGroup}
               onPress={handleCardPress}

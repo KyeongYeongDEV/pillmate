@@ -18,10 +18,11 @@ public class User {
     private static final int NAME_MIN_LENGTH = 1;
     private static final int NAME_MAX_LENGTH = 20;
 
-    // 프론트와 정확히 동일한 고정 팔레트(10색) — 구성원 고유색 개인 설정 선택지
+    // 프론트와 정확히 동일한 고정 팔레트(12색) — 구성원 고유색 개인 설정 선택지
     private static final Set<String> SELECTABLE_COLORS = Set.of(
             "#7E57C2", "#26A69A", "#EC407A", "#5C6BC0", "#8D6E63",
-            "#9CCC65", "#29B6F6", "#AB47BC", "#FF7043", "#78909C");
+            "#9CCC65", "#29B6F6", "#AB47BC", "#FF7043", "#78909C",
+            "#C0CA33", "#5D4037");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
