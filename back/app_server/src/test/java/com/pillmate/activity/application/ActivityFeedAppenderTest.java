@@ -55,10 +55,10 @@ class ActivityFeedAppenderTest {
     }
 
     @Test
-    @DisplayName("DOSE_MISSED — summary에 미복용 문구 포함, WARN 심각도")
+    @DisplayName("DOSE_MISSED — summary에 HH:mm 정확 시각 포함(시간대 라벨 미포함), WARN 심각도")
     void appendMissed_savesFeedWithWarnSeverity() {
         // when
-        sut.appendMissed(2L, TimeOfDay.NOON, "12:30", "어머니");
+        sut.appendMissed(2L, TimeOfDay.NOON, "12:30");
 
         // then
         ArgumentCaptor<ActivityFeed> captor = ArgumentCaptor.forClass(ActivityFeed.class);
@@ -66,7 +66,7 @@ class ActivityFeedAppenderTest {
         ActivityFeed saved = captor.getValue();
         assertThat(saved.getActivityType()).isEqualTo(ActivityType.DOSE_MISSED);
         assertThat(saved.getSeverity()).isEqualTo(ActivitySeverity.WARN);
-        assertThat(saved.getSummary()).isEqualTo("어머니이(가) 12:30 약을 복용하지 않았어요");
+        assertThat(saved.getSummary()).isEqualTo("12:30 약을 놓치셨어요");
         assertThat(saved.getSummary()).doesNotContain("점심");
     }
 
@@ -130,7 +130,7 @@ class ActivityFeedAppenderTest {
                 eq(3L), eq(ActivityType.DOSE_MISSED), eq(TimeOfDay.NOON), any(Instant.class)))
                 .willReturn(true);
 
-        sut.appendMissed(3L, TimeOfDay.NOON, "12:30", "어머니");
+        sut.appendMissed(3L, TimeOfDay.NOON, "12:30");
 
         then(activityFeedRepository).should(never()).save(any());
     }
@@ -180,6 +180,33 @@ class ActivityFeedAppenderTest {
                 Membership.of(10L, 3L, MemberRole.PATIENT, null)));
 
         sut.appendCanceled(3L, TimeOfDay.EVENING, "19:00", "아버지");
+
+        then(activityFeedCachePort).should().evictGroup(10L);
+    }
+
+    // T-ACTIVITY-NUDGE: 그룹원이 재촉(넛지)을 보내면 그룹 활동 피드에도 남긴다.
+    @Test
+    @DisplayName("NUDGE_SENT — summary에 보낸사람·받는사람 이름 포함, timeSlot null, INFO 심각도")
+    void appendNudge_savesFeedWithBothNamesAndNoTimeSlot() {
+        sut.appendNudge(1L, "보호자", "환자");
+
+        ArgumentCaptor<ActivityFeed> captor = ArgumentCaptor.forClass(ActivityFeed.class);
+        then(activityFeedRepository).should(times(1)).save(captor.capture());
+        ActivityFeed saved = captor.getValue();
+        assertThat(saved.getActorUserId()).isEqualTo(1L);
+        assertThat(saved.getActivityType()).isEqualTo(ActivityType.NUDGE_SENT);
+        assertThat(saved.getTimeSlot()).isNull();
+        assertThat(saved.getSummary()).isEqualTo("보호자님이 환자님에게 약 챙기라고 알렸어요");
+        assertThat(saved.getSeverity()).isEqualTo(ActivitySeverity.INFO);
+    }
+
+    @Test
+    @DisplayName("NUDGE_SENT 적재 시에도 actor 소속 그룹 evictGroup 호출")
+    void appendNudge_evictsActorGroupFeeds() {
+        given(membershipRepository.findByUserId(1L)).willReturn(java.util.List.of(
+                Membership.of(10L, 1L, MemberRole.GUARDIAN, null)));
+
+        sut.appendNudge(1L, "보호자", "환자");
 
         then(activityFeedCachePort).should().evictGroup(10L);
     }

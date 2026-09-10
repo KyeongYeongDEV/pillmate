@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.activity.application.ActivityFeedAppender;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
@@ -37,6 +38,7 @@ public class SendOverdueDoseNotificationService {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter TIME_LABEL = DateTimeFormatter.ofPattern("a h시", Locale.KOREAN);
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
     private static final String ROUTE_HOME = "/home";
     private static final String DATA_KEY_CHANNEL = "channel";
     private static final String CHANNEL_DOSE_REMINDER = "dose-reminder";
@@ -48,6 +50,7 @@ public class SendOverdueDoseNotificationService {
     private final UserRepository userRepository;
     private final NotificationSenderPort notificationSenderPort;
     private final RecipientCachePort recipientCachePort;
+    private final ActivityFeedAppender activityFeedAppender;
     private final Clock clock;
 
     public void send(Long doseLogId) {
@@ -68,6 +71,12 @@ public class SendOverdueDoseNotificationService {
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
         dispatchAll(saved, tokensByUserId, doseLog.getPatientId());
+        activityFeedAppender.appendMissed(
+                doseLog.getPatientId(), schedule.getTimeOfDay(), formatExactTime(doseLog.getScheduledAt()));
+    }
+
+    private String formatExactTime(Instant scheduledAt) {
+        return scheduledAt.atZone(KST).format(HH_MM);
     }
 
     private List<Notification> buildNotifications(DoseLog doseLog, Long careGroupId, String timeLabel,

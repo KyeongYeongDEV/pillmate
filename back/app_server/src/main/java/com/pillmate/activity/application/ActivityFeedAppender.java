@@ -34,9 +34,18 @@ public class ActivityFeedAppender {
         evictActorGroupFeeds(actorUserId);
     }
 
-    public void appendMissed(Long actorUserId, TimeOfDay timeSlot, String timeLabel, String actorName) {
+    // 그룹원 재촉(넛지) — 특정 시간대와 무관한 1회성 이벤트라 timeSlot 없음, dedupe 도 안 한다
+    // (발신 자체가 이미 상위 쿨다운으로 막혀 있어 중복 적재될 일이 없음).
+    public void appendNudge(Long actorUserId, String actorName, String targetName) {
+        String summary = actorName + "님이 " + targetName + "님에게 약 챙기라고 알렸어요";
+        ActivityFeed feed = ActivityFeed.create(actorUserId, ActivityType.NUDGE_SENT, null, summary, ActivitySeverity.INFO);
+        activityFeedRepository.save(feed);
+        evictActorGroupFeeds(actorUserId);
+    }
+
+    public void appendMissed(Long actorUserId, TimeOfDay timeSlot, String timeLabel) {
         if (isDuplicate(actorUserId, ActivityType.DOSE_MISSED, timeSlot)) return;
-        String summary = actorName + "이(가) " + timeLabel + " 약을 복용하지 않았어요";
+        String summary = timeLabel + " 약을 놓치셨어요";
         ActivityFeed feed = ActivityFeed.create(actorUserId, ActivityType.DOSE_MISSED, timeSlot, summary, ActivitySeverity.WARN);
         activityFeedRepository.save(feed);
         evictActorGroupFeeds(actorUserId);

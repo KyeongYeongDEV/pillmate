@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.activity.application.ActivityFeedAppender;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
@@ -60,6 +61,7 @@ class SendOverdueDoseNotificationServiceTest {
     @Mock UserRepository userRepository;
     @Mock NotificationSenderPort notificationSenderPort;
     @Mock RecipientCachePort recipientCachePort;
+    @Mock ActivityFeedAppender activityFeedAppender;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendOverdueDoseNotificationService sut;
 
@@ -96,6 +98,7 @@ class SendOverdueDoseNotificationServiceTest {
         sut.send(DOSE_LOG_ID);
 
         verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(activityFeedAppender, never()).appendMissed(any(), any(), any());
     }
 
     @Test
@@ -124,6 +127,7 @@ class SendOverdueDoseNotificationServiceTest {
         assertThat(cmdCaptor.getValue().get(0).data()).containsEntry("channel", "dose-reminder");
         assertThat(cmdCaptor.getValue().get(0).recipientPushToken()).isEqualTo("ExponentPushToken[patient]");
         verify(membershipRepository, never()).findByCareGroupId(any());
+        verify(activityFeedAppender).appendMissed(PATIENT_ID, TimeOfDay.MORNING, "08:00");
     }
 
     @Test
@@ -167,6 +171,7 @@ class SendOverdueDoseNotificationServiceTest {
                 .filter(c -> c.recipientUserId().equals(MEMBER_ID)).findFirst().orElseThrow();
         assertThat(selfCmd.data()).containsEntry("channel", "dose-reminder");
         assertThat(groupCmd.data()).doesNotContainKey("channel");
+        verify(activityFeedAppender).appendMissed(PATIENT_ID, TimeOfDay.MORNING, "08:00");
     }
 
     @Test

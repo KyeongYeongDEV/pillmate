@@ -3,5 +3,6 @@ package com.pillmate.activity.domain.model;
 public enum ActivityType {
     DOSE_TAKEN,
     DOSE_MISSED,
-    DOSE_CANCELED
+    DOSE_CANCELED,
+    NUDGE_SENT
 }
