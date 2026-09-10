@@ -188,19 +188,10 @@ export default function GroupDetailScreen() {
                 <Text style={styles.inviteBtnIssuedText}>발급됨 · {remainingSeconds}초</Text>
               ) : (
                 <>
-                  <Feather name="plus" size={scale(18)} color={colors.staticWhite} />
+                  <Feather name="plus" size={scale(20)} color={colors.staticWhite} />
                   <Text style={styles.inviteBtnText}>초대하기</Text>
                 </>
               )}
-            </Pressable>
-            <Pressable
-              style={styles.scanBtn}
-              onPress={() => router.push('/group/scan' as any)}
-              accessibilityLabel="QR촬영"
-              accessibilityRole="button"
-            >
-              <Feather name="maximize" size={scale(18)} color={colors.labelNormal} />
-              <Text style={styles.scanBtnText}>QR촬영</Text>
             </Pressable>
           </View>
 
@@ -343,22 +334,14 @@ const styles = StyleSheet.create({
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
   inviteBtn: {
     flex: 1,
-    height: scale(42), borderRadius: radius.r10,
+    height: scale(50), borderRadius: radius.r12,
     backgroundColor: colors.labelNormal, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: space.s6,
   },
-  inviteBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.staticWhite },
+  inviteBtnText: { fontSize: scale(16), fontWeight: '700', color: colors.staticWhite },
   inviteBtnDisabled: { opacity: 0.6 },
   inviteBtnIssued: { backgroundColor: colors.fillNormal },
   inviteBtnIssuedText: { fontSize: scale(14), fontWeight: '600', color: colors.labelAlternative },
-  scanBtn: {
-    flex: 1,
-    height: scale(42), borderRadius: radius.r10,
-    flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: space.s6,
-    backgroundColor: colors.fillNormal,
-  },
-  scanBtnText: { fontSize: scale(14), fontWeight: '600', color: colors.labelNormal },
   sectionLabel: { fontSize: scale(11), fontWeight: '700', color: colors.labelAlternative, letterSpacing: 0.06 },
   listCard: {
     backgroundColor: colors.bgNormal, borderRadius: radius.r16,
