@@ -168,7 +168,8 @@ interface MemberDotProps {
 
 // 점은 순수 표시용 — "색 = 사람, 형태/투명도 = 복약 상태" 를 나타낼 뿐 자체 탭 대상은 아니다(날짜 칸이 탭 대상).
 function MemberDot({ color, adherence }: MemberDotProps) {
-  const shape = adherence === 'MISS'
+  const isHollow = adherence === 'MISS' || adherence === 'UPCOMING';
+  const shape = isHollow
     ? [styles.dot, styles.dotHollow, { borderColor: color }]
     : [styles.dot, { backgroundColor: color, opacity: ADHERENCE_OPACITY[adherence] }];
   return <View style={shape} />;
