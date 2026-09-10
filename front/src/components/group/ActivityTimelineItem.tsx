@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
 import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
@@ -31,7 +30,6 @@ interface ActivityTimelineItemProps {
 
 function ActivityTimelineItem({ item, isLast, whoLabel, tint }: ActivityTimelineItemProps) {
   const accent = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
-  const isMiss = item.activityType === 'DOSE_MISSED';
 
   return (
     <View style={styles.wrapper}>
@@ -52,11 +50,6 @@ function ActivityTimelineItem({ item, isLast, whoLabel, tint }: ActivityTimeline
         </View>
 
         <View style={styles.titleRow}>
-          {isMiss && (
-            <View style={styles.warnBadge}>
-              <Feather name="alert-triangle" size={scale(11)} color={colors.red40} />
-            </View>
-          )}
           <Text style={styles.title}>{item.summary}</Text>
         </View>
       </View>
@@ -95,11 +88,6 @@ const styles = StyleSheet.create({
   actorLabel: { color: colors.labelAlternative },
   time: { fontSize: scale(12), fontWeight: '500', color: colors.labelAlternative },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
-  warnBadge: {
-    width: scale(16), height: scale(16), borderRadius: scale(4),
-    backgroundColor: colors.red95,
-    alignItems: 'center', justifyContent: 'center',
-  },
   title: {
     flex: 1, fontSize: scale(15), fontWeight: '700', color: colors.labelNormal,
     letterSpacing: -0.15, lineHeight: scale(19),

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import Avatar from '@/components/common/Avatar';
 import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
@@ -26,7 +25,6 @@ interface ActivityItemFullProps {
 
 function ActivityItemFull({ item, last, tint }: ActivityItemFullProps) {
   const dotColor = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
-  const isMiss = item.activityType === 'DOSE_MISSED';
   const time = formatTime(item.occurredAt);
 
   return (
@@ -47,11 +45,6 @@ function ActivityItemFull({ item, last, tint }: ActivityItemFullProps) {
           </View>
 
           <View style={styles.titleRow}>
-            {isMiss && (
-              <View style={styles.warnBadge}>
-                <Feather name="alert-triangle" size={scale(11)} color={colors.red40} />
-              </View>
-            )}
             <Text style={styles.title}>{item.summary}</Text>
           </View>
         </View>
@@ -105,11 +98,6 @@ const styles = StyleSheet.create({
   actorName: { fontSize: scale(13), fontWeight: '700', color: colors.labelNormal },
   time: { fontSize: scale(12), color: colors.labelAlternative, fontWeight: '500' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
-  warnBadge: {
-    width: scale(16), height: scale(16), borderRadius: scale(4),
-    backgroundColor: colors.red95,
-    alignItems: 'center', justifyContent: 'center',
-  },
   title: {
     flex: 1, fontSize: scale(15), fontWeight: '700',
     color: colors.labelNormal, letterSpacing: -0.15, lineHeight: scale(19),
