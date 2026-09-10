@@ -64,11 +64,11 @@ export default function GroupScreen() {
           <Pressable
             style={styles.ctaCard}
             onPress={handleScan}
-            accessibilityLabel="QR 촬영"
+            accessibilityLabel="참여하기"
             accessibilityRole="button"
           >
             <Feather name="maximize" size={scale(20)} color={colors.labelNormal} />
-            <Text style={styles.ctaText}>QR 촬영</Text>
+            <Text style={styles.ctaText}>참여하기</Text>
           </Pressable>
         </View>
 

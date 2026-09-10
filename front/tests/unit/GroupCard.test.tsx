@@ -67,19 +67,19 @@ describe('GroupCard', () => {
 
   it('핀 버튼 미고정 상태 — 고정 레이블 렌더', () => {
     render(<GroupCard group={GROUP} onPress={jest.fn()} onPinToggle={jest.fn()} isPinned={false} />);
-    expect(screen.getByLabelText('그룹 핀 고정')).toBeTruthy();
+    expect(screen.getByLabelText('즐겨찾기 추가')).toBeTruthy();
   });
 
   it('isPinned=true — 핀 해제 레이블 렌더', () => {
     render(<GroupCard group={{ ...GROUP, pinned: true }} onPress={jest.fn()} onPinToggle={jest.fn()} isPinned />);
-    expect(screen.getByLabelText('그룹 핀 해제')).toBeTruthy();
+    expect(screen.getByLabelText('즐겨찾기 해제')).toBeTruthy();
   });
 
   it('핀 버튼 → onPinToggle 호출, onPress 미호출', () => {
     const onPress = jest.fn();
     const onPinToggle = jest.fn();
     render(<GroupCard group={GROUP} onPress={onPress} onPinToggle={onPinToggle} isPinned={false} />);
-    fireEvent.press(screen.getByLabelText('그룹 핀 고정'));
+    fireEvent.press(screen.getByLabelText('즐겨찾기 추가'));
     expect(onPinToggle).toHaveBeenCalledWith(1, false);
     expect(onPress).not.toHaveBeenCalled();
   });

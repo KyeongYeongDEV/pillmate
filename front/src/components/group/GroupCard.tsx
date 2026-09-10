@@ -59,12 +59,12 @@ function GroupCard({ group, onPress, onPinToggle, isPinned }: GroupCardProps) {
             )}
             <Pressable
               onPress={() => onPinToggle(group.groupId, isPinned ?? false)}
-              accessibilityLabel={isPinned ? '그룹 핀 해제' : '그룹 핀 고정'}
+              accessibilityLabel={isPinned ? '즐겨찾기 해제' : '즐겨찾기 추가'}
               accessibilityRole="button"
               hitSlop={8}
             >
               <Ionicons
-                name={isPinned ? 'pin' : 'pin-outline'}
+                name={isPinned ? 'star' : 'star-outline'}
                 size={scale(22)}
                 color={isPinned ? colors.red40 : colors.labelAlternative}
               />
