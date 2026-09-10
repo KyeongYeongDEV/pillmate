@@ -14,6 +14,7 @@ interface MembershipJpaRepository extends JpaRepository<Membership, Long> {
     Optional<Membership> findByCareGroupIdAndUserIdAndStatus(Long careGroupId, Long userId, MembershipStatus status);
     List<Membership> findByCareGroupIdAndStatus(Long careGroupId, MembershipStatus status);
     boolean existsByCareGroupIdAndUserIdAndStatus(Long careGroupId, Long userId, MembershipStatus status);
+    long countByCareGroupIdAndStatus(Long careGroupId, MembershipStatus status);
     List<Membership> findByUserIdAndStatus(Long userId, MembershipStatus status);
     Optional<Membership> findFirstByUserIdAndStatusAndPinnedTrue(Long userId, MembershipStatus status);
 

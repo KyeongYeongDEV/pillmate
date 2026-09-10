@@ -11,6 +11,7 @@ public interface MembershipRepository {
     Optional<Membership> findByCareGroupIdAndUserId(Long careGroupId, Long userId);
     List<Membership> findByCareGroupId(Long careGroupId);
     boolean existsByCareGroupIdAndUserId(Long careGroupId, Long userId);
+    long countByCareGroupId(Long careGroupId);
     List<Membership> findByUserId(Long userId);
     boolean existsSharedGroup(Long viewerUserId, Long targetUserId);
     boolean existsByGuardianAndPatient(Long guardianUserId, Long patientUserId);

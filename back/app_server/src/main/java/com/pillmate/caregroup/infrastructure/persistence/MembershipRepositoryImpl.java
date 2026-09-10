@@ -19,6 +19,7 @@ class MembershipRepositoryImpl implements MembershipRepository {
     @Override public Optional<Membership> findByCareGroupIdAndUserId(Long g, Long u) { return jpa.findByCareGroupIdAndUserIdAndStatus(g, u, MembershipStatus.ACTIVE); }
     @Override public List<Membership> findByCareGroupId(Long g) { return jpa.findByCareGroupIdAndStatus(g, MembershipStatus.ACTIVE); }
     @Override public boolean existsByCareGroupIdAndUserId(Long g, Long u) { return jpa.existsByCareGroupIdAndUserIdAndStatus(g, u, MembershipStatus.ACTIVE); }
+    @Override public long countByCareGroupId(Long g) { return jpa.countByCareGroupIdAndStatus(g, MembershipStatus.ACTIVE); }
     @Override public List<Membership> findByUserId(Long u) { return jpa.findByUserIdAndStatus(u, MembershipStatus.ACTIVE); }
     @Override public boolean existsSharedGroup(Long v, Long t) { return jpa.existsSharedGroup(v, t); }
     @Override public boolean existsByGuardianAndPatient(Long g, Long p) { return jpa.existsByGuardianAndPatient(g, p); }

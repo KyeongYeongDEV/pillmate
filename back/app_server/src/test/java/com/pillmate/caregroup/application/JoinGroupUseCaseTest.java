@@ -107,6 +107,35 @@ class JoinGroupUseCaseTest {
         verify(eventPublisher).publishEvent(new MemberJoined(GROUP_ID, USER_ID));
     }
 
+    // T-GROUP-MEMBER-LIMIT: 케어그룹 최대 6명 — 정원 초과 시 가입 차단
+    @Test
+    @DisplayName("이미 6명이면 GROUP_MEMBER_LIMIT_EXCEEDED, save/이벤트발행 안 함")
+    void join_whenGroupFull_throwsMemberLimitExceeded() {
+        given(inviteCodeCachePort.findGroupId(CODE)).willReturn(Optional.of(GROUP_ID));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(false);
+        given(membershipRepository.countByCareGroupId(GROUP_ID)).willReturn(6L);
+
+        assertThatThrownBy(() -> sut.join(CODE, USER_ID, MemberRole.PATIENT))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED);
+
+        verify(membershipRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("5명(정원 미만)이면 정상 가입")
+    void join_whenUnderLimit_joins() {
+        given(inviteCodeCachePort.findGroupId(CODE)).willReturn(Optional.of(GROUP_ID));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(false);
+        given(membershipRepository.countByCareGroupId(GROUP_ID)).willReturn(5L);
+
+        Long groupId = sut.join(CODE, USER_ID, MemberRole.PATIENT);
+
+        assertThat(groupId).isEqualTo(GROUP_ID);
+        verify(membershipRepository).save(any(Membership.class));
+    }
+
     @Test
     @DisplayName("이미 멤버/ADMIN role 등 실패 시 MemberJoined 이벤트 발행 안 함")
     void join_whenFails_doesNotPublishEvent() {

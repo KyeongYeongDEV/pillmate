@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class JoinGroupUseCase {
 
+    private static final long MAX_MEMBERS = 6;
+
     private final InviteCodeCachePort inviteCodeCachePort;
     private final MembershipRepository membershipRepository;
     private final RecipientCachePort recipientCachePort;
@@ -27,6 +29,7 @@ public class JoinGroupUseCase {
         requireJoinableRole(role);
         Long groupId = lookupGroupOrThrowExpired(code);
         requireNotAlreadyMember(groupId, userId);
+        requireUnderCapacity(groupId);
 
         membershipRepository.save(Membership.of(groupId, userId, role, null));
         recipientCachePort.evict(groupId);
@@ -50,6 +53,12 @@ public class JoinGroupUseCase {
     private void requireNotAlreadyMember(Long careGroupId, Long userId) {
         if (membershipRepository.existsByCareGroupIdAndUserId(careGroupId, userId)) {
             throw new PillmateException(ErrorCode.GROUP_ALREADY_MEMBER);
+        }
+    }
+
+    private void requireUnderCapacity(Long careGroupId) {
+        if (membershipRepository.countByCareGroupId(careGroupId) >= MAX_MEMBERS) {
+            throw new PillmateException(ErrorCode.GROUP_MEMBER_LIMIT_EXCEEDED);
         }
     }
 }
