@@ -40,7 +40,7 @@ public class ActivityFeed {
     private String summary;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(nullable = false, length = 20)
     private ActivitySeverity severity;
 
     @Column(nullable = false)
