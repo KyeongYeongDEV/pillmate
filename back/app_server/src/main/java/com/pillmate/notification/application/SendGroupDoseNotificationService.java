@@ -56,11 +56,12 @@ public class SendGroupDoseNotificationService {
     // 호출자 신원 검증 불필요(요청 컨텍스트 자체가 없음). 외부 HTTP 진입점은 반드시 sendForCaller 사용.
     public void send(Long doseLogId, Long actorUserId) {
         DoseLog doseLog = findDoseLog(doseLogId);
-        if (doseLog.isGroupNotified()) {
+        Schedule schedule = findSchedule(doseLog.getScheduleId());
+        // 원자 클레임 — group_notified_at IS NULL 인 경우만 1행. 동시 폴러(blue-green)·HTTP·재시도의
+        // 이중 발송을 차단하고, 엔티티 전체 merge 를 쓰지 않아 스테일 status 되돌림(취소→TAKEN)도 원천 차단.
+        if (doseLogRepository.markGroupNotifiedIfNotYet(doseLogId, Instant.now(clock)) == 0) {
             return;
         }
-        Schedule schedule = findSchedule(doseLog.getScheduleId());
-        markGroupNotified(doseLog);
 
         List<CachedRecipient> groupRecipients = loadGroupRecipients(schedule.getCareGroupId());
         if (groupRecipients.isEmpty()) {
@@ -101,11 +102,6 @@ public class SendGroupDoseNotificationService {
         if (callerUserId == null || !callerUserId.equals(doseLog.getPatientId())) {
             throw new PillmateException(ErrorCode.GROUP_ACCESS_DENIED);
         }
-    }
-
-    private void markGroupNotified(DoseLog doseLog) {
-        doseLog.markGroupNotified(Instant.now(clock));
-        doseLogRepository.save(doseLog);
     }
 
     private void dispatchAll(List<Notification> saved, List<CachedRecipient> groupRecipients) {

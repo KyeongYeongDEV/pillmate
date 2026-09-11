@@ -74,6 +74,12 @@ class DoseLogRepositoryImpl implements DoseLogRepository {
     }
 
     @Override
+    @Transactional
+    public int markGroupNotifiedIfNotYet(Long doseLogId, Instant now) {
+        return jpa.markGroupNotifiedIfNull(doseLogId, now);
+    }
+
+    @Override
     public Optional<DoseLog> findEarliestOverduePendingByScheduleIds(
             Long patientId, Collection<Long> scheduleIds, Instant now) {
         if (scheduleIds.isEmpty()) {

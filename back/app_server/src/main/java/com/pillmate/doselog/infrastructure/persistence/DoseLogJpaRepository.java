@@ -46,6 +46,15 @@ interface DoseLogJpaRepository extends JpaRepository<DoseLog, Long> {
     int markOverdueNotifiedIfStatus(@Param("id") Long id, @Param("now") Instant now,
                                     @Param("status") DoseStatus status);
 
+    // 조건부 원자 클레임 — 동시 폴러/재시도/HTTP 이중발송 차단 + 엔티티 merge 없이 flag 만 갱신해
+    // 스테일 status 되돌림(lost-update) 원천 차단 (markRemindedIfStatus 와 동일 사상)
+    @Modifying
+    @Query("""
+            UPDATE DoseLog d SET d.groupNotifiedAt = :now
+            WHERE d.id = :id AND d.groupNotifiedAt IS NULL
+            """)
+    int markGroupNotifiedIfNull(@Param("id") Long id, @Param("now") Instant now);
+
     Optional<DoseLog> findFirstByPatientIdAndScheduleIdInAndStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
             Long patientId, Collection<Long> scheduleIds, DoseStatus status, Instant scheduledAtInclusive);
 }

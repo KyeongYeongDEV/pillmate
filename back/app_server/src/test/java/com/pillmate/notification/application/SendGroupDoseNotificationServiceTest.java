@@ -79,6 +79,8 @@ class SendGroupDoseNotificationServiceTest {
         // 각 테스트가 개별 스텁으로 재정의하지 않으면 null(fallback body) 으로 동작.
         lenient().when(userRepository.findById(ACTOR_ID)).thenReturn(Optional.empty());
         lenient().when(careGroupLookupPort.findNameById(any())).thenReturn(Optional.empty());
+        // 기본: 원자 클레임 성공(1행) — happy-path 공통. "이미 발송" 케이스만 0 으로 재정의.
+        lenient().when(doseLogRepository.markGroupNotifiedIfNotYet(anyLong(), any(Instant.class))).thenReturn(1);
     }
 
     @Test
@@ -154,22 +156,22 @@ class SendGroupDoseNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("이미 group_notified_at 기록된 DoseLog — 중복 발송 가드 (저장/발송 모두 skip)")
+    @DisplayName("이미 group_notified_at 기록된 DoseLog — 원자 클레임 0행 → 저장/발송 모두 skip")
     void notify_whenAlreadyGroupNotified_skips() {
         DoseLog doseLog = takenDoseLog();
-        doseLog.markGroupNotified(FIXED_NOW.minusSeconds(30));
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(scheduleOf(GROUP_ID)));
+        given(doseLogRepository.markGroupNotifiedIfNotYet(DOSE_LOG_ID, FIXED_NOW)).willReturn(0);
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
         verify(notificationPersistenceService, never()).saveAll(anyList());
         verify(notificationSenderPort, never()).sendAll(anyList());
-        verify(doseLogRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("발송 시 group_notified_at 기록 + save — 폴러 재선택 방지 (멱등)")
-    void notify_marksGroupNotifiedAndSaves() {
+    @DisplayName("발송 시 group_notified_at 원자 클레임 호출 — 폴러 재선택 방지, 엔티티 save 안 함(lost-update 방지)")
+    void notify_claimsGroupNotifiedAtomicallyWithoutEntitySave() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = scheduleOf(GROUP_ID);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
@@ -183,15 +185,13 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
-        ArgumentCaptor<DoseLog> captor = ArgumentCaptor.forClass(DoseLog.class);
-        verify(doseLogRepository).save(captor.capture());
-        assertThat(captor.getValue().isGroupNotified()).isTrue();
-        assertThat(captor.getValue().getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
+        verify(doseLogRepository).markGroupNotifiedIfNotYet(DOSE_LOG_ID, FIXED_NOW);
+        verify(doseLogRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("그룹 멤버 없어도 group_notified_at 기록 — 폴러 무한 재선택 방지")
-    void notify_whenNoGroupMembers_stillMarksGroupNotified() {
+    @DisplayName("그룹 멤버 없어도 원자 클레임 호출 — 폴러 무한 재선택 방지")
+    void notify_whenNoGroupMembers_stillClaimsGroupNotified() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = scheduleOf(GROUP_ID);
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
@@ -200,7 +200,7 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
-        verify(doseLogRepository).save(any(DoseLog.class));
+        verify(doseLogRepository).markGroupNotifiedIfNotYet(DOSE_LOG_ID, FIXED_NOW);
         verify(notificationSenderPort, never()).sendAll(anyList());
     }
 
@@ -417,8 +417,8 @@ class SendGroupDoseNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("T-BE-SOLO-NOGROUP: careGroupId null(솔로) TAKEN — 발송 스킵하되 group_notified_at 마킹 (폴러 무한 재조회 방지)")
-    void notify_whenCareGroupIdNull_skipsButMarksGroupNotified() {
+    @DisplayName("T-BE-SOLO-NOGROUP: careGroupId null(솔로) TAKEN — 발송 스킵하되 원자 클레임 (폴러 무한 재조회 방지)")
+    void notify_whenCareGroupIdNull_skipsButClaimsGroupNotified() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = scheduleOf(null);
 
@@ -427,10 +427,7 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
-        ArgumentCaptor<DoseLog> captor = ArgumentCaptor.forClass(DoseLog.class);
-        verify(doseLogRepository).save(captor.capture());
-        assertThat(captor.getValue().isGroupNotified()).isTrue();
-        assertThat(captor.getValue().getGroupNotifiedAt()).isEqualTo(FIXED_NOW);
+        verify(doseLogRepository).markGroupNotifiedIfNotYet(DOSE_LOG_ID, FIXED_NOW);
         verify(notificationSenderPort, never()).sendAll(anyList());
         verify(recipientCachePort, never()).get(any());
     }
@@ -664,7 +661,7 @@ class SendGroupDoseNotificationServiceTest {
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
 
-        verify(doseLogRepository, never()).save(any());
+        verify(doseLogRepository, never()).markGroupNotifiedIfNotYet(anyLong(), any());
         verify(notificationPersistenceService, never()).saveAll(anyList());
         verify(notificationSenderPort, never()).sendAll(anyList());
     }
@@ -701,7 +698,7 @@ class SendGroupDoseNotificationServiceTest {
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_ACCESS_DENIED);
 
-        verify(doseLogRepository, never()).save(any());
+        verify(doseLogRepository, never()).markGroupNotifiedIfNotYet(anyLong(), any());
         verify(careGroupGuard, never()).requireAccessible(any());
     }
 
@@ -715,7 +712,7 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.sendForCaller(DOSE_LOG_ID, ACTOR_ID);
 
-        verify(doseLogRepository).save(any(DoseLog.class));
+        verify(doseLogRepository).markGroupNotifiedIfNotYet(DOSE_LOG_ID, FIXED_NOW);
         verify(notificationSenderPort, never()).sendAll(anyList());
     }
 
