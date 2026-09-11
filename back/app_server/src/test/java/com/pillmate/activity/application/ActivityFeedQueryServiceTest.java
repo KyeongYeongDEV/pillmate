@@ -87,9 +87,10 @@ class ActivityFeedQueryServiceTest {
 
         given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
         given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
-        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(memberId)), anyInt()))
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, memberId)), anyInt()))
                 .willReturn(List.of(afterJoin, beforeJoin));
-        given(userRepository.findAllByIdIn(List.of(memberId))).willReturn(List.of(userOf(memberId, "할머니")));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(viewerId, "나"), userOf(memberId, "할머니")));
 
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
@@ -114,7 +115,8 @@ class ActivityFeedQueryServiceTest {
         given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
         given(activityFeedRepository.findByActorUserIdIn(anyList(), anyInt()))
                 .willReturn(List.of(feedAt(memberId, "가입 순간 활동", joined)));
-        given(userRepository.findAllByIdIn(List.of(memberId))).willReturn(List.of(userOf(memberId, "할머니")));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(viewerId, "나"), userOf(memberId, "할머니")));
 
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
@@ -141,10 +143,10 @@ class ActivityFeedQueryServiceTest {
 
         given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
         given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2, m3));
-        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(earlyMember, lateMember)), eq(20)))
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, earlyMember, lateMember)), eq(30)))
                 .willReturn(List.of(lateNew, lateBeforeJoin, earlyOld));
-        given(userRepository.findAllByIdIn(List.of(earlyMember, lateMember)))
-                .willReturn(List.of(userOf(earlyMember, "할머니"), userOf(lateMember, "보호자")));
+        given(userRepository.findAllByIdIn(List.of(viewerId, earlyMember, lateMember)))
+                .willReturn(List.of(userOf(viewerId, "나"), userOf(earlyMember, "할머니"), userOf(lateMember, "보호자")));
 
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
@@ -185,7 +187,7 @@ class ActivityFeedQueryServiceTest {
         given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
         given(activityFeedRepository.findByActorUserIdIn(anyList(), anyInt()))
                 .willReturn(List.of(feedAt(memberId, "활동", joined.plusSeconds(60))));
-        given(userRepository.findAllByIdIn(List.of(memberId))).willReturn(List.of());
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId))).willReturn(List.of());
 
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
@@ -244,7 +246,8 @@ class ActivityFeedQueryServiceTest {
         given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
         given(activityFeedRepository.findByActorUserIdIn(anyList(), anyInt()))
                 .willReturn(List.of(feedAt(memberId, "활동", joined.plusSeconds(60))));
-        given(userRepository.findAllByIdIn(List.of(memberId))).willReturn(List.of(userOf(memberId, "할머니")));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(viewerId, "나"), userOf(memberId, "할머니")));
 
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
@@ -260,6 +263,34 @@ class ActivityFeedQueryServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> sut.query(99L, 10L, 10))
                 .isInstanceOf(com.pillmate.common.exception.PillmateException.class);
         then(activityFeedCachePort).should(never()).getGroupFeed(anyLong(), anyLong(), anyInt());
+    }
+
+    // T-ACTIVITY-VIEWER-SELF: 그룹 활동에 viewer 본인 활동도 포함 (사용자 요청 2026-09-11 — 기존 본인 제외 제거)
+    @Test
+    @DisplayName("그룹 모드 — viewer 본인 활동도 피드에 포함 (본인 제외 안 함)")
+    void groupMode_includesViewerOwnActivity() {
+        Long viewerId = 1L;
+        Long memberId = 2L;
+        Instant past = Instant.parse("2026-06-01T00:00:00Z");
+        Membership m1 = Membership.of(10L, viewerId, MemberRole.ADMIN, null);
+        Membership m2 = Membership.of(10L, memberId, MemberRole.PATIENT, viewerId);
+        ReflectionTestUtils.setField(m1, "joinedAt", past);
+        ReflectionTestUtils.setField(m2, "joinedAt", past);
+
+        ActivityFeed viewerFeed = feedAt(viewerId, "내 활동", past.plusSeconds(120));
+        ActivityFeed memberFeed = feedAt(memberId, "구성원 활동", past.plusSeconds(60));
+
+        given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, memberId)), anyInt()))
+                .willReturn(List.of(viewerFeed, memberFeed));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(viewerId, "나"), userOf(memberId, "할머니")));
+
+        List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
+
+        assertThat(result).extracting(ActivityFeedItem::summary).containsExactly("내 활동", "구성원 활동");
+        assertThat(result.get(0).actorNickname()).isEqualTo("나");
     }
 
     private ActivityFeed feedAt(Long actorUserId, String summary, Instant occurredAt) {

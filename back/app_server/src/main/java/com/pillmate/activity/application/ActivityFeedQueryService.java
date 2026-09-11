@@ -52,7 +52,7 @@ public class ActivityFeedQueryService {
         return mapFeeds(feeds, buildNameMap(memberIds));
     }
 
-    // 그룹 피드 — 멤버별 가입(joinedAt) 시점 이후만 (새 그룹은 과거 활동 미노출). viewer 자신 제외(기존 동작 유지)
+    // 그룹 피드 — 멤버별 가입(joinedAt) 시점 이후만 (새 그룹은 과거 활동 미노출). viewer 본인 활동도 포함(2026-09-11)
     // 30초 폴링 hot path: 멤버 N회 쿼리 대신 단일 IN over-fetch 후 인메모리 joinedAt 필터 (T-BE-ACTIVITY-FEED-BATCH 안 A)
     private List<ActivityFeedItem> groupFeed(Long viewerId, Long groupId, int limit) {
         if (!membershipRepository.existsByCareGroupIdAndUserId(groupId, viewerId)) {
@@ -63,9 +63,7 @@ public class ActivityFeedQueryService {
     }
 
     private List<ActivityFeedItem> loadAndCacheGroupFeed(Long viewerId, Long groupId, int limit) {
-        List<Membership> members = membershipRepository.findByCareGroupId(groupId).stream()
-                .filter(m -> !m.getUserId().equals(viewerId))
-                .toList();
+        List<Membership> members = membershipRepository.findByCareGroupId(groupId);
         if (members.isEmpty()) {
             return Collections.emptyList();
         }
