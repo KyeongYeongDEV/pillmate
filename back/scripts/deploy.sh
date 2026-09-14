@@ -37,7 +37,9 @@ CADDY_CONTAINER="pillmate-caddy"
 log() { echo "[deploy] $*"; }
 
 # CI workspace → 서버 고정 경로 동기화
-# .env.prod / secrets / Caddyfile(현재 업스트림 유지)는 제외
+# .env.prod / secrets / Caddyfile(현재 업스트림 유지)는 제외.
+# .backups/·backups/ 는 서버에만 존재하는 DB 백업(gitignore라 CI 워크스페이스엔 없음) —
+# --delete 가 매 배포마다 서버 백업 전량을 지우지 않도록 반드시 제외한다 (복구 사본 보호).
 sync_workspace() {
     log "Syncing workspace → $BACK_DIR"
     mkdir -p "$BACK_DIR"
@@ -48,6 +50,8 @@ sync_workspace() {
         --exclude='.env.prod' \
         --exclude='secrets/' \
         --exclude='Caddyfile' \
+        --exclude='.backups/' \
+        --exclude='backups/' \
         "$WORKSPACE_BACK/" "$BACK_DIR/"
 }
 
@@ -160,6 +164,18 @@ rollback() {
     log "✓ Rollback complete. Active=$old"
 }
 
+# 위험 마이그레이션(신규 컬러 기동 시 Flyway 실행) 직전 로컬 pg_dump 스냅샷.
+# 야간 1회 백업과 배포 사이 데이터 유실 창을 좁힌다. best-effort: 실패해도 배포는 진행하되 경고
+# (백업 hiccup 이 모든 배포를 막지 않도록). S3 오프사이트 업로드는 야간 cron 담당이라 여기선 로컬만.
+pre_migration_backup() {
+    log "Pre-migration DB snapshot (local pg_dump)..."
+    if bash "$BACK_DIR/scripts/backup_postgres.sh" >/dev/null 2>&1; then
+        log "✓ Pre-migration snapshot done"
+    else
+        log "⚠ Pre-migration snapshot FAILED — 배포는 계속하나 롤백 지점 확인 권장"
+    fi
+}
+
 # ── 일반 배포 (blue-green 전환) ────────────────────────────────────────
 deploy() {
     local current new_color
@@ -172,6 +188,9 @@ deploy() {
 
     new_color=$([[ "$current" == "blue" ]] && echo "green" || echo "blue")
     log "Active=$current → Deploying to $new_color"
+
+    # 0. 마이그레이션 직전 스냅샷 (신규 컬러 기동 = Flyway 실행 전)
+    pre_migration_backup
 
     # 1. 새 컬러 빌드 + 기동
     log "Building app-$new_color..."

@@ -64,6 +64,10 @@ services:
   redis:
     restart: unless-stopped
     mem_limit: 512m
+    # maxmemory < mem_limit(512m) 여유로 RDB save fork COW 스파이크 흡수, allkeys-lru 로
+    # 한도 도달 시 write 실패(noeviction) 대신 LRU 축출 (cost-aware.md 정책 준수).
+    # 앱은 모든 키에 TTL 을 강제하므로 축출은 오래된 캐시/카운터부터 자연 회수됨.
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 384mb --maxmemory-policy allkeys-lru
 
   ai-server:
     env_file:
