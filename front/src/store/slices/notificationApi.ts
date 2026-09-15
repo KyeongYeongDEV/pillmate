@@ -9,6 +9,11 @@ export function markReadInList(list: NotificationItem[], id: number): void {
   if (target) target.status = 'READ';
 }
 
+// "모두 읽음" 은 상태만 바꾸는 게 아니라 목록 자체에서 치운다(사용자 요청 2026-09-16).
+export function clearList(list: NotificationItem[]): void {
+  list.length = 0;
+}
+
 export const notificationApiSlice = createApi({
   reducerPath: 'notificationApi',
   baseQuery: createPillmateBaseQuery(),
@@ -37,7 +42,18 @@ export const notificationApiSlice = createApi({
     }),
     markReadAll: build.mutation<void, void>({
       query: () => ({ url: '/notifications/read-all', method: 'PATCH' }),
-      invalidatesTags: ['Notification'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          notificationApiSlice.util.updateQueryData('getNotifications', undefined, (draft) => {
+            clearList(draft);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
     nudgeDose: build.mutation<NudgeResult, number>({
       query: (doseLogId) => ({ url: `/dose-logs/${doseLogId}/nudge`, method: 'POST' }),

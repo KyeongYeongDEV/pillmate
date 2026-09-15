@@ -1,4 +1,4 @@
-import { notificationApiSlice, markReadInList } from '@/store/slices/notificationApi';
+import { notificationApiSlice, markReadInList, clearList } from '@/store/slices/notificationApi';
 import { notificationMeta, notificationRoute, unreadCount } from '@/lib/notificationMeta';
 import { canNudge, nudgeSuccessMessage, nudgeErrorMessage } from '@/lib/nudge';
 import { relativeTime } from '@/utils/relativeTime';
@@ -38,6 +38,20 @@ describe('markReadInList — 낙관적 읽음 처리', () => {
     const items = [item({ id: 1, status: 'SENT' })];
     markReadInList(items, 99);
     expect(items[0].status).toBe('SENT');
+  });
+});
+
+describe('clearList — "모두 읽음" 시 목록에서 전부 제거', () => {
+  it('목록을 비운다', () => {
+    const items = [item({ id: 1 }), item({ id: 2 }), item({ id: 3 })];
+    clearList(items);
+    expect(items).toHaveLength(0);
+  });
+
+  it('빈 목록도 안전하게 처리', () => {
+    const items: ReturnType<typeof item>[] = [];
+    clearList(items);
+    expect(items).toHaveLength(0);
   });
 });
 
