@@ -22,7 +22,7 @@ public class User {
     private static final Set<String> SELECTABLE_COLORS = Set.of(
             "#7E57C2", "#26A69A", "#EC407A", "#5C6BC0", "#8D6E63",
             "#9CCC65", "#29B6F6", "#AB47BC", "#FF7043", "#78909C",
-            "#C0CA33", "#5D4037");
+            "#C0CA33", "#F48FB1");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

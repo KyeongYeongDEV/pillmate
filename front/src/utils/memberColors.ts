@@ -12,7 +12,7 @@ export const MEMBER_COLOR_PALETTE = [
   '#FF7043', // coral
   '#78909C', // blue grey
   '#C0CA33', // lime
-  '#5D4037', // dark brown
+  '#F48FB1', // pastel pink
 ] as const;
 
 // 사용자가 직접 고를 수 있는 고정 색 선택지 — 팔레트 12색 전체.

@@ -146,4 +146,24 @@ class UserTest {
         assertThatThrownBy(() -> user.updateColor(null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    // 사용자 요청(2026-09-15): 팔레트에서 다크브라운(#5D4037) 제거 + 파스텔 핑크(#F48FB1) 추가
+    @Test
+    @DisplayName("updateColor — 새로 추가된 파스텔 핑크(#F48FB1)는 팔레트 안의 값으로 허용")
+    void updateColor_newPastelPink_accepted() {
+        User user = User.ofOAuth("kakao-123", UserProvider.KAKAO, "홍길동", "hong@example.com");
+
+        user.updateColor("#F48FB1");
+
+        assertThat(user.getPreferredColor()).isEqualTo("#F48FB1");
+    }
+
+    @Test
+    @DisplayName("updateColor — 제거된 다크브라운(#5D4037)은 이제 팔레트 밖의 값으로 거부")
+    void updateColor_removedDarkBrown_rejected() {
+        User user = User.ofOAuth("kakao-123", UserProvider.KAKAO, "홍길동", "hong@example.com");
+
+        assertThatThrownBy(() -> user.updateColor("#5D4037"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
