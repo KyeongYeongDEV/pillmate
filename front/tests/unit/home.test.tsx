@@ -23,7 +23,10 @@ jest.mock('@/store/slices/activityApi', () => ({
   useGetRecentActivityQuery: () => ({ data: [], isLoading: false, isError: false, refetch: mockRefetchFeed }),
 }));
 
-jest.mock('@/store/slices/caregroupApi', () => ({ useGetMyGroupsQuery: jest.fn() }));
+jest.mock('@/store/slices/caregroupApi', () => ({
+  useGetMyGroupsQuery: jest.fn(),
+  useGetGroupDetailQuery: () => ({ data: undefined }),
+}));
 
 jest.mock('@/store/slices/prescriptionApi', () => ({
   useGetActiveWithInsightsQuery: () => ({ data: [], refetch: mockRefetchInsights }),

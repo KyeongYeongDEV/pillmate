@@ -79,7 +79,9 @@ public class ActivityFeedQueryService {
                 .collect(Collectors.toMap(Membership::getUserId, Membership::getJoinedAt));
         return activityFeedRepository.findByActorUserIdIn(memberIds, limit * members.size()).stream()
                 .filter(feed -> isAfterJoin(feed, joinedAtByUserId))
-                .sorted(Comparator.comparing(ActivityFeed::getOccurredAt).reversed())
+                .sorted(Comparator.comparing(ActivityFeed::getOccurredAt)
+                        .thenComparing(ActivityFeed::getId)
+                        .reversed())
                 .limit(limit)
                 .toList();
     }

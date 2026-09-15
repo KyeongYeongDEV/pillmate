@@ -44,4 +44,19 @@ describe('ActivityFeedItem', () => {
     render(<ActivityFeedItem item={{ ...BASE, occurredAt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }} />);
     expect(screen.getByText('3분 전')).toBeTruthy();
   });
+
+  // 사용자 요청(2026-09-15): 홈 고정 그룹 알림에도 구성원 개개인 색상 적용
+  it('tint 전달 시 severity 색 대신 구성원 고유색으로 아바타 렌더', () => {
+    render(<ActivityFeedItem item={BASE} tint="#7E57C2" />);
+    const avatarView = screen.getByText('할').parent?.parent;
+    const flatStyle = Object.assign({}, ...(avatarView!.props.style as object[]));
+    expect(flatStyle.backgroundColor).toBe('#7E57C2');
+  });
+
+  it('tint 미전달 시 기존 severity 기반 색 유지(회귀 없음)', () => {
+    render(<ActivityFeedItem item={BASE} />);
+    const avatarView = screen.getByText('할').parent?.parent;
+    const flatStyle = Object.assign({}, ...(avatarView!.props.style as object[]));
+    expect(flatStyle.backgroundColor).not.toBe('#7E57C2');
+  });
 });

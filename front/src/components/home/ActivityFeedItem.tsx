@@ -15,6 +15,7 @@ export interface FeedActivity {
 interface Props {
   item: ActivityFeedItemType;
   onPress?: (item: ActivityFeedItemType) => void;
+  tint?: string;
 }
 
 function severityTint(s: ActivitySeverity): string {
@@ -30,8 +31,8 @@ function formatTime(iso: string): string {
   return `${Math.floor(diffH / 24)}일 전`;
 }
 
-function ActivityFeedItemComponent({ item, onPress }: Props) {
-  const tint = severityTint(item.severity);
+function ActivityFeedItemComponent({ item, onPress, tint: memberTint }: Props) {
+  const tint = memberTint ?? severityTint(item.severity);
   return (
     <Pressable
       style={styles.container}

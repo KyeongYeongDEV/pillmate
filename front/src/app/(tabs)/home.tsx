@@ -9,7 +9,8 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import { colors, typography, space, radius, shadows, scale } from '@/styles/tokens';
 import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
-import { useGetMyGroupsQuery } from '@/store/slices/caregroupApi';
+import { useGetMyGroupsQuery, useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
+import { assignMemberColors } from '@/utils/memberColors';
 import { useGetActiveWithInsightsQuery } from '@/store/slices/prescriptionApi';
 import { buildInsightSubtitle } from '@/lib/prescriptionInsight';
 import { useSlotPress } from '@/hooks/useSlotPress';
@@ -55,6 +56,18 @@ export default function HomeScreen() {
         refetchOnMountOrArgChange: true,
       },
     );
+
+  // 고정 그룹 알림의 아바타 색을 그룹 화면과 동일한 구성원 고유색으로 맞추기 위한 조회.
+  const { data: pinnedGroupDetail } = useGetGroupDetailQuery(pinnedGroupId ?? skipToken, {
+    refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
+  });
+  const tintByActorName = useMemo(() => {
+    if (!pinnedGroupDetail) return undefined;
+    const colorByUserId = assignMemberColors(pinnedGroupDetail.members);
+    return new Map(
+      pinnedGroupDetail.members.map(m => [m.name, colorByUserId.get(m.userId) ?? colors.fallbackGray]),
+    );
+  }, [pinnedGroupDetail]);
 
   const { data: insightList = [], refetch: refetchInsights } = useGetActiveWithInsightsQuery(undefined, {
     refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
@@ -240,6 +253,7 @@ export default function HomeScreen() {
             isLoading={feedLoading}
             isError={feedError}
             hasPinnedGroup={pinnedGroupId != null}
+            tintByName={tintByActorName}
           />
         </View>
 

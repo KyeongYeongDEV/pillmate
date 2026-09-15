@@ -10,9 +10,10 @@ interface Props {
   isLoading: boolean;
   isError: boolean;
   hasPinnedGroup: boolean;
+  tintByName?: Map<string, string>;
 }
 
-export default function FamilyActivityFeed({ feed, isLoading, isError, hasPinnedGroup }: Props) {
+export default function FamilyActivityFeed({ feed, isLoading, isError, hasPinnedGroup, tintByName }: Props) {
   if (!hasPinnedGroup) {
     return (
       <View style={styles.noPinCard} testID="no-pinned-group">
@@ -53,7 +54,7 @@ export default function FamilyActivityFeed({ feed, isLoading, isError, hasPinned
     <View style={styles.feedCard} testID="activity-data">
       {feed.map((item, idx) => (
         <React.Fragment key={`${item.actorNickname}-${item.occurredAt}`}>
-          <ActivityFeedItem item={item} />
+          <ActivityFeedItem item={item} tint={tintByName?.get(item.actorNickname)} />
           {idx < feed.length - 1 && <View style={styles.separator} />}
         </React.Fragment>
       ))}

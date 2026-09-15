@@ -293,9 +293,46 @@ class ActivityFeedQueryServiceTest {
         assertThat(result.get(0).actorNickname()).isEqualTo("나");
     }
 
+    // T-ACTIVITY-SORT-TIEBREAK: occurredAt 이 완전히 같은 두 활동(대량체크 등)이면
+    // id(적재 순서) 로 동률을 깨 렌더 시마다 순서가 흔들리지 않게 한다 (사용자 요청 2026-09-15).
+    @Test
+    @DisplayName("그룹 모드 — occurredAt 동일한 두 활동은 id 큰 쪽(나중 적재) 이 먼저 (안정 정렬)")
+    void groupMode_sameOccurredAt_tieBrokenByIdDescending() {
+        Long viewerId = 1L;
+        Long memberId = 2L;
+        Instant joined = Instant.parse("2020-01-01T00:00:00Z");
+        Instant same = Instant.parse("2026-09-15T00:00:00Z");
+        Membership m1 = Membership.of(10L, viewerId, MemberRole.ADMIN, null);
+        Membership m2 = Membership.of(10L, memberId, MemberRole.PATIENT, viewerId);
+        ReflectionTestUtils.setField(m1, "joinedAt", joined);
+        ReflectionTestUtils.setField(m2, "joinedAt", joined);
+
+        ActivityFeed older = feedAt(memberId, "먼저 적재", same, 100L);
+        ActivityFeed newer = feedAt(memberId, "나중 적재", same, 101L);
+
+        given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, memberId)), anyInt()))
+                // DB 조회 결과가 반환 순서를 보장하지 않는 상황을 재현 — 일부러 역순으로 반환
+                .willReturn(List.of(older, newer));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(memberId, "할머니")));
+
+        List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
+
+        assertThat(result).extracting(ActivityFeedItem::summary).containsExactly("나중 적재", "먼저 적재");
+    }
+
     private ActivityFeed feedAt(Long actorUserId, String summary, Instant occurredAt) {
+        return feedAt(actorUserId, summary, occurredAt, null);
+    }
+
+    private ActivityFeed feedAt(Long actorUserId, String summary, Instant occurredAt, Long id) {
         ActivityFeed feed = ActivityFeed.create(actorUserId, ActivityType.DOSE_TAKEN, TimeOfDay.NOON, summary, null);
         ReflectionTestUtils.setField(feed, "occurredAt", occurredAt);
+        if (id != null) {
+            ReflectionTestUtils.setField(feed, "id", id);
+        }
         return feed;
     }
 
