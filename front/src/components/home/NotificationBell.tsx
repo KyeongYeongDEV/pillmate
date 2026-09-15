@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { useGetNotificationsQuery } from '@/store/slices/notificationApi';
 import { unreadCount } from '@/lib/notificationMeta';
 import { safePush } from '@/lib/router/safePush';
@@ -14,6 +15,13 @@ export default function NotificationBell() {
     refetchOnReconnect: true,
     selectFromResult: ({ data }) => ({ count: unreadCount(data ?? []) }),
   });
+
+  // 인앱 읽음 상태(마크읽음/모두읽음)가 바뀌어도 OS 앱 아이콘 배지는 별개 상태라 저절로
+  // 안 지워짐 — unreadCount 가 바뀔 때마다 OS 배지를 진실源(SENT 미읽음 개수)에 동기화한다.
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(count).catch(() => {});
+  }, [count]);
+
   return (
     <Pressable
       onPress={() => safePush('/notifications')}
