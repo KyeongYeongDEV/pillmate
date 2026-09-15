@@ -44,10 +44,12 @@ export interface ShareSettingView {
 }
 
 export interface ActivityView {
+  id: number;
   actorName: string;
   activityType: string;
   summary: string;
   occurredAt: string;
+  praisedByMe: boolean;
 }
 
 export interface GroupDetailResponse {

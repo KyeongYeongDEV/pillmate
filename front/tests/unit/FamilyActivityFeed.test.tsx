@@ -11,6 +11,7 @@ jest.mock('@/components/home/ActivityFeedItem', () => (({ item }: { item: Activi
 }) as React.FC<{ item: ActivityFeedItem }>);
 
 const FEED: ActivityFeedItem[] = [{
+  id: 1,
   actorNickname: '할머니',
   activityType: 'DOSE_TAKEN',
   timeSlot: 'MORNING',

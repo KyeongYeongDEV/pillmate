@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Avatar from '@/components/common/Avatar';
+import PraiseButton from '@/components/group/PraiseButton';
 import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
 
@@ -26,10 +27,13 @@ interface ActivityTimelineItemProps {
   isLast?: boolean;
   whoLabel?: string;
   tint?: string;
+  groupId?: number;
+  excludeActorName?: string;
 }
 
-function ActivityTimelineItem({ item, isLast, whoLabel, tint }: ActivityTimelineItemProps) {
+function ActivityTimelineItem({ item, isLast, whoLabel, tint, groupId, excludeActorName }: ActivityTimelineItemProps) {
   const accent = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
+  const canPraise = groupId != null && item.activityType === 'DOSE_TAKEN' && item.actorName !== excludeActorName;
 
   return (
     <View style={styles.wrapper}>
@@ -52,6 +56,10 @@ function ActivityTimelineItem({ item, isLast, whoLabel, tint }: ActivityTimeline
         <View style={styles.titleRow}>
           <Text style={styles.title}>{item.summary}</Text>
         </View>
+
+        {canPraise && (
+          <PraiseButton activityFeedId={item.id} groupId={groupId as number} praisedByMe={item.praisedByMe} />
+        )}
       </View>
     </View>
   );

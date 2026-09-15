@@ -4,6 +4,7 @@ import type { ActivityFeedItem, ActivitySeverity } from '../../src/types/activit
 
 describe('ActivityFeedItem 타입', () => {
   const item: ActivityFeedItem = {
+    id: 1,
     actorNickname: '할머니',
     activityType: 'DOSE_TAKEN',
     timeSlot: 'MORNING',

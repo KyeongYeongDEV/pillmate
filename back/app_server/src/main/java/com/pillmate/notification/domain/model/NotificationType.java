@@ -7,6 +7,7 @@ public enum NotificationType {
     DOSE_CANCELED,
     DOSE_OVERDUE,
     DOSE_NUDGE,
+    DOSE_PRAISE,
     DDI_CRITICAL,
     PRESCRIPTION_NEW,
     WEEKLY_REPORT,

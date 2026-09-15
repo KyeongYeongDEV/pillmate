@@ -6,8 +6,8 @@ import type { ActivityView } from '@/types/caregroup';
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 
 const ITEMS: ActivityView[] = [
-  { actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: new Date().toISOString() },
-  { actorName: '김민지', activityType: 'PRESCRIPTION_ADDED', summary: '약봉투 등록', occurredAt: new Date().toISOString() },
+  { id: 1, actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: new Date().toISOString() },
+  { id: 2, actorName: '김민지', activityType: 'PRESCRIPTION_ADDED', summary: '약봉투 등록', occurredAt: new Date().toISOString() },
 ];
 
 describe('DaySection', () => {
@@ -28,7 +28,7 @@ describe('DaySection', () => {
   });
 
   it('item count 만큼 렌더 (3개)', () => {
-    const three = [...ITEMS, { actorName: '아들', activityType: 'COMMENT', summary: '메모 추가', occurredAt: new Date().toISOString() }];
+    const three = [...ITEMS, { id: 3, actorName: '아들', activityType: 'COMMENT', summary: '메모 추가', occurredAt: new Date().toISOString() }];
     render(<DaySection title="오늘" items={three} />);
     expect(screen.getByText('메모 추가')).toBeTruthy();
   });

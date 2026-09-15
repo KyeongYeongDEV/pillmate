@@ -236,4 +236,29 @@ class NotificationTest {
 
         assertThat(n.getBody()).isEqualTo("그룹 멤버가 약 챙기라고 알려드려요");
     }
+
+    private static final Long ACTIVITY_FEED_ID = 7L;
+
+    @Test
+    @DisplayName("dosePraise — type DOSE_PRAISE, 본문에 그룹명+칭찬한사람 이름 포함, reference=ACTIVITY_FEED")
+    void create_dosePraise_bodyContainsGroupAndPraiserName() {
+        Notification n = Notification.dosePraise(
+                RECIPIENT, ACTOR, GROUP_ID, ACTIVITY_FEED_ID, "김철수", "우리가족");
+
+        assertThat(n.getType()).isEqualTo(NotificationType.DOSE_PRAISE);
+        assertThat(n.getActorUserId()).isEqualTo(ACTOR);
+        assertThat(n.getRecipientUserId()).isEqualTo(RECIPIENT);
+        assertThat(n.getBody()).isEqualTo("우리가족에서 김철수님이 복약을 칭찬해줬어요!");
+        assertThat(n.getReferenceId()).isEqualTo(ACTIVITY_FEED_ID);
+        assertThat(n.getReferenceType()).isEqualTo(NotificationReferenceType.ACTIVITY_FEED);
+    }
+
+    @Test
+    @DisplayName("dosePraise — praiserName/groupName null 이면 각각 '그룹 멤버'/그룹명 생략")
+    void create_dosePraise_nullNames_fallback() {
+        Notification n = Notification.dosePraise(
+                RECIPIENT, ACTOR, GROUP_ID, ACTIVITY_FEED_ID, null, null);
+
+        assertThat(n.getBody()).isEqualTo("그룹 멤버가 복약을 칭찬해줬어요!");
+    }
 }

@@ -5,10 +5,12 @@ export type ActivityType = 'DOSE_TAKEN' | 'DOSE_MISSED' | 'DOSE_CANCELED';
 export type TimeSlot = 'MORNING' | 'NOON' | 'EVENING' | 'BEDTIME';
 
 export interface ActivityFeedItem {
+  id: number;
   actorNickname: string;
   activityType: ActivityType;
   timeSlot: TimeSlot;
   summary: string;
   severity: ActivitySeverity;
   occurredAt: string; // ISO 8601
+  praisedByMe: boolean;
 }

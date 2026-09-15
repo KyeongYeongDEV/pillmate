@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -21,6 +22,11 @@ class ActivityFeedRepositoryImpl implements ActivityFeedRepository {
     @Override
     public ActivityFeed save(ActivityFeed feed) {
         return jpa.save(feed);
+    }
+
+    @Override
+    public Optional<ActivityFeed> findById(Long id) {
+        return jpa.findById(id);
     }
 
     @Override

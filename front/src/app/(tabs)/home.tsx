@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, RefreshControl,
 } from 'react-native';
@@ -11,6 +11,7 @@ import { useAppSelector } from '@/store/hooks';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetMyGroupsQuery, useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import { assignMemberColors } from '@/utils/memberColors';
+import { getCurrentUserId } from '@/lib/auth/storage';
 import { useGetActiveWithInsightsQuery } from '@/store/slices/prescriptionApi';
 import { buildInsightSubtitle } from '@/lib/prescriptionInsight';
 import { useSlotPress } from '@/hooks/useSlotPress';
@@ -68,6 +69,15 @@ export default function HomeScreen() {
       pinnedGroupDetail.members.map(m => [m.name, colorByUserId.get(m.userId) ?? colors.fallbackGray]),
     );
   }, [pinnedGroupDetail]);
+
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  useEffect(() => {
+    let active = true;
+    getCurrentUserId().then(uid => { if (active) setCurrentUserId(uid); });
+    return () => { active = false; };
+  }, []);
+  // 칭찬 버튼은 본인 활동엔 안 떠야 함(자기 자신 칭찬 불가, 서버도 차단하지만 UI 도 선제 숨김).
+  const myName = pinnedGroupDetail?.members.find(m => m.userId === currentUserId)?.name;
 
   const { data: insightList = [], refetch: refetchInsights } = useGetActiveWithInsightsQuery(undefined, {
     refetchOnMountOrArgChange: HOME_REFETCH_THROTTLE_SEC,
@@ -254,6 +264,8 @@ export default function HomeScreen() {
             isError={feedError}
             hasPinnedGroup={pinnedGroupId != null}
             tintByName={tintByActorName}
+            groupId={pinnedGroupId}
+            excludeActorName={myName}
           />
         </View>
 

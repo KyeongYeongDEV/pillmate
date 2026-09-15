@@ -9,9 +9,11 @@ interface DaySectionProps {
   items: ActivityView[];
   first?: boolean;
   tintByMemberName?: Map<string, string | undefined>;
+  groupId?: number;
+  excludeActorName?: string;
 }
 
-function DaySection({ title, items, first, tintByMemberName }: DaySectionProps) {
+function DaySection({ title, items, first, tintByMemberName, groupId, excludeActorName }: DaySectionProps) {
   if (items.length === 0) return null;
   return (
     <View style={[styles.section, first && styles.sectionFirst]}>
@@ -23,6 +25,8 @@ function DaySection({ title, items, first, tintByMemberName }: DaySectionProps) 
             item={it}
             last={i === items.length - 1}
             tint={tintByMemberName?.get(it.actorName)}
+            groupId={groupId}
+            excludeActorName={excludeActorName}
           />
         ))}
       </View>

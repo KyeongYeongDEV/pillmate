@@ -4,8 +4,13 @@ import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import type { ActivityView } from '@/types/caregroup';
 
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+jest.mock('@/components/group/PraiseButton', () => (({ activityFeedId, groupId }: { activityFeedId: number; groupId: number }) => {
+  const { Text } = require('react-native');
+  return <Text>칭찬버튼:{activityFeedId}:{groupId}</Text>;
+}) as React.FC<{ activityFeedId: number; groupId: number }>);
 
 const DONE: ActivityView = {
+  id: 1,
   actorName: '박순자',
   activityType: 'DOSE_TAKEN',
   summary: '아침약 2개 복용',
@@ -13,6 +18,7 @@ const DONE: ActivityView = {
 };
 
 const MISSED: ActivityView = {
+  id: 2,
   actorName: '박순자',
   activityType: 'DOSE_MISSED',
   summary: '저녁약을 놓치셨어요',
@@ -53,5 +59,20 @@ describe('ActivityTimelineItem', () => {
   it('tint prop 을 주면 그 색이 Avatar 에 쓰인다', () => {
     render(<ActivityTimelineItem item={DONE} tint="#123456" />);
     expect(screen.getByText('박').parent?.parent?.props.style.backgroundColor).toBe('#123456');
+  });
+
+  it('DOSE_TAKEN + groupId 있으면 칭찬 버튼 렌더', () => {
+    render(<ActivityTimelineItem item={DONE} groupId={20} />);
+    expect(screen.getByText('칭찬버튼:1:20')).toBeTruthy();
+  });
+
+  it('groupId 없으면 칭찬 버튼 미렌더', () => {
+    render(<ActivityTimelineItem item={DONE} />);
+    expect(screen.queryByText(/칭찬버튼/)).toBeNull();
+  });
+
+  it('본인 활동(excludeActorName 일치)이면 칭찬 버튼 미렌더', () => {
+    render(<ActivityTimelineItem item={DONE} groupId={20} excludeActorName="박순자" />);
+    expect(screen.queryByText(/칭찬버튼/)).toBeNull();
   });
 });

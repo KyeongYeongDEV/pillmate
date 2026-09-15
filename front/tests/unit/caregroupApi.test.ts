@@ -34,7 +34,7 @@ describe('caregroupApi — 타입 + 엔드포인트', () => {
       memberCount: 3,
       members: [{ userId: 1, name: '박순자', role: '환자', color: null }],
       inviteCode: { code: '3F9K2P', expiresAt: '2026-06-01T09:00:00Z' },
-      recentActivities: [{ actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: '2026-06-01T08:00:00Z' }],
+      recentActivities: [{ id: 1, actorName: '박순자', activityType: 'DOSE_TAKEN', summary: '아침약 복용', occurredAt: '2026-06-01T08:00:00Z' }],
     };
     expect(detail.members).toHaveLength(1);
     expect(detail.inviteCode.code).toBe('3F9K2P');

@@ -172,6 +172,18 @@ public class Notification {
                 NotificationType.DOSE_NUDGE, "복약 알림", subject + " 약 챙기라고 알려드려요");
     }
 
+    // 그룹원이 "복용 완료" 활동에 보내는 칭찬 — "○○에서 ○○님이 복약을 칭찬해줬어요!"
+    public static Notification dosePraise(Long recipientUserId, Long actorUserId,
+                                          Long careGroupId, Long activityFeedId,
+                                          String praiserName, String groupName) {
+        String subject = praiserName != null ? praiserName + "님이" : "그룹 멤버가";
+        String prefix = groupName != null ? groupName + "에서 " : "";
+        String body = prefix + subject + " 복약을 칭찬해줬어요!";
+        return createWithReference(recipientUserId, actorUserId, careGroupId,
+                activityFeedId, NotificationReferenceType.ACTIVITY_FEED,
+                NotificationType.DOSE_PRAISE, "칭찬 알림", body);
+    }
+
     public static Notification ddiCritical(Long recipientUserId, Long actorUserId,
                                             Long careGroupId, Long prescriptionId,
                                             String warningDetail) {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Avatar from '@/components/common/Avatar';
+import PraiseButton from '@/components/group/PraiseButton';
 import { scale, colors, space, radius } from '@/styles/tokens';
 import type { ActivityView } from '@/types/caregroup';
 
@@ -21,11 +22,14 @@ interface ActivityItemFullProps {
   item: ActivityView;
   last?: boolean;
   tint?: string;
+  groupId?: number;
+  excludeActorName?: string;
 }
 
-function ActivityItemFull({ item, last, tint }: ActivityItemFullProps) {
+function ActivityItemFull({ item, last, tint, groupId, excludeActorName }: ActivityItemFullProps) {
   const dotColor = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
   const time = formatTime(item.occurredAt);
+  const canPraise = groupId != null && item.activityType === 'DOSE_TAKEN' && item.actorName !== excludeActorName;
 
   return (
     <View style={styles.wrapper}>
@@ -47,6 +51,10 @@ function ActivityItemFull({ item, last, tint }: ActivityItemFullProps) {
           <View style={styles.titleRow}>
             <Text style={styles.title}>{item.summary}</Text>
           </View>
+
+          {canPraise && (
+            <PraiseButton activityFeedId={item.id} groupId={groupId as number} praisedByMe={item.praisedByMe} />
+          )}
         </View>
       </View>
     </View>

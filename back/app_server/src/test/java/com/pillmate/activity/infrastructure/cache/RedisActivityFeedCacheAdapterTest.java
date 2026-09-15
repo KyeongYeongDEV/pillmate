@@ -54,8 +54,8 @@ class RedisActivityFeedCacheAdapterTest {
 
     private List<ActivityFeedItem> items(String summary) {
         return List.of(new ActivityFeedItem(
-                "할머니", ActivityType.DOSE_TAKEN, TimeOfDay.NOON, summary,
-                ActivitySeverity.INFO, Instant.parse("2026-07-02T03:00:00Z")));
+                1L, "할머니", ActivityType.DOSE_TAKEN, TimeOfDay.NOON, summary,
+                ActivitySeverity.INFO, Instant.parse("2026-07-02T03:00:00Z"), false));
     }
 
     @Test

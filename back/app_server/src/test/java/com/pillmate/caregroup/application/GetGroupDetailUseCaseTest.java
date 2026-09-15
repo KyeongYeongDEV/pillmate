@@ -4,6 +4,7 @@ import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.model.ActivitySeverity;
 import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.domain.model.CareGroup;
 import com.pillmate.caregroup.domain.model.InviteCode;
@@ -17,6 +18,7 @@ import com.pillmate.common.exception.PillmateException;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,14 +33,17 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 
 @DisplayName("GetGroupDetailUseCase — 단위 테스트")
@@ -50,7 +55,13 @@ class GetGroupDetailUseCaseTest {
     @Mock UserRepository userRepository;
     @Mock InviteCodeRepository inviteCodeRepository;
     @Mock ActivityFeedRepository activityFeedRepository;
+    @Mock ActivityPraiseRepository activityPraiseRepository;
     @InjectMocks GetGroupDetailService sut;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(activityPraiseRepository.findPraisedActivityFeedIds(any(), anyList())).thenReturn(Set.of());
+    }
 
     private static final Long GROUP_ID = 10L;
     private static final Long USER_ID  = 1L;

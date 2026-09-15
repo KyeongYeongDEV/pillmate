@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import PraiseButton from '@/components/group/PraiseButton';
 import { scale, colors, typography, space, radius } from '@/styles/tokens';
 import type { ActivityFeedItem as ActivityFeedItemType, ActivitySeverity } from '@/types/activity';
 
@@ -16,6 +17,8 @@ interface Props {
   item: ActivityFeedItemType;
   onPress?: (item: ActivityFeedItemType) => void;
   tint?: string;
+  groupId?: number;
+  excludeActorName?: string;
 }
 
 function severityTint(s: ActivitySeverity): string {
@@ -31,42 +34,53 @@ function formatTime(iso: string): string {
   return `${Math.floor(diffH / 24)}일 전`;
 }
 
-function ActivityFeedItemComponent({ item, onPress, tint: memberTint }: Props) {
+function ActivityFeedItemComponent({ item, onPress, tint: memberTint, groupId, excludeActorName }: Props) {
   const tint = memberTint ?? severityTint(item.severity);
+  const canPraise = groupId != null && item.activityType === 'DOSE_TAKEN'
+    && item.actorNickname !== excludeActorName;
   return (
-    <Pressable
-      style={styles.container}
-      onPress={() => onPress?.(item)}
-      accessibilityLabel={`${item.actorNickname} ${item.summary} ${formatTime(item.occurredAt)}`}
-      accessibilityRole="button"
-    >
-      <View style={[styles.avatar, { backgroundColor: tint }]}>
-        <Text style={styles.avatarLetter}>{item.actorNickname.charAt(0)}</Text>
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.body}>
-          {item.summary.startsWith(item.actorNickname) ? (
-            <>
-              <Text style={styles.nameSpan}>{item.actorNickname}</Text>
-              {item.summary.slice(item.actorNickname.length)}
-            </>
-          ) : (
-            item.summary
-          )}
-        </Text>
-      </View>
-      <Text style={styles.time}>{formatTime(item.occurredAt)}</Text>
-    </Pressable>
+    <View style={styles.wrapper}>
+      <Pressable
+        style={styles.container}
+        onPress={() => onPress?.(item)}
+        accessibilityLabel={`${item.actorNickname} ${item.summary} ${formatTime(item.occurredAt)}`}
+        accessibilityRole="button"
+      >
+        <View style={[styles.avatar, { backgroundColor: tint }]}>
+          <Text style={styles.avatarLetter}>{item.actorNickname.charAt(0)}</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.body}>
+            {item.summary.startsWith(item.actorNickname) ? (
+              <>
+                <Text style={styles.nameSpan}>{item.actorNickname}</Text>
+                {item.summary.slice(item.actorNickname.length)}
+              </>
+            ) : (
+              item.summary
+            )}
+          </Text>
+        </View>
+        <Text style={styles.time}>{formatTime(item.occurredAt)}</Text>
+      </Pressable>
+      {canPraise && (
+        <View style={styles.praiseRow}>
+          <PraiseButton activityFeedId={item.id} groupId={groupId as number} praisedByMe={item.praisedByMe} />
+        </View>
+      )}
+    </View>
   );
 }
 
 export default React.memo(ActivityFeedItemComponent);
 
 const styles = StyleSheet.create({
+  wrapper: { gap: space.s4 },
   container: {
     flexDirection: 'row', alignItems: 'center', gap: space.s12,
     paddingVertical: space.s12, paddingHorizontal: space.s16,
   },
+  praiseRow: { paddingLeft: scale(64), paddingRight: space.s16, paddingBottom: space.s8, marginTop: -space.s8 },
   avatar: { width: scale(36), height: scale(36), borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontSize: scale(14), fontWeight: '700', color: '#fff' },
   content: { flex: 1, gap: 4 },

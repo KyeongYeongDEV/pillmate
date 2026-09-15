@@ -4,6 +4,7 @@ import com.pillmate.activity.application.dto.ActivityFeedItem;
 import com.pillmate.activity.application.port.ActivityFeedCachePort;
 import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
@@ -19,6 +20,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +32,7 @@ public class ActivityFeedQueryService {
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final ActivityFeedCachePort activityFeedCachePort;
+    private final ActivityPraiseRepository activityPraiseRepository;
 
     public List<ActivityFeedItem> query(Long viewerId, int limit) {
         return query(viewerId, null, limit);
@@ -49,7 +52,7 @@ public class ActivityFeedQueryService {
             return Collections.emptyList();
         }
         List<ActivityFeed> feeds = activityFeedRepository.findByActorUserIdIn(memberIds, limit);
-        return mapFeeds(feeds, buildNameMap(memberIds));
+        return mapFeeds(viewerId, feeds, buildNameMap(memberIds));
     }
 
     // 그룹 피드 — 멤버별 가입(joinedAt) 시점 이후만 (새 그룹은 과거 활동 미노출). viewer 본인 활동도 포함(2026-09-11)
@@ -69,7 +72,7 @@ public class ActivityFeedQueryService {
         }
         List<Long> memberIds = members.stream().map(Membership::getUserId).toList();
         List<ActivityFeed> feeds = fetchFeedsAfterJoin(members, memberIds, limit);
-        List<ActivityFeedItem> items = mapFeeds(feeds, buildGroupNameMap(members, memberIds));
+        List<ActivityFeedItem> items = mapFeeds(viewerId, feeds, buildGroupNameMap(members, memberIds));
         activityFeedCachePort.putGroupFeed(groupId, viewerId, limit, items);
         return items;
     }
@@ -91,10 +94,17 @@ public class ActivityFeedQueryService {
         return joinedAt == null || !feed.getOccurredAt().isBefore(joinedAt);
     }
 
-    private List<ActivityFeedItem> mapFeeds(List<ActivityFeed> feeds, Map<Long, String> nameById) {
+    private List<ActivityFeedItem> mapFeeds(Long viewerId, List<ActivityFeed> feeds, Map<Long, String> nameById) {
+        Set<Long> praisedIds = activityPraiseRepository.findPraisedActivityFeedIds(
+                viewerId, feeds.stream().map(ActivityFeed::getId).filter(java.util.Objects::nonNull).toList());
         return feeds.stream()
-                .map(f -> ActivityFeedItem.from(f, nameById.getOrDefault(f.getActorUserId(), "멤버")))
+                .map(f -> ActivityFeedItem.from(
+                        f, nameById.getOrDefault(f.getActorUserId(), "멤버"), isPraised(f, praisedIds)))
                 .toList();
+    }
+
+    private boolean isPraised(ActivityFeed feed, Set<Long> praisedIds) {
+        return feed.getId() != null && praisedIds.contains(feed.getId());
     }
 
     private Map<Long, String> buildNameMap(List<Long> userIds) {

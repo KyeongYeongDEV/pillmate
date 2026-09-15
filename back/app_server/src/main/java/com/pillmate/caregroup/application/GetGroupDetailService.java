@@ -2,6 +2,7 @@ package com.pillmate.caregroup.application;
 
 import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
 import com.pillmate.caregroup.application.dto.ActivityView;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
 import com.pillmate.caregroup.application.dto.InviteCodeView;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +37,7 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
     private final UserRepository userRepository;
     private final InviteCodeRepository inviteCodeRepository;
     private final ActivityFeedRepository activityFeedRepository;
+    private final ActivityPraiseRepository activityPraiseRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -49,7 +52,7 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
                 memberships.size(),
                 toMemberViews(memberships, userInfoById),
                 toInviteCodeView(groupId),
-                toRecentActivities(memberships, userInfoById)
+                toRecentActivities(userId, memberships, userInfoById)
         );
     }
 
@@ -99,7 +102,7 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
         return new InviteCodeView(code.getCode(), code.getExpiresAt());
     }
 
-    private List<ActivityView> toRecentActivities(List<Membership> memberships, Map<Long, UserInfo> userInfoById) {
+    private List<ActivityView> toRecentActivities(Long viewerId, List<Membership> memberships, Map<Long, UserInfo> userInfoById) {
         // 멤버별 가입 시점(joinedAt) 이후 활동만 합집합 → 새 그룹은 과거 활동 미노출
         List<ActivityFeed> feeds = memberships.stream()
                 .flatMap(m -> activityFeedRepository
@@ -107,12 +110,17 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
                 .sorted(Comparator.comparing(ActivityFeed::getOccurredAt).reversed())
                 .limit(RECENT_ACTIVITY_LIMIT)
                 .toList();
+        // 칭찬 여부가 서버 진실源이라 어느 화면(홈/그룹상세/전체보기)에서 조회해도 "칭찬함" 이 일관되게 보여야 함
+        Set<Long> praisedIds = activityPraiseRepository.findPraisedActivityFeedIds(
+                viewerId, feeds.stream().map(ActivityFeed::getId).filter(java.util.Objects::nonNull).toList());
         return feeds.stream()
                 .map(f -> new ActivityView(
+                        f.getId(),
                         userInfoById.getOrDefault(f.getActorUserId(), new UserInfo("멤버", null)).name(),
                         f.getActivityType().name(),
                         f.getSummary(),
-                        f.getOccurredAt()))
+                        f.getOccurredAt(),
+                        f.getId() != null && praisedIds.contains(f.getId())))
                 .toList();
     }
 

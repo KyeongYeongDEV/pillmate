@@ -5,12 +5,14 @@ import com.pillmate.activity.domain.model.ActivityFeed;
 import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.application.port.ActivityFeedCachePort;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
+import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
@@ -41,7 +45,13 @@ class ActivityFeedQueryServiceTest {
     @Mock MembershipRepository membershipRepository;
     @Mock UserRepository userRepository;
     @Mock ActivityFeedCachePort activityFeedCachePort;
+    @Mock ActivityPraiseRepository activityPraiseRepository;
     @InjectMocks ActivityFeedQueryService sut;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(activityPraiseRepository.findPraisedActivityFeedIds(any(), anyList())).thenReturn(Set.of());
+    }
 
     @Test
     @DisplayName("다른 그룹 멤버 활동 반환 — actorNickname 포함, actorUserId 미포함")
@@ -219,8 +229,8 @@ class ActivityFeedQueryServiceTest {
     void groupMode_cacheHit_skipsDb() {
         Long viewerId = 1L;
         List<ActivityFeedItem> cached = List.of(new ActivityFeedItem(
-                "할머니", ActivityType.DOSE_TAKEN, TimeOfDay.NOON, "점심약 복용",
-                null, Instant.parse("2026-07-01T03:00:00Z")));
+                99L, "할머니", ActivityType.DOSE_TAKEN, TimeOfDay.NOON, "점심약 복용",
+                null, Instant.parse("2026-07-01T03:00:00Z"), false));
         given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
         given(activityFeedCachePort.getGroupFeed(10L, viewerId, 10)).willReturn(java.util.Optional.of(cached));
 
@@ -287,6 +297,38 @@ class ActivityFeedQueryServiceTest {
         List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
 
         assertThat(result.get(0).actorNickname()).isEqualTo("삼촌");
+    }
+
+    // T-ACTIVITY-PRAISE-STATE: 칭찬 여부가 서버 진실源이라 어느 화면에서 조회해도 "칭찬함" 이 일관되게 보여야 함
+    @Test
+    @DisplayName("그룹 모드 — 이미 칭찬한 활동은 praisedByMe=true, 아니면 false")
+    void groupMode_praisedByMe_reflectsExistingPraise() {
+        Long viewerId = 1L;
+        Long memberId = 2L;
+        Instant joined = Instant.parse("2026-06-28T00:00:00Z");
+        Membership m1 = Membership.of(10L, viewerId, MemberRole.ADMIN, null);
+        Membership m2 = Membership.of(10L, memberId, MemberRole.PATIENT, viewerId);
+        ReflectionTestUtils.setField(m1, "joinedAt", joined);
+        ReflectionTestUtils.setField(m2, "joinedAt", joined);
+
+        ActivityFeed praised = feedAt(memberId, "칭찬받은 활동", joined.plusSeconds(120), 501L);
+        ActivityFeed notPraised = feedAt(memberId, "칭찬안받은 활동", joined.plusSeconds(60), 502L);
+
+        given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, memberId)), anyInt()))
+                .willReturn(List.of(praised, notPraised));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(memberId, "할머니")));
+        given(activityPraiseRepository.findPraisedActivityFeedIds(eq(viewerId), anyList()))
+                .willReturn(Set.of(501L));
+
+        List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
+
+        assertThat(result).filteredOn(i -> i.summary().equals("칭찬받은 활동"))
+                .extracting(ActivityFeedItem::praisedByMe).containsExactly(true);
+        assertThat(result).filteredOn(i -> i.summary().equals("칭찬안받은 활동"))
+                .extracting(ActivityFeedItem::praisedByMe).containsExactly(false);
     }
 
     // T-ACTIVITY-VIEWER-SELF: 그룹 활동에 viewer 본인 활동도 포함 (사용자 요청 2026-09-11 — 기존 본인 제외 제거)

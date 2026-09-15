@@ -150,6 +150,8 @@ export default function GroupDetailScreen() {
   const tintByMemberName = new Map(
     detail.members.map(m => [m.name, colorByUserId.get(m.userId) ?? colors.fallbackGray]),
   );
+  // 칭찬 버튼은 본인 활동엔 안 떠야 함(자기 자신 칭찬 불가, 서버도 차단하지만 UI 도 선제 숨김).
+  const myName = detail.members.find(m => m.userId === currentUserId)?.name;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -247,6 +249,8 @@ export default function GroupDetailScreen() {
               item={item}
               isLast={i === arr.length - 1}
               tint={tintByMemberName.get(item.actorName)}
+              groupId={groupId}
+              excludeActorName={myName}
             />
           ))}
           {detail.recentActivities.length === 0 && (

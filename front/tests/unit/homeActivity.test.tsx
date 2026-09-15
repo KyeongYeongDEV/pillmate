@@ -6,6 +6,7 @@ import type { ActivityFeedItem as ActivityFeedItemType } from '@/types/activity'
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 
 const BASE: ActivityFeedItemType = {
+  id: 1,
   actorNickname: '할머니',
   activityType: 'DOSE_TAKEN',
   timeSlot: 'MORNING',

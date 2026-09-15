@@ -4,6 +4,10 @@ import ActivityItemFull from '@/components/group/ActivityItemFull';
 import type { ActivityView } from '@/types/caregroup';
 
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+jest.mock('@/components/group/PraiseButton', () => (({ activityFeedId, groupId }: { activityFeedId: number; groupId: number }) => {
+  const { Text } = require('react-native');
+  return <Text>칭찬버튼:{activityFeedId}:{groupId}</Text>;
+}) as React.FC<{ activityFeedId: number; groupId: number }>);
 
 // 상대시간 포맷은 컴포넌트가 new Date() 로 '지금'을 읽으므로 실행 날짜에 의존 → 플레이키.
 // 기준 '지금'을 고정하고 fixture occurredAt 도 그 기준에 맞춘 명시적 날짜로 만들어 결정적으로 둔다.
@@ -12,18 +16,18 @@ const TODAY_OCCURRED = new Date(2026, 5, 14, 9, 15, 0).toISOString();
 const YESTERDAY_OCCURRED = new Date(2026, 5, 13, 22, 0, 0).toISOString();
 
 const TODAY: ActivityView = {
-  actorName: '박순자', activityType: 'DOSE_TAKEN',
+  id: 1, actorName: '박순자', activityType: 'DOSE_TAKEN',
   summary: '아침약 2개 복용', occurredAt: TODAY_OCCURRED,
 };
 
 const MISS: ActivityView = {
-  actorName: '박순자', activityType: 'DOSE_MISSED',
+  id: 2, actorName: '박순자', activityType: 'DOSE_MISSED',
   summary: '취침 전 약을 놓치셨어요',
   occurredAt: YESTERDAY_OCCURRED,
 };
 
 const UNKNOWN: ActivityView = {
-  actorName: '아들', activityType: 'UNKNOWN_TYPE_XYZ',
+  id: 3, actorName: '아들', activityType: 'UNKNOWN_TYPE_XYZ',
   summary: '미정의 활동', occurredAt: TODAY_OCCURRED,
 };
 
@@ -71,5 +75,26 @@ describe('ActivityItemFull', () => {
     render(<ActivityItemFull item={TODAY} tint="#EC407A" />);
     const avatarBg = screen.getByText('박').parent?.parent?.props.style.backgroundColor;
     expect(avatarBg).toBe('#EC407A');
+  });
+
+  // 사용자 요청(2026-09-15): 복용완료 활동 옆에 칭찬 버튼
+  it('DOSE_TAKEN + groupId 있으면 칭찬 버튼 렌더', () => {
+    render(<ActivityItemFull item={TODAY} groupId={20} />);
+    expect(screen.getByText('칭찬버튼:1:20')).toBeTruthy();
+  });
+
+  it('groupId 없으면 칭찬 버튼 미렌더', () => {
+    render(<ActivityItemFull item={TODAY} />);
+    expect(screen.queryByText(/칭찬버튼/)).toBeNull();
+  });
+
+  it('DOSE_TAKEN 아니면(DOSE_MISSED) 칭찬 버튼 미렌더', () => {
+    render(<ActivityItemFull item={MISS} groupId={20} />);
+    expect(screen.queryByText(/칭찬버튼/)).toBeNull();
+  });
+
+  it('본인 활동(excludeActorName 일치)이면 칭찬 버튼 미렌더', () => {
+    render(<ActivityItemFull item={TODAY} groupId={20} excludeActorName="박순자" />);
+    expect(screen.queryByText(/칭찬버튼/)).toBeNull();
   });
 });

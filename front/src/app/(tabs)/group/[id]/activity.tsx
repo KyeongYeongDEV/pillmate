@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert,
 } from 'react-native';
@@ -11,6 +11,7 @@ import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
 import DaySection from '@/components/group/DaySection';
 import { safeBack } from '@/lib/router/safeBack';
 import { assignMemberColors } from '@/utils/memberColors';
+import { getCurrentUserId } from '@/lib/auth/storage';
 import { filterByDateRange, type DateRangeFilter } from '@/lib/activityDateFilter';
 import type { ActivityView } from '@/types/caregroup';
 import type { ActivityFeedItem } from '@/types/activity';
@@ -29,6 +30,13 @@ export default function ActivityScreen() {
 
   const { data: feed = [], isLoading } = useGetRecentActivityQuery({ groupId });
   const { data: detail } = useGetGroupDetailQuery(groupId);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUserId().then(uid => { if (active) setCurrentUserId(uid); });
+    return () => { active = false; };
+  }, []);
 
   const handleTabPress = useCallback((range: DateRangeFilter) => {
     if (range === 'custom') {
@@ -50,6 +58,12 @@ export default function ActivityScreen() {
     const colorByUserId = assignMemberColors(detail.members);
     return new Map(detail.members.map(m => [m.name, colorByUserId.get(m.userId)]));
   }, [detail]);
+
+  // 칭찬 버튼은 본인 활동엔 안 떠야 함(자기 자신 칭찬 불가, 서버도 차단하지만 UI 도 선제 숨김).
+  const myName = useMemo(
+    () => detail?.members.find(m => m.userId === currentUserId)?.name,
+    [detail, currentUserId],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -82,13 +96,13 @@ export default function ActivityScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={colors.primaryBase} style={styles.loader} />}
         {grouped.today.length > 0 && (
-          <DaySection title={`오늘 · ${formatHeader(new Date())}`} items={grouped.today} first tintByMemberName={tintByMemberName} />
+          <DaySection title={`오늘 · ${formatHeader(new Date())}`} items={grouped.today} first tintByMemberName={tintByMemberName} groupId={groupId} excludeActorName={myName} />
         )}
         {grouped.yesterday.length > 0 && (
-          <DaySection title={`어제 · ${formatHeader(addDays(new Date(), -1))}`} items={grouped.yesterday} tintByMemberName={tintByMemberName} />
+          <DaySection title={`어제 · ${formatHeader(addDays(new Date(), -1))}`} items={grouped.yesterday} tintByMemberName={tintByMemberName} groupId={groupId} excludeActorName={myName} />
         )}
         {grouped.earlier.length > 0 && (
-          <DaySection title="이전 활동" items={grouped.earlier} tintByMemberName={tintByMemberName} />
+          <DaySection title="이전 활동" items={grouped.earlier} tintByMemberName={tintByMemberName} groupId={groupId} excludeActorName={myName} />
         )}
         {!isLoading && filtered.length === 0 && (
           <Text style={styles.empty}>표시할 활동이 없어요</Text>
@@ -101,10 +115,12 @@ export default function ActivityScreen() {
 
 function toActivityView(f: ActivityFeedItem): ActivityView {
   return {
+    id: f.id,
     actorName: f.actorNickname,
     activityType: f.activityType,
     summary: f.summary,
     occurredAt: f.occurredAt,
+    praisedByMe: f.praisedByMe,
   };
 }
 
