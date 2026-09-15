@@ -127,6 +127,20 @@ class MedicationShareServiceTest {
         assertThat(withColor.myColor()).isEqualTo("#5C6BC0");
     }
 
+    // T-GROUP-NICKNAME: 별명 입력칸 기본값(placeholder 아닌 프리필)으로 쓸 본인 실제 이름
+    @Test
+    @DisplayName("getShareSettings — myName 은 본인 실제 이름(닉네임과 무관하게 항상 채워짐)")
+    void getShareSettings_myName_returnsOwnRealName() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of());
+        given(prescriptionRepository.findAllByPatientId(OWNER_ID)).willReturn(List.of());
+        given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID, "최경영")));
+
+        ShareSettingsView result = sut.getShareSettings(GROUP_ID, OWNER_ID);
+
+        assertThat(result.myName()).isEqualTo("최경영");
+    }
+
     // T-GROUP-NICKNAME
     @Test
     @DisplayName("getShareSettings — myNickname 은 설정 전엔 null, 설정 후엔 그 값(그룹별)")

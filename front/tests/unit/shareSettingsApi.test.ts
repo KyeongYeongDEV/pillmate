@@ -19,6 +19,7 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
   ],
   myColor: null,
   myNickname: null,
+  myName: null,
   ...over,
 });
 

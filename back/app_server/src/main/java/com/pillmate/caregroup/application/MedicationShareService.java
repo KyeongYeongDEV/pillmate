@@ -16,6 +16,7 @@ import com.pillmate.prescription.application.port.PrescriptionPeriodPort.PeriodS
 import com.pillmate.prescription.domain.model.Prescription;
 import com.pillmate.prescription.domain.model.PrescriptionStatus;
 import com.pillmate.prescription.domain.repository.PrescriptionRepository;
+import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -52,12 +53,20 @@ public class MedicationShareService {
                 toMemberShareSettings(groupId, ownerUserId),
                 toShareablePrescriptions(ownerUserId),
                 resolveMyColor(ownerUserId),
-                resolveMyNickname(groupId, ownerUserId));
+                resolveMyNickname(groupId, ownerUserId),
+                resolveMyName(ownerUserId));
     }
 
     private String resolveMyColor(Long ownerUserId) {
         return userRepository.findById(ownerUserId)
                 .map(user -> user.getPreferredColor())
+                .orElse(null);
+    }
+
+    // 별명 입력칸 기본값(플레이스홀더가 아닌 실제 프리필값)으로 쓰인다 — 안 건드리고 저장해도 실제 이름 그대로 표시됨.
+    private String resolveMyName(Long ownerUserId) {
+        return userRepository.findById(ownerUserId)
+                .map(User::getName)
                 .orElse(null);
     }
 

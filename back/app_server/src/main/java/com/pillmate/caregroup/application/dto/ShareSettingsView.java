@@ -10,5 +10,6 @@ public record ShareSettingsView(
         List<ShareSettingView> members,
         List<ShareablePrescriptionView> prescriptions,
         String myColor,
-        String myNickname
+        String myNickname,
+        String myName
 ) {}

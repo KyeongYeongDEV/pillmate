@@ -49,6 +49,7 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
   ],
   myColor: null,
   myNickname: null,
+  myName: '나',
   ...over,
 });
 
@@ -65,7 +66,7 @@ function setup(options: {
 } = {}) {
   mockParams.mockReturnValue({ id: '3' });
   mockQuery.mockReturnValue({
-    data: options.data ?? { members: [], prescriptions: [], myColor: null, myNickname: null },
+    data: options.data ?? { members: [], prescriptions: [], myColor: null, myNickname: null, myName: null },
     isLoading: options.isLoading ?? false,
     isError: options.isError ?? false,
     error: options.error,
@@ -201,21 +202,30 @@ describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션',
     expect(screen.getByText('그룹 개인 설정')).toBeTruthy();
   });
 
-  it('내 별명 섹션 — myNickname 없으면 입력칸이 비어있음(기본값=원래 이름 폴백은 서버가 처리)', () => {
-    setup({ data: view({ myNickname: null }) });
+  it('내 별명 섹션 — myNickname 없으면 placeholder 대신 실제 이름(myName)이 프리필됨', () => {
+    setup({ data: view({ myNickname: null, myName: '최경영' }) });
     render(<ShareSettingsScreen />);
     expect(screen.getByText('내 별명')).toBeTruthy();
-    expect(screen.getByLabelText('내 별명 입력').props.value).toBe('');
+    expect(screen.getByLabelText('내 별명 입력').props.value).toBe('최경영');
   });
 
-  it('내 별명 섹션 — myNickname 있으면 입력칸에 그 값이 채워짐', () => {
-    setup({ data: view({ myNickname: '삼촌' }) });
+  it('내 별명 섹션 — myNickname 있으면 실제 이름 대신 그 값이 채워짐', () => {
+    setup({ data: view({ myNickname: '삼촌', myName: '최경영' }) });
     render(<ShareSettingsScreen />);
     expect(screen.getByLabelText('내 별명 입력').props.value).toBe('삼촌');
   });
 
+  it('프리필된 기본값(실제 이름)을 그대로 저장하면 그 이름 그대로 groupId+nickname 으로 호출', async () => {
+    setup({ data: view({ myNickname: null, myName: '최경영' }) });
+    render(<ShareSettingsScreen />);
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('별명 저장'));
+    });
+    expect(nicknameMutate).toHaveBeenCalledWith({ groupId: 3, nickname: '최경영' });
+  });
+
   it('별명 저장 버튼을 누르면 groupId+nickname 으로 updateMyNickname 호출', async () => {
-    setup({ data: view({ myNickname: null }) });
+    setup({ data: view({ myNickname: null, myName: '최경영' }) });
     render(<ShareSettingsScreen />);
     fireEvent.changeText(screen.getByLabelText('내 별명 입력'), '삼촌');
     await act(async () => {

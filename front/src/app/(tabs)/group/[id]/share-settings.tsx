@@ -42,7 +42,9 @@ export default function ShareSettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [nicknameInput, setNicknameInput] = useState<string | null>(null);
 
-  const nicknameValue = nicknameInput ?? (data?.myNickname ?? '');
+  // 별명 미설정 시 빈칸(placeholder)이 아니라 실제 이름을 기본값으로 프리필 — 그대로 저장해도
+  // 원래 이름과 똑같이 보이고, 수정 후 저장하면 그 그룹 한정으로 별명이 반영된다.
+  const nicknameValue = nicknameInput ?? (data?.myNickname ?? data?.myName ?? '');
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -160,8 +162,6 @@ export default function ShareSettingsScreen() {
               style={styles.nicknameInput}
               value={nicknameValue}
               onChangeText={setNicknameInput}
-              placeholder={data?.members ? '별명 없음' : ''}
-              placeholderTextColor={colors.labelAlternative}
               maxLength={20}
               accessibilityLabel="내 별명 입력"
             />

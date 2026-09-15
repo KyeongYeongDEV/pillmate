@@ -33,10 +33,11 @@ export interface ShareSettingsView {
   prescriptions: SharePrescriptionSetting[];
   myColor: string | null;
   myNickname: string | null;
+  myName: string | null;
 }
 
 const EMPTY_SHARE_SETTINGS: ShareSettingsView = {
-  members: [], prescriptions: [], myColor: null, myNickname: null,
+  members: [], prescriptions: [], myColor: null, myNickname: null, myName: null,
 };
 
 export interface UpdateMemberShareArgs {
