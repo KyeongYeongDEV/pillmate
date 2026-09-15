@@ -9,5 +9,6 @@ import java.util.List;
 public record ShareSettingsView(
         List<ShareSettingView> members,
         List<ShareablePrescriptionView> prescriptions,
-        String myColor
+        String myColor,
+        String myNickname
 ) {}

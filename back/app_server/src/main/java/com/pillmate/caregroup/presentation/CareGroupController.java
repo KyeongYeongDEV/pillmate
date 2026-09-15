@@ -13,6 +13,7 @@ import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.RenameCareGroupService;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
+import com.pillmate.caregroup.application.UpdateMembershipNicknameService;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse;
 import com.pillmate.caregroup.application.dto.GroupDetailResponse;
@@ -23,6 +24,7 @@ import com.pillmate.caregroup.application.dto.ShareSettingsView;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.presentation.dto.CreateGroupRequest;
 import com.pillmate.caregroup.presentation.dto.RenameGroupRequest;
+import com.pillmate.caregroup.presentation.dto.UpdateNicknameRequest;
 import com.pillmate.caregroup.presentation.dto.UpdateShareSettingRequest;
 import com.pillmate.common.response.ApiResponse;
 import com.pillmate.common.security.UserContext;
@@ -61,6 +63,7 @@ public class CareGroupController {
     private final PinGroupUseCase pinGroupUseCase;
     private final UnpinGroupUseCase unpinGroupUseCase;
     private final RenameCareGroupService renameCareGroupService;
+    private final UpdateMembershipNicknameService updateMembershipNicknameService;
     private final GetGroupDetailUseCase getGroupDetailUseCase;
     private final LeaveGroupUseCase leaveGroupUseCase;
     private final MedicationShareService medicationShareService;
@@ -136,6 +139,15 @@ public class CareGroupController {
             @RequestBody @Valid RenameGroupRequest request) {
         Long userId = UserContext.get();
         renameCareGroupService.rename(groupId, userId, request.name());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PatchMapping("/{groupId}/members/me/nickname")
+    public ResponseEntity<ApiResponse<Void>> updateMyNickname(
+            @PathVariable Long groupId,
+            @RequestBody @Valid UpdateNicknameRequest request) {
+        Long userId = UserContext.get();
+        updateMembershipNicknameService.updateNickname(groupId, userId, request.nickname());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 

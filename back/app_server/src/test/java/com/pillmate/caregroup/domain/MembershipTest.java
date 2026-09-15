@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("Membership 도메인 — 역할 식별")
 class MembershipTest {
@@ -107,5 +108,44 @@ class MembershipTest {
 
         assertThat(m.hasLeft()).isTrue();
         assertThat(m.getLeftAt()).isEqualTo(firstLeftAt);
+    }
+
+    // T-GROUP-NICKNAME: 그룹별 별명 — 기본값은 null(=표시할 때 실제 이름으로 폴백)
+    @Test
+    @DisplayName("생성 직후 nickname=null (기본값은 본인 원래 이름으로 폴백)")
+    void create_defaultNicknameNull() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+
+        assertThat(m.getNickname()).isNull();
+    }
+
+    @Test
+    @DisplayName("updateNickname — 정상 값이면 trim 후 저장")
+    void updateNickname_trimsAndSets() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+
+        m.updateNickname("  삼촌  ");
+
+        assertThat(m.getNickname()).isEqualTo("삼촌");
+    }
+
+    @Test
+    @DisplayName("updateNickname — null/공백이면 nickname null 로 리셋(기본값=원래 이름 복귀)")
+    void updateNickname_blankResetsToNull() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+        m.updateNickname("삼촌");
+
+        m.updateNickname("   ");
+
+        assertThat(m.getNickname()).isNull();
+    }
+
+    @Test
+    @DisplayName("updateNickname — 20자 초과면 IllegalArgumentException")
+    void updateNickname_tooLong_throws() {
+        Membership m = Membership.of(1L, 1L, MemberRole.ADMIN, null);
+
+        assertThatThrownBy(() -> m.updateNickname("가".repeat(21)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

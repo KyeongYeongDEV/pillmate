@@ -265,6 +265,30 @@ class ActivityFeedQueryServiceTest {
         then(activityFeedCachePort).should(never()).getGroupFeed(anyLong(), anyLong(), anyInt());
     }
 
+    // T-GROUP-NICKNAME: 그룹별 별명 — 활동 피드 actorNickname 도 그룹 별명으로 표시
+    @Test
+    @DisplayName("그룹 모드 — 별명 설정된 멤버는 actorNickname 이 별명으로 표시")
+    void groupMode_actorNickname_usesGroupNicknameWhenSet() {
+        Long viewerId = 1L;
+        Long memberId = 2L;
+        Instant joined = Instant.parse("2026-06-28T00:00:00Z");
+        Membership m1 = Membership.of(10L, viewerId, MemberRole.ADMIN, null);
+        Membership m2 = Membership.of(10L, memberId, MemberRole.PATIENT, viewerId);
+        ReflectionTestUtils.setField(m2, "joinedAt", joined);
+        m2.updateNickname("삼촌");
+
+        given(membershipRepository.existsByCareGroupIdAndUserId(10L, viewerId)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(10L)).willReturn(List.of(m1, m2));
+        given(activityFeedRepository.findByActorUserIdIn(eq(List.of(viewerId, memberId)), anyInt()))
+                .willReturn(List.of(feedAt(memberId, "활동", joined.plusSeconds(60))));
+        given(userRepository.findAllByIdIn(List.of(viewerId, memberId)))
+                .willReturn(List.of(userOf(memberId, "할머니")));
+
+        List<ActivityFeedItem> result = sut.query(viewerId, 10L, 10);
+
+        assertThat(result.get(0).actorNickname()).isEqualTo("삼촌");
+    }
+
     // T-ACTIVITY-VIEWER-SELF: 그룹 활동에 viewer 본인 활동도 포함 (사용자 요청 2026-09-11 — 기존 본인 제외 제거)
     @Test
     @DisplayName("그룹 모드 — viewer 본인 활동도 피드에 포함 (본인 제외 안 함)")

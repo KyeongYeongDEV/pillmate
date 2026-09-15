@@ -127,6 +127,27 @@ class MedicationShareServiceTest {
         assertThat(withColor.myColor()).isEqualTo("#5C6BC0");
     }
 
+    // T-GROUP-NICKNAME
+    @Test
+    @DisplayName("getShareSettings — myNickname 은 설정 전엔 null, 설정 후엔 그 값(그룹별)")
+    void getShareSettings_myNickname_reflectsOwnMembershipNickname() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, OWNER_ID)).willReturn(true);
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of());
+        given(prescriptionRepository.findAllByPatientId(OWNER_ID)).willReturn(List.of());
+        given(userRepository.findById(OWNER_ID)).willReturn(Optional.of(user(OWNER_ID, "나")));
+        Membership ownMembership = Membership.of(GROUP_ID, OWNER_ID, MemberRole.GUARDIAN, null);
+        given(membershipRepository.findByCareGroupIdAndUserId(GROUP_ID, OWNER_ID))
+                .willReturn(Optional.of(ownMembership));
+
+        ShareSettingsView withoutNickname = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        assertThat(withoutNickname.myNickname()).isNull();
+
+        ownMembership.updateNickname("삼촌");
+
+        ShareSettingsView withNickname = sut.getShareSettings(GROUP_ID, OWNER_ID);
+        assertThat(withNickname.myNickname()).isEqualTo("삼촌");
+    }
+
     @Test
     @DisplayName("getShareSettings — care_group_id 가 NULL 인 내 약봉투도 반드시 포함(회귀 방지)")
     void getShareSettings_includesPrescriptionsWithNullCareGroupId() {

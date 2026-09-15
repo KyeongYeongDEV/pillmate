@@ -51,12 +51,19 @@ public class MedicationShareService {
         return new ShareSettingsView(
                 toMemberShareSettings(groupId, ownerUserId),
                 toShareablePrescriptions(ownerUserId),
-                resolveMyColor(ownerUserId));
+                resolveMyColor(ownerUserId),
+                resolveMyNickname(groupId, ownerUserId));
     }
 
     private String resolveMyColor(Long ownerUserId) {
         return userRepository.findById(ownerUserId)
                 .map(user -> user.getPreferredColor())
+                .orElse(null);
+    }
+
+    private String resolveMyNickname(Long groupId, Long ownerUserId) {
+        return membershipRepository.findByCareGroupIdAndUserId(groupId, ownerUserId)
+                .map(Membership::getNickname)
                 .orElse(null);
     }
 

@@ -13,6 +13,7 @@ import com.pillmate.caregroup.application.PinGroupUseCase;
 import com.pillmate.caregroup.application.RenameCareGroupService;
 import com.pillmate.caregroup.application.SendMemberNudgeService;
 import com.pillmate.caregroup.application.UnpinGroupUseCase;
+import com.pillmate.caregroup.application.UpdateMembershipNicknameService;
 import com.pillmate.caregroup.application.dto.CreateGroupResponse;
 import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse;
 import com.pillmate.caregroup.application.dto.GroupDayScheduleResponse.MemberDayView;
@@ -73,6 +74,7 @@ class CareGroupControllerTest {
     @MockitoBean PinGroupUseCase pinGroupUseCase;
     @MockitoBean UnpinGroupUseCase unpinGroupUseCase;
     @MockitoBean RenameCareGroupService renameCareGroupService;
+    @MockitoBean UpdateMembershipNicknameService updateMembershipNicknameService;
     @MockitoBean GetGroupDetailUseCase getGroupDetailUseCase;
     @MockitoBean LeaveGroupUseCase leaveGroupUseCase;
     @MockitoBean MedicationShareService medicationShareService;
@@ -209,6 +211,60 @@ class CareGroupControllerTest {
 
     private record RenameGroupRequestBody(String name) {}
 
+    // T-GROUP-NICKNAME
+    @Test
+    @DisplayName("PATCH /groups/{groupId}/members/me/nickname → 200 + 별명 변경 위임")
+    void updateMyNickname_returns200() throws Exception {
+        mockMvc.perform(patch("/groups/" + GROUP_ID + "/members/me/nickname")
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new NicknameRequestBody("삼촌"))))
+                .andExpect(status().isOk());
+
+        then(updateMembershipNicknameService).should().updateNickname(GROUP_ID, USER_ID, "삼촌");
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId}/members/me/nickname — 공백/null 허용(리셋 신호)")
+    void updateMyNickname_blank_allowedAsReset() throws Exception {
+        mockMvc.perform(patch("/groups/" + GROUP_ID + "/members/me/nickname")
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new NicknameRequestBody(null))))
+                .andExpect(status().isOk());
+
+        then(updateMembershipNicknameService).should().updateNickname(GROUP_ID, USER_ID, null);
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId}/members/me/nickname 21자면 400 (INVALID_REQUEST)")
+    void updateMyNickname_tooLong_returns400() throws Exception {
+        mockMvc.perform(patch("/groups/" + GROUP_ID + "/members/me/nickname")
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new NicknameRequestBody("가".repeat(21)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PILL_040"));
+
+        then(updateMembershipNicknameService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("PATCH /groups/{groupId}/members/me/nickname — 비구성원이면 403")
+    void updateMyNickname_nonMember_returns403() throws Exception {
+        org.mockito.BDDMockito.willThrow(new PillmateException(ErrorCode.GROUP_ACCESS_DENIED))
+                .given(updateMembershipNicknameService).updateNickname(GROUP_ID, USER_ID, "삼촌");
+
+        mockMvc.perform(patch("/groups/" + GROUP_ID + "/members/me/nickname")
+                        .header("X-User-Id", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new NicknameRequestBody("삼촌"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("PILL_011"));
+    }
+
+    private record NicknameRequestBody(String nickname) {}
+
     @Test
     @DisplayName("GET /groups/{groupId}/share-settings → 200 + 구성원별·약봉투별 공유 설정 목록")
     void getShareSettings_returns200() throws Exception {
@@ -217,7 +273,7 @@ class CareGroupControllerTest {
                         List.of(new ShareSettingView(VIEWER_ID, "아버지", "PATIENT", true)),
                         List.of(new ShareablePrescriptionView(
                                 PRESCRIPTION_ID, "감기약", LocalDate.of(2026, 6, 1), true, PrescriptionStatus.ONGOING)),
-                        null));
+                        null, null));
 
         mockMvc.perform(get("/groups/" + GROUP_ID + "/share-settings").header("X-User-Id", USER_ID))
                 .andExpect(status().isOk())

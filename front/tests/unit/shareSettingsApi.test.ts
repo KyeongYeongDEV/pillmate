@@ -18,6 +18,7 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
     { prescriptionId: 3, label: '당뇨약', prescribedAt: '2026-09-03', shared: false, status: 'ONGOING' },
   ],
   myColor: null,
+  myNickname: null,
   ...over,
 });
 

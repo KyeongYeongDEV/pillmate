@@ -7,6 +7,7 @@ import {
   useUpdateMemberShareMutation,
   useUpdatePrescriptionShareMutation,
   useUpdateMyColorMutation,
+  useUpdateMyNicknameMutation,
 } from '@/store/slices/caregroupApi';
 import type { ShareSettingsView } from '@/store/slices/caregroupApi';
 import { SELECTABLE_COLOR_PALETTE } from '@/utils/memberColors';
@@ -28,6 +29,7 @@ jest.mock('@/store/slices/caregroupApi', () => ({
   useUpdateMemberShareMutation: jest.fn(),
   useUpdatePrescriptionShareMutation: jest.fn(),
   useUpdateMyColorMutation: jest.fn(),
+  useUpdateMyNicknameMutation: jest.fn(),
 }));
 
 const mockParams = useLocalSearchParams as unknown as jest.Mock;
@@ -35,6 +37,7 @@ const mockQuery = useGetShareSettingsQuery as unknown as jest.Mock;
 const mockMemberMutation = useUpdateMemberShareMutation as unknown as jest.Mock;
 const mockPrescriptionMutation = useUpdatePrescriptionShareMutation as unknown as jest.Mock;
 const mockColorMutation = useUpdateMyColorMutation as unknown as jest.Mock;
+const mockNicknameMutation = useUpdateMyNicknameMutation as unknown as jest.Mock;
 
 const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
   members: [
@@ -45,12 +48,14 @@ const view = (over: Partial<ShareSettingsView> = {}): ShareSettingsView => ({
     { prescriptionId: 2, label: '감기약', prescribedAt: '2026-09-01', shared: false, status: 'ONGOING' },
   ],
   myColor: null,
+  myNickname: null,
   ...over,
 });
 
 let memberMutate: jest.Mock;
 let prescriptionMutate: jest.Mock;
 let colorMutate: jest.Mock;
+let nicknameMutate: jest.Mock;
 
 function setup(options: {
   data?: ShareSettingsView;
@@ -60,7 +65,7 @@ function setup(options: {
 } = {}) {
   mockParams.mockReturnValue({ id: '3' });
   mockQuery.mockReturnValue({
-    data: options.data ?? { members: [], prescriptions: [], myColor: null },
+    data: options.data ?? { members: [], prescriptions: [], myColor: null, myNickname: null },
     isLoading: options.isLoading ?? false,
     isError: options.isError ?? false,
     error: options.error,
@@ -69,9 +74,11 @@ function setup(options: {
   memberMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
   prescriptionMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
   colorMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
+  nicknameMutate = jest.fn(() => ({ unwrap: () => Promise.resolve() }));
   mockMemberMutation.mockReturnValue([memberMutate, {}]);
   mockPrescriptionMutation.mockReturnValue([prescriptionMutate, {}]);
   mockColorMutation.mockReturnValue([colorMutate, {}]);
+  mockNicknameMutation.mockReturnValue([nicknameMutate, {}]);
 }
 
 describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션', () => {
@@ -185,5 +192,45 @@ describe('알약 정보 공유 설정 화면 — 구성원 + 약봉투 2섹션',
       fireEvent.press(screen.getByLabelText(`색상 ${target}`));
     });
     expect(colorMutate).toHaveBeenCalledWith(target);
+  });
+
+  // 사용자 요청(2026-09-15): 화면 타이틀 "알약 정보 공유" → "그룹 개인 설정"
+  it('화면 타이틀이 "그룹 개인 설정" 이다', () => {
+    setup({ data: view() });
+    render(<ShareSettingsScreen />);
+    expect(screen.getByText('그룹 개인 설정')).toBeTruthy();
+  });
+
+  it('내 별명 섹션 — myNickname 없으면 입력칸이 비어있음(기본값=원래 이름 폴백은 서버가 처리)', () => {
+    setup({ data: view({ myNickname: null }) });
+    render(<ShareSettingsScreen />);
+    expect(screen.getByText('내 별명')).toBeTruthy();
+    expect(screen.getByLabelText('내 별명 입력').props.value).toBe('');
+  });
+
+  it('내 별명 섹션 — myNickname 있으면 입력칸에 그 값이 채워짐', () => {
+    setup({ data: view({ myNickname: '삼촌' }) });
+    render(<ShareSettingsScreen />);
+    expect(screen.getByLabelText('내 별명 입력').props.value).toBe('삼촌');
+  });
+
+  it('별명 저장 버튼을 누르면 groupId+nickname 으로 updateMyNickname 호출', async () => {
+    setup({ data: view({ myNickname: null }) });
+    render(<ShareSettingsScreen />);
+    fireEvent.changeText(screen.getByLabelText('내 별명 입력'), '삼촌');
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('별명 저장'));
+    });
+    expect(nicknameMutate).toHaveBeenCalledWith({ groupId: 3, nickname: '삼촌' });
+  });
+
+  it('별명을 비운 채 저장하면 nickname null 로 호출(기본값 복귀)', async () => {
+    setup({ data: view({ myNickname: '삼촌' }) });
+    render(<ShareSettingsScreen />);
+    fireEvent.changeText(screen.getByLabelText('내 별명 입력'), '   ');
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('별명 저장'));
+    });
+    expect(nicknameMutate).toHaveBeenCalledWith({ groupId: 3, nickname: null });
   });
 });

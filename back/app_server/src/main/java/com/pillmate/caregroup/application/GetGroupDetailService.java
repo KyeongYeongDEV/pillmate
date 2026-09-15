@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,15 +64,20 @@ public class GetGroupDetailService implements GetGroupDetailUseCase {
                 .orElseThrow(() -> new PillmateException(ErrorCode.GROUP_NOT_FOUND));
     }
 
+    // 그룹별 별명(Membership.nickname) 이 설정돼 있으면 실제 이름 대신 그걸로 표시 — 멤버 목록·활동 피드 공통.
     private Map<Long, UserInfo> loadUserInfoMap(List<Membership> memberships) {
         return memberships.stream()
-                .map(Membership::getUserId)
                 .collect(Collectors.toMap(
-                        Function.identity(),
-                        id -> userRepository.findById(id)
-                                .map(u -> new UserInfo(u.getName(), u.getPreferredColor()))
-                                .orElse(new UserInfo("멤버", null)),
+                        Membership::getUserId,
+                        m -> userRepository.findById(m.getUserId())
+                                .map(u -> new UserInfo(resolveDisplayName(m, u.getName()), u.getPreferredColor()))
+                                .orElse(new UserInfo(resolveDisplayName(m, "멤버"), null)),
                         (a, b) -> a));
+    }
+
+    private String resolveDisplayName(Membership membership, String fallbackName) {
+        String nickname = membership.getNickname();
+        return (nickname != null && !nickname.isBlank()) ? nickname : fallbackName;
     }
 
     private List<MemberView> toMemberViews(List<Membership> memberships, Map<Long, UserInfo> userInfoById) {

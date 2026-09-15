@@ -14,6 +14,8 @@ import java.time.Instant;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Membership {
 
+    private static final int NICKNAME_MAX_LENGTH = 20;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -43,6 +45,10 @@ public class Membership {
 
     @Column(name = "left_at")
     private Instant leftAt;
+
+    // 그룹별 별명 — null 이면 표시 시 본인 실제 이름(User.name)으로 폴백 (그룹마다 다르게 설정 가능)
+    @Column(length = 20)
+    private String nickname;
 
     public static Membership of(Long careGroupId, Long userId, MemberRole role, Long invitedBy) {
         Membership m = new Membership();
@@ -88,5 +94,18 @@ public class Membership {
         this.status = MembershipStatus.LEFT;
         this.leftAt = Instant.now(clock);
         this.pinned = false;
+    }
+
+    // 공백/null 이면 별명을 리셋해 기본값(본인 실제 이름)으로 되돌린다.
+    public void updateNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            this.nickname = null;
+            return;
+        }
+        String trimmed = nickname.trim();
+        if (trimmed.length() > NICKNAME_MAX_LENGTH) {
+            throw new IllegalArgumentException("nickname must be at most " + NICKNAME_MAX_LENGTH + " chars");
+        }
+        this.nickname = trimmed;
     }
 }

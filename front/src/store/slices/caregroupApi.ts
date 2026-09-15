@@ -32,9 +32,12 @@ export interface ShareSettingsView {
   members: ShareMemberSetting[];
   prescriptions: SharePrescriptionSetting[];
   myColor: string | null;
+  myNickname: string | null;
 }
 
-const EMPTY_SHARE_SETTINGS: ShareSettingsView = { members: [], prescriptions: [], myColor: null };
+const EMPTY_SHARE_SETTINGS: ShareSettingsView = {
+  members: [], prescriptions: [], myColor: null, myNickname: null,
+};
 
 export interface UpdateMemberShareArgs {
   groupId: number;
@@ -288,6 +291,16 @@ export const caregroupApiSlice = createApi({
       query: (color) => ({ url: '/users/me/color', method: 'PATCH', body: { color } }),
       invalidatesTags: ['Group', 'GroupDetail', 'ShareSettings'],
     }),
+    // 그룹별 별명 — 다른 그룹엔 영향 없으므로 그 groupId 캐시만 무효화.
+    updateMyNickname: build.mutation<void, { groupId: number; nickname: string | null }>({
+      query: ({ groupId, nickname }) => ({
+        url: `/groups/${groupId}/members/me/nickname`, method: 'PATCH', body: { nickname },
+      }),
+      invalidatesTags: (_r, _e, { groupId }) => [
+        { type: 'GroupDetail', id: groupId },
+        { type: 'ShareSettings', id: groupId },
+      ],
+    }),
   }),
 });
 
@@ -309,5 +322,6 @@ export const {
   useGetGroupDayScheduleQuery,
   useGetSharedPrescriptionQuery,
   useUpdateMyColorMutation,
+  useUpdateMyNicknameMutation,
 } = caregroupApiSlice;
 

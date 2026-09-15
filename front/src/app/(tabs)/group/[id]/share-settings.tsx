@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl, Switch,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -11,6 +12,7 @@ import {
   useUpdateMemberShareMutation,
   useUpdatePrescriptionShareMutation,
   useUpdateMyColorMutation,
+  useUpdateMyNicknameMutation,
   type ShareMemberSetting,
   type SharePrescriptionSetting,
 } from '@/store/slices/caregroupApi';
@@ -33,10 +35,14 @@ export default function ShareSettingsScreen() {
   const [updateMemberShare] = useUpdateMemberShareMutation();
   const [updatePrescriptionShare] = useUpdatePrescriptionShareMutation();
   const [updateMyColor] = useUpdateMyColorMutation();
+  const [updateMyNickname, { isLoading: isSavingNickname }] = useUpdateMyNicknameMutation();
   const [pendingMembers, setPendingMembers] = useState<number[]>([]);
   const [pendingPrescriptions, setPendingPrescriptions] = useState<number[]>([]);
   const [pendingColor, setPendingColor] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState<string | null>(null);
+
+  const nicknameValue = nicknameInput ?? (data?.myNickname ?? '');
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -70,6 +76,16 @@ export default function ShareSettingsScreen() {
       setPendingColor(null);
     }
   }, [pendingColor, updateMyColor]);
+
+  const handleNicknameSave = useCallback(async () => {
+    const trimmed = nicknameValue.trim();
+    try {
+      await updateMyNickname({ groupId, nickname: trimmed === '' ? null : trimmed }).unwrap();
+      setNicknameInput(null);
+    } catch (e: any) {
+      Alert.alert('별명 변경 실패', e?.data?.error?.message ?? '잠시 후 다시 시도해 주세요');
+    }
+  }, [nicknameValue, updateMyNickname, groupId]);
 
   const handlePrescriptionToggle = useCallback(async (prescriptionId: number, enabled: boolean) => {
     if (pendingPrescriptions.includes(prescriptionId)) return;
@@ -133,6 +149,35 @@ export default function ShareSettingsScreen() {
                 onSelect={handleColorSelect}
               />
             ))}
+          </View>
+        </View>
+
+        <Text style={styles.sectionLabel}>내 별명</Text>
+        <View style={styles.colorCard}>
+          <Text style={styles.colorHint}>이 그룹에서만 다르게 보일 내 이름이에요. 비워두면 원래 이름으로 보여요.</Text>
+          <View style={styles.nicknameRow}>
+            <TextInput
+              style={styles.nicknameInput}
+              value={nicknameValue}
+              onChangeText={setNicknameInput}
+              placeholder={data?.members ? '별명 없음' : ''}
+              placeholderTextColor={colors.labelAlternative}
+              maxLength={20}
+              accessibilityLabel="내 별명 입력"
+            />
+            <Pressable
+              style={styles.nicknameSaveBtn}
+              onPress={handleNicknameSave}
+              disabled={isSavingNickname}
+              accessibilityRole="button"
+              accessibilityLabel="별명 저장"
+            >
+              {isSavingNickname ? (
+                <ActivityIndicator size="small" color={colors.staticWhite} />
+              ) : (
+                <Text style={styles.nicknameSaveTxt}>저장</Text>
+              )}
+            </Pressable>
           </View>
         </View>
 
@@ -273,7 +318,7 @@ function Header() {
       >
         <Feather name="chevron-left" size={scale(24)} color={colors.labelNormal} />
       </Pressable>
-      <Text style={styles.headerTitle}>알약 정보 공유</Text>
+      <Text style={styles.headerTitle}>그룹 개인 설정</Text>
       <View style={{ width: scale(24) }} />
     </View>
   );
@@ -313,6 +358,17 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: 'transparent',
   },
   swatchSelected: { borderColor: colors.labelNormal },
+  nicknameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  nicknameInput: {
+    flex: 1, height: scale(40), borderRadius: radius.r10,
+    borderWidth: 1, borderColor: colors.line, paddingHorizontal: space.s12,
+    fontSize: scale(15), color: colors.labelNormal,
+  },
+  nicknameSaveBtn: {
+    height: scale(40), paddingHorizontal: space.s16, borderRadius: radius.r10,
+    backgroundColor: colors.primaryBase, alignItems: 'center', justifyContent: 'center',
+  },
+  nicknameSaveTxt: { fontSize: scale(14), fontWeight: '700', color: colors.staticWhite },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: space.s12,
     padding: space.s14,

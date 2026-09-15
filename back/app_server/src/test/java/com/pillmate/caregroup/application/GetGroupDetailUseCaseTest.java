@@ -207,6 +207,48 @@ class GetGroupDetailUseCaseTest {
                 .containsExactly((String) null);
     }
 
+    // T-GROUP-NICKNAME: 그룹별 별명 — 설정 시 실제 이름 대신 별명으로 표시(구성원 목록+활동 피드 모두)
+    @Test
+    @DisplayName("구성원 별명 설정 시 MemberView.name 과 활동 actorName 모두 별명으로 표시")
+    void detail_memberNickname_overridesDisplayName() {
+        Membership nicknamed = Membership.of(GROUP_ID, MEMBER_2, MemberRole.PATIENT, USER_ID);
+        nicknamed.updateNickname("삼촌");
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(true);
+        given(careGroupRepository.findById(GROUP_ID)).willReturn(Optional.of(group("우리가족")));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(
+                List.of(Membership.of(GROUP_ID, USER_ID, MemberRole.ADMIN, null), nicknamed));
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(User.dummy("어머니")));
+        given(userRepository.findById(MEMBER_2)).willReturn(Optional.of(User.dummy("아버지")));
+        given(inviteCodeRepository.findActiveByCareGroupId(GROUP_ID)).willReturn(Optional.empty());
+        given(activityFeedRepository.findByActorSince(eq(USER_ID), any(), anyInt())).willReturn(List.of());
+        given(activityFeedRepository.findByActorSince(eq(MEMBER_2), any(), anyInt()))
+                .willReturn(List.of(activityFeed(MEMBER_2)));
+
+        GroupDetailResponse response = sut.detail(GROUP_ID, USER_ID);
+
+        assertThat(response.members())
+                .filteredOn(m -> m.userId().equals(MEMBER_2))
+                .extracting(com.pillmate.caregroup.application.dto.MemberView::name)
+                .containsExactly("삼촌");
+        assertThat(response.recentActivities().get(0).actorName()).isEqualTo("삼촌");
+    }
+
+    @Test
+    @DisplayName("별명 미설정 — 실제 이름 그대로 표시(회귀 없음)")
+    void detail_noNickname_usesRealName() {
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, USER_ID)).willReturn(true);
+        given(careGroupRepository.findById(GROUP_ID)).willReturn(Optional.of(group("우리가족")));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(
+                List.of(Membership.of(GROUP_ID, USER_ID, MemberRole.ADMIN, null)));
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(User.dummy("어머니")));
+        given(inviteCodeRepository.findActiveByCareGroupId(GROUP_ID)).willReturn(Optional.empty());
+        given(activityFeedRepository.findByActorSince(any(), any(), anyInt())).willReturn(List.of());
+
+        GroupDetailResponse response = sut.detail(GROUP_ID, USER_ID);
+
+        assertThat(response.members().get(0).name()).isEqualTo("어머니");
+    }
+
     private CareGroup group(String name) {
         return CareGroup.create(name, USER_ID);
     }

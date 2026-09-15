@@ -69,7 +69,7 @@ public class ActivityFeedQueryService {
         }
         List<Long> memberIds = members.stream().map(Membership::getUserId).toList();
         List<ActivityFeed> feeds = fetchFeedsAfterJoin(members, memberIds, limit);
-        List<ActivityFeedItem> items = mapFeeds(feeds, buildNameMap(memberIds));
+        List<ActivityFeedItem> items = mapFeeds(feeds, buildGroupNameMap(members, memberIds));
         activityFeedCachePort.putGroupFeed(groupId, viewerId, limit, items);
         return items;
     }
@@ -100,5 +100,14 @@ public class ActivityFeedQueryService {
     private Map<Long, String> buildNameMap(List<Long> userIds) {
         return userRepository.findAllByIdIn(userIds).stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
+    }
+
+    // 그룹 피드 전용 — Membership.nickname(그룹별 별명) 이 설정돼 있으면 실제 이름 대신 그걸로 표시.
+    private Map<Long, String> buildGroupNameMap(List<Membership> members, List<Long> userIds) {
+        Map<Long, String> nameById = new java.util.HashMap<>(buildNameMap(userIds));
+        members.stream()
+                .filter(m -> m.getNickname() != null && !m.getNickname().isBlank())
+                .forEach(m -> nameById.put(m.getUserId(), m.getNickname()));
+        return nameById;
     }
 }
