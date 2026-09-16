@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import ActivityTimelineItem from '@/components/group/ActivityTimelineItem';
 import type { ActivityView } from '@/types/caregroup';
 
@@ -74,5 +74,18 @@ describe('ActivityTimelineItem', () => {
   it('본인 활동(excludeActorName 일치)이면 칭찬 버튼 미렌더', () => {
     render(<ActivityTimelineItem item={DONE} groupId={20} excludeActorName="박순자" />);
     expect(screen.queryByText(/칭찬버튼/)).toBeNull();
+  });
+
+  // 사용자 요청(2026-09-17): 그룹 상세 새로고침 시 occurredAt 이 그대로여도(React.memo 로 재렌더 안 됨)
+  // "N분 전" 표시가 최신 시각 기준으로 재계산돼야 한다 — now prop 을 명시적으로 흘려 memo 를 우회.
+  it('now prop 이 바뀌면 occurredAt 이 그대로여도 상대시간이 재계산된다(새로고침 시나리오)', () => {
+    const baseNow = Date.now();
+    const { rerender } = render(<ActivityTimelineItem item={DONE} now={baseNow} />);
+    expect(screen.getByText('5분 전')).toBeTruthy();
+
+    rerender(<ActivityTimelineItem item={DONE} now={baseNow + 10 * 60_000} />);
+
+    expect(screen.getByText('15분 전')).toBeTruthy();
+    expect(screen.queryByText('5분 전')).toBeNull();
   });
 });

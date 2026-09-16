@@ -29,9 +29,10 @@ interface ActivityTimelineItemProps {
   tint?: string;
   groupId?: number;
   excludeActorName?: string;
+  now?: number;
 }
 
-function ActivityTimelineItem({ item, isLast, whoLabel, tint, groupId, excludeActorName }: ActivityTimelineItemProps) {
+function ActivityTimelineItem({ item, isLast, whoLabel, tint, groupId, excludeActorName, now }: ActivityTimelineItemProps) {
   const accent = tint ?? DOT_COLOR[item.activityType] ?? DEFAULT_DOT;
   const canPraise = groupId != null && item.activityType === 'DOSE_TAKEN' && item.actorName !== excludeActorName;
 
@@ -50,7 +51,7 @@ function ActivityTimelineItem({ item, isLast, whoLabel, tint, groupId, excludeAc
               {whoLabel && <Text style={styles.actorLabel}> · {whoLabel}</Text>}
             </Text>
           </View>
-          <Text style={styles.time}>{formatRelativeTime(item.occurredAt)}</Text>
+          <Text style={styles.time}>{formatRelativeTime(item.occurredAt, now)}</Text>
         </View>
 
         <View style={styles.titleRow}>
@@ -65,8 +66,9 @@ function ActivityTimelineItem({ item, isLast, whoLabel, tint, groupId, excludeAc
   );
 }
 
-function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+// now 를 명시적 prop 으로 받아야 새로고침(occurredAt 불변)에도 React.memo 를 우회해 재계산된다.
+function formatRelativeTime(iso: string, now: number = Date.now()): string {
+  const diff = now - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return '방금';
   if (mins < 60) return `${mins}분 전`;

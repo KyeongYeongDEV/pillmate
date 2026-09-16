@@ -97,11 +97,13 @@ export default function GroupDetailScreen() {
     }
   }, [nudgeMember, groupId, nudgingUserId, showNudgeToast]);
 
+  const [refreshedAt, setRefreshedAt] = useState(() => Date.now());
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetchDetail();
     } finally {
+      setRefreshedAt(Date.now());
       setRefreshing(false);
     }
   }, [refetchDetail]);
@@ -251,6 +253,7 @@ export default function GroupDetailScreen() {
               tint={tintByMemberName.get(item.actorName)}
               groupId={groupId}
               excludeActorName={myName}
+              now={refreshedAt}
             />
           ))}
           {detail.recentActivities.length === 0 && (
