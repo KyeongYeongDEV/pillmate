@@ -558,32 +558,25 @@ class SendGroupDoseNotificationServiceTest {
     // ─── T-BE-NOTIFICATION-L2-LEAK: 그룹 알림 라벨 L2 게이팅 (약봉투 단위 그룹 공유) ──
 
     @Test
-    @DisplayName("약봉투 공유 꺼짐 — 처방전 라벨 없는 제네릭 본문(약봉투 이름 유출 차단)")
-    void notify_prescriptionNotShared_getsGenericBodyWithoutLabel() {
+    @DisplayName("약봉투 공유 꺼짐 — 라벨만 가리는 게 아니라 그룹에 알림 자체를 보내지 않음(사용자 요청 2026-09-16)")
+    void notify_prescriptionNotShared_sendsNoNotificationAtAll() {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
-        User actor = User.dummy("홍길동");
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
         given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
                 membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
-        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
-        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
                         LocalDate.of(2026, 6, 21), "우울증약", false)));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
-        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
-        verify(notificationPersistenceService).saveAll(captor.capture());
-        String body = captor.getValue().get(0).getBody();
-        assertThat(body).doesNotContain("우울증약");
-        assertThat(body).contains("홍길동");
-        assertThat(body).contains("복약을 완료했어요");
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).sendAll(anyList());
     }
 
     @Test

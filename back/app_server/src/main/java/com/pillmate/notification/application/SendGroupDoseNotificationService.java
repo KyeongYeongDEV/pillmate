@@ -191,6 +191,9 @@ public class SendGroupDoseNotificationService {
         Long careGroupId = schedule.getCareGroupId();
         Long patientId = doseLog.getPatientId();
         PrescriptionSummary summary = resolvePrescriptionSummary(prescriptionId);
+        if (isUnsharedPrescription(prescriptionId, summary)) {
+            return List.of();
+        }
         String actorName = resolveActorName(actorUserId);
         String groupName = resolveGroupName(careGroupId);
         return recipientIds.stream()
@@ -213,6 +216,12 @@ public class SendGroupDoseNotificationService {
         return isMissed
                 ? Notification.doseMissed(recipientId, actorUserId, careGroupId, doseLogId, prescriptionId, prescriptionName, actorName, groupName)
                 : Notification.doseTaken(recipientId, actorUserId, careGroupId, doseLogId, prescriptionId, prescriptionName, actorName, groupName);
+    }
+
+    // 약봉투(prescription) 축 공유가 꺼져 있으면 라벨만 가리지 않고 그룹 발송 자체를 하지 않는다.
+    // (사용자 요청 2026-09-16) — "복약했어요" 라는 존재 자체도 미공유 정보 유출로 판단.
+    private boolean isUnsharedPrescription(Long prescriptionId, PrescriptionSummary summary) {
+        return prescriptionId != null && summary != null && !summary.sharedWithGroup();
     }
 
     private String resolveActorName(Long userId) {
