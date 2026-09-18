@@ -104,7 +104,8 @@ public class NotifyDueDoseRemindersService implements NotifyDueDoseRemindersUseC
                 lookupToken(notification.getRecipientUserId()),
                 notification.getTitle(),
                 notification.getBody(),
-                Map.of("route", "/home", "type", notification.getType().name()));
+                Map.of("route", "/home", "type", notification.getType().name(),
+                        "notificationId", String.valueOf(notification.getId())));
     }
 
     private String lookupToken(Long userId) {

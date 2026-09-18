@@ -105,6 +105,28 @@ class SendOverdueDoseNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void send_commandDataContainsNotificationId() {
+        DoseLog doseLog = pendingDoseLog();
+        Schedule schedule = scheduleOf(null);
+        User patient = patientWithToken("ExponentPushToken[patient]");
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> {
+            List<Notification> saved = inv.getArgument(0);
+            saved.forEach(n -> ReflectionTestUtils.setField(n, "id", 999L));
+            return saved;
+        });
+
+        sut.send(DOSE_LOG_ID);
+
+        ArgumentCaptor<List<NotificationCommand>> cmdCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationSenderPort).sendAll(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().get(0).data()).containsEntry("notificationId", "999");
+    }
+
+    @Test
     @DisplayName("솔로(careGroupId null) — 당사자 본인 알림만 저장·발송, dose-reminder 채널")
     void send_soloPatient_onlySelfNotification() {
         DoseLog doseLog = pendingDoseLog();

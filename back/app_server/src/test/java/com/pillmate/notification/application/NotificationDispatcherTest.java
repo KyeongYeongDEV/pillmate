@@ -70,6 +70,22 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void on_ddiCriticalDetected_commandDataContainsNotificationId() {
+        DdiCriticalDetected event = new DdiCriticalDetected(ACTOR_ID, PRESCRIPTION_ID, List.of("횡문근융해증 위험"));
+        Notification saved = buildNotification(ACTOR_ID, NotificationType.DDI_CRITICAL);
+        org.springframework.test.util.ReflectionTestUtils.setField(saved, "id", 999L);
+        given(notificationPersistenceService.saveAll(anyList())).willReturn(List.of(saved));
+
+        sut.on(event);
+
+        ArgumentCaptor<com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand> cmdCaptor =
+                ArgumentCaptor.forClass(com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand.class);
+        verify(notificationSenderPort).send(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().data()).containsEntry("notificationId", "999");
+    }
+
+    @Test
     @DisplayName("DdiCriticalDetected — 본인 notification 저장 + send 호출")
     void on_ddiCriticalDetected_savesAndSendsToSelf() {
         // given

@@ -76,6 +76,25 @@ class NotifyDueDoseRemindersServiceTest {
     }
 
     @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void notifyDue_commandDataContainsNotificationId() {
+        DoseLog doseLog = pendingDoseLog();
+        Schedule schedule = prescriptionSchedule(null, TimeOfDay.MORNING, null);
+        stubHappyPath(doseLog, schedule, "솔로 테스트 약봉투");
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> {
+            List<Notification> saved = inv.getArgument(0);
+            saved.forEach(n -> org.springframework.test.util.ReflectionTestUtils.setField(n, "id", 999L));
+            return saved;
+        });
+
+        sut.notifyDue();
+
+        ArgumentCaptor<List<NotificationCommand>> cmdCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationSenderPort).sendAll(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().get(0).data()).containsEntry("notificationId", "999");
+    }
+
+    @Test
     @DisplayName("솔로(careGroupId null) 스케줄 — NPE 없이 careGroupId null 알림 저장 + 본인 토큰으로 발송")
     void notifyDue_soloSchedule_sendsToPatientSelf() {
         DoseLog doseLog = pendingDoseLog();

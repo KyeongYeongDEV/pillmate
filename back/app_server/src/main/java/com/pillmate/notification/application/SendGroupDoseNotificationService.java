@@ -159,7 +159,8 @@ public class SendGroupDoseNotificationService {
                 token,
                 n.getTitle(),
                 n.getBody(),
-                Map.of("route", resolveRoute(n), "type", n.getType().name())
+                Map.of("route", resolveRoute(n), "type", n.getType().name(),
+                        "notificationId", String.valueOf(n.getId()))
         );
     }
 

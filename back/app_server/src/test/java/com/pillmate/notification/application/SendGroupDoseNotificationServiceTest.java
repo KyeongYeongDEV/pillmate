@@ -28,6 +28,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -107,6 +108,31 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(cmd.recipientPushToken()).isEqualTo("ExponentPushToken[abc]");
         assertThat(cmd.data()).containsEntry("route", "/group/" + GROUP_ID);
         assertThat(cmd.data()).containsEntry("type", "DOSE_TAKEN");
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void notify_commandDataContainsNotificationId() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> {
+            List<Notification> saved = inv.getArgument(0);
+            saved.forEach(n -> ReflectionTestUtils.setField(n, "id", 999L));
+            return saved;
+        });
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<List<NotificationCommand>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationSenderPort).sendAll(captor.capture());
+        assertThat(captor.getValue().get(0).data()).containsEntry("notificationId", "999");
     }
 
     @Test

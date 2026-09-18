@@ -107,7 +107,8 @@ public class SendDoseNudgeService {
         Map<String, String> data = Map.of(
                 "route", ROUTE_HOME,
                 "type", n.getType().name(),
-                "channel", CHANNEL_DOSE_REMINDER);
+                "channel", CHANNEL_DOSE_REMINDER,
+                "notificationId", String.valueOf(n.getId()));
         return new NotificationCommand(n.getId(), n.getRecipientUserId(), token, n.getTitle(), n.getBody(), data);
     }
 

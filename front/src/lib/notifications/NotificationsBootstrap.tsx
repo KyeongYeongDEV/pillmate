@@ -10,8 +10,9 @@ import {
   ensureAndroidNotificationChannels,
 } from './setup';
 import { registerPushForCurrentUser } from './pushRegistration';
-import { extractRouteFromNotification } from './deepLink';
+import { extractRouteFromNotification, extractNotificationIdFromNotification } from './deepLink';
 import { handlePushReceived } from './pushSync';
+import { notificationApiSlice } from '@/store/slices/notificationApi';
 
 const NOTIFICATION_INBOX_ROUTE = '/notifications';
 
@@ -50,11 +51,16 @@ export default function NotificationsBootstrap() {
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      // 푸시 탭으로 앱에 들어오는 것 자체는 "읽음"이 아니었음 — 배지 숫자가 안 줄어들던 원인.
+      const notificationId = extractNotificationIdFromNotification(response);
+      if (notificationId != null) {
+        dispatch(notificationApiSlice.endpoints.markRead.initiate(notificationId));
+      }
       const route = extractRouteFromNotification(response) ?? NOTIFICATION_INBOX_ROUTE;
       router.push(route as any);
     });
     return () => sub.remove();
-  }, []);
+  }, [dispatch]);
 
   // 포그라운드 수신 — 화면 띄운 상태에서 푸시 오면 관련 cache 즉시 invalidate
   useEffect(() => {

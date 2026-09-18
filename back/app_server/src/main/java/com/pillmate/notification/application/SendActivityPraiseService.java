@@ -96,7 +96,9 @@ public class SendActivityPraiseService {
         String token = userRepository.findById(n.getRecipientUserId())
                 .map(User::getExpoPushToken)
                 .orElse(null);
-        Map<String, String> data = Map.of("route", ROUTE_GROUP_PREFIX + groupId, "type", n.getType().name());
+        Map<String, String> data = Map.of(
+                "route", ROUTE_GROUP_PREFIX + groupId, "type", n.getType().name(),
+                "notificationId", String.valueOf(n.getId()));
         return new NotificationCommand(n.getId(), n.getRecipientUserId(), token, n.getTitle(), n.getBody(), data);
     }
 

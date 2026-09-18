@@ -153,6 +153,7 @@ public class SendOverdueDoseNotificationService {
         Map<String, String> data = new HashMap<>();
         data.put("route", ROUTE_HOME);
         data.put("type", n.getType().name());
+        data.put("notificationId", String.valueOf(n.getId()));
         if (n.getRecipientUserId().equals(patientId)) {
             data.put(DATA_KEY_CHANNEL, CHANNEL_DOSE_REMINDER);
         }

@@ -184,6 +184,7 @@ public class NotificationDispatcher {
         data.put("route", route);
         data.put("groupId", String.valueOf(n.getCareGroupId()));
         data.put("type", n.getType().name());
+        data.put("notificationId", String.valueOf(n.getId()));
         return new NotificationCommand(
                 n.getId(),
                 n.getRecipientUserId(),

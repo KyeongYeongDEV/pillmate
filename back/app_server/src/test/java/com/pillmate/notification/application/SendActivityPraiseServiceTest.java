@@ -15,6 +15,7 @@ import com.pillmate.common.security.CareGroupGuard;
 import com.pillmate.notification.application.dto.PraiseResponse;
 import com.pillmate.notification.application.port.CareGroupLookupPort;
 import com.pillmate.notification.application.port.NotificationSenderPort;
+import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import com.pillmate.user.domain.model.PushProvider;
@@ -100,6 +101,31 @@ class SendActivityPraiseServiceTest {
         assertThat(saved.getBody()).isEqualTo("우리가족에서 김철수님이 복약을 칭찬해줬어요!");
         verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
         verify(activityFeedCachePort).evictGroup(GROUP_ID);
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void praise_commandDataContainsNotificationId() {
+        ActivityFeed feed = doseTakenFeedBy(RECIPIENT_ID);
+        User recipient = patientWithToken(RECIPIENT_ID, "ExponentPushToken[patient]");
+
+        given(activityFeedRepository.findById(ACTIVITY_FEED_ID)).willReturn(Optional.of(feed));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, RECIPIENT_ID)).willReturn(true);
+        given(activityPraiseRepository.existsByActivityFeedIdAndPraiserUserId(ACTIVITY_FEED_ID, PRAISER_ID))
+                .willReturn(false);
+        given(userRepository.findById(RECIPIENT_ID)).willReturn(Optional.of(recipient));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> {
+            List<Notification> saved = inv.getArgument(0);
+            saved.forEach(n -> ReflectionTestUtils.setField(n, "id", 999L));
+            return saved;
+        });
+        given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(999L));
+
+        sut.praise(GROUP_ID, ACTIVITY_FEED_ID, PRAISER_ID);
+
+        ArgumentCaptor<List<NotificationCommand>> cmdCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationSenderPort).sendAll(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().get(0).data()).containsEntry("notificationId", "999");
     }
 
     @Test

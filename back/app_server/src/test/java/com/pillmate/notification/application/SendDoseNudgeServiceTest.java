@@ -115,6 +115,33 @@ class SendDoseNudgeServiceTest {
     }
 
     @Test
+    @DisplayName("사용자 요청(2026-09-18) — data 에 notificationId 포함 (푸시 탭 시 읽음처리용)")
+    void nudge_commandDataContainsNotificationId() {
+        DoseLog doseLog = pendingDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User patient = patientWithToken("ExponentPushToken[patient]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> {
+            List<Notification> saved = inv.getArgument(0);
+            saved.forEach(n -> ReflectionTestUtils.setField(n, "id", 999L));
+            return saved;
+        });
+
+        sut.nudge(DOSE_LOG_ID, FROM_USER_ID);
+
+        ArgumentCaptor<List<NotificationCommand>> cmdCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationSenderPort).sendAll(cmdCaptor.capture());
+        assertThat(cmdCaptor.getValue().get(0).data()).containsEntry("notificationId", "999");
+    }
+
+    @Test
     @DisplayName("정상 — ACTIVE 멤버 + PENDING + 쿨다운 통과 → 당사자에게 발송, dose-reminder 채널")
     void nudge_whenValid_sendsToPatient() {
         DoseLog doseLog = pendingDoseLog();
