@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
@@ -41,6 +42,7 @@ public class SendDoseNudgeService {
     private final UserRepository userRepository;
     private final NotificationPersistenceService notificationPersistenceService;
     private final NotificationSenderPort notificationSenderPort;
+    private final GroupDisplayNameResolver groupDisplayNameResolver;
     private final Clock clock;
 
     public NudgeResponse nudge(Long doseLogId, Long fromUserId) {
@@ -55,7 +57,8 @@ public class SendDoseNudgeService {
         }
 
         Notification notification = Notification.doseNudge(
-                doseLog.getPatientId(), fromUserId, schedule.getCareGroupId(), doseLogId, resolveActorName(fromUserId));
+                doseLog.getPatientId(), fromUserId, schedule.getCareGroupId(), doseLogId,
+                groupDisplayNameResolver.resolve(schedule.getCareGroupId(), fromUserId));
         Notification saved = notificationPersistenceService.saveAll(List.of(notification)).get(0);
         List<Long> sentIds = notificationSenderPort.sendAll(List.of(toCommand(saved)));
         markSentAll(sentIds);
@@ -72,7 +75,7 @@ public class SendDoseNudgeService {
         }
 
         Notification notification = Notification.doseNudge(
-                recipientUserId, fromUserId, groupId, null, resolveActorName(fromUserId));
+                recipientUserId, fromUserId, groupId, null, groupDisplayNameResolver.resolve(groupId, fromUserId));
         Notification saved = notificationPersistenceService.saveAll(List.of(notification)).get(0);
         List<Long> sentIds = notificationSenderPort.sendAll(List.of(toCommand(saved)));
         markSentAll(sentIds);
@@ -111,10 +114,6 @@ public class SendDoseNudgeService {
     private void markSentAll(List<Long> sentNotificationIds) {
         Instant now = Instant.now(clock);
         sentNotificationIds.forEach(id -> notificationPersistenceService.markSent(id, now));
-    }
-
-    private String resolveActorName(Long userId) {
-        return userRepository.findById(userId).map(User::getName).orElse(null);
     }
 
     private DoseLog findDoseLog(Long doseLogId) {

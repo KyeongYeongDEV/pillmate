@@ -1,6 +1,7 @@
 package com.pillmate.notification.application;
 
 import com.pillmate.activity.application.ActivityFeedAppender;
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
@@ -51,6 +52,7 @@ public class SendOverdueDoseNotificationService {
     private final NotificationSenderPort notificationSenderPort;
     private final RecipientCachePort recipientCachePort;
     private final ActivityFeedAppender activityFeedAppender;
+    private final GroupDisplayNameResolver groupDisplayNameResolver;
     private final Clock clock;
 
     public void send(Long doseLogId) {
@@ -66,7 +68,7 @@ public class SendOverdueDoseNotificationService {
         List<CachedRecipient> groupRecipients = loadGroupRecipients(schedule.getCareGroupId());
 
         List<Notification> notifications =
-                buildNotifications(doseLog, schedule.getCareGroupId(), timeLabel, patient, groupRecipients);
+                buildNotifications(doseLog, schedule.getCareGroupId(), timeLabel, groupRecipients);
         Map<Long, String> tokensByUserId = buildTokenMap(doseLog.getPatientId(), patient, groupRecipients);
 
         List<Notification> saved = notificationPersistenceService.saveAll(notifications);
@@ -80,11 +82,11 @@ public class SendOverdueDoseNotificationService {
     }
 
     private List<Notification> buildNotifications(DoseLog doseLog, Long careGroupId, String timeLabel,
-                                                    User patient, List<CachedRecipient> groupRecipients) {
+                                                    List<CachedRecipient> groupRecipients) {
         List<Notification> notifications = new ArrayList<>();
         notifications.add(Notification.doseOverdueSelf(doseLog.getPatientId(), careGroupId, doseLog.getId(), timeLabel));
         if (careGroupId != null) {
-            String patientName = patient == null ? null : patient.getName();
+            String patientName = groupDisplayNameResolver.resolve(careGroupId, doseLog.getPatientId());
             notifications.addAll(buildGroupNotifications(doseLog, careGroupId, timeLabel, patientName, groupRecipients));
         }
         return notifications;

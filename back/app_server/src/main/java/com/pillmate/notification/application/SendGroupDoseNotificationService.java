@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.caregroup.application.MedicationShareService;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
@@ -50,6 +51,7 @@ public class SendGroupDoseNotificationService {
     private final CareGroupLookupPort careGroupLookupPort;
     private final CareGroupGuard careGroupGuard;
     private final MedicationShareService medicationShareService;
+    private final GroupDisplayNameResolver groupDisplayNameResolver;
     private final Clock clock;
 
     // 백그라운드 폴러(NotifyDueGroupDosesService) 전용 — doseLogId 는 폴러 자신의 쿼리 결과이므로
@@ -194,7 +196,7 @@ public class SendGroupDoseNotificationService {
         if (isUnsharedPrescription(prescriptionId, summary)) {
             return List.of();
         }
-        String actorName = resolveActorName(actorUserId);
+        String actorName = groupDisplayNameResolver.resolve(careGroupId, actorUserId);
         String groupName = resolveGroupName(careGroupId);
         return recipientIds.stream()
                 .filter(id -> !id.equals(actorUserId))
@@ -222,11 +224,6 @@ public class SendGroupDoseNotificationService {
     // (사용자 요청 2026-09-16) — "복약했어요" 라는 존재 자체도 미공유 정보 유출로 판단.
     private boolean isUnsharedPrescription(Long prescriptionId, PrescriptionSummary summary) {
         return prescriptionId != null && summary != null && !summary.sharedWithGroup();
-    }
-
-    private String resolveActorName(Long userId) {
-        if (userId == null) return null;
-        return userRepository.findById(userId).map(User::getName).orElse(null);
     }
 
     private String resolveGroupName(Long careGroupId) {

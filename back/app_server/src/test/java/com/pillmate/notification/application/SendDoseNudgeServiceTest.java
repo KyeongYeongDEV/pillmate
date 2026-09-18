@@ -1,5 +1,6 @@
 package com.pillmate.notification.application;
 
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
 import com.pillmate.common.security.CareGroupGuard;
@@ -59,6 +60,7 @@ class SendDoseNudgeServiceTest {
     @Mock UserRepository userRepository;
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock NotificationSenderPort notificationSenderPort;
+    @Mock GroupDisplayNameResolver groupDisplayNameResolver;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendDoseNudgeService sut;
 
@@ -117,7 +119,6 @@ class SendDoseNudgeServiceTest {
     void nudge_whenValid_sendsToPatient() {
         DoseLog doseLog = pendingDoseLog();
         Schedule schedule = scheduleOf(GROUP_ID);
-        User fromUser = userOf(FROM_USER_ID, "김철수");
         User patient = patientWithToken("ExponentPushToken[patient]");
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
@@ -126,7 +127,7 @@ class SendDoseNudgeServiceTest {
                 .willReturn(true);
         given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
-        given(userRepository.findById(FROM_USER_ID)).willReturn(Optional.of(fromUser));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, FROM_USER_ID)).willReturn("김철수");
         given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
@@ -147,6 +148,32 @@ class SendDoseNudgeServiceTest {
         assertThat(cmd.recipientPushToken()).isEqualTo("ExponentPushToken[patient]");
         assertThat(cmd.data()).containsEntry("channel", "dose-reminder");
         verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — 발신자에게 그룹별 별명이 있으면 넛지 알림에 별명이 들어간다")
+    void nudge_fromUserHasGroupNickname_usesNicknameInBody() {
+        DoseLog doseLog = pendingDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User patient = patientWithToken("ExponentPushToken[patient]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(nudgeCooldownPort.tryAcquire(DOSE_LOG_ID, FROM_USER_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
+                .willReturn(true);
+        given(groupDisplayNameResolver.resolve(GROUP_ID, FROM_USER_ID)).willReturn("삼촌");
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
+
+        sut.nudge(DOSE_LOG_ID, FROM_USER_ID);
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        String body = captor.getValue().get(0).getBody();
+        assertThat(body).isEqualTo("삼촌님이 약 챙기라고 알려드려요");
     }
 
     @Test
@@ -171,14 +198,13 @@ class SendDoseNudgeServiceTest {
     @Test
     @DisplayName("nudgeGeneral — 그룹 접근 가능 + 쿨다운·캡 통과 → doseLogId null 로 발송")
     void nudgeGeneral_whenValid_sendsWithNullDoseLogId() {
-        User fromUser = userOf(FROM_USER_ID, "김철수");
         User recipient = patientWithToken("ExponentPushToken[patient]");
 
         given(nudgeCooldownPort.tryAcquireGeneral(PATIENT_ID, FROM_USER_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
         given(nudgeCooldownPort.acquireRecipientCap(PATIENT_ID, Duration.ofMinutes(5)))
                 .willReturn(true);
-        given(userRepository.findById(FROM_USER_ID)).willReturn(Optional.of(fromUser));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, FROM_USER_ID)).willReturn("김철수");
         given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(recipient));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
@@ -235,12 +261,6 @@ class SendDoseNudgeServiceTest {
         assertThat(response.alreadyNotified()).isTrue();
         verify(notificationPersistenceService, never()).saveAll(anyList());
         verify(notificationSenderPort, never()).sendAll(anyList());
-    }
-
-    private User userOf(Long id, String name) {
-        User user = User.dummy(name);
-        ReflectionTestUtils.setField(user, "id", id);
-        return user;
     }
 
     private User patientWithToken(String token) {

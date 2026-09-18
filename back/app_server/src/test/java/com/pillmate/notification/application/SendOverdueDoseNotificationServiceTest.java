@@ -1,6 +1,7 @@
 package com.pillmate.notification.application;
 
 import com.pillmate.activity.application.ActivityFeedAppender;
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.caregroup.domain.model.MemberRole;
 import com.pillmate.caregroup.domain.model.Membership;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
@@ -62,6 +63,7 @@ class SendOverdueDoseNotificationServiceTest {
     @Mock NotificationSenderPort notificationSenderPort;
     @Mock RecipientCachePort recipientCachePort;
     @Mock ActivityFeedAppender activityFeedAppender;
+    @Mock GroupDisplayNameResolver groupDisplayNameResolver;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendOverdueDoseNotificationService sut;
 
@@ -74,6 +76,7 @@ class SendOverdueDoseNotificationServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(userRepository.findById(PATIENT_ID)).thenReturn(Optional.empty());
+        lenient().when(groupDisplayNameResolver.resolve(any(), any())).thenReturn(null);
     }
 
     @Test
@@ -145,6 +148,7 @@ class SendOverdueDoseNotificationServiceTest {
                 membershipOf(GROUP_ID, PATIENT_ID), membershipOf(GROUP_ID, MEMBER_ID)));
         given(userRepository.findAllByIdIn(List.of(PATIENT_ID, MEMBER_ID)))
                 .willReturn(List.of(patient, member));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, PATIENT_ID)).willReturn("환자");
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
 
         sut.send(DOSE_LOG_ID);
@@ -159,7 +163,7 @@ class SendOverdueDoseNotificationServiceTest {
 
         Notification group = captor.getValue().stream()
                 .filter(n -> n.getRecipientUserId().equals(MEMBER_ID)).findFirst().orElseThrow();
-        assertThat(group.getBody()).contains("님이").contains("오전 8시");
+        assertThat(group.getBody()).contains("환자님이").contains("오전 8시");
         assertThat(group.getActorUserId()).isEqualTo(PATIENT_ID);
 
         ArgumentCaptor<List<NotificationCommand>> cmdCaptor = ArgumentCaptor.forClass(List.class);
@@ -172,6 +176,34 @@ class SendOverdueDoseNotificationServiceTest {
         assertThat(selfCmd.data()).containsEntry("channel", "dose-reminder");
         assertThat(groupCmd.data()).doesNotContainKey("channel");
         verify(activityFeedAppender).appendMissed(PATIENT_ID, TimeOfDay.MORNING, "08:00");
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — 환자에게 그룹별 별명이 있으면 3인칭 지연 알림에 별명이 들어간다")
+    void send_patientHasGroupNickname_usesNicknameInGroupBody() {
+        DoseLog doseLog = pendingDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User patient = patientWithToken("ExponentPushToken[patient]");
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[member]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patient));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, PATIENT_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(userRepository.findAllByIdIn(List.of(PATIENT_ID, MEMBER_ID)))
+                .willReturn(List.of(patient, member));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, PATIENT_ID)).willReturn("할머니");
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+
+        sut.send(DOSE_LOG_ID);
+
+        ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(captor.capture());
+        Notification group = captor.getValue().stream()
+                .filter(n -> n.getRecipientUserId().equals(MEMBER_ID)).findFirst().orElseThrow();
+        assertThat(group.getBody()).contains("할머니님이");
+        assertThat(group.getBody()).doesNotContain("환자");
     }
 
     @Test

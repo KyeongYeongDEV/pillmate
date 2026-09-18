@@ -6,6 +6,7 @@ import com.pillmate.activity.domain.model.ActivityPraise;
 import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
 import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
@@ -42,6 +43,7 @@ public class SendActivityPraiseService {
     private final NotificationPersistenceService notificationPersistenceService;
     private final NotificationSenderPort notificationSenderPort;
     private final ActivityFeedCachePort activityFeedCachePort;
+    private final GroupDisplayNameResolver groupDisplayNameResolver;
     private final Clock clock;
 
     @Transactional
@@ -60,7 +62,7 @@ public class SendActivityPraiseService {
 
         Notification notification = Notification.dosePraise(
                 recipientUserId, praiserUserId, groupId, activityFeedId,
-                resolveName(praiserUserId), resolveGroupName(groupId));
+                groupDisplayNameResolver.resolve(groupId, praiserUserId), resolveGroupName(groupId));
         Notification saved = notificationPersistenceService.saveAll(List.of(notification)).get(0);
         List<Long> sentIds = notificationSenderPort.sendAll(List.of(toCommand(saved, groupId)));
         markSentAll(sentIds);
@@ -84,10 +86,6 @@ public class SendActivityPraiseService {
     private ActivityFeed findActivityFeed(Long activityFeedId) {
         return activityFeedRepository.findById(activityFeedId)
                 .orElseThrow(() -> new PillmateException(ErrorCode.ACTIVITY_FEED_NOT_FOUND));
-    }
-
-    private String resolveName(Long userId) {
-        return userRepository.findById(userId).map(User::getName).orElse(null);
     }
 
     private String resolveGroupName(Long groupId) {

@@ -64,6 +64,7 @@ class SendGroupDoseNotificationServiceTest {
     @Mock CareGroupLookupPort careGroupLookupPort;
     @Mock CareGroupGuard careGroupGuard;
     @Mock com.pillmate.caregroup.application.MedicationShareService medicationShareService;
+    @Mock com.pillmate.caregroup.application.GroupDisplayNameResolver groupDisplayNameResolver;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendGroupDoseNotificationService sut;
 
@@ -77,7 +78,7 @@ class SendGroupDoseNotificationServiceTest {
     void setUp() {
         // resolveActorName/resolveGroupName 은 모든 buildNotifications 경로에서 호출된다.
         // 각 테스트가 개별 스텁으로 재정의하지 않으면 null(fallback body) 으로 동작.
-        lenient().when(userRepository.findById(ACTOR_ID)).thenReturn(Optional.empty());
+        lenient().when(groupDisplayNameResolver.resolve(any(), any())).thenReturn(null);
         lenient().when(careGroupLookupPort.findNameById(any())).thenReturn(Optional.empty());
         // 기본: 원자 클레임 성공(1행) — happy-path 공통. "이미 발송" 케이스만 0 으로 재정의.
         lenient().when(doseLogRepository.markGroupNotifiedIfNotYet(anyLong(), any(Instant.class))).thenReturn(1);
@@ -233,7 +234,6 @@ class SendGroupDoseNotificationServiceTest {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
-        User actor = User.dummy("홍길동");
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -241,7 +241,7 @@ class SendGroupDoseNotificationServiceTest {
                 membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
-        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, ACTOR_ID)).willReturn("홍길동");
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
@@ -266,7 +266,6 @@ class SendGroupDoseNotificationServiceTest {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = prescriptionScheduleOf(GROUP_ID, 77L);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
-        User actor = User.dummy("홍길동");
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -274,7 +273,7 @@ class SendGroupDoseNotificationServiceTest {
                 membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
-        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, ACTOR_ID)).willReturn("홍길동");
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("가족그룹"));
         given(prescriptionSummaryPort.findById(77L)).willReturn(Optional.of(
                 new com.pillmate.notification.application.port.PrescriptionSummaryPort.PrescriptionSummary(
@@ -296,7 +295,6 @@ class SendGroupDoseNotificationServiceTest {
         DoseLog doseLog = takenDoseLog();
         Schedule schedule = scheduleOf(GROUP_ID);
         User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
-        User actor = User.dummy("김철수");
 
         given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -304,7 +302,7 @@ class SendGroupDoseNotificationServiceTest {
                 membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
-        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.of(actor));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, ACTOR_ID)).willReturn("김철수");
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("우리가족"));
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
@@ -315,6 +313,30 @@ class SendGroupDoseNotificationServiceTest {
         assertThat(body).contains("김철수");
         assertThat(body).doesNotContain("우리가족");
         assertThat(body).doesNotContain("[");
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — actor 에게 그룹별 별명이 있으면 실명 대신 별명이 본문에 들어간다")
+    void notify_actorHasGroupNickname_usesNicknameInBody() {
+        DoseLog doseLog = takenDoseLog();
+        Schedule schedule = scheduleOf(GROUP_ID);
+        User member = memberWithToken(MEMBER_ID, "ExponentPushToken[abc]");
+
+        given(doseLogRepository.findById(DOSE_LOG_ID)).willReturn(Optional.of(doseLog));
+        given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+        given(membershipRepository.findByCareGroupId(GROUP_ID)).willReturn(List.of(
+                membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, ACTOR_ID)).willReturn("삼촌");
+
+        sut.send(DOSE_LOG_ID, ACTOR_ID);
+
+        ArgumentCaptor<List<Notification>> notifCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(notifCaptor.capture());
+        String body = notifCaptor.getValue().get(0).getBody();
+        assertThat(body).contains("삼촌");
+        assertThat(body).doesNotContain("김철수");
     }
 
     @Test
@@ -330,7 +352,6 @@ class SendGroupDoseNotificationServiceTest {
                 membershipOf(GROUP_ID, ACTOR_ID), membershipOf(GROUP_ID, MEMBER_ID)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(userRepository.findAllByIdIn(List.of(ACTOR_ID, MEMBER_ID))).willReturn(List.of(member));
-        given(userRepository.findById(ACTOR_ID)).willReturn(Optional.empty());
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.empty());
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);

@@ -7,6 +7,7 @@ import com.pillmate.activity.domain.model.ActivityType;
 import com.pillmate.activity.domain.repository.ActivityFeedRepository;
 import com.pillmate.activity.domain.repository.ActivityPraiseRepository;
 import com.pillmate.activity.application.port.ActivityFeedCachePort;
+import com.pillmate.caregroup.application.GroupDisplayNameResolver;
 import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
@@ -62,6 +63,7 @@ class SendActivityPraiseServiceTest {
     @Mock NotificationPersistenceService notificationPersistenceService;
     @Mock NotificationSenderPort notificationSenderPort;
     @Mock ActivityFeedCachePort activityFeedCachePort;
+    @Mock GroupDisplayNameResolver groupDisplayNameResolver;
     @Spy  Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     @InjectMocks SendActivityPraiseService sut;
 
@@ -69,15 +71,14 @@ class SendActivityPraiseServiceTest {
     @DisplayName("정상 — DOSE_TAKEN 활동에 칭찬 저장 + 알림 발송")
     void praise_doseTakenActivity_savesAndSends() {
         ActivityFeed feed = doseTakenFeedBy(RECIPIENT_ID);
-        User praiser = userOf(PRAISER_ID, "김철수");
         User recipient = patientWithToken(RECIPIENT_ID, "ExponentPushToken[patient]");
 
         given(activityFeedRepository.findById(ACTIVITY_FEED_ID)).willReturn(Optional.of(feed));
         given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, RECIPIENT_ID)).willReturn(true);
         given(activityPraiseRepository.existsByActivityFeedIdAndPraiserUserId(ACTIVITY_FEED_ID, PRAISER_ID))
                 .willReturn(false);
-        given(userRepository.findById(PRAISER_ID)).willReturn(Optional.of(praiser));
         given(userRepository.findById(RECIPIENT_ID)).willReturn(Optional.of(recipient));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, PRAISER_ID)).willReturn("김철수");
         given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("우리가족"));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
@@ -99,6 +100,31 @@ class SendActivityPraiseServiceTest {
         assertThat(saved.getBody()).isEqualTo("우리가족에서 김철수님이 복약을 칭찬해줬어요!");
         verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
         verify(activityFeedCachePort).evictGroup(GROUP_ID);
+    }
+
+    @Test
+    @DisplayName("사용자 요청(2026-09-18) — 칭찬한 사람에게 그룹별 별명이 있으면 알림에 별명이 들어간다")
+    void praise_praiserHasGroupNickname_usesNicknameInBody() {
+        ActivityFeed feed = doseTakenFeedBy(RECIPIENT_ID);
+        User recipient = patientWithToken(RECIPIENT_ID, "ExponentPushToken[patient]");
+
+        given(activityFeedRepository.findById(ACTIVITY_FEED_ID)).willReturn(Optional.of(feed));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, RECIPIENT_ID)).willReturn(true);
+        given(activityPraiseRepository.existsByActivityFeedIdAndPraiserUserId(ACTIVITY_FEED_ID, PRAISER_ID))
+                .willReturn(false);
+        given(userRepository.findById(RECIPIENT_ID)).willReturn(Optional.of(recipient));
+        given(groupDisplayNameResolver.resolve(GROUP_ID, PRAISER_ID)).willReturn("이모");
+        given(careGroupLookupPort.findNameById(GROUP_ID)).willReturn(Optional.of("우리가족"));
+        given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
+        given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(1L));
+
+        sut.praise(GROUP_ID, ACTIVITY_FEED_ID, PRAISER_ID);
+
+        ArgumentCaptor<List<Notification>> notifCaptor = ArgumentCaptor.forClass(List.class);
+        verify(notificationPersistenceService).saveAll(notifCaptor.capture());
+        String body = notifCaptor.getValue().get(0).getBody();
+        assertThat(body).contains("이모님이");
+        assertThat(body).doesNotContain("김철수");
     }
 
     @Test
@@ -189,12 +215,6 @@ class SendActivityPraiseServiceTest {
                 TimeOfDay.MORNING, "08:00 약을 복용했어요", ActivitySeverity.INFO);
         ReflectionTestUtils.setField(feed, "id", ACTIVITY_FEED_ID);
         return feed;
-    }
-
-    private User userOf(Long id, String name) {
-        User user = User.dummy(name);
-        ReflectionTestUtils.setField(user, "id", id);
-        return user;
     }
 
     private User patientWithToken(Long id, String token) {
