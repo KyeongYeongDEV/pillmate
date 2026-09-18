@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { scale, colors, space, typography } from '@/styles/tokens';
 import { useGetRecentActivityQuery } from '@/store/slices/activityApi';
 import { useGetGroupDetailQuery } from '@/store/slices/caregroupApi';
+import { ACTIVITY_POLL_INTERVAL_MS } from '@/lib/constants';
 import DaySection from '@/components/group/DaySection';
 import { safeBack } from '@/lib/router/safeBack';
 import { assignMemberColors } from '@/utils/memberColors';
@@ -28,8 +29,18 @@ export default function ActivityScreen() {
   const groupId = Number(id);
   const [activeRange, setActiveRange] = useState<DateRangeFilter>('week');
 
-  const { data: feed = [], isLoading } = useGetRecentActivityQuery({ groupId });
-  const { data: detail } = useGetGroupDetailQuery(groupId);
+  const { data: feed = [], isLoading } = useGetRecentActivityQuery(
+    { groupId },
+    {
+      refetchOnFocus: true,
+      refetchOnMountOrArgChange: true,
+      pollingInterval: ACTIVITY_POLL_INTERVAL_MS,
+    },
+  );
+  const { data: detail } = useGetGroupDetailQuery(groupId, {
+    refetchOnFocus: true,
+    refetchOnMountOrArgChange: true,
+  });
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
