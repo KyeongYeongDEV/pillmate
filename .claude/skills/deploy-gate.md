@@ -53,6 +53,27 @@
 - [ ] Grafana Cloud/Alloy 연결 + 핵심 대시보드 (요청수·에러율·LLM 비용)
 - [ ] Slack 웹훅 알림 (deploy 성공/실패, 헬스체크 다운)
 
+## G8. 2026-09-20 배포감사 (4 감사관: 보안·정합성·동시성·운영준비도) — 총 P0 1·P1 13·P2 16
+
+### 코드 픽스 완료 (TDD GREEN, 이 세션)
+- [x] **AddPrescriptionSlot IDOR** — 슬롯추가 인가가드 누락(BOLA, 의료 write) → 형제 유스케이스 패턴대로 patientAccessGuard+careGroupGuard 추가. **Tier 1 → 커밋 전 adversarial 검증**
+- [x] **SendActivityPraiseService** — @Transactional 안 FCM 발송 + 이중쓰기 + 비원자 멱등 → tx 제거·칭찬행 선커밋·DataIntegrityViolationException 멱등 catch
+- [x] **ActivityFeedAppender** — 커밋 전 캐시 evict(15s stale) → TransactionSynchronization afterCommit 으로 미룸
+- [x] **GenerateWeeklyReport** — 멱등성 부재(blue-green 자정 이중실행 시 리포트·푸시 2벌) → findByPatientId...WEEKLY 존재 시 skip
+- [x] **JVM MaxRAMPercentage 75→65** — 2g mem_limit 대비 OOM-kill 여지 완화
+
+### 코드 픽스 보류 (신중 처리 필요 — 아래 근거)
+- [ ] **GenerateWeeklyReport LLM-out-of-tx** — @Transactional 안 LLM(최대 170s) 커넥션 점유. 분리는 tx경계 재설계(별도 빈 or TransactionTemplate + AFTER_COMMIT 이벤트 정합) 필요 → 백그라운드 스케줄러라 비-사용자경로, 별도 태스크로
+- [ ] **dose_logs UNIQUE(schedule_id, scheduled_at) 백스톱** — check-then-act 원자성 없음. **로컬 DB에 이미 중복행 1건 존재 확인(schedule 45)** → 순진한 UNIQUE 인덱스는 마이그레이션 실패. ①기존 중복 정리(DELETE=db-safety P0, 사용자 명시 동의 필수) → ②파티션 유니크 추가(파티션키 scheduled_at 포함, 락 주의) 순서. **사용자 동의 없이 진행 금지**
+
+### 운영/직접 항목 (코드 밖 — CTO 수행)
+- [ ] **[P0] 백업 복원 리허설 + verify_backup.sh cron 배선** — 검증 안 된 백업 = 백업 없음 (db-safety)
+- [ ] 관측성 CI 배선: Alloy prod compose + GRAFANA_CLOUD_* 시크릿 + deploy.sh Slack 성공/실패 훅
+- [ ] 호스트 리소스(mem/disk/swap) 지표 재도입 + 디스크 80%·mem 알림
+- [ ] 배포 트리거 [main] 승격 + 브랜치보호 + 전환 직후 스모크(health+로그인) 
+- [ ] 블루그린 마이그레이션 규율: 파괴적 변경 2단계(expand→contract) 강제 + Flyway validate CI 게이트 (신규 enum값 forward-incompat 500 창 주의)
+- [ ] P2 잔여 16건 (404→500 매핑, TTL<폴링, LLM 일일예산 알람, docker image prune -af cron 등) — 출시 후
+
 ## 운영 규칙
 - 게이트 실행 주체: CTO. Tier 1 항목(G1·G3·G4)은 트리오 검증 병행.
 - 각 항목 통과 시 이 파일에 날짜 기록 후 커밋 (게이트 증적).

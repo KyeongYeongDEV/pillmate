@@ -10,6 +10,8 @@ import com.pillmate.caregroup.domain.repository.MembershipRepository;
 import com.pillmate.schedule.domain.model.TimeOfDay;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -59,8 +61,22 @@ public class ActivityFeedAppender {
         evictActorGroupFeeds(actorUserId);
     }
 
-    // 새 활동이 생기는 정확한 순간 — actor 소속 그룹 피드 캐시 무효화 (FCM 즉시 갱신 UX 보존)
+    // 새 활동 저장 후 actor 소속 그룹 피드 캐시 무효화. 트랜잭션이 열려 있으면 커밋 후로 미룬다 —
+    // 커밋 전 evict 하면 그 창에 다른 조회가 미커밋 DB 를 읽어 새 활동 빠진 목록을 재적재하기 때문(2026-09-20 배포감사).
     private void evictActorGroupFeeds(Long actorUserId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictNow(actorUserId);
+                }
+            });
+        } else {
+            evictNow(actorUserId);
+        }
+    }
+
+    private void evictNow(Long actorUserId) {
         membershipRepository.findByUserId(actorUserId).stream()
                 .map(Membership::getCareGroupId)
                 .distinct()

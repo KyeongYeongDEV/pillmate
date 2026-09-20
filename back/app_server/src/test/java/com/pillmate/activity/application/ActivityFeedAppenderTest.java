@@ -210,4 +210,25 @@ class ActivityFeedAppenderTest {
 
         then(activityFeedCachePort).should().evictGroup(10L);
     }
+
+    // 2026-09-20 배포감사: 트랜잭션 커밋 전 evict 하면 그 15초 창에 미커밋 DB 를 읽어 stale 재적재 → afterCommit 으로 미룸
+    @Test
+    @DisplayName("트랜잭션 활성 시 — evict 를 afterCommit 까지 미루고, 커밋 전에는 호출 안 함")
+    void appendTaken_withActiveTx_defersEvictUntilAfterCommit() {
+        given(membershipRepository.findByUserId(1L)).willReturn(java.util.List.of(
+                Membership.of(10L, 1L, MemberRole.PATIENT, null)));
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            sut.appendTaken(1L, TimeOfDay.MORNING, "08:00", "할머니");
+
+            then(activityFeedCachePort).should(never()).evictGroup(any());  // 커밋 전 미호출
+
+            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
+
+            then(activityFeedCachePort).should().evictGroup(10L);  // 커밋 후 호출
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
 }

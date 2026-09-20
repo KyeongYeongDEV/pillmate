@@ -22,10 +22,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @DisplayName("GenerateWeeklyReportUseCase — 리포트 생성 후 WeeklyReportGenerated 발행")
@@ -73,5 +75,23 @@ class GenerateWeeklyReportUseCaseTest {
         WeeklyReportGenerated event = captor.getValue();
         assertThat(event.actorUserId()).isEqualTo(PATIENT_ID);
         assertThat(event.weekStart()).isEqualTo(WEEK_START);
+    }
+
+    @Test
+    @DisplayName("이미 해당 주 리포트 존재 시 — LLM/저장/이벤트 전부 skip (blue-green·재시도 중복 방지, 2026-09-20 배포감사)")
+    void generate_whenReportAlreadyExists_skipsGenerationAndEvent() {
+        HealthReport existing = HealthReport.create(
+                GROUP_ID, PATIENT_ID, PeriodType.WEEKLY,
+                WEEK_START, WEEK_START.plusDays(6), 80, null,
+                new BigDecimal("80.00"), 10, 8, 1, 0, List.of());
+        given(reportRepository.findByPatientIdAndPeriodStartAndPeriodType(PATIENT_ID, WEEK_START, PeriodType.WEEKLY))
+                .willReturn(Optional.of(existing));
+
+        HealthReport result = sut.generate(PATIENT_ID, WEEK_START);
+
+        assertThat(result).isSameAs(existing);
+        verify(llmInsightPort, never()).generate(any());
+        verify(reportRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }

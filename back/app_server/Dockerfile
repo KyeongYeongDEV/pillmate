@@ -27,7 +27,8 @@ RUN chown -R app:app /app
 USER app
 
 EXPOSE 8080
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+# MaxRAMPercentage 65 — mem_limit 2g 기준 힙 ~1.3g + 메타스페이스/스레드/direct buffer 여유 확보(OOM-kill 방지, 2026-09-20 배포감사)
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=65 -XX:+UseG1GC"
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
     CMD curl -fsS http://localhost:8080/api/v1/actuator/health || exit 1

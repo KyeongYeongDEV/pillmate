@@ -19,8 +19,8 @@ import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.user.domain.model.User;
 import com.pillmate.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 // 그룹원 → "복용 완료" 활동에 칭찬. (activityFeed, praiser) 유니크로 중복 알림 차단(멱등, like-버튼 시맨틱).
+// @Transactional 을 걸지 않는다 — 칭찬행 저장(자체 tx 커밋) 후에 알림 저장·FCM 발송을 하므로,
+// 발송이 트랜잭션 안에서 커넥션을 붙잡지 않고(풀 압박 X), 발송 실패해도 칭찬행은 남아 재시도가 멱등이다.
 @Service
 @RequiredArgsConstructor
 public class SendActivityPraiseService {
@@ -46,7 +48,6 @@ public class SendActivityPraiseService {
     private final GroupDisplayNameResolver groupDisplayNameResolver;
     private final Clock clock;
 
-    @Transactional
     public PraiseResponse praise(Long groupId, Long activityFeedId, Long praiserUserId) {
         careGroupGuard.requireAccessible(groupId);
         ActivityFeed feed = findActivityFeed(activityFeedId);
@@ -57,7 +58,12 @@ public class SendActivityPraiseService {
         if (activityPraiseRepository.existsByActivityFeedIdAndPraiserUserId(activityFeedId, praiserUserId)) {
             return new PraiseResponse(true);
         }
-        activityPraiseRepository.save(ActivityPraise.create(activityFeedId, praiserUserId, clock));
+        try {
+            activityPraiseRepository.save(ActivityPraise.create(activityFeedId, praiserUserId, clock));
+        } catch (DataIntegrityViolationException e) {
+            // 동시 더블탭 — 유니크(activity, praiser) 위반 = 이미 칭찬됨. 500 대신 멱등 응답.
+            return new PraiseResponse(true);
+        }
         activityFeedCachePort.evictGroup(groupId);
 
         Notification notification = Notification.dosePraise(

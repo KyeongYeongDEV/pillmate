@@ -43,6 +43,12 @@ public class GenerateWeeklyReportUseCase {
     @Transactional
     public HealthReport generate(Long patientId, LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(6);
+        // 멱등: 같은 주 리포트가 이미 있으면 재생성/재발송 안 함 (blue-green 자정 이중실행·재시도 시 리포트·푸시 2벌 방지, 2026-09-20 배포감사)
+        Optional<HealthReport> existing = reportRepository.findByPatientIdAndPeriodStartAndPeriodType(
+                patientId, weekStart, PeriodType.WEEKLY);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         PatientContext ctx = prescriptionContextPort.loadContext(patientId);
         PeriodStats stats = statsPort.aggregate(patientId, weekStart, weekEnd);
         List<DailyCount> daily = statsPort.dailyCounts(patientId, weekStart, weekEnd);

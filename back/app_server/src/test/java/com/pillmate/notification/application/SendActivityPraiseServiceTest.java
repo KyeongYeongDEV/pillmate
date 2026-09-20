@@ -154,6 +154,24 @@ class SendActivityPraiseServiceTest {
     }
 
     @Test
+    @DisplayName("동시 더블탭 — save 시 유니크 위반이면 500 대신 alreadyPraised=true 멱등 처리 (2026-09-20 배포감사)")
+    void praise_concurrentDuplicate_uniqueViolation_returnsAlreadyPraised() {
+        ActivityFeed feed = doseTakenFeedBy(RECIPIENT_ID);
+        given(activityFeedRepository.findById(ACTIVITY_FEED_ID)).willReturn(Optional.of(feed));
+        given(membershipRepository.existsByCareGroupIdAndUserId(GROUP_ID, RECIPIENT_ID)).willReturn(true);
+        given(activityPraiseRepository.existsByActivityFeedIdAndPraiserUserId(ACTIVITY_FEED_ID, PRAISER_ID))
+                .willReturn(false);
+        org.mockito.BDDMockito.willThrow(new org.springframework.dao.DataIntegrityViolationException("dup"))
+                .given(activityPraiseRepository).save(any());
+
+        PraiseResponse response = sut.praise(GROUP_ID, ACTIVITY_FEED_ID, PRAISER_ID);
+
+        assertThat(response.alreadyPraised()).isTrue();
+        verify(notificationPersistenceService, never()).saveAll(anyList());
+        verify(notificationSenderPort, never()).sendAll(anyList());
+    }
+
+    @Test
     @DisplayName("이미 칭찬한 활동 — 재요청 시 저장/발송 없이 alreadyPraised=true")
     void praise_alreadyPraised_skipsSaveAndSend() {
         ActivityFeed feed = doseTakenFeedBy(RECIPIENT_ID);
