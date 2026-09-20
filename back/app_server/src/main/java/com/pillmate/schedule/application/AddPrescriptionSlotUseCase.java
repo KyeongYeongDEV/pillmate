@@ -2,6 +2,8 @@ package com.pillmate.schedule.application;
 
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.port.PrescriptionLookupPort;
 import com.pillmate.prescription.application.port.PrescriptionLookupPort.PrescriptionOwner;
@@ -29,11 +31,14 @@ public class AddPrescriptionSlotUseCase {
     private final ScheduleRepository scheduleRepository;
     private final PrescriptionScheduleService prescriptionScheduleService;
     private final PrescriptionLookupPort prescriptionLookupPort;
+    private final PatientAccessGuard patientAccessGuard;
+    private final CareGroupGuard careGroupGuard;
     private final Clock clock;
 
     @Transactional
     public List<CreatedSchedule> addSlot(Long prescriptionId, TimeOfDay timeOfDay, LocalTime customTime) {
         PrescriptionOwner owner = requireOwner(prescriptionId);
+        requireAccess(owner);
         List<Schedule> existing = scheduleRepository.findActiveByPrescriptionId(prescriptionId);
         LocalDate startDate = resolveStart(existing, owner);
         LocalDate endDate = resolveEnd(existing, owner, startDate);
@@ -46,6 +51,14 @@ public class AddPrescriptionSlotUseCase {
     private PrescriptionOwner requireOwner(Long prescriptionId) {
         return prescriptionLookupPort.findOwner(prescriptionId)
                 .orElseThrow(() -> new PillmateException(ErrorCode.PRESCRIPTION_NOT_FOUND));
+    }
+
+    // 슬롯 추가는 처방전 소유자 본인만 — 형제 유스케이스(remove/update/get)와 동일 가드. 누락 시 IDOR.
+    private void requireAccess(PrescriptionOwner owner) {
+        patientAccessGuard.requireAccess(UserContext.get(), owner.patientId());
+        if (owner.careGroupId() != null) {
+            careGroupGuard.requireAccessible(owner.careGroupId());
+        }
     }
 
     private LocalDate resolveStart(List<Schedule> existing, PrescriptionOwner owner) {

@@ -2,6 +2,8 @@ package com.pillmate.schedule.application;
 
 import com.pillmate.common.exception.ErrorCode;
 import com.pillmate.common.exception.PillmateException;
+import com.pillmate.common.security.CareGroupGuard;
+import com.pillmate.common.security.PatientAccessGuard;
 import com.pillmate.common.security.UserContext;
 import com.pillmate.prescription.application.port.PrescriptionLookupPort;
 import com.pillmate.prescription.application.port.PrescriptionLookupPort.PrescriptionOwner;
@@ -30,7 +32,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @DisplayName("AddPrescriptionSlotUseCase — 약봉투에 처방전 단위 시간슬롯 추가")
@@ -46,13 +50,17 @@ class AddPrescriptionSlotUseCaseTest {
     private final ScheduleRepository scheduleRepository = mock(ScheduleRepository.class);
     private final PrescriptionScheduleService prescriptionScheduleService = mock(PrescriptionScheduleService.class);
     private final PrescriptionLookupPort prescriptionLookupPort = mock(PrescriptionLookupPort.class);
+    private final PatientAccessGuard patientAccessGuard = new PatientAccessGuard();
+    private final CareGroupGuard careGroupGuard = mock(CareGroupGuard.class);
     private AddPrescriptionSlotUseCase sut;
 
     @BeforeEach
     void setUp() {
-        given(clock.instant()).willReturn(TODAY.atStartOfDay(ZoneOffset.UTC).toInstant());
-        given(clock.getZone()).willReturn(ZoneOffset.UTC);
-        sut = new AddPrescriptionSlotUseCase(scheduleRepository, prescriptionScheduleService, prescriptionLookupPort, clock);
+        // 인가 거부 테스트는 clock 도달 전 던지므로 lenient (strict stubbing 회피)
+        lenient().when(clock.instant()).thenReturn(TODAY.atStartOfDay(ZoneOffset.UTC).toInstant());
+        lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+        sut = new AddPrescriptionSlotUseCase(scheduleRepository, prescriptionScheduleService,
+                prescriptionLookupPort, patientAccessGuard, careGroupGuard, clock);
     }
 
     @AfterEach
@@ -111,6 +119,7 @@ class AddPrescriptionSlotUseCaseTest {
     @Test
     @DisplayName("스케줄 0개인 만료 처방 — PRESCRIPTION_PERIOD_ENDED 거부")
     void addSlot_noExistingSchedules_expiredPrescription_throwsPeriodEnded() {
+        UserContext.set(2L);
         LocalDate oldDate = LocalDate.of(2026, 6, 1);
         // prescribedAt=2026-06-01, maxDurationDays=7 → endDate=2026-06-07 (< today 2026-06-24)
         given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, oldDate, 7)));
@@ -124,6 +133,7 @@ class AddPrescriptionSlotUseCaseTest {
     @Test
     @DisplayName("기존 스케줄 있지만 만료된 처방 — PRESCRIPTION_PERIOD_ENDED 거부")
     void addSlot_existingSchedules_expiredPrescription_throwsPeriodEnded() {
+        UserContext.set(2L);
         LocalDate expiredEnd = LocalDate.of(2026, 6, 1);  // < today 2026-06-24
         given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, START, 7)));
         Schedule expiredSchedule = Schedule.forPrescription(1L, 2L, 99L, TimeOfDay.MORNING, null, START, expiredEnd, 2L);
@@ -177,6 +187,7 @@ class AddPrescriptionSlotUseCaseTest {
     @Test
     @DisplayName("동일 처방전에 이미 같은 timeOfDay(기본 시각) 슬롯 있으면 SCHEDULE_CONFLICT")
     void addSlot_whenSameDefaultTimeExists_throws() {
+        UserContext.set(2L);
         given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, START, 7)));
         given(scheduleRepository.findActiveByPrescriptionId(99L)).willReturn(
                 List.of(schedule(TimeOfDay.MORNING)));  // MORNING = 08:00
@@ -189,6 +200,7 @@ class AddPrescriptionSlotUseCaseTest {
     @Test
     @DisplayName("동일 처방전에 이미 같은 customTime 슬롯 있으면 SCHEDULE_CONFLICT")
     void addSlot_whenSameCustomTimeExists_throws() {
+        UserContext.set(2L);
         given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, START, 7)));
         Schedule existingWithCustomTime =
                 Schedule.forPrescription(1L, 2L, 99L, TimeOfDay.NOON, LocalTime.of(9, 0), START, END, 2L);
@@ -197,6 +209,19 @@ class AddPrescriptionSlotUseCaseTest {
         assertThatThrownBy(() -> sut.addSlot(99L, TimeOfDay.MORNING, LocalTime.of(9, 0)))
                 .isInstanceOf(PillmateException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SCHEDULE_CONFLICT);
+    }
+
+    @Test
+    @DisplayName("처방전 소유자가 아니면 PATIENT_ACCESS_DENIED — 슬롯 생성 위임 안 함 (IDOR 차단, 2026-09-20 배포감사)")
+    void addSlot_whenNotOwner_throwsAccessDeniedAndSkipsCreate() {
+        UserContext.set(999L);  // 공격자 — 처방전 owner(2L) 아님
+        given(prescriptionLookupPort.findOwner(99L)).willReturn(Optional.of(new PrescriptionOwner(2L, 1L, START, 7)));
+
+        assertThatThrownBy(() -> sut.addSlot(99L, TimeOfDay.MORNING, null))
+                .isInstanceOf(PillmateException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PATIENT_ACCESS_DENIED);
+
+        verify(prescriptionScheduleService, never()).createForPrescription(any(CreatePrescriptionSchedulesCommand.class));
     }
 
     private Schedule schedule(TimeOfDay timeOfDay) {
