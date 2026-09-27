@@ -177,7 +177,7 @@ class NotifyDueDoseRemindersServiceTest {
         given(scheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
         given(drugNameLookupPort.findNameById(7L)).willReturn(Optional.of("타이레놀정500밀리그램"));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patientWithToken()));
+        given(userRepository.findAllByIdIn(List.of(PATIENT_ID))).willReturn(List.of(patientWithToken()));
 
         sut.notifyDue();
 
@@ -241,7 +241,7 @@ class NotifyDueDoseRemindersServiceTest {
         given(prescriptionSummaryPort.findById(PRESCRIPTION_ID))
                 .willReturn(Optional.of(new PrescriptionSummary(LocalDate.of(2026, 7, 13), "약봉투A", false)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patientWithoutToken()));
+        given(userRepository.findAllByIdIn(List.of(PATIENT_ID))).willReturn(List.of(patientWithoutToken()));
 
         sut.notifyDue();
 
@@ -298,7 +298,7 @@ class NotifyDueDoseRemindersServiceTest {
         given(prescriptionSummaryPort.findById(PRESCRIPTION_ID))
                 .willReturn(Optional.of(new PrescriptionSummary(LocalDate.of(2026, 7, 13), "약봉투A", false)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patientWithToken()));
+        given(userRepository.findAllByIdIn(List.of(PATIENT_ID))).willReturn(List.of(patientWithToken()));
 
         int processed = sut.notifyDue();
 
@@ -313,7 +313,7 @@ class NotifyDueDoseRemindersServiceTest {
         given(prescriptionSummaryPort.findById(PRESCRIPTION_ID))
                 .willReturn(Optional.of(new PrescriptionSummary(LocalDate.of(2026, 7, 13), label, false)));
         given(notificationPersistenceService.saveAll(anyList())).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findById(PATIENT_ID)).willReturn(Optional.of(patientWithToken()));
+        given(userRepository.findAllByIdIn(List.of(PATIENT_ID))).willReturn(List.of(patientWithToken()));
     }
 
     private DoseLog pendingDoseLog() {

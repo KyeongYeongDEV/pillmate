@@ -114,7 +114,7 @@ public class SendDoseNudgeService {
 
     private void markSentAll(List<Long> sentNotificationIds) {
         Instant now = Instant.now(clock);
-        sentNotificationIds.forEach(id -> notificationPersistenceService.markSent(id, now));
+        notificationPersistenceService.markSentAll(sentNotificationIds, now);
     }
 
     private DoseLog findDoseLog(Long doseLogId) {

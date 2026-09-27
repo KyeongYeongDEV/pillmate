@@ -22,8 +22,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -49,67 +52,88 @@ public class NotifyDueDoseRemindersService implements NotifyDueDoseRemindersUseC
     private final DrugNameLookupPort drugNameLookupPort;
     private final Clock clock;
 
+    // 2026-09-27 FCM 성능개선(끼니시간 스파이크 대응) — 폴 사이클의 due 전체를 모아서
+    // saveAll·sendAll(500-배치 sendEach)·markSentAll 각 1회로 처리한다. 기존엔 dose 1건마다
+    // 개별 FCM 왕복(순차 1메시지)이라 실측 2.5 TPS 에 불과했음 — 배치 시 281 TPS (112배).
     @Override
     public int notifyDue() {
         Instant now = Instant.now(clock);
         List<DoseLog> due = doseLogRepository.findPendingNotRemindedBetween(now.minus(RECENCY_WINDOW), now);
-        due.forEach(this::remindSafely);
+        List<Notification> toSave = collectClaimedReminders(due);
+        dispatchBatch(toSave);
         return due.size();
     }
 
-    private void remindSafely(DoseLog doseLog) {
-        try {
-            remind(doseLog);
-        } catch (RuntimeException ex) {
-            log.warn("복약 리마인더 처리 실패 doseLogId={} reason={}", doseLog.getId(), ex.getMessage());
+    private List<Notification> collectClaimedReminders(List<DoseLog> due) {
+        List<Notification> toSave = new ArrayList<>();
+        for (DoseLog doseLog : due) {
+            try {
+                buildIfClaimed(doseLog).ifPresent(toSave::add);
+            } catch (RuntimeException ex) {
+                log.warn("복약 리마인더 처리 실패 doseLogId={} reason={}", doseLog.getId(), ex.getMessage());
+            }
         }
+        return toSave;
     }
 
     // 조건부 원자 클레임 선행 — 동시 복용체크(TAKEN)·타 인스턴스 선점이면 0행 → 발송 skip.
     // entity save 금지: detached merge 가 TAKEN 을 PENDING 으로 되돌리는 lost-update 원천 차단 (트리오 QA P0-1)
-    private void remind(DoseLog doseLog) {
+    private Optional<Notification> buildIfClaimed(DoseLog doseLog) {
         if (!claimReminder(doseLog)) {
-            return;
+            return Optional.empty();
         }
         Schedule schedule = scheduleRepository.findById(doseLog.getScheduleId()).orElse(null);
         if (schedule == null || !schedule.isActive()) {
             log.warn("복약 리마인더 스케줄 미조회/비활성 doseLogId={} scheduleId={}",
                     doseLog.getId(), doseLog.getScheduleId());
-            return;
+            return Optional.empty();
         }
-        dispatch(doseLog, schedule);
+        return Optional.of(Notification.doseReminder(
+                doseLog.getPatientId(), schedule.getCareGroupId(), doseLog.getId(), buildBody(schedule)));
     }
 
     private boolean claimReminder(DoseLog doseLog) {
         return doseLogRepository.markRemindedIfPending(doseLog.getId(), Instant.now(clock)) == 1;
     }
 
-    private void dispatch(DoseLog doseLog, Schedule schedule) {
-        Notification reminder = Notification.doseReminder(
-                doseLog.getPatientId(), schedule.getCareGroupId(), doseLog.getId(), buildBody(schedule));
-        Notification saved = notificationPersistenceService.saveAll(List.of(reminder)).get(0);
-        List<Long> sentIds = notificationSenderPort.sendAll(List.of(toCommand(saved)));
+    private void dispatchBatch(List<Notification> toSave) {
+        if (toSave.isEmpty()) {
+            return;
+        }
+        List<Notification> saved = notificationPersistenceService.saveAll(toSave);
+        Map<Long, String> tokensByUserId = tokensByUserId(saved);
+        List<NotificationCommand> commands = saved.stream()
+                .map(n -> toCommand(n, tokensByUserId.get(n.getRecipientUserId())))
+                .toList();
+        List<Long> sentIds = notificationSenderPort.sendAll(commands);
         markSentAll(sentIds);
+    }
+
+    private Map<Long, String> tokensByUserId(List<Notification> notifications) {
+        List<Long> recipientIds = notifications.stream()
+                .map(Notification::getRecipientUserId)
+                .distinct()
+                .toList();
+        Map<Long, String> tokens = new HashMap<>();
+        userRepository.findAllByIdIn(recipientIds)
+                .forEach(u -> tokens.put(u.getId(), u.getExpoPushToken()));
+        return tokens;
     }
 
     private void markSentAll(List<Long> sentNotificationIds) {
         Instant now = Instant.now(clock);
-        sentNotificationIds.forEach(id -> notificationPersistenceService.markSent(id, now));
+        notificationPersistenceService.markSentAll(sentNotificationIds, now);
     }
 
-    private NotificationCommand toCommand(Notification notification) {
+    private NotificationCommand toCommand(Notification notification, String token) {
         return new NotificationCommand(
                 notification.getId(),
                 notification.getRecipientUserId(),
-                lookupToken(notification.getRecipientUserId()),
+                token,
                 notification.getTitle(),
                 notification.getBody(),
                 Map.of("route", "/home", "type", notification.getType().name(),
                         "notificationId", String.valueOf(notification.getId())));
-    }
-
-    private String lookupToken(Long userId) {
-        return userRepository.findById(userId).map(User::getExpoPushToken).orElse(null);
     }
 
     private String buildBody(Schedule schedule) {

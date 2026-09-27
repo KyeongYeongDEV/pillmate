@@ -99,7 +99,7 @@ class SendActivityPraiseServiceTest {
         assertThat(saved.getRecipientUserId()).isEqualTo(RECIPIENT_ID);
         assertThat(saved.getActorUserId()).isEqualTo(PRAISER_ID);
         assertThat(saved.getBody()).isEqualTo("우리가족에서 김철수님이 복약을 칭찬해줬어요!");
-        verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
+        verify(notificationPersistenceService).markSentAll(List.of(1L), FIXED_NOW);
         verify(activityFeedCachePort).evictGroup(GROUP_ID);
     }
 

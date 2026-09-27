@@ -65,6 +65,11 @@ public class Notification {
     @Column
     private Instant readAt;
 
+    // Polling Outbox 재시도 스위퍼용 — DOSE_REMINDER/DOSE_OVERDUE 가 PENDING 에 방치되면
+    // 이 값 기준으로 재시도하고, 한도 초과 시 FAILED 로 전환한다 (2026-09-27).
+    @Column(nullable = false)
+    private int retryCount = 0;
+
     // 환자 본인 복약 리마인더 — 솔로 사용자는 careGroupId null, actor = 본인
     public static Notification doseReminder(Long recipientUserId, Long careGroupId,
                                             Long doseLogId, String body) {

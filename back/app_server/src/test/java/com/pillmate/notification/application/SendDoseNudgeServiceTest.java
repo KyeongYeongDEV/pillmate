@@ -174,7 +174,7 @@ class SendDoseNudgeServiceTest {
         NotificationCommand cmd = cmdCaptor.getValue().get(0);
         assertThat(cmd.recipientPushToken()).isEqualTo("ExponentPushToken[patient]");
         assertThat(cmd.data()).containsEntry("channel", "dose-reminder");
-        verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
+        verify(notificationPersistenceService).markSentAll(List.of(1L), FIXED_NOW);
     }
 
     @Test
@@ -245,7 +245,7 @@ class SendDoseNudgeServiceTest {
         assertThat(saved.getRecipientUserId()).isEqualTo(PATIENT_ID);
         assertThat(saved.getActorUserId()).isEqualTo(FROM_USER_ID);
         assertThat(saved.getDoseLogId()).isNull();
-        verify(notificationPersistenceService).markSent(1L, FIXED_NOW);
+        verify(notificationPersistenceService).markSentAll(List.of(1L), FIXED_NOW);
     }
 
     @Test

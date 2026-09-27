@@ -554,7 +554,8 @@ class SendGroupDoseNotificationServiceTest {
 
         sut.send(DOSE_LOG_ID, ACTOR_ID);
 
-        verify(notificationPersistenceService).markSent(org.mockito.ArgumentMatchers.eq(42L), any(Instant.class));
+        verify(notificationPersistenceService).markSentAll(
+                org.mockito.ArgumentMatchers.eq(List.of(42L)), any(Instant.class));
     }
 
     // T-BE-REDIS-RECIPIENT-CACHE — 수신자+토큰 캐시
