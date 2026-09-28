@@ -8,6 +8,13 @@ spring:
     # graceful shutdown 시 in-flight 요청 drain 최대 대기 (blue-green stop 무중단). 트랜잭션 내 외부호출 없음 원칙이라 25s면 충분.
     timeout-per-shutdown-phase: 25s
 
+  task:
+    scheduling:
+      pool:
+        # @Scheduled 기본은 스레드 1개 → 4개 폴러(리마인더·overdue·그룹·재시도)가 한 스레드를 공유.
+        # 끼니 스파이크 때 리마인더 배치가 길게 블로킹하면 다른 폴러가 못 뜨므로 폴러 수만큼 분리.
+        size: 4
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:pillmate}
     username: ${POSTGRES_USER:pillmate}

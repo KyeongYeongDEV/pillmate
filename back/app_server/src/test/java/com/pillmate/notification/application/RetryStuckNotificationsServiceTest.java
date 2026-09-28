@@ -2,7 +2,6 @@ package com.pillmate.notification.application;
 
 import com.pillmate.common.monitoring.SlackNotifier;
 import com.pillmate.notification.application.port.NotificationSenderPort;
-import com.pillmate.notification.application.port.NotificationSenderPort.NotificationCommand;
 import com.pillmate.notification.domain.model.Notification;
 import com.pillmate.notification.domain.model.NotificationStatus;
 import com.pillmate.notification.domain.model.NotificationType;
@@ -24,7 +23,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +35,7 @@ import static org.mockito.Mockito.verify;
 // 2026-09-27 Polling Outbox 재시도 스위퍼 — DOSE_REMINDER/DOSE_OVERDUE 처럼 "최소 1번은 가야 하는"
 // 알림이 PENDING 에 방치되면(발송 실패·앱 크래시 등) 재시도한다. 브로커 없이 기존 notifications
 // 테이블을 그대로 outbox 로 재활용 — Kafka 등 신규 인프라 도입 없음(no-overengineering).
+// 재시도 실패는 exponential backoff + jitter 로 다음 시도 시각을 잡아 몰림을 분산한다.
 @DisplayName("RetryStuckNotificationsService — 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class RetryStuckNotificationsServiceTest {
@@ -55,7 +54,7 @@ class RetryStuckNotificationsServiceTest {
     @Test
     @DisplayName("stuck 없으면 아무 것도 안 함")
     void retryStuck_whenNoneStuck_doesNothing() {
-        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(Integer.class)))
+        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(), any(Integer.class)))
                 .willReturn(List.of());
 
         int retried = sut.retryStuck();
@@ -65,11 +64,11 @@ class RetryStuckNotificationsServiceTest {
     }
 
     @Test
-    @DisplayName("stuck 알림 재발송 성공 — markSentAll 호출, retryCount 증가 없음")
+    @DisplayName("stuck 알림 재발송 성공 — markSentAll 호출, 재예약 없음")
     void retryStuck_whenResendSucceeds_marksSent() {
         Notification stuck = reminderPending(10L, RECIPIENT_ID);
         User recipient = userWithToken(RECIPIENT_ID, "ExponentPushToken[abc]");
-        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(Integer.class)))
+        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(), any(Integer.class)))
                 .willReturn(List.of(stuck));
         given(userRepository.findAllByIdIn(List.of(RECIPIENT_ID))).willReturn(List.of(recipient));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of(10L));
@@ -78,49 +77,52 @@ class RetryStuckNotificationsServiceTest {
 
         assertThat(retried).isEqualTo(1);
         verify(notificationPersistenceService).markSentAll(List.of(10L), FIXED_NOW);
-        verify(notificationRepository, never()).incrementRetryCountByIdIn(any());
+        verify(notificationRepository, never()).scheduleNextRetry(any(), any());
     }
 
     @Test
-    @DisplayName("재발송도 실패 + 한도 미달 — retryCount 증가만, FAILED 전환 없음")
-    void retryStuck_whenResendFailsButUnderLimit_incrementsRetryCountOnly() {
+    @DisplayName("재발송도 실패 + 한도 미달 — backoff+jitter 로 다음 시도 시각 재예약, FAILED 전환 없음")
+    void retryStuck_whenResendFailsButUnderLimit_reschedulesWithBackoff() {
         Notification stuck = reminderPending(10L, RECIPIENT_ID);
-        ReflectionTestUtils.setField(stuck, "retryCount", 1);
+        ReflectionTestUtils.setField(stuck, "retryCount", 1); // 다음 backoff = 60*2^1=120s → jitter [60,120]s
         User recipient = userWithToken(RECIPIENT_ID, "ExponentPushToken[abc]");
-        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(Integer.class)))
+        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(), any(Integer.class)))
                 .willReturn(List.of(stuck));
         given(userRepository.findAllByIdIn(List.of(RECIPIENT_ID))).willReturn(List.of(recipient));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of());
 
         sut.retryStuck();
 
-        verify(notificationRepository).incrementRetryCountByIdIn(List.of(10L));
+        ArgumentCaptor<Instant> nextRetryAt = ArgumentCaptor.forClass(Instant.class);
+        verify(notificationRepository).scheduleNextRetry(eq(10L), nextRetryAt.capture());
+        assertThat(nextRetryAt.getValue())
+                .isBetween(FIXED_NOW.plusSeconds(60), FIXED_NOW.plusSeconds(120));
         verify(notificationRepository, never()).markFailedByIdIn(any(), any());
         verify(slackNotifier, never()).send(any());
     }
 
     @Test
-    @DisplayName("재발송 실패 + 한도 도달(3회째) — FAILED 전환 + Slack 알림")
+    @DisplayName("재발송 실패 + 한도 도달(3회째) — FAILED 전환 + Slack 알림, 재예약 없음")
     void retryStuck_whenResendFailsAtLimit_marksFailedAndAlerts() {
         Notification stuck = reminderPending(10L, RECIPIENT_ID);
-        ReflectionTestUtils.setField(stuck, "retryCount", 2); // 이번이 3번째 시도(0-indexed 2 → +1 = 3 = MAX)
+        ReflectionTestUtils.setField(stuck, "retryCount", 2); // 이번이 3번째 시도(2 → +1 = 3 = MAX)
         User recipient = userWithToken(RECIPIENT_ID, "ExponentPushToken[abc]");
-        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(Integer.class)))
+        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(), any(Integer.class)))
                 .willReturn(List.of(stuck));
         given(userRepository.findAllByIdIn(List.of(RECIPIENT_ID))).willReturn(List.of(recipient));
         given(notificationSenderPort.sendAll(anyList())).willReturn(List.of());
 
         sut.retryStuck();
 
-        verify(notificationRepository).incrementRetryCountByIdIn(List.of(10L));
         verify(notificationRepository).markFailedByIdIn(eq(List.of(10L)), eq(NotificationStatus.FAILED));
+        verify(notificationRepository, never()).scheduleNextRetry(any(), any());
         verify(slackNotifier).send(any());
     }
 
     @Test
-    @DisplayName("조회 조건 — PENDING + DOSE_REMINDER/DOSE_OVERDUE 타입 + 2분 이전 + retryCount<3")
+    @DisplayName("조회 조건 — PENDING + DOSE_REMINDER/DOSE_OVERDUE 타입 + 2분 이전 + now + retryCount<3")
     void retryStuck_queriesWithCorrectFilters() {
-        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(Integer.class)))
+        given(notificationRepository.findStuckPendingByTypesBefore(any(), any(), any(), any(), any(Integer.class)))
                 .willReturn(List.of());
 
         sut.retryStuck();
@@ -129,6 +131,7 @@ class RetryStuckNotificationsServiceTest {
                 eq(NotificationStatus.PENDING),
                 eq(List.of(NotificationType.DOSE_REMINDER, NotificationType.DOSE_OVERDUE)),
                 eq(FIXED_NOW.minusSeconds(120)),
+                eq(FIXED_NOW),
                 eq(3));
     }
 

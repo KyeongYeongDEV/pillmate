@@ -16,10 +16,12 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 // Polling Outbox 재시도 스위퍼(2026-09-27) — 브로커 없이 기존 notifications 테이블을 outbox 로
 // 재활용한다. DOSE_REMINDER/DOSE_OVERDUE 는 발송이 PENDING 에 방치되면(FCM 실패·앱 크래시 등)
@@ -34,6 +36,9 @@ public class RetryStuckNotificationsService {
             List.of(NotificationType.DOSE_REMINDER, NotificationType.DOSE_OVERDUE);
     private static final Duration STUCK_THRESHOLD = Duration.ofMinutes(2);
     private static final int MAX_RETRIES = 3;
+    // exponential backoff: 60s * 2^retryCount (1→2분 계열), 상한 10분. FCM 장애 시 60s마다 몰림 방지.
+    private static final Duration RETRY_BASE_BACKOFF = Duration.ofMinutes(1);
+    private static final Duration RETRY_MAX_BACKOFF = Duration.ofMinutes(10);
     private static final String ROUTE_HOME = "/home";
     private static final String DATA_KEY_CHANNEL = "channel";
     private static final String CHANNEL_DOSE_REMINDER = "dose-reminder";
@@ -46,9 +51,10 @@ public class RetryStuckNotificationsService {
     private final Clock clock;
 
     public int retryStuck() {
-        Instant before = Instant.now(clock).minus(STUCK_THRESHOLD);
+        Instant now = Instant.now(clock);
+        Instant before = now.minus(STUCK_THRESHOLD);
         List<Notification> stuck = notificationRepository.findStuckPendingByTypesBefore(
-                NotificationStatus.PENDING, RETRIABLE_TYPES, before, MAX_RETRIES);
+                NotificationStatus.PENDING, RETRIABLE_TYPES, before, now, MAX_RETRIES);
         if (stuck.isEmpty()) {
             return 0;
         }
@@ -68,22 +74,25 @@ public class RetryStuckNotificationsService {
         handleFailedAttempts(stuck, Set.copyOf(sentIds));
     }
 
+    // retryCount 는 "이번 시도 전" 값 — +1 이 한도에 도달하면 이번이 마지막 시도. 한도 미달은 backoff 재예약.
     private void handleFailedAttempts(List<Notification> stuck, Set<Long> sentIds) {
         List<Notification> failed = stuck.stream().filter(n -> !sentIds.contains(n.getId())).toList();
         if (failed.isEmpty()) {
             return;
         }
-        List<Long> failedIds = failed.stream().map(Notification::getId).toList();
-        notificationRepository.incrementRetryCountByIdIn(failedIds);
-        markExhaustedAndAlert(failed);
+        Instant now = Instant.now(clock);
+        List<Long> exhaustedIds = new ArrayList<>();
+        for (Notification n : failed) {
+            if (n.getRetryCount() + 1 >= MAX_RETRIES) {
+                exhaustedIds.add(n.getId());
+            } else {
+                notificationRepository.scheduleNextRetry(n.getId(), now.plus(backoffWithJitter(n.getRetryCount())));
+            }
+        }
+        markExhaustedAndAlert(exhaustedIds);
     }
 
-    // retryCount 는 "이번 시도 전" 값 — +1 이 한도에 도달하면 이번이 마지막 시도였다는 뜻.
-    private void markExhaustedAndAlert(List<Notification> failed) {
-        List<Long> exhaustedIds = failed.stream()
-                .filter(n -> n.getRetryCount() + 1 >= MAX_RETRIES)
-                .map(Notification::getId)
-                .toList();
+    private void markExhaustedAndAlert(List<Long> exhaustedIds) {
         if (exhaustedIds.isEmpty()) {
             return;
         }
@@ -92,6 +101,16 @@ public class RetryStuckNotificationsService {
         slackNotifier.send(String.format(
                 "⚠️ 복약 알림 %d건이 %d회 재시도 후에도 발송 실패 (FAILED 전환) notificationIds=%s",
                 exhaustedIds.size(), MAX_RETRIES, exhaustedIds));
+    }
+
+    // equal jitter: 60s*2^retryCount 를 상한 적용 후 [절반, 전체] 범위로 흔든다.
+    // 절반 하한을 둬 backoff=0 로 즉시 재발사되는 것을 막고, 상단 jitter 로 동시 재시도 몰림(스탬피드)을 분산.
+    private Duration backoffWithJitter(int priorRetryCount) {
+        long exponentialSeconds = RETRY_BASE_BACKOFF.getSeconds() * (1L << priorRetryCount);
+        long cappedSeconds = Math.min(exponentialSeconds, RETRY_MAX_BACKOFF.getSeconds());
+        long half = cappedSeconds / 2;
+        long jittered = half + ThreadLocalRandom.current().nextLong(half + 1);
+        return Duration.ofSeconds(jittered);
     }
 
     private Map<Long, String> tokensByUserId(List<Notification> notifications) {

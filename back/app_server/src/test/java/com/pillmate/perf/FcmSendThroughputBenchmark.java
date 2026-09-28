@@ -45,6 +45,15 @@ class FcmSendThroughputBenchmark {
         Path credsPath = Path.of(envOr("PERF_FCM_CREDS", CREDS_DEFAULT));
         assumeTrue(Files.exists(credsPath), "creds 없음: " + credsPath.toAbsolutePath());
 
+        // JVM HttpURLConnection keep-alive 캐시의 호스트당 커넥션 수(기본 5). 첫 연결 전에 설정해야 반영됨.
+        // PERF_HTTP_MAX_CONN 값을 바꿔 재실행하면 커넥션 풀 크기별 처리량을 실측 비교할 수 있다.
+        String maxConn = System.getenv("PERF_HTTP_MAX_CONN");
+        if (maxConn != null) {
+            System.setProperty("http.maxConnections", maxConn);
+        }
+        System.out.printf("[cfg] http.maxConnections=%s%n",
+                System.getProperty("http.maxConnections", "5(default)"));
+
         FcmSenderAdapter adapter = buildAdapter(credsPath);
 
         int seqN = intEnv("PERF_SEQ_N", 100);

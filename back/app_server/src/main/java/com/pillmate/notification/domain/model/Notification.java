@@ -70,6 +70,11 @@ public class Notification {
     @Column(nullable = false)
     private int retryCount = 0;
 
+    // 재시도 실패 시 exponential backoff + jitter 로 계산한 다음 시도 가능 시각.
+    // NULL = 최초 stuck(아직 재시도 없음) → createdAt 기준 stuck 판정을 따른다 (2026-09-27).
+    @Column
+    private Instant nextRetryAt;
+
     // 환자 본인 복약 리마인더 — 솔로 사용자는 careGroupId null, actor = 본인
     public static Notification doseReminder(Long recipientUserId, Long careGroupId,
                                             Long doseLogId, String body) {

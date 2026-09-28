@@ -28,7 +28,9 @@ USER app
 
 EXPOSE 8080
 # MaxRAMPercentage 65 — mem_limit 2g 기준 힙 ~1.3g + 메타스페이스/스레드/direct buffer 여유 확보(OOM-kill 방지, 2026-09-20 배포감사)
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=65 -XX:+UseG1GC"
+# http.maxConnections 20 — FCM(firebase-admin)이 JVM HttpURLConnection keep-alive 캐시를 쓰는데 기본 호스트당 5.
+# 실측(FcmSendThroughputBenchmark): 5→20 시 500-배치 264→328 TPS(+24%), 50은 이득 없음. 끼니 스파이크 대응.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=65 -XX:+UseG1GC -Dhttp.maxConnections=20"
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
     CMD curl -fsS http://localhost:8080/api/v1/actuator/health || exit 1
