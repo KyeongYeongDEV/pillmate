@@ -26,6 +26,30 @@ if [[ "${BACKUP_S3}" == "true" && -f "${ENV_FILE}" ]]; then
     set -a; . "${ENV_FILE}"; set +a
 fi
 
+# 실패 알림/생존 신호 — cron 이 조용히 실패하는 것을 막는다(백업 사고 단골). 둘 다 미설정이면 무해 skip.
+SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"      # .env.prod 에서 로드됨(BACKUP_S3=true 시)
+HEALTHCHECK_PING_URL="${HEALTHCHECK_PING_URL:-}"  # healthchecks.io 등 dead-man switch URL(무료 티어)
+
+# 실패 시 Slack 통보 — webhook URL 값은 로그에 찍지 않는다(secret-safety). curl 은 fail-soft.
+notify_failure() {
+    local rc="$1"
+    if [[ -n "${SLACK_WEBHOOK_URL}" ]]; then
+        local payload
+        payload="$(printf '{"text":"🚨 PillMate DB 백업 실패 (exit=%s) host=%s time=%s"}' \
+            "${rc}" "$(hostname)" "$(date '+%Y-%m-%d %H:%M:%S')")"
+        curl -fsS -m 10 -X POST -H 'Content-Type: application/json' \
+            -d "${payload}" "${SLACK_WEBHOOK_URL}" >/dev/null 2>&1 || true
+    fi
+}
+
+# 성공 시에만 healthcheck ping — 일정 시간 ping 이 없으면 healthchecks.io 가 "백업 누락"으로 별도 경보.
+ping_healthcheck() {
+    [[ -n "${HEALTHCHECK_PING_URL}" ]] && curl -fsS -m 10 "${HEALTHCHECK_PING_URL}" >/dev/null 2>&1 || true
+}
+
+# EXIT 트랩으로 모든 비정상 종료(explicit exit 1 포함)를 Slack 으로. 정상(rc=0)은 통보 안 함(노이즈 방지).
+trap 'rc=$?; [[ ${rc} -ne 0 ]] && notify_failure "${rc}"' EXIT
+
 # 로컬 덤프를 S3 오프사이트로 업로드 (SSE-S3). 크리덴셜은 env 로만 주입 — argv 노출 0.
 upload_to_s3() {
     local file="$1"
@@ -89,6 +113,7 @@ main() {
     # S3 오프사이트 (로컬 백업은 이미 안전 — 업로드 실패해도 유지, fail-soft)
     if [[ "${BACKUP_S3}" != "true" ]]; then
         echo "[backup] S3 업로드 스킵 (BACKUP_S3=${BACKUP_S3})"
+        ping_healthcheck
         return 0
     fi
     if ! upload_to_s3 "${DUMP_PATH}"; then
@@ -96,6 +121,7 @@ main() {
         exit 1
     fi
     echo "[backup] S3 오프사이트 완료: ${DUMP_FILENAME}"
+    ping_healthcheck
 }
 
 main "$@"
