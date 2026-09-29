@@ -2,7 +2,10 @@
 # DB 백업 cron 배선 — 서버에서 1회 실행.
 # 6시간마다(00/06/12/18시 KST) backup_postgres.sh 실행 → back/.backups/ 에 pg_dump(read-only) 적재, 7일 보관.
 # (2026-09-28) 일 1회(RPO 24h)에서 6시간 간격(RPO 6h)으로 단축 — pg_dump 는 read-only라 빈도 올려도 부담 적음.
-# 멱등: 이미 등록돼 있으면 중복 추가하지 않음. db-safety: pg_dump 는 read-only, DELETE/DROP 없음.
+# 멱등: 마커 라인이 있으면 "내용까지 동일할 때만" 스킵 — 스케줄 등 내용이 바뀌었으면 교체한다.
+# (2026-09-28 수정) 예전엔 마커 텍스트 존재만 보고 무조건 skip 해, 이미 등록된 서버에서
+# 04:00 1일1회 → 6시간마다로 스케줄을 바꿔도 재실행 시 반영이 안 되는 버그가 있었다.
+# db-safety: pg_dump 는 read-only, DELETE/DROP 없음.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,13 +24,15 @@ fi
 
 existing="$(crontab -l 2>/dev/null || true)"
 
-if echo "${existing}" | grep -qF "${CRON_MARK}"; then
-    echo "[cron] 이미 등록됨 — 중복 추가 생략 (${CRON_MARK})"
+if echo "${existing}" | grep -qF "${CRON_LINE}"; then
+    echo "[cron] 동일 내용 이미 등록됨 — 변경 없음"
     exit 0
 fi
 
-printf '%s\n%s\n' "${existing}" "${CRON_LINE}" | grep -v '^$' | crontab -
+# 마커가 있는 기존 라인(구 스케줄 등)은 제거 후 최신 라인으로 재등록.
+filtered="$(echo "${existing}" | grep -vF "${CRON_MARK}" || true)"
+printf '%s\n%s\n' "${filtered}" "${CRON_LINE}" | grep -v '^$' | crontab -
 
-echo "[cron] 등록 완료: 6시간마다 DB 백업 (RPO 6h)"
+echo "[cron] 등록/갱신 완료: 6시간마다 DB 백업 (RPO 6h)"
 echo "[cron]   ${CRON_LINE}"
 echo "[cron] 로그: ${LOG_FILE}"
